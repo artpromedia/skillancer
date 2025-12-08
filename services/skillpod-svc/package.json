@@ -1,0 +1,33 @@
+{
+  "name": "@skillancer/skillpod-svc",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "VDI management and orchestration service",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint . --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@skillancer/database": "workspace:*",
+    "@skillancer/cache": "workspace:*",
+    "@skillancer/types": "workspace:*",
+    "@skillancer/utils": "workspace:*",
+    "fastify": "^4.26.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@skillancer/config": "workspace:*",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  }
+}

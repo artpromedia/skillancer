@@ -1,0 +1,63 @@
+{
+  "name": "@skillancer/types",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared TypeScript type definitions with Zod schemas",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./common": {
+      "types": "./dist/common/index.d.ts",
+      "import": "./dist/common/index.mjs",
+      "require": "./dist/common/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "import": "./dist/auth/index.mjs",
+      "require": "./dist/auth/index.js"
+    },
+    "./market": {
+      "types": "./dist/market/index.d.ts",
+      "import": "./dist/market/index.mjs",
+      "require": "./dist/market/index.js"
+    },
+    "./skillpod": {
+      "types": "./dist/skillpod/index.d.ts",
+      "import": "./dist/skillpod/index.mjs",
+      "require": "./dist/skillpod/index.js"
+    },
+    "./cockpit": {
+      "types": "./dist/cockpit/index.d.ts",
+      "import": "./dist/cockpit/index.mjs",
+      "require": "./dist/cockpit/index.js"
+    },
+    "./billing": {
+      "types": "./dist/billing/index.d.ts",
+      "import": "./dist/billing/index.mjs",
+      "require": "./dist/billing/index.js"
+    }
+  },
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@skillancer/config": "workspace:*",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}

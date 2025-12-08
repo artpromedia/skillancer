@@ -1,0 +1,16 @@
+{
+  "extends": "../config/tsconfig/library.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "types": ["node"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@skillancer/types": ["../types/src"],
+      "@skillancer/types/*": ["../types/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+}

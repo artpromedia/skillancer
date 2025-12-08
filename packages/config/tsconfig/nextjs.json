@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Next.js Applications",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@skillancer/ui": ["../../packages/ui/src"],
+      "@skillancer/ui/*": ["../../packages/ui/src/*"],
+      "@skillancer/types": ["../../packages/types/src"],
+      "@skillancer/types/*": ["../../packages/types/src/*"],
+      "@skillancer/utils": ["../../packages/utils/src"],
+      "@skillancer/utils/*": ["../../packages/utils/src/*"],
+      "@skillancer/api-client": ["../../packages/api-client/src"],
+      "@skillancer/api-client/*": ["../../packages/api-client/src/*"],
+      "@skillancer/database": ["../../packages/database/src"],
+      "@skillancer/database/*": ["../../packages/database/src/*"]
+    }
+  },
+  "include": ["src", "next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "dist", ".next", "coverage"]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@skillancer/api-client",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Generated API client for Skillancer services",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "tsup src/index.ts --watch",
+    "build": "tsup src/index.ts --dts",
+    "generate": "openapi-typescript-codegen --input ./openapi.json --output ./src/generated",
+    "lint": "eslint . --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@skillancer/types": "workspace:*",
+    "axios": "^1.6.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@skillancer/config": "workspace:*",
+    "openapi-typescript-codegen": "^0.27.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}

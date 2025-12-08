@@ -1,0 +1,165 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Skillancer Brand Colors */
+    --primary: 216 55% 24%; /* #1B365D */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 210 49% 36%; /* #2E5A88 */
+    --secondary-foreground: 0 0% 100%;
+    
+    --accent: 207 38% 47%; /* #4A7BA7 */
+    --accent-foreground: 0 0% 100%;
+
+    /* Base Colors */
+    --background: 0 0% 100%;
+    --foreground: 216 55% 24%;
+
+    /* Card */
+    --card: 0 0% 100%;
+    --card-foreground: 216 55% 24%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 55% 24%;
+
+    /* Muted */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border & Input */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 216 55% 24%;
+
+    /* Radius */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Skillancer Brand Colors (Dark Mode) */
+    --primary: 207 38% 47%; /* Lighter for dark mode */
+    --primary-foreground: 216 55% 12%;
+    
+    --secondary: 210 49% 50%;
+    --secondary-foreground: 216 55% 12%;
+    
+    --accent: 207 38% 60%;
+    --accent-foreground: 216 55% 12%;
+
+    /* Base Colors */
+    --background: 216 55% 8%;
+    --foreground: 210 40% 98%;
+
+    /* Card */
+    --card: 216 55% 12%;
+    --card-foreground: 210 40% 98%;
+
+    /* Popover */
+    --popover: 216 55% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Muted */
+    --muted: 216 55% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Destructive */
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border & Input */
+    --border: 216 55% 20%;
+    --input: 216 55% 20%;
+    --ring: 207 38% 47%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Improve font rendering */
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Focus styles */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Selection colors */
+  ::selection {
+    @apply bg-primary/20 text-primary;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Custom scrollbar styling */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-background/80 backdrop-blur-sm;
+  }
+
+  /* Skillancer card shadow */
+  .shadow-skillancer {
+    box-shadow: 0 4px 6px -1px rgba(27, 54, 93, 0.1), 0 2px 4px -1px rgba(27, 54, 93, 0.06);
+  }
+
+  .shadow-skillancer-lg {
+    box-shadow: 0 10px 15px -3px rgba(27, 54, 93, 0.1), 0 4px 6px -2px rgba(27, 54, 93, 0.05);
+  }
+}

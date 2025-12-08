@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "files": [],
+  "references": [
+    { "path": "packages/types" },
+    { "path": "packages/utils" },
+    { "path": "packages/ui" },
+    { "path": "packages/database" },
+    { "path": "packages/cache" },
+    { "path": "packages/api-client" },
+    { "path": "apps/web" },
+    { "path": "apps/web-market" },
+    { "path": "apps/web-cockpit" },
+    { "path": "apps/web-skillpod" },
+    { "path": "services/api-gateway" },
+    { "path": "services/auth-svc" },
+    { "path": "services/billing-svc" },
+    { "path": "services/market-svc" },
+    { "path": "services/skillpod-svc" },
+    { "path": "services/cockpit-svc" },
+    { "path": "services/notification-svc" },
+    { "path": "services/audit-svc" }
+  ]
+}

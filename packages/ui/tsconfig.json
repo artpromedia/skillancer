@@ -1,0 +1,18 @@
+{
+  "extends": "../config/tsconfig/react-library.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "types": ["node", "react", "react-dom"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@skillancer/types": ["../types/src"],
+      "@skillancer/types/*": ["../types/src/*"],
+      "@skillancer/utils": ["../utils/src"],
+      "@skillancer/utils/*": ["../utils/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx", "**/*.stories.tsx"]
+}

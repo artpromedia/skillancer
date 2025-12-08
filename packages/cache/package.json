@@ -1,0 +1,26 @@
+{
+  "name": "@skillancer/cache",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Redis cache utilities",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "tsup src/index.ts --watch --dts",
+    "build": "tsup src/index.ts --dts",
+    "lint": "eslint . --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "ioredis": "^5.3.0"
+  },
+  "devDependencies": {
+    "@skillancer/config": "workspace:*",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  }
+}

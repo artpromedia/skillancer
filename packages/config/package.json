@@ -1,0 +1,44 @@
+{
+  "name": "@skillancer/config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared configuration files (ESLint, TypeScript, Prettier, etc.)",
+  "main": "index.js",
+  "exports": {
+    "./tsconfig/base": "./tsconfig/base.json",
+    "./tsconfig/nextjs": "./tsconfig/nextjs.json",
+    "./tsconfig/node": "./tsconfig/node.json",
+    "./tsconfig/react-library": "./tsconfig/react-library.json",
+    "./tsconfig/library": "./tsconfig/library.json",
+    "./tsconfig/*": "./tsconfig/*.json",
+    "./eslint": "./eslint/index.js",
+    "./eslint/base": "./eslint/base.js",
+    "./eslint/react": "./eslint/react.js",
+    "./eslint/next": "./eslint/next.js",
+    "./eslint/node": "./eslint/node.js",
+    "./prettier": "./prettier/index.js"
+  },
+  "scripts": {
+    "lint": "eslint . --ext .js,.ts",
+    "clean": "rm -rf node_modules"
+  },
+  "dependencies": {
+    "@next/eslint-plugin-next": "^14.1.0",
+    "@typescript-eslint/eslint-plugin": "^6.20.0",
+    "@typescript-eslint/parser": "^6.20.0",
+    "eslint-config-next": "^14.1.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^3.6.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-jsx-a11y": "^6.8.0",
+    "eslint-plugin-n": "^16.6.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier-plugin-tailwindcss": "^0.5.11"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.3.0"
+  }
+}
