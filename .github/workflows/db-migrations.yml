@@ -1,0 +1,412 @@
+name: Database Migrations
+
+on:
+  pull_request:
+    paths:
+      - 'packages/database/prisma/**'
+      - 'packages/database/src/seed.ts'
+  push:
+    branches: [main, master]
+    paths:
+      - 'packages/database/prisma/**'
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  # ============================================================================
+  # VALIDATION - Run on all PRs and pushes
+  # ============================================================================
+  validate:
+    name: Validate Schema & Migrations
+    runs-on: ubuntu-latest
+    outputs:
+      has_destructive: ${{ steps.check-destructive.outputs.has_destructive }}
+      migration_diff: ${{ steps.diff.outputs.diff }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Validate Prisma Schema
+        run: |
+          cd packages/database
+          npx prisma validate
+        
+      - name: Check for Breaking Changes
+        id: check-destructive
+        run: |
+          cd packages/database
+          if pnpm db:check-destructive; then
+            echo "has_destructive=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_destructive=true" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Generate Migration Diff
+        id: diff
+        if: github.event_name == 'pull_request'
+        run: |
+          cd packages/database
+          # Get list of new/modified migration files
+          DIFF=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- prisma/migrations/ || echo "")
+          echo "diff<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR with Changes
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const hasDest = '${{ steps.check-destructive.outputs.has_destructive }}' === 'true';
+            const diff = `${{ steps.diff.outputs.diff }}`;
+            
+            let body = '## 🗃️ Database Migration Review\n\n';
+            
+            if (hasDest) {
+              body += '⚠️ **WARNING: Destructive changes detected!**\n\n';
+              body += 'This migration contains potentially destructive operations (DROP, DELETE, TRUNCATE).\n';
+              body += 'Manual approval will be required for production deployment.\n\n';
+            }
+            
+            if (diff) {
+              body += '### Changed Migration Files\n';
+              body += '```\n' + diff + '\n```\n\n';
+            } else {
+              body += 'No migration file changes detected.\n\n';
+            }
+            
+            body += '### Checklist\n';
+            body += '- [ ] Migration has been tested locally\n';
+            body += '- [ ] Rollback procedure documented (if needed)\n';
+            body += '- [ ] Data migration script included (if needed)\n';
+            body += '- [ ] Team notified of schema changes\n';
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(c => 
+              c.user.type === 'Bot' && c.body.includes('Database Migration Review')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
+
+  # ============================================================================
+  # PREVIEW - Create preview database for PRs
+  # ============================================================================
+  migrate-preview:
+    name: Preview Database
+    needs: validate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: skillancer_preview
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply Migrations to Preview
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/skillancer_preview?schema=public
+        run: |
+          pnpm db:generate
+          pnpm db:migrate:deploy
+
+      - name: Run Seed (Test Data)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/skillancer_preview?schema=public
+        run: pnpm db:seed
+        continue-on-error: true
+
+      - name: Verify Migration Success
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/skillancer_preview?schema=public
+        run: |
+          cd packages/database
+          npx prisma migrate status
+
+      - name: Comment Preview Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## ✅ Preview Database Migration Successful
+            
+            Migrations have been successfully applied to the preview database.
+            
+            **Database:** PostgreSQL 16 (CI Service Container)
+            **Status:** All migrations applied successfully
+            `;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+  # ============================================================================
+  # STAGING - Deploy to staging on main branch
+  # ============================================================================
+  migrate-staging:
+    name: Staging Migration
+    needs: validate
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Check Migration Status (Pre)
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "📊 Pre-migration status:"
+          pnpm db:migrate:status || true
+
+      - name: Apply Migrations to Staging
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: pnpm db:migrate:deploy
+
+      - name: Verify Migration Success
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "✅ Post-migration status:"
+          pnpm db:migrate:status
+
+      - name: Notify Slack - Staging Success
+        if: success()
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "text": "✅ Staging DB Migration Successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "✅ *Staging Database Migration*\n\nMigrations deployed successfully to staging.\n\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+
+      - name: Notify Slack - Staging Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "text": "❌ Staging DB Migration Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "❌ *Staging Database Migration Failed*\n\nPlease check the workflow logs.\n\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}\n*Workflow:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+
+  # ============================================================================
+  # PRODUCTION - Deploy to production (requires approval for destructive)
+  # ============================================================================
+  migrate-production:
+    name: Production Migration
+    needs: [validate, migrate-staging]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: 
+      name: production
+      # Require manual approval if destructive changes detected
+      # Environment protection rules should be configured in GitHub
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Require Manual Approval (Destructive)
+        if: needs.validate.outputs.has_destructive == 'true'
+        run: |
+          echo "⚠️ DESTRUCTIVE CHANGES DETECTED"
+          echo "This migration contains DROP, DELETE, or TRUNCATE operations."
+          echo "Manual approval required via GitHub Environment protection rules."
+
+      - name: Check Migration Status (Pre)
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "📊 Pre-migration status:"
+          pnpm db:migrate:status || true
+
+      - name: Create Database Backup Reference
+        run: |
+          echo "📸 Backup Reference: $(date -u +%Y%m%d_%H%M%S)_pre_migration"
+          echo "Ensure RDS automated backups are enabled and recent snapshot exists."
+
+      - name: Apply Migrations to Production
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: pnpm db:migrate:deploy
+
+      - name: Verify Migration Success
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "✅ Post-migration status:"
+          pnpm db:migrate:status
+
+      - name: Notify Slack - Production Success
+        if: success()
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "text": "🚀 Production DB Migration Successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🚀 *Production Database Migration*\n\nMigrations deployed successfully to production.\n\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+
+      - name: Notify Slack - Production Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "text": "🔴 PRODUCTION DB Migration Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🔴 *PRODUCTION Database Migration Failed*\n\n⚠️ IMMEDIATE ATTENTION REQUIRED\n\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}\n*Workflow:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true

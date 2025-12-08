@@ -10,6 +10,9 @@ export * from './client';
 export * from './extensions/soft-delete';
 export * from './extensions/audit-log';
 
+// Migration utilities
+export * from './migration-lock';
+
 // Types (re-exported from Prisma)
 export type {
   User,
