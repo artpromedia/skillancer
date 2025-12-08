@@ -6,4 +6,14 @@ module.exports = {
     project: './tsconfig.json',
     tsconfigRootDir: __dirname,
   },
+  ignorePatterns: [
+    '**/__tests__/**',
+    '**/*.test.ts',
+    '**/*.spec.ts',
+    '.eslintrc.js',
+    'tsup.config.ts',
+  ],
+  rules: {
+    'no-console': 'off', // Allow console for logging in cache utilities
+  },
 };

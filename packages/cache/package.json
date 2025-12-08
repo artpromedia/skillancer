@@ -2,25 +2,47 @@
   "name": "@skillancer/cache",
   "version": "0.0.1",
   "private": true,
-  "description": "Redis cache utilities",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "description": "Redis cache and session store for Skillancer",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./session": {
+      "types": "./dist/session-store.d.ts",
+      "import": "./dist/session-store.mjs",
+      "require": "./dist/session-store.js"
+    },
+    "./decorators": {
+      "types": "./dist/decorators.d.ts",
+      "import": "./dist/decorators.mjs",
+      "require": "./dist/decorators.js"
+    }
+  },
   "scripts": {
-    "dev": "tsup src/index.ts --watch --dts",
-    "build": "tsup src/index.ts --dts",
+    "dev": "tsup --watch",
+    "build": "tsup",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist node_modules"
+    "test:coverage": "vitest run --coverage",
+    "clean": "rimraf dist"
   },
   "dependencies": {
-    "ioredis": "^5.3.0"
+    "ioredis": "^5.4.1"
   },
   "devDependencies": {
     "@skillancer/config": "workspace:*",
-    "tsup": "^8.0.0",
-    "typescript": "^5.3.0",
-    "vitest": "^1.2.0"
+    "@types/node": "^20.11.0",
+    "ioredis-mock": "^8.13.1",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.8"
   }
 }
