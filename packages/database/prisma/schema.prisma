@@ -1,0 +1,947 @@
+// ============================================================================
+// Skillancer Database Schema
+// Multi-tenant SaaS platform for freelancers and clients
+// ============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [uuid_ossp(map: "uuid-ossp"), pg_trgm]
+}
+
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id                String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email             String            @unique @db.VarChar(255)
+  passwordHash      String?           @map("password_hash") @db.VarChar(255)
+  firstName         String            @map("first_name") @db.VarChar(100)
+  lastName          String            @map("last_name") @db.VarChar(100)
+  displayName       String?           @map("display_name") @db.VarChar(200)
+  avatarUrl         String?           @map("avatar_url") @db.VarChar(500)
+  bio               String?           @db.Text
+  status            UserStatus        @default(PENDING_VERIFICATION)
+  verificationLevel VerificationLevel @default(NONE)
+  timezone          String            @default("UTC") @db.VarChar(50)
+  locale            String            @default("en") @db.VarChar(10)
+
+  // OAuth fields
+  oauthProvider String? @map("oauth_provider") @db.VarChar(50)
+  oauthId       String? @map("oauth_id") @db.VarChar(255)
+
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  lastLoginAt DateTime? @map("last_login_at")
+
+  // Relations
+  tenantMemberships     TenantMember[]
+  jobsPosted            Job[]              @relation("ClientJobs")
+  bids                  Bid[]
+  contractsAsClient     Contract[]         @relation("ClientContracts")
+  contractsAsFreelancer Contract[]         @relation("FreelancerContracts")
+  services              Service[]
+  sessions              Session[]
+  messagesSent          Message[]          @relation("SenderMessages")
+  messagesReceived      Message[]          @relation("ReceiverMessages")
+  reviewsGiven          Review[]           @relation("ReviewerReviews")
+  reviewsReceived       Review[]           @relation("RevieweeReviews")
+  trustScore            TrustScore?
+  skills                UserSkill[]
+  portfolioItems        PortfolioItem[]
+  paymentMethods        PaymentMethod[]
+  notifications         Notification[]
+  refreshTokens         RefreshToken[]
+  auditLogs             AuditLog[]         @relation("UserAuditLogs")
+
+  @@unique([oauthProvider, oauthId])
+  @@index([email])
+  @@index([status])
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@map("users")
+}
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum VerificationLevel {
+  NONE
+  EMAIL
+  BASIC
+  ENHANCED
+  PREMIUM
+}
+
+model RefreshToken {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  token     String   @unique @db.VarChar(500)
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+  userAgent String?  @map("user_agent") @db.VarChar(500)
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model UserSkill {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  skillId     String   @map("skill_id") @db.Uuid
+  level       SkillLevel @default(INTERMEDIATE)
+  yearsExp    Int?     @map("years_exp")
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+  @@map("user_skills")
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+model Skill {
+  id          String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String      @unique @db.VarChar(100)
+  slug        String      @unique @db.VarChar(100)
+  category    String      @db.VarChar(100)
+  description String?     @db.Text
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  userSkills  UserSkill[]
+  jobSkills   JobSkill[]
+  serviceSkills ServiceSkill[]
+
+  @@index([category])
+  @@index([slug])
+  @@map("skills")
+}
+
+model PortfolioItem {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  title       String   @db.VarChar(200)
+  description String?  @db.Text
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  projectUrl  String?  @map("project_url") @db.VarChar(500)
+  tags        String[] @default([])
+  featured    Boolean  @default(false)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("portfolio_items")
+}
+
+// ============================================================================
+// MULTI-TENANCY
+// ============================================================================
+
+model Tenant {
+  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String     @db.VarChar(200)
+  slug        String     @unique @db.VarChar(100)
+  description String?    @db.Text
+  logoUrl     String?    @map("logo_url") @db.VarChar(500)
+  website     String?    @db.VarChar(500)
+  plan        TenantPlan @default(FREE)
+  settings    Json       @default("{}")
+  metadata    Json       @default("{}")
+
+  // Billing
+  stripeCustomerId     String? @unique @map("stripe_customer_id") @db.VarChar(100)
+  stripeSubscriptionId String? @map("stripe_subscription_id") @db.VarChar(100)
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  members  TenantMember[]
+  jobs     Job[]
+  sessions Session[]
+  invoices Invoice[]
+
+  @@index([slug])
+  @@index([plan])
+  @@index([deletedAt])
+  @@map("tenants")
+}
+
+model TenantMember {
+  id        String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String     @map("tenant_id") @db.Uuid
+  userId    String     @map("user_id") @db.Uuid
+  role      TenantRole @default(MEMBER)
+  invitedBy String?    @map("invited_by") @db.Uuid
+  joinedAt  DateTime   @default(now()) @map("joined_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@map("tenant_members")
+}
+
+enum TenantPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum TenantRole {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+// ============================================================================
+// JOBS & MARKETPLACE
+// ============================================================================
+
+model Job {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clientId    String    @map("client_id") @db.Uuid
+  tenantId    String?   @map("tenant_id") @db.Uuid
+  title       String    @db.VarChar(200)
+  description String    @db.Text
+  slug        String    @unique @db.VarChar(250)
+  status      JobStatus @default(DRAFT)
+  visibility  JobVisibility @default(PUBLIC)
+
+  // Budget
+  budgetType  BudgetType @default(FIXED) @map("budget_type")
+  budgetMin   Decimal?   @map("budget_min") @db.Decimal(12, 2)
+  budgetMax   Decimal?   @map("budget_max") @db.Decimal(12, 2)
+  currency    String     @default("USD") @db.VarChar(3)
+
+  // Duration & Location
+  duration        JobDuration? 
+  experienceLevel ExperienceLevel @default(INTERMEDIATE) @map("experience_level")
+  location        String?      @db.VarChar(200)
+  isRemote        Boolean      @default(true) @map("is_remote")
+
+  // Content
+  attachments Json    @default("[]")
+  tags        String[] @default([])
+
+  // Timestamps
+  publishedAt DateTime? @map("published_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  // Relations
+  client    User           @relation("ClientJobs", fields: [clientId], references: [id])
+  tenant    Tenant?        @relation(fields: [tenantId], references: [id])
+  bids      Bid[]
+  contracts Contract[]
+  skills    JobSkill[]
+  messages  Message[]      @relation("JobMessages")
+
+  @@index([clientId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([publishedAt])
+  @@index([deletedAt])
+  @@index([slug])
+  @@map("jobs")
+}
+
+model JobSkill {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  jobId     String   @map("job_id") @db.Uuid
+  skillId   String   @map("skill_id") @db.Uuid
+  required  Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job   Job   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, skillId])
+  @@map("job_skills")
+}
+
+enum JobStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum JobVisibility {
+  PUBLIC
+  PRIVATE
+  INVITE_ONLY
+}
+
+enum BudgetType {
+  FIXED
+  HOURLY
+  MONTHLY
+}
+
+enum JobDuration {
+  LESS_THAN_WEEK
+  ONE_TO_TWO_WEEKS
+  TWO_TO_FOUR_WEEKS
+  ONE_TO_THREE_MONTHS
+  THREE_TO_SIX_MONTHS
+  MORE_THAN_SIX_MONTHS
+}
+
+enum ExperienceLevel {
+  ENTRY
+  INTERMEDIATE
+  EXPERT
+}
+
+// ============================================================================
+// BIDS
+// ============================================================================
+
+model Bid {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  jobId        String    @map("job_id") @db.Uuid
+  freelancerId String    @map("freelancer_id") @db.Uuid
+  status       BidStatus @default(PENDING)
+
+  // Proposal
+  coverLetter  String    @map("cover_letter") @db.Text
+  proposedRate Decimal   @map("proposed_rate") @db.Decimal(12, 2)
+  rateType     BudgetType @default(FIXED) @map("rate_type")
+  deliveryDays Int?      @map("delivery_days")
+  attachments  Json      @default("[]")
+
+  // Timestamps
+  submittedAt  DateTime  @default(now()) @map("submitted_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  withdrawnAt  DateTime? @map("withdrawn_at")
+
+  // Relations
+  job        Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  freelancer User      @relation(fields: [freelancerId], references: [id])
+  contract   Contract?
+
+  @@unique([jobId, freelancerId])
+  @@index([freelancerId])
+  @@index([status])
+  @@index([submittedAt])
+  @@map("bids")
+}
+
+enum BidStatus {
+  PENDING
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+// ============================================================================
+// CONTRACTS
+// ============================================================================
+
+model Contract {
+  id           String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  jobId        String         @map("job_id") @db.Uuid
+  bidId        String?        @unique @map("bid_id") @db.Uuid
+  clientId     String         @map("client_id") @db.Uuid
+  freelancerId String         @map("freelancer_id") @db.Uuid
+  status       ContractStatus @default(PENDING)
+
+  // Terms
+  title        String    @db.VarChar(200)
+  description  String    @db.Text
+  agreedRate   Decimal   @map("agreed_rate") @db.Decimal(12, 2)
+  rateType     BudgetType @default(FIXED) @map("rate_type")
+  currency     String    @default("USD") @db.VarChar(3)
+  totalAmount  Decimal?  @map("total_amount") @db.Decimal(12, 2)
+
+  // Timeline
+  startDate    DateTime? @map("start_date")
+  endDate      DateTime? @map("end_date")
+  deadlineAt   DateTime? @map("deadline_at")
+
+  // Timestamps
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  signedAt     DateTime? @map("signed_at")
+  completedAt  DateTime? @map("completed_at")
+  cancelledAt  DateTime? @map("cancelled_at")
+
+  // Relations
+  job        Job         @relation(fields: [jobId], references: [id])
+  bid        Bid?        @relation(fields: [bidId], references: [id])
+  client     User        @relation("ClientContracts", fields: [clientId], references: [id])
+  freelancer User        @relation("FreelancerContracts", fields: [freelancerId], references: [id])
+  milestones Milestone[]
+  payments   Payment[]
+  reviews    Review[]
+  messages   Message[]   @relation("ContractMessages")
+
+  @@index([clientId])
+  @@index([freelancerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("contracts")
+}
+
+enum ContractStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+model Milestone {
+  id          String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId  String          @map("contract_id") @db.Uuid
+  title       String          @db.VarChar(200)
+  description String?         @db.Text
+  amount      Decimal         @db.Decimal(12, 2)
+  status      MilestoneStatus @default(PENDING)
+  sortOrder   Int             @default(0) @map("sort_order")
+
+  // Timestamps
+  dueDate     DateTime? @map("due_date")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  approvedAt  DateTime? @map("approved_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  contract Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([contractId])
+  @@index([status])
+  @@map("milestones")
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  REVISION_REQUESTED
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+// ============================================================================
+// SERVICES (Productized Offerings)
+// ============================================================================
+
+model Service {
+  id           String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerId String        @map("freelancer_id") @db.Uuid
+  title        String        @db.VarChar(200)
+  slug         String        @unique @db.VarChar(250)
+  description  String        @db.Text
+  status       ServiceStatus @default(DRAFT)
+
+  // Pricing Tiers
+  tiers        Json          @default("[]") // Array of ServiceTier
+
+  // Content
+  category     String        @db.VarChar(100)
+  tags         String[]      @default([])
+  images       Json          @default("[]")
+  faqs         Json          @default("[]")
+
+  // Stats
+  orderCount   Int           @default(0) @map("order_count")
+  rating       Decimal?      @db.Decimal(3, 2)
+  reviewCount  Int           @default(0) @map("review_count")
+
+  // Timestamps
+  publishedAt  DateTime?     @map("published_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  deletedAt    DateTime?     @map("deleted_at")
+
+  // Relations
+  freelancer User           @relation(fields: [freelancerId], references: [id])
+  skills     ServiceSkill[]
+  reviews    Review[]
+
+  @@index([freelancerId])
+  @@index([status])
+  @@index([category])
+  @@index([slug])
+  @@index([deletedAt])
+  @@map("services")
+}
+
+model ServiceSkill {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  serviceId String   @map("service_id") @db.Uuid
+  skillId   String   @map("skill_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, skillId])
+  @@map("service_skills")
+}
+
+enum ServiceStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+// ============================================================================
+// SKILLPOD SESSIONS (VDI)
+// ============================================================================
+
+model Session {
+  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  tenantId    String?       @map("tenant_id") @db.Uuid
+  status      SessionStatus @default(PENDING)
+  type        SessionType   @default(DEVELOPMENT)
+
+  // Session Config
+  instanceType String       @map("instance_type") @db.VarChar(50)
+  region       String       @db.VarChar(50)
+  image        String       @db.VarChar(200)
+  config       Json         @default("{}")
+
+  // Connection
+  connectionUrl String?     @map("connection_url") @db.VarChar(500)
+  publicIp      String?     @map("public_ip") @db.VarChar(45)
+  privateIp     String?     @map("private_ip") @db.VarChar(45)
+
+  // Usage
+  startedAt     DateTime?   @map("started_at")
+  endedAt       DateTime?   @map("ended_at")
+  durationMins  Int         @default(0) @map("duration_mins")
+  costCredits   Decimal     @default(0) @map("cost_credits") @db.Decimal(10, 2)
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user   User    @relation(fields: [userId], references: [id])
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("sessions")
+}
+
+enum SessionStatus {
+  PENDING
+  PROVISIONING
+  RUNNING
+  PAUSED
+  STOPPING
+  STOPPED
+  FAILED
+  TERMINATED
+}
+
+enum SessionType {
+  DEVELOPMENT
+  TESTING
+  PRODUCTION
+  TRAINING
+}
+
+// ============================================================================
+// MESSAGING
+// ============================================================================
+
+model Message {
+  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  senderId    String        @map("sender_id") @db.Uuid
+  receiverId  String        @map("receiver_id") @db.Uuid
+  jobId       String?       @map("job_id") @db.Uuid
+  contractId  String?       @map("contract_id") @db.Uuid
+  threadId    String?       @map("thread_id") @db.Uuid
+  
+  content     String        @db.Text
+  type        MessageType   @default(TEXT)
+  attachments Json          @default("[]")
+  metadata    Json          @default("{}")
+
+  // Status
+  readAt      DateTime?     @map("read_at")
+  deletedAt   DateTime?     @map("deleted_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  sender   User      @relation("SenderMessages", fields: [senderId], references: [id])
+  receiver User      @relation("ReceiverMessages", fields: [receiverId], references: [id])
+  job      Job?      @relation("JobMessages", fields: [jobId], references: [id])
+  contract Contract? @relation("ContractMessages", fields: [contractId], references: [id])
+  thread   Message?  @relation("MessageThread", fields: [threadId], references: [id])
+  replies  Message[] @relation("MessageThread")
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([jobId])
+  @@index([contractId])
+  @@index([threadId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+enum MessageType {
+  TEXT
+  FILE
+  IMAGE
+  SYSTEM
+  OFFER
+}
+
+// ============================================================================
+// PAYMENTS & BILLING
+// ============================================================================
+
+model Payment {
+  id           String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId   String        @map("contract_id") @db.Uuid
+  milestoneId  String?       @map("milestone_id") @db.Uuid
+  payerId      String        @map("payer_id") @db.Uuid
+  payeeId      String        @map("payee_id") @db.Uuid
+  paymentMethodId String?    @map("payment_method_id") @db.Uuid
+  
+  amount       Decimal       @db.Decimal(12, 2)
+  currency     String        @default("USD") @db.VarChar(3)
+  fee          Decimal       @default(0) @db.Decimal(12, 2)
+  netAmount    Decimal       @map("net_amount") @db.Decimal(12, 2)
+  
+  status       PaymentStatus @default(PENDING)
+  type         PaymentType   @default(MILESTONE)
+
+  // External references
+  stripePaymentIntentId String? @unique @map("stripe_payment_intent_id") @db.VarChar(100)
+  stripeTransferId      String? @map("stripe_transfer_id") @db.VarChar(100)
+
+  // Escrow
+  escrowedAt   DateTime?     @map("escrowed_at")
+  releasedAt   DateTime?     @map("released_at")
+  refundedAt   DateTime?     @map("refunded_at")
+
+  // Timestamps
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  completedAt  DateTime?     @map("completed_at")
+
+  contract      Contract       @relation(fields: [contractId], references: [id])
+  milestone     Milestone?     @relation(fields: [milestoneId], references: [id])
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+
+  @@index([contractId])
+  @@index([milestoneId])
+  @@index([payerId])
+  @@index([payeeId])
+  @@index([paymentMethodId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+model PaymentMethod {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      PaymentMethodType
+  isDefault Boolean  @default(false) @map("is_default")
+  
+  // Stripe
+  stripePaymentMethodId String? @map("stripe_payment_method_id") @db.VarChar(100)
+  
+  // Card details (masked)
+  last4     String?  @db.VarChar(4)
+  brand     String?  @db.VarChar(20)
+  expiryMonth Int?   @map("expiry_month")
+  expiryYear  Int?   @map("expiry_year")
+
+  // Bank details (masked)
+  bankName  String?  @map("bank_name") @db.VarChar(100)
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([userId])
+  @@map("payment_methods")
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  ESCROWED
+  RELEASED
+  COMPLETED
+  FAILED
+  REFUNDED
+  DISPUTED
+}
+
+enum PaymentType {
+  MILESTONE
+  HOURLY
+  BONUS
+  REFUND
+  SUBSCRIPTION
+}
+
+enum PaymentMethodType {
+  CARD
+  BANK_ACCOUNT
+  PAYPAL
+}
+
+model Invoice {
+  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId    String?       @map("tenant_id") @db.Uuid
+  number      String        @unique @db.VarChar(50)
+  status      InvoiceStatus @default(DRAFT)
+
+  // Amounts
+  subtotal    Decimal       @db.Decimal(12, 2)
+  tax         Decimal       @default(0) @db.Decimal(12, 2)
+  total       Decimal       @db.Decimal(12, 2)
+  currency    String        @default("USD") @db.VarChar(3)
+
+  // Dates
+  issuedAt    DateTime?     @map("issued_at")
+  dueAt       DateTime?     @map("due_at")
+  paidAt      DateTime?     @map("paid_at")
+
+  // Line items
+  lineItems   Json          @default("[]") @map("line_items")
+  
+  // External
+  stripeInvoiceId String?   @unique @map("stripe_invoice_id") @db.VarChar(100)
+
+  // Timestamps
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([number])
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+// ============================================================================
+// REVIEWS & TRUST
+// ============================================================================
+
+model Review {
+  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  reviewerId  String     @map("reviewer_id") @db.Uuid
+  revieweeId  String     @map("reviewee_id") @db.Uuid
+  contractId  String?    @map("contract_id") @db.Uuid
+  serviceId   String?    @map("service_id") @db.Uuid
+  
+  rating      Int        @db.SmallInt // 1-5
+  title       String?    @db.VarChar(200)
+  comment     String?    @db.Text
+  
+  // Detailed ratings
+  communication  Int?    @db.SmallInt
+  quality        Int?    @db.SmallInt
+  expertise      Int?    @db.SmallInt
+  professionalism Int?   @db.SmallInt
+  wouldRecommend Boolean @default(true) @map("would_recommend")
+
+  // Moderation
+  status      ReviewStatus @default(PENDING)
+  reportedAt  DateTime?    @map("reported_at")
+  
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  reviewer User      @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  reviewee User      @relation("RevieweeReviews", fields: [revieweeId], references: [id])
+  contract Contract? @relation(fields: [contractId], references: [id])
+  service  Service?  @relation(fields: [serviceId], references: [id])
+
+  @@unique([reviewerId, contractId])
+  @@index([revieweeId])
+  @@index([contractId])
+  @@index([serviceId])
+  @@index([rating])
+  @@index([status])
+  @@map("reviews")
+}
+
+enum ReviewStatus {
+  PENDING
+  PUBLISHED
+  HIDDEN
+  FLAGGED
+}
+
+model TrustScore {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String   @unique @map("user_id") @db.Uuid
+  
+  // Overall score
+  overallScore    Decimal  @default(0) @map("overall_score") @db.Decimal(5, 2)
+  
+  // Component scores
+  completionRate  Decimal  @default(0) @map("completion_rate") @db.Decimal(5, 2)
+  responseTime    Decimal  @default(0) @map("response_time") @db.Decimal(5, 2)
+  qualityScore    Decimal  @default(0) @map("quality_score") @db.Decimal(5, 2)
+  communicationScore Decimal @default(0) @map("communication_score") @db.Decimal(5, 2)
+  
+  // Stats
+  totalJobs       Int      @default(0) @map("total_jobs")
+  completedJobs   Int      @default(0) @map("completed_jobs")
+  totalEarnings   Decimal  @default(0) @map("total_earnings") @db.Decimal(12, 2)
+  repeatClients   Int      @default(0) @map("repeat_clients")
+  
+  // Timestamps
+  calculatedAt    DateTime @default(now()) @map("calculated_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("trust_scores")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id        String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  title     String           @db.VarChar(200)
+  message   String           @db.Text
+  data      Json             @default("{}")
+  channel   NotificationChannel @default(IN_APP)
+  
+  readAt    DateTime?        @map("read_at")
+  sentAt    DateTime?        @map("sent_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([readAt])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  JOB_POSTED
+  BID_RECEIVED
+  BID_ACCEPTED
+  BID_REJECTED
+  CONTRACT_STARTED
+  CONTRACT_COMPLETED
+  MILESTONE_COMPLETED
+  PAYMENT_RECEIVED
+  PAYMENT_SENT
+  MESSAGE_RECEIVED
+  REVIEW_RECEIVED
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+  SMS
+}
+
+// ============================================================================
+// AUDIT LOG
+// ============================================================================
+
+model AuditLog {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  action      String   @db.VarChar(100)
+  entityType  String   @map("entity_type") @db.VarChar(100)
+  entityId    String?  @map("entity_id") @db.Uuid
+  
+  // Change data
+  oldValues   Json?    @map("old_values")
+  newValues   Json?    @map("new_values")
+  
+  // Context
+  ipAddress   String?  @map("ip_address") @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.VarChar(500)
+  metadata    Json     @default("{}")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User? @relation("UserAuditLogs", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

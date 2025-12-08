@@ -2,30 +2,52 @@
   "name": "@skillancer/database",
   "version": "0.0.1",
   "private": true,
-  "description": "Prisma schema and database utilities",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "description": "Prisma schema and database utilities for Skillancer",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.mjs",
+      "require": "./dist/client.js"
+    },
+    "./extensions": {
+      "types": "./dist/extensions/index.d.ts",
+      "import": "./dist/extensions/index.mjs",
+      "require": "./dist/extensions/index.js"
+    }
+  },
   "scripts": {
-    "dev": "tsup src/index.ts --watch --dts",
-    "build": "tsup src/index.ts --dts",
+    "dev": "tsup --watch",
+    "build": "pnpm db:generate && tsup",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:migrate:prod": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "tsx src/seed.ts",
+    "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
-    "clean": "rm -rf dist node_modules generated"
+    "postinstall": "prisma generate",
+    "clean": "rimraf dist node_modules/.prisma"
   },
   "dependencies": {
-    "@prisma/client": "^5.9.0"
+    "@prisma/client": "^5.22.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.2.0",
     "@skillancer/config": "workspace:*",
-    "prisma": "^5.9.0",
-    "tsup": "^8.0.0",
-    "tsx": "^4.7.0",
-    "typescript": "^5.3.0"
+    "prisma": "^5.22.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
   }
 }
