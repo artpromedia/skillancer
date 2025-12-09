@@ -1,0 +1,145 @@
+.heroBanner {
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--ifm-color-primary-darker) 0%, var(--ifm-color-primary) 100%);
+  color: white;
+}
+
+.heroBanner h1 {
+  font-size: 3rem;
+  color: white;
+}
+
+.heroBanner p {
+  font-size: 1.25rem;
+  opacity: 0.9;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.buttons .button--secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: white;
+  color: white;
+}
+
+.buttons .button--secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.features {
+  padding: 4rem 0;
+  background: var(--ifm-background-surface-color);
+}
+
+.featureCard {
+  display: block;
+  padding: 2rem;
+  border-radius: 12px;
+  background: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+}
+
+.featureCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  border-color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+
+.featureIcon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.featureCard h3 {
+  margin-bottom: 0.5rem;
+  color: var(--ifm-heading-color);
+}
+
+.featureCard p {
+  color: var(--ifm-color-emphasis-700);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.quickLinks {
+  padding: 4rem 0;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.quickLinks h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.quickLinkCard {
+  background: var(--ifm-card-background-color);
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.quickLinkCard h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.quickLinkCard code {
+  display: block;
+  padding: 0.75rem;
+  background: var(--ifm-code-background);
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.quickLinkCard a {
+  font-weight: 500;
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .heroBanner {
+  background: linear-gradient(135deg, #1e3a5f 0%, var(--ifm-color-primary) 100%);
+}
+
+[data-theme='dark'] .quickLinks {
+  background: var(--ifm-background-color);
+}
+
+[data-theme='dark'] .featureCard {
+  background: var(--ifm-background-surface-color);
+  border-color: var(--ifm-color-emphasis-300);
+}
+
+[data-theme='dark'] .quickLinkCard {
+  background: var(--ifm-background-surface-color);
+  border-color: var(--ifm-color-emphasis-300);
+}
+
+/* Responsive */
+@media screen and (max-width: 996px) {
+  .heroBanner h1 {
+    font-size: 2rem;
+  }
+  
+  .buttons {
+    flex-direction: column;
+  }
+  
+  .featureCard {
+    margin-bottom: 1rem;
+  }
+}
