@@ -12,11 +12,6 @@ variable "environment" {
   type        = string
 }
 
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-}
-
 variable "service_name" {
   description = "Name of the ECS service"
   type        = string
@@ -37,6 +32,12 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "vpc_cidr" {
+  description = "VPC CIDR block for inter-service communication"
+  type        = string
+  default     = null
+}
+
 variable "subnet_ids" {
   description = "Subnet IDs for the service"
   type        = list(string)
@@ -54,7 +55,7 @@ variable "image_tag" {
 }
 
 variable "cpu" {
-  description = "CPU units for the task"
+  description = "CPU units for the task (256, 512, 1024, 2048, 4096)"
   type        = number
   default     = 256
 }
@@ -100,8 +101,27 @@ variable "task_role_arn" {
 }
 
 variable "log_group_name" {
-  description = "CloudWatch log group name"
+  description = "CloudWatch log group name (used if create_log_group is false)"
   type        = string
+  default     = null
+}
+
+variable "create_log_group" {
+  description = "Create a dedicated CloudWatch log group for this service"
+  type        = bool
+  default     = true
+}
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention in days"
+  type        = number
+  default     = 30
+}
+
+variable "kms_key_arn" {
+  description = "KMS key ARN for encrypting logs"
+  type        = string
+  default     = null
 }
 
 variable "environment_variables" {
@@ -128,6 +148,20 @@ variable "container_health_check" {
   default = null
 }
 
+variable "ulimits" {
+  description = "Container ulimits configuration"
+  type = list(object({
+    name      = string
+    softLimit = number
+    hardLimit = number
+  }))
+  default = null
+}
+
+# -----------------------------------------------------------------------------
+# Security Group Variables
+# -----------------------------------------------------------------------------
+
 variable "alb_security_group_ids" {
   description = "Security group IDs of the ALB"
   type        = list(string)
@@ -146,10 +180,86 @@ variable "allow_internal_traffic" {
   default     = true
 }
 
+# -----------------------------------------------------------------------------
+# Load Balancer Variables
+# -----------------------------------------------------------------------------
+
+variable "create_target_group" {
+  description = "Create ALB target group for this service"
+  type        = bool
+  default     = true
+}
+
 variable "target_group_arn" {
-  description = "ARN of the ALB target group"
+  description = "ARN of existing ALB target group (used if create_target_group is false)"
   type        = string
   default     = null
+}
+
+variable "alb_listener_arn" {
+  description = "ARN of the ALB listener"
+  type        = string
+  default     = null
+}
+
+variable "alb_test_listener_arn" {
+  description = "ARN of the ALB test listener (for blue-green deployments)"
+  type        = string
+  default     = null
+}
+
+variable "alb_priority" {
+  description = "Priority for ALB listener rule"
+  type        = number
+  default     = 100
+}
+
+variable "host_headers" {
+  description = "Host headers for ALB routing"
+  type        = list(string)
+  default     = null
+}
+
+variable "path_patterns" {
+  description = "Path patterns for ALB routing"
+  type        = list(string)
+  default     = null
+}
+
+variable "health_check_path" {
+  description = "Health check path for target group"
+  type        = string
+  default     = "/health"
+}
+
+variable "health_check_interval" {
+  description = "Health check interval in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "health_check_timeout" {
+  description = "Health check timeout in seconds"
+  type        = number
+  default     = 5
+}
+
+variable "health_check_healthy_threshold" {
+  description = "Number of consecutive successful health checks"
+  type        = number
+  default     = 2
+}
+
+variable "health_check_unhealthy_threshold" {
+  description = "Number of consecutive failed health checks"
+  type        = number
+  default     = 3
+}
+
+variable "health_check_matcher" {
+  description = "HTTP codes to use when checking for a successful response"
+  type        = string
+  default     = "200"
 }
 
 variable "health_check_grace_period" {
@@ -157,6 +267,28 @@ variable "health_check_grace_period" {
   type        = number
   default     = 60
 }
+
+variable "deregistration_delay" {
+  description = "Deregistration delay in seconds"
+  type        = number
+  default     = 30
+}
+
+variable "enable_stickiness" {
+  description = "Enable sticky sessions"
+  type        = bool
+  default     = false
+}
+
+variable "stickiness_duration" {
+  description = "Stickiness duration in seconds"
+  type        = number
+  default     = 86400
+}
+
+# -----------------------------------------------------------------------------
+# Deployment Variables
+# -----------------------------------------------------------------------------
 
 variable "deployment_minimum_healthy_percent" {
   description = "Minimum healthy percent during deployment"
@@ -182,6 +314,16 @@ variable "use_fargate_spot" {
   default     = false
 }
 
+variable "wait_for_steady_state" {
+  description = "Wait for the service to reach a steady state"
+  type        = bool
+  default     = false
+}
+
+# -----------------------------------------------------------------------------
+# Service Discovery Variables
+# -----------------------------------------------------------------------------
+
 variable "enable_service_discovery" {
   description = "Enable Cloud Map service discovery"
   type        = bool
@@ -194,17 +336,14 @@ variable "service_discovery_namespace_id" {
   default     = null
 }
 
-variable "service_discovery_service_arn" {
-  description = "Service discovery service ARN (if already created)"
-  type        = string
-  default     = null
-}
+# -----------------------------------------------------------------------------
+# Auto Scaling Variables
+# -----------------------------------------------------------------------------
 
-# Auto Scaling
 variable "enable_auto_scaling" {
   description = "Enable auto scaling"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "min_capacity" {
@@ -253,4 +392,82 @@ variable "scale_out_cooldown" {
   description = "Scale out cooldown period in seconds"
   type        = number
   default     = 60
+}
+
+# -----------------------------------------------------------------------------
+# Blue-Green Deployment Variables
+# -----------------------------------------------------------------------------
+
+variable "enable_blue_green" {
+  description = "Enable blue-green deployment via CodeDeploy"
+  type        = bool
+  default     = false
+}
+
+variable "codedeploy_role_arn" {
+  description = "IAM role ARN for CodeDeploy"
+  type        = string
+  default     = null
+}
+
+variable "codedeploy_deployment_config" {
+  description = "CodeDeploy deployment configuration"
+  type        = string
+  default     = "CodeDeployDefault.ECSAllAtOnce"
+}
+
+variable "codedeploy_wait_time_for_cutover" {
+  description = "Minutes to wait before cutover in blue-green deployment"
+  type        = number
+  default     = 0
+}
+
+variable "codedeploy_termination_wait_time" {
+  description = "Minutes to wait before terminating old tasks"
+  type        = number
+  default     = 5
+}
+
+variable "codedeploy_alarm_arns" {
+  description = "CloudWatch alarm ARNs to monitor during deployment"
+  type        = list(string)
+  default     = []
+}
+
+# -----------------------------------------------------------------------------
+# Monitoring Variables
+# -----------------------------------------------------------------------------
+
+variable "enable_service_alarms" {
+  description = "Enable CloudWatch alarms for service monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "service_cpu_alarm_threshold" {
+  description = "CPU utilization threshold for service alarm"
+  type        = number
+  default     = 85
+}
+
+variable "service_memory_alarm_threshold" {
+  description = "Memory utilization threshold for service alarm"
+  type        = number
+  default     = 85
+}
+
+variable "alarm_sns_topic_arns" {
+  description = "SNS topic ARNs for CloudWatch alarm notifications"
+  type        = list(string)
+  default     = []
+}
+
+# -----------------------------------------------------------------------------
+# Tags
+# -----------------------------------------------------------------------------
+
+variable "tags" {
+  description = "Additional tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 }
