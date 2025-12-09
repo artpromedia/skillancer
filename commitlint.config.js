@@ -35,6 +35,7 @@ module.exports = {
         'cockpit-svc',
         'notification-svc',
         'audit-svc',
+        'service-template',
         'ui',
         'types',
         'utils',
