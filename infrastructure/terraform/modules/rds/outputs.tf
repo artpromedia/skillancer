@@ -92,3 +92,47 @@ output "enhanced_monitoring_role_arn" {
   description = "ARN of the enhanced monitoring role"
   value       = var.monitoring_interval > 0 ? aws_iam_role.enhanced_monitoring[0].arn : null
 }
+
+output "connection_string" {
+  description = "PostgreSQL connection string (password placeholder)"
+  value       = "postgresql://${aws_db_instance.main.username}:PASSWORD@${aws_db_instance.main.endpoint}/${aws_db_instance.main.db_name}"
+  sensitive   = true
+}
+
+output "connection_string_read" {
+  description = "PostgreSQL read replica connection string (if replica exists)"
+  value       = length(aws_db_instance.replica) > 0 ? "postgresql://${aws_db_instance.main.username}:PASSWORD@${aws_db_instance.replica[0].endpoint}/${aws_db_instance.main.db_name}" : null
+  sensitive   = true
+}
+
+output "db_subnet_group_name" {
+  description = "Name of the DB subnet group"
+  value       = var.db_subnet_group_name != null ? var.db_subnet_group_name : aws_db_subnet_group.main[0].name
+}
+
+output "cloudwatch_alarm_arns" {
+  description = "ARNs of CloudWatch alarms"
+  value = var.enable_cloudwatch_alarms ? {
+    cpu         = aws_cloudwatch_metric_alarm.cpu_utilization[0].arn
+    storage     = aws_cloudwatch_metric_alarm.free_storage_space[0].arn
+    connections = aws_cloudwatch_metric_alarm.database_connections[0].arn
+    memory      = aws_cloudwatch_metric_alarm.freeable_memory[0].arn
+    read_latency  = aws_cloudwatch_metric_alarm.read_latency[0].arn
+    write_latency = aws_cloudwatch_metric_alarm.write_latency[0].arn
+  } : {}
+}
+
+output "rds_summary" {
+  description = "Summary of RDS configuration"
+  value = {
+    identifier       = aws_db_instance.main.identifier
+    engine           = "${aws_db_instance.main.engine} ${aws_db_instance.main.engine_version}"
+    instance_class   = aws_db_instance.main.instance_class
+    storage_gb       = aws_db_instance.main.allocated_storage
+    multi_az         = aws_db_instance.main.multi_az
+    replica_count    = length(aws_db_instance.replica)
+    endpoint         = aws_db_instance.main.endpoint
+    database         = aws_db_instance.main.db_name
+    encrypted        = aws_db_instance.main.storage_encrypted
+  }
+}

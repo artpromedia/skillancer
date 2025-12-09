@@ -188,3 +188,52 @@ variable "secrets_kms_key_id" {
   type        = string
   default     = null
 }
+
+# CloudWatch Alarms
+variable "enable_cloudwatch_alarms" {
+  description = "Enable CloudWatch alarms for Redis metrics"
+  type        = bool
+  default     = true
+}
+
+variable "alarm_sns_topic_arn" {
+  description = "SNS topic ARN for CloudWatch alarm notifications"
+  type        = string
+  default     = null
+}
+
+variable "cpu_utilization_threshold" {
+  description = "CPU utilization threshold for alarm (%)"
+  type        = number
+  default     = 80
+}
+
+variable "memory_usage_threshold" {
+  description = "Memory usage threshold for alarm (%)"
+  type        = number
+  default     = 80
+}
+
+variable "connections_threshold" {
+  description = "Current connections threshold for alarm"
+  type        = number
+  default     = 5000
+}
+
+variable "evictions_threshold" {
+  description = "Evictions threshold for alarm (per 5 minutes)"
+  type        = number
+  default     = 1000
+}
+
+variable "cache_hit_rate_threshold" {
+  description = "Cache hit rate threshold for alarm (%)"
+  type        = number
+  default     = 80
+}
+
+variable "replication_lag_threshold" {
+  description = "Replication lag threshold for alarm (seconds)"
+  type        = number
+  default     = 1
+}

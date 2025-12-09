@@ -296,3 +296,183 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
     dbInstanceIdentifier = aws_db_instance.main.id
   })
 }
+
+# -----------------------------------------------------------------------------
+# CloudWatch Alarms
+# -----------------------------------------------------------------------------
+
+resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-rds-cpu"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/RDS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.cpu_utilization_threshold
+  alarm_description   = "RDS CPU utilization is above ${var.cpu_utilization_threshold}%"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.main.identifier
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+  ok_actions    = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-rds-cpu-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "free_storage_space" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-rds-storage"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "FreeStorageSpace"
+  namespace           = "AWS/RDS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.allocated_storage * 1024 * 1024 * 1024 * 0.2 # 20% of allocated storage
+  alarm_description   = "RDS free storage space is below 20%"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.main.identifier
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-rds-storage-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "database_connections" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-rds-connections"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "DatabaseConnections"
+  namespace           = "AWS/RDS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.max_connections_threshold
+  alarm_description   = "RDS connections are above ${var.max_connections_threshold}"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.main.identifier
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-rds-connections-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "freeable_memory" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-rds-memory"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "FreeableMemory"
+  namespace           = "AWS/RDS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.freeable_memory_threshold
+  alarm_description   = "RDS freeable memory is below ${var.freeable_memory_threshold / 1024 / 1024}MB"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.main.identifier
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-rds-memory-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "read_latency" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-rds-read-latency"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "ReadLatency"
+  namespace           = "AWS/RDS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.read_latency_threshold
+  alarm_description   = "RDS read latency is above ${var.read_latency_threshold * 1000}ms"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.main.identifier
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-rds-read-latency-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "write_latency" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-rds-write-latency"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "WriteLatency"
+  namespace           = "AWS/RDS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.write_latency_threshold
+  alarm_description   = "RDS write latency is above ${var.write_latency_threshold * 1000}ms"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.main.identifier
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-rds-write-latency-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "replica_lag" {
+  count = var.enable_cloudwatch_alarms && var.create_read_replica ? var.read_replica_count : 0
+
+  alarm_name          = "${var.project}-${var.environment}-rds-replica-${count.index + 1}-lag"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "ReplicaLag"
+  namespace           = "AWS/RDS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.replica_lag_threshold
+  alarm_description   = "RDS replica lag is above ${var.replica_lag_threshold} seconds"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DBInstanceIdentifier = aws_db_instance.replica[count.index].identifier
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-rds-replica-${count.index + 1}-lag-alarm"
+  }
+}

@@ -199,3 +199,158 @@ resource "aws_secretsmanager_secret_version" "redis_auth" {
     port             = var.port
   })
 }
+
+# -----------------------------------------------------------------------------
+# CloudWatch Alarms
+# -----------------------------------------------------------------------------
+
+resource "aws_cloudwatch_metric_alarm" "cpu_utilization" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-redis-cpu"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ElastiCache"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.cpu_utilization_threshold
+  alarm_description   = "Redis CPU utilization is above ${var.cpu_utilization_threshold}%"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    CacheClusterId = "${var.project}-${var.environment}-001"
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+  ok_actions    = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-redis-cpu-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "memory_usage" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-redis-memory"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "DatabaseMemoryUsagePercentage"
+  namespace           = "AWS/ElastiCache"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.memory_usage_threshold
+  alarm_description   = "Redis memory usage is above ${var.memory_usage_threshold}%"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    CacheClusterId = "${var.project}-${var.environment}-001"
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-redis-memory-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "current_connections" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-redis-connections"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "CurrConnections"
+  namespace           = "AWS/ElastiCache"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.connections_threshold
+  alarm_description   = "Redis connections are above ${var.connections_threshold}"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    CacheClusterId = "${var.project}-${var.environment}-001"
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-redis-connections-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "evictions" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-redis-evictions"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "Evictions"
+  namespace           = "AWS/ElastiCache"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = var.evictions_threshold
+  alarm_description   = "Redis evictions are above ${var.evictions_threshold} in 5 minutes"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    CacheClusterId = "${var.project}-${var.environment}-001"
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-redis-evictions-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "cache_hit_rate" {
+  count = var.enable_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-redis-hit-rate"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "CacheHitRate"
+  namespace           = "AWS/ElastiCache"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.cache_hit_rate_threshold
+  alarm_description   = "Redis cache hit rate is below ${var.cache_hit_rate_threshold}%"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    CacheClusterId = "${var.project}-${var.environment}-001"
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-redis-hit-rate-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "replication_lag" {
+  count = var.enable_cloudwatch_alarms && var.num_cache_clusters > 1 ? 1 : 0
+
+  alarm_name          = "${var.project}-${var.environment}-redis-replication-lag"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "ReplicationLag"
+  namespace           = "AWS/ElastiCache"
+  period              = 300
+  statistic           = "Average"
+  threshold           = var.replication_lag_threshold
+  alarm_description   = "Redis replication lag is above ${var.replication_lag_threshold} seconds"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    CacheClusterId = "${var.project}-${var.environment}-002"
+  }
+
+  alarm_actions = var.alarm_sns_topic_arn != null ? [var.alarm_sns_topic_arn] : []
+
+  tags = {
+    Name = "${var.project}-${var.environment}-redis-replication-lag-alarm"
+  }
+}

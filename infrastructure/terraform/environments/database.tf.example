@@ -1,0 +1,466 @@
+# =============================================================================
+# Database Infrastructure Example Usage
+# Copy relevant sections to your environment's main.tf
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Development Environment Configuration
+# Single-node, minimal cost, fast iteration
+# Estimated Monthly Cost: ~$30-50 (RDS + ElastiCache)
+# -----------------------------------------------------------------------------
+
+module "rds_dev" {
+  source = "../modules/rds"
+
+  project     = "skillancer"
+  environment = "dev"
+
+  # Network
+  vpc_id                     = module.networking.vpc_id
+  subnet_ids                 = module.networking.database_subnet_ids
+  allowed_security_group_ids = [module.ecs_cluster.service_security_group_id]
+
+  # Instance (minimal)
+  instance_class        = "db.t3.micro"      # 2 vCPU, 1GB RAM - $0.017/hr
+  allocated_storage     = 20                  # GB
+  max_allocated_storage = 50                  # Auto-scale up to 50GB
+  engine_version        = "16.1"
+
+  # Database
+  database_name   = "skillancer"
+  master_username = "skillancer_admin"
+
+  # No High Availability (dev)
+  multi_az            = false
+  create_read_replica = false
+
+  # Backup (minimal)
+  backup_retention_period = 1                 # 1 day
+  skip_final_snapshot     = true
+
+  # Monitoring (basic)
+  performance_insights_enabled          = true
+  performance_insights_retention_period = 7   # Free tier
+  monitoring_interval                   = 60
+
+  # Security
+  deletion_protection = false
+  apply_immediately   = true                  # Fast iteration
+
+  # CloudWatch Alarms
+  enable_cloudwatch_alarms = true
+  alarm_sns_topic_arn      = module.monitoring.alerts_topic_arn
+
+  # Secrets Manager
+  store_credentials_in_secrets_manager = true
+  secrets_kms_key_id                   = module.kms.key_id
+}
+
+module "elasticache_dev" {
+  source = "../modules/elasticache"
+
+  project     = "skillancer"
+  environment = "dev"
+
+  # Network
+  vpc_id                     = module.networking.vpc_id
+  subnet_ids                 = module.networking.database_subnet_ids
+  allowed_security_group_ids = [module.ecs_cluster.service_security_group_id]
+
+  # Instance (minimal)
+  node_type          = "cache.t3.micro"       # 0.5GB RAM - $0.017/hr
+  num_cache_clusters = 1                       # Single node
+  engine_version     = "7.0"
+
+  # No High Availability (dev)
+  automatic_failover_enabled = false
+  multi_az_enabled           = false
+
+  # Backup (minimal)
+  snapshot_retention_limit = 1
+  skip_final_snapshot      = true
+
+  # Security
+  at_rest_encryption_enabled = true
+  transit_encryption_enabled = true
+
+  # CloudWatch Alarms
+  enable_cloudwatch_alarms = true
+  alarm_sns_topic_arn      = module.monitoring.alerts_topic_arn
+
+  # Secrets Manager
+  store_auth_token_in_secrets_manager = true
+  secrets_kms_key_id                  = module.kms.key_id
+}
+
+# -----------------------------------------------------------------------------
+# Staging Environment Configuration
+# Multi-AZ, production-like but smaller instances
+# Estimated Monthly Cost: ~$200-300 (RDS + ElastiCache)
+# -----------------------------------------------------------------------------
+
+module "rds_staging" {
+  source = "../modules/rds"
+
+  project     = "skillancer"
+  environment = "staging"
+
+  # Network
+  vpc_id                     = module.networking.vpc_id
+  subnet_ids                 = module.networking.database_subnet_ids
+  allowed_security_group_ids = [module.ecs_cluster.service_security_group_id]
+
+  # Instance (medium)
+  instance_class        = "db.t3.medium"      # 2 vCPU, 4GB RAM - $0.068/hr
+  allocated_storage     = 50                   # GB
+  max_allocated_storage = 200                  # Auto-scale
+  engine_version        = "16.1"
+  kms_key_id            = module.kms.key_arn
+
+  # Database
+  database_name   = "skillancer"
+  master_username = "skillancer_admin"
+
+  # High Availability
+  multi_az            = true                   # Multi-AZ for failover testing
+  create_read_replica = false                  # No replica in staging
+
+  # Backup (moderate)
+  backup_retention_period = 7                  # 7 days
+  skip_final_snapshot     = false
+
+  # Monitoring (full)
+  performance_insights_enabled          = true
+  performance_insights_retention_period = 7
+  monitoring_interval                   = 60
+
+  # Security
+  deletion_protection = true
+  apply_immediately   = true                   # Still allow fast changes
+
+  # CloudWatch Alarms
+  enable_cloudwatch_alarms  = true
+  alarm_sns_topic_arn       = module.monitoring.alerts_topic_arn
+  cpu_utilization_threshold = 75
+  max_connections_threshold = 120
+
+  # Secrets Manager
+  store_credentials_in_secrets_manager = true
+  secrets_kms_key_id                   = module.kms.key_id
+}
+
+module "elasticache_staging" {
+  source = "../modules/elasticache"
+
+  project     = "skillancer"
+  environment = "staging"
+
+  # Network
+  vpc_id                     = module.networking.vpc_id
+  subnet_ids                 = module.networking.database_subnet_ids
+  allowed_security_group_ids = [module.ecs_cluster.service_security_group_id]
+
+  # Instance (medium)
+  node_type          = "cache.t3.small"        # 1.37GB RAM - $0.034/hr
+  num_cache_clusters = 2                        # Primary + 1 replica
+  engine_version     = "7.0"
+
+  # High Availability
+  automatic_failover_enabled = true
+  multi_az_enabled           = true
+
+  # Backup
+  snapshot_retention_limit = 7
+  skip_final_snapshot      = false
+
+  # Security
+  at_rest_encryption_enabled = true
+  transit_encryption_enabled = true
+  kms_key_id                 = module.kms.key_arn
+
+  # CloudWatch Alarms
+  enable_cloudwatch_alarms = true
+  alarm_sns_topic_arn      = module.monitoring.alerts_topic_arn
+
+  # Secrets Manager
+  store_auth_token_in_secrets_manager = true
+  secrets_kms_key_id                  = module.kms.key_id
+}
+
+# -----------------------------------------------------------------------------
+# Production Environment Configuration
+# Multi-AZ, read replicas, full monitoring
+# Estimated Monthly Cost: ~$800-1200 (RDS + ElastiCache)
+# -----------------------------------------------------------------------------
+
+module "rds_prod" {
+  source = "../modules/rds"
+
+  project     = "skillancer"
+  environment = "prod"
+
+  # Network
+  vpc_id                     = module.networking.vpc_id
+  subnet_ids                 = module.networking.database_subnet_ids
+  allowed_security_group_ids = [module.ecs_cluster.service_security_group_id]
+
+  # Instance (large)
+  instance_class        = "db.r6g.large"       # 2 vCPU, 16GB RAM - $0.26/hr (Graviton)
+  allocated_storage     = 100                   # GB
+  max_allocated_storage = 500                   # Auto-scale
+  storage_type          = "gp3"
+  engine_version        = "16.1"
+  kms_key_id            = module.kms.key_arn
+
+  # Database
+  database_name   = "skillancer"
+  master_username = "skillancer_admin"
+
+  # High Availability
+  multi_az               = true                 # Multi-AZ mandatory
+  create_read_replica    = true
+  read_replica_count     = 1                    # Start with 1, scale as needed
+  replica_instance_class = "db.r6g.large"
+
+  # Backup (extensive)
+  backup_retention_period = 30                  # 30 days
+  backup_window           = "03:00-04:00"       # 3-4 AM UTC
+  maintenance_window      = "Mon:04:00-Mon:05:00"
+  skip_final_snapshot     = false
+
+  # Monitoring (comprehensive)
+  performance_insights_enabled          = true
+  performance_insights_retention_period = 731   # 2 years (paid)
+  monitoring_interval                   = 60
+  enabled_cloudwatch_logs_exports       = ["postgresql", "upgrade"]
+
+  # Performance tuning parameters
+  parameters = [
+    {
+      name  = "shared_buffers"
+      value = "{DBInstanceClassMemory/4}"
+    },
+    {
+      name  = "effective_cache_size"
+      value = "{DBInstanceClassMemory*3/4}"
+    },
+    {
+      name  = "work_mem"
+      value = "65536"                           # 64MB
+    },
+    {
+      name  = "maintenance_work_mem"
+      value = "524288"                          # 512MB
+    },
+    {
+      name  = "checkpoint_completion_target"
+      value = "0.9"
+    },
+    {
+      name  = "wal_buffers"
+      value = "16384"                           # 16MB
+    },
+    {
+      name  = "random_page_cost"
+      value = "1.1"                             # SSD optimized
+    }
+  ]
+
+  # Security
+  deletion_protection = true
+  apply_immediately   = false                   # Apply during maintenance window
+
+  # CloudWatch Alarms (stricter thresholds)
+  enable_cloudwatch_alarms   = true
+  alarm_sns_topic_arn        = module.monitoring.alerts_topic_arn
+  cpu_utilization_threshold  = 70
+  max_connections_threshold  = 150
+  freeable_memory_threshold  = 536870912        # 512MB
+  read_latency_threshold     = 0.01             # 10ms
+  write_latency_threshold    = 0.02             # 20ms
+  replica_lag_threshold      = 30               # 30 seconds
+
+  # Secrets Manager
+  store_credentials_in_secrets_manager = true
+  secrets_kms_key_id                   = module.kms.key_id
+}
+
+module "elasticache_prod" {
+  source = "../modules/elasticache"
+
+  project     = "skillancer"
+  environment = "prod"
+
+  # Network
+  vpc_id                     = module.networking.vpc_id
+  subnet_ids                 = module.networking.database_subnet_ids
+  allowed_security_group_ids = [module.ecs_cluster.service_security_group_id]
+
+  # Instance (large)
+  node_type          = "cache.r6g.large"        # 13.07GB RAM - $0.178/hr (Graviton)
+  num_cache_clusters = 3                         # Primary + 2 replicas
+  engine_version     = "7.0"
+
+  # High Availability
+  automatic_failover_enabled = true
+  multi_az_enabled           = true
+
+  # Backup
+  snapshot_retention_limit = 30
+  snapshot_window          = "04:00-05:00"      # After RDS backup window
+  skip_final_snapshot      = false
+
+  # Security
+  at_rest_encryption_enabled = true
+  transit_encryption_enabled = true
+  kms_key_id                 = module.kms.key_arn
+
+  # Performance tuning
+  maxmemory_policy = "volatile-lru"
+  parameters = [
+    {
+      name  = "timeout"
+      value = "300"
+    },
+    {
+      name  = "tcp-keepalive"
+      value = "300"
+    },
+    {
+      name  = "notify-keyspace-events"
+      value = "AKE"                             # Keyspace notifications
+    }
+  ]
+
+  # CloudWatch Alarms (stricter thresholds)
+  enable_cloudwatch_alarms  = true
+  alarm_sns_topic_arn       = module.monitoring.alerts_topic_arn
+  cpu_utilization_threshold = 70
+  memory_usage_threshold    = 75
+  connections_threshold     = 10000
+  evictions_threshold       = 500
+  cache_hit_rate_threshold  = 90
+  replication_lag_threshold = 0.5
+
+  # Secrets Manager
+  store_auth_token_in_secrets_manager = true
+  secrets_kms_key_id                  = module.kms.key_id
+
+  # Notifications
+  notification_topic_arn = module.monitoring.alerts_topic_arn
+}
+
+# -----------------------------------------------------------------------------
+# Production with Cluster Mode (High-Scale Option)
+# For when you need horizontal scaling across shards
+# Estimated Monthly Cost: ~$1500-2500 (with 3 shards)
+# -----------------------------------------------------------------------------
+
+module "elasticache_prod_clustered" {
+  source = "../modules/elasticache"
+
+  project     = "skillancer"
+  environment = "prod"
+
+  # Network
+  vpc_id                     = module.networking.vpc_id
+  subnet_ids                 = module.networking.database_subnet_ids
+  allowed_security_group_ids = [module.ecs_cluster.service_security_group_id]
+
+  # Cluster Mode Configuration
+  cluster_mode_enabled    = true
+  num_node_groups         = 3                   # 3 shards
+  replicas_per_node_group = 2                   # 2 replicas per shard (9 nodes total)
+  node_type               = "cache.r6g.large"
+  engine_version          = "7.0"
+
+  # High Availability (mandatory for cluster mode)
+  automatic_failover_enabled = true
+  multi_az_enabled           = true
+
+  # Backup
+  snapshot_retention_limit = 30
+  skip_final_snapshot      = false
+
+  # Security
+  at_rest_encryption_enabled = true
+  transit_encryption_enabled = true
+  kms_key_id                 = module.kms.key_arn
+
+  # CloudWatch Alarms
+  enable_cloudwatch_alarms = true
+  alarm_sns_topic_arn      = module.monitoring.alerts_topic_arn
+
+  # Secrets Manager
+  store_auth_token_in_secrets_manager = true
+  secrets_kms_key_id                  = module.kms.key_id
+}
+
+# -----------------------------------------------------------------------------
+# Outputs
+# -----------------------------------------------------------------------------
+
+output "rds_endpoint" {
+  description = "RDS endpoint"
+  value       = module.rds.cluster_endpoint
+}
+
+output "rds_reader_endpoint" {
+  description = "RDS reader endpoint"
+  value       = module.rds.reader_endpoint
+}
+
+output "rds_credentials_secret" {
+  description = "RDS credentials secret ARN"
+  value       = module.rds.credentials_secret_arn
+}
+
+output "redis_primary_endpoint" {
+  description = "Redis primary endpoint"
+  value       = module.elasticache.primary_endpoint
+}
+
+output "redis_reader_endpoint" {
+  description = "Redis reader endpoint"
+  value       = module.elasticache.reader_endpoint
+}
+
+output "redis_auth_secret" {
+  description = "Redis auth token secret ARN"
+  value       = module.elasticache.auth_token_secret_arn
+}
+
+# -----------------------------------------------------------------------------
+# Cost Estimation Summary
+# -----------------------------------------------------------------------------
+#
+# Development Environment (~$30-50/month):
+#   - RDS db.t3.micro: $12/month
+#   - ElastiCache cache.t3.micro: $12/month
+#   - Storage (20GB): $3/month
+#   - Secrets Manager: $1/month
+#   - CloudWatch: ~$5/month
+#
+# Staging Environment (~$200-300/month):
+#   - RDS db.t3.medium Multi-AZ: $100/month
+#   - ElastiCache cache.t3.small (2 nodes): $50/month
+#   - Storage (50GB): $8/month
+#   - Performance Insights: $0 (7-day retention)
+#   - Secrets Manager: $1/month
+#   - CloudWatch + Alarms: ~$20/month
+#
+# Production Environment (~$800-1200/month):
+#   - RDS db.r6g.large Multi-AZ: $380/month
+#   - RDS Read Replica db.r6g.large: $190/month
+#   - ElastiCache cache.r6g.large (3 nodes): $390/month
+#   - Storage (100GB + growth): $20/month
+#   - Performance Insights (2yr retention): $10/month
+#   - Secrets Manager: $2/month
+#   - CloudWatch + Alarms: ~$50/month
+#   - Snapshots/Backups: ~$20/month
+#
+# Production Clustered (~$1500-2500/month):
+#   - ElastiCache cache.r6g.large (9 nodes): $1,170/month
+#   - Plus RDS costs from above
+#
+# -----------------------------------------------------------------------------

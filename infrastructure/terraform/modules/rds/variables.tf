@@ -227,3 +227,52 @@ variable "secrets_kms_key_id" {
   type        = string
   default     = null
 }
+
+# CloudWatch Alarms
+variable "enable_cloudwatch_alarms" {
+  description = "Enable CloudWatch alarms for RDS metrics"
+  type        = bool
+  default     = true
+}
+
+variable "alarm_sns_topic_arn" {
+  description = "SNS topic ARN for CloudWatch alarm notifications"
+  type        = string
+  default     = null
+}
+
+variable "cpu_utilization_threshold" {
+  description = "CPU utilization threshold for alarm (%)"
+  type        = number
+  default     = 80
+}
+
+variable "max_connections_threshold" {
+  description = "Maximum connections threshold for alarm"
+  type        = number
+  default     = 160
+}
+
+variable "freeable_memory_threshold" {
+  description = "Freeable memory threshold for alarm (bytes)"
+  type        = number
+  default     = 268435456 # 256MB
+}
+
+variable "read_latency_threshold" {
+  description = "Read latency threshold for alarm (seconds)"
+  type        = number
+  default     = 0.02 # 20ms
+}
+
+variable "write_latency_threshold" {
+  description = "Write latency threshold for alarm (seconds)"
+  type        = number
+  default     = 0.05 # 50ms
+}
+
+variable "replica_lag_threshold" {
+  description = "Replica lag threshold for alarm (seconds)"
+  type        = number
+  default     = 60
+}
