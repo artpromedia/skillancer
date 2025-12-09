@@ -125,3 +125,61 @@ variable "alb_latency_threshold" {
   type        = number
   default     = 1
 }
+
+# =============================================================================
+# Logging Module Variables
+# =============================================================================
+
+variable "project_name" {
+  description = "Project name for resource naming"
+  type        = string
+  default     = "skillancer"
+}
+
+variable "services" {
+  description = "List of service names to create log groups for"
+  type        = list(string)
+  default     = []
+}
+
+variable "audit_log_retention_days" {
+  description = "Retention in days for audit and security logs"
+  type        = number
+  default     = 365
+}
+
+variable "metric_namespace" {
+  description = "CloudWatch metric namespace for custom metrics"
+  type        = string
+  default     = "Skillancer/Application"
+}
+
+variable "alarm_sns_topic_arns" {
+  description = "SNS topic ARNs for alarm notifications"
+  type        = list(string)
+  default     = []
+}
+
+variable "critical_alarm_sns_topic_arns" {
+  description = "SNS topic ARNs for critical alarm notifications"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_log_archive" {
+  description = "Enable S3 archival of CloudWatch logs"
+  type        = bool
+  default     = false
+}
+
+variable "log_archive_kms_key_id" {
+  description = "KMS key ID for S3 log archive encryption"
+  type        = string
+  default     = null
+}
+
+variable "tags" {
+  description = "Additional tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}
