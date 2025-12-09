@@ -1,0 +1,87 @@
+{
+  "name": "@skillancer/metrics",
+  "version": "0.0.0",
+  "description": "Metrics collection and CloudWatch integration for Skillancer",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./fastify-plugin": {
+      "import": {
+        "types": "./dist/fastify-plugin.d.ts",
+        "default": "./dist/fastify-plugin.js"
+      },
+      "require": {
+        "types": "./dist/fastify-plugin.d.cts",
+        "default": "./dist/fastify-plugin.cjs"
+      }
+    },
+    "./express-middleware": {
+      "import": {
+        "types": "./dist/express-middleware.d.ts",
+        "default": "./dist/express-middleware.js"
+      },
+      "require": {
+        "types": "./dist/express-middleware.d.cts",
+        "default": "./dist/express-middleware.cjs"
+      }
+    },
+    "./business-metrics": {
+      "import": {
+        "types": "./dist/business-metrics.d.ts",
+        "default": "./dist/business-metrics.js"
+      },
+      "require": {
+        "types": "./dist/business-metrics.d.cts",
+        "default": "./dist/business-metrics.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.600.0"
+  },
+  "devDependencies": {
+    "@skillancer/config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "eslint": "^8.57.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0 || ^5.0.0",
+    "fastify": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    }
+  }
+}

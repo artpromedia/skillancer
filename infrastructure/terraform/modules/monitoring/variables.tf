@@ -126,6 +126,12 @@ variable "alb_latency_threshold" {
   default     = 1
 }
 
+variable "alb_target_group_arn_suffix" {
+  description = "ALB target group ARN suffix for metrics"
+  type        = string
+  default     = null
+}
+
 # =============================================================================
 # Logging Module Variables
 # =============================================================================

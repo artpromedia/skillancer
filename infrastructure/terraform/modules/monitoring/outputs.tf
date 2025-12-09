@@ -90,3 +90,51 @@ output "log_archive_bucket" {
   description = "S3 bucket name for log archive (if enabled)"
   value       = var.enable_log_archive ? aws_s3_bucket.log_archive[0].id : null
 }
+
+# =============================================================================
+# Dashboard Outputs
+# =============================================================================
+
+output "platform_overview_dashboard_name" {
+  description = "Name of the platform overview dashboard"
+  value       = aws_cloudwatch_dashboard.platform_overview.dashboard_name
+}
+
+output "business_metrics_dashboard_name" {
+  description = "Name of the business metrics dashboard"
+  value       = aws_cloudwatch_dashboard.business_metrics.dashboard_name
+}
+
+output "slo_dashboard_name" {
+  description = "Name of the SLO dashboard"
+  value       = aws_cloudwatch_dashboard.slo_dashboard.dashboard_name
+}
+
+# =============================================================================
+# Alarm Outputs
+# =============================================================================
+
+output "alarms_sns_topic_arn" {
+  description = "ARN of the alarms SNS topic"
+  value       = aws_sns_topic.alarms.arn
+}
+
+output "critical_alarms_sns_topic_arn" {
+  description = "ARN of the critical alarms SNS topic"
+  value       = aws_sns_topic.critical_alarms.arn
+}
+
+output "high_error_rate_alarm_arn" {
+  description = "ARN of the high error rate alarm"
+  value       = aws_cloudwatch_metric_alarm.high_error_rate.arn
+}
+
+output "high_latency_alarm_arn" {
+  description = "ARN of the high latency alarm"
+  value       = aws_cloudwatch_metric_alarm.high_latency.arn
+}
+
+output "low_availability_alarm_arn" {
+  description = "ARN of the low availability alarm"
+  value       = aws_cloudwatch_metric_alarm.low_availability.arn
+}
