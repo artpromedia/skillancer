@@ -1,0 +1,537 @@
+# =============================================================================
+# Terraform CI/CD Workflow
+# =============================================================================
+# This workflow handles Terraform plan/apply for infrastructure changes
+# - Plans on PRs targeting main
+# - Applies on merge to main (after approval)
+# - Supports dev, staging, and prod environments
+# =============================================================================
+
+name: Terraform
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'infrastructure/terraform/**'
+      - '.github/workflows/terraform.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'infrastructure/terraform/**'
+      - '.github/workflows/terraform.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      action:
+        description: 'Terraform action'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+env:
+  TF_VERSION: '1.5.7'
+  TF_LOG: ''
+  AWS_REGION: 'us-east-1'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Detect changed environments
+  # ---------------------------------------------------------------------------
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      dev: ${{ steps.changes.outputs.dev }}
+      staging: ${{ steps.changes.outputs.staging }}
+      prod: ${{ steps.changes.outputs.prod }}
+      modules: ${{ steps.changes.outputs.modules }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            dev:
+              - 'infrastructure/terraform/environments/dev/**'
+            staging:
+              - 'infrastructure/terraform/environments/staging/**'
+            prod:
+              - 'infrastructure/terraform/environments/prod/**'
+            modules:
+              - 'infrastructure/terraform/modules/**'
+
+  # ---------------------------------------------------------------------------
+  # Terraform Format Check
+  # ---------------------------------------------------------------------------
+  format:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive infrastructure/terraform
+
+  # ---------------------------------------------------------------------------
+  # Dev Environment
+  # ---------------------------------------------------------------------------
+  plan-dev:
+    name: Plan (dev)
+    needs: [detect-changes, format]
+    if: |
+      github.event_name == 'pull_request' && 
+      (needs.detect-changes.outputs.dev == 'true' || needs.detect-changes.outputs.modules == 'true') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    runs-on: ubuntu-latest
+    environment: dev
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/environments/dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan -input=false -no-color -out=tfplan 2>&1 | tee plan.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-dev
+          path: infrastructure/terraform/environments/dev/tfplan
+
+      - name: Post Plan to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('infrastructure/terraform/environments/dev/plan.txt', 'utf8');
+            const maxLength = 60000;
+            const truncatedPlan = plan.length > maxLength 
+              ? plan.substring(0, maxLength) + '\n... (truncated)'
+              : plan;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### Terraform Plan - Dev 📋
+
+            <details>
+            <summary>Show Plan</summary>
+
+            \`\`\`hcl
+            ${truncatedPlan}
+            \`\`\`
+
+            </details>
+
+            *Plan: \`${{ steps.plan.outcome }}\`*`
+            });
+
+      - name: Check Plan Status
+        if: steps.plan.outputs.exitcode != '0'
+        run: exit 1
+
+  apply-dev:
+    name: Apply (dev)
+    needs: [detect-changes, plan-dev]
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+       (needs.detect-changes.outputs.dev == 'true' || needs.detect-changes.outputs.modules == 'true')) ||
+      (github.event_name == 'workflow_dispatch' && 
+       github.event.inputs.environment == 'dev' && 
+       github.event.inputs.action == 'apply')
+    runs-on: ubuntu-latest
+    environment: dev
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/environments/dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        run: terraform apply -input=false -auto-approve
+
+  # ---------------------------------------------------------------------------
+  # Staging Environment
+  # ---------------------------------------------------------------------------
+  plan-staging:
+    name: Plan (staging)
+    needs: [detect-changes, format]
+    if: |
+      github.event_name == 'pull_request' && 
+      (needs.detect-changes.outputs.staging == 'true' || needs.detect-changes.outputs.modules == 'true') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    runs-on: ubuntu-latest
+    environment: staging
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/environments/staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan -input=false -no-color -out=tfplan 2>&1 | tee plan.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-staging
+          path: infrastructure/terraform/environments/staging/tfplan
+
+      - name: Post Plan to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('infrastructure/terraform/environments/staging/plan.txt', 'utf8');
+            const maxLength = 60000;
+            const truncatedPlan = plan.length > maxLength 
+              ? plan.substring(0, maxLength) + '\n... (truncated)'
+              : plan;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### Terraform Plan - Staging 📋
+
+            <details>
+            <summary>Show Plan</summary>
+
+            \`\`\`hcl
+            ${truncatedPlan}
+            \`\`\`
+
+            </details>
+
+            *Plan: \`${{ steps.plan.outcome }}\`*`
+            });
+
+      - name: Check Plan Status
+        if: steps.plan.outputs.exitcode != '0'
+        run: exit 1
+
+  apply-staging:
+    name: Apply (staging)
+    needs: [detect-changes, plan-staging, apply-dev]
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+       (needs.detect-changes.outputs.staging == 'true' || needs.detect-changes.outputs.modules == 'true')) ||
+      (github.event_name == 'workflow_dispatch' && 
+       github.event.inputs.environment == 'staging' && 
+       github.event.inputs.action == 'apply')
+    runs-on: ubuntu-latest
+    environment: staging
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/environments/staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        run: terraform apply -input=false -auto-approve
+
+  # ---------------------------------------------------------------------------
+  # Production Environment
+  # ---------------------------------------------------------------------------
+  plan-prod:
+    name: Plan (prod)
+    needs: [detect-changes, format]
+    if: |
+      github.event_name == 'pull_request' && 
+      (needs.detect-changes.outputs.prod == 'true' || needs.detect-changes.outputs.modules == 'true') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod')
+    runs-on: ubuntu-latest
+    environment: prod-plan
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/environments/prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan -input=false -no-color -out=tfplan 2>&1 | tee plan.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Upload Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-prod
+          path: infrastructure/terraform/environments/prod/tfplan
+
+      - name: Post Plan to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('infrastructure/terraform/environments/prod/plan.txt', 'utf8');
+            const maxLength = 60000;
+            const truncatedPlan = plan.length > maxLength 
+              ? plan.substring(0, maxLength) + '\n... (truncated)'
+              : plan;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### Terraform Plan - Production 📋
+
+            ⚠️ **Production changes require manual approval**
+
+            <details>
+            <summary>Show Plan</summary>
+
+            \`\`\`hcl
+            ${truncatedPlan}
+            \`\`\`
+
+            </details>
+
+            *Plan: \`${{ steps.plan.outcome }}\`*`
+            });
+
+      - name: Check Plan Status
+        if: steps.plan.outputs.exitcode != '0'
+        run: exit 1
+
+  apply-prod:
+    name: Apply (prod)
+    needs: [detect-changes, plan-prod, apply-staging]
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+       (needs.detect-changes.outputs.prod == 'true' || needs.detect-changes.outputs.modules == 'true')) ||
+      (github.event_name == 'workflow_dispatch' && 
+       github.event.inputs.environment == 'prod' && 
+       github.event.inputs.action == 'apply')
+    runs-on: ubuntu-latest
+    environment: prod
+    defaults:
+      run:
+        working-directory: infrastructure/terraform/environments/prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        run: terraform apply -input=false -auto-approve
+
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Production Terraform Apply: ${{ job.status }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Production Terraform Apply*\n*Status:* ${{ job.status }}\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ---------------------------------------------------------------------------
+  # Security Scan
+  # ---------------------------------------------------------------------------
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@v1
+        with:
+          working_directory: infrastructure/terraform
+          soft_fail: true
+
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infrastructure/terraform
+          framework: terraform
+          soft_fail: true
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+
+  # ---------------------------------------------------------------------------
+  # Cost Estimation
+  # ---------------------------------------------------------------------------
+  cost-estimate:
+    name: Cost Estimate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Generate cost estimate
+        run: |
+          infracost breakdown --path=infrastructure/terraform/environments \
+            --format=json \
+            --out-file=/tmp/infracost.json
+        continue-on-error: true
+
+      - name: Post cost estimate
+        uses: infracost/actions/comment@v1
+        with:
+          path: /tmp/infracost.json
+          behavior: update
+        continue-on-error: true
