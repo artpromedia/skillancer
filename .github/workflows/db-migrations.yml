@@ -24,7 +24,7 @@ jobs:
     outputs:
       has_destructive: ${{ steps.check-destructive.outputs.has_destructive }}
       migration_diff: ${{ steps.diff.outputs.diff }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
         run: |
           cd packages/database
           npx prisma validate
-        
+
       - name: Check for Breaking Changes
         id: check-destructive
         run: |
@@ -82,39 +82,39 @@ jobs:
           script: |
             const hasDest = '${{ steps.check-destructive.outputs.has_destructive }}' === 'true';
             const diff = `${{ steps.diff.outputs.diff }}`;
-            
+
             let body = '## 🗃️ Database Migration Review\n\n';
-            
+
             if (hasDest) {
               body += '⚠️ **WARNING: Destructive changes detected!**\n\n';
               body += 'This migration contains potentially destructive operations (DROP, DELETE, TRUNCATE).\n';
               body += 'Manual approval will be required for production deployment.\n\n';
             }
-            
+
             if (diff) {
               body += '### Changed Migration Files\n';
               body += '```\n' + diff + '\n```\n\n';
             } else {
               body += 'No migration file changes detected.\n\n';
             }
-            
+
             body += '### Checklist\n';
             body += '- [ ] Migration has been tested locally\n';
             body += '- [ ] Rollback procedure documented (if needed)\n';
             body += '- [ ] Data migration script included (if needed)\n';
             body += '- [ ] Team notified of schema changes\n';
-            
+
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            
+
             const botComment = comments.find(c => 
               c.user.type === 'Bot' && c.body.includes('Database Migration Review')
             );
-            
+
             if (botComment) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
@@ -139,7 +139,7 @@ jobs:
     needs: validate
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:16
@@ -198,13 +198,13 @@ jobs:
         with:
           script: |
             const body = `## ✅ Preview Database Migration Successful
-            
+
             Migrations have been successfully applied to the preview database.
-            
+
             **Database:** PostgreSQL 16 (CI Service Container)
             **Status:** All migrations applied successfully
             `;
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -221,7 +221,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     environment: staging
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -250,10 +250,28 @@ jobs:
           echo "📊 Pre-migration status:"
           pnpm db:migrate:status || true
 
+      - name: Acquire Migration Lock
+        id: acquire-lock
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          LOCK_TIMEOUT_MS: '60000'
+        run: |
+          echo "🔒 Acquiring migration lock..."
+          pnpm db:lock:acquire
+          echo "lock_acquired=true" >> $GITHUB_OUTPUT
+
       - name: Apply Migrations to Staging
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: pnpm db:migrate:deploy
+
+      - name: Release Migration Lock
+        if: always() && steps.acquire-lock.outputs.lock_acquired == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "🔓 Releasing migration lock..."
+          pnpm db:lock:release || true
 
       - name: Verify Migration Success
         env:
@@ -312,7 +330,7 @@ jobs:
     needs: [validate, migrate-staging]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    environment: 
+    environment:
       name: production
       # Require manual approval if destructive changes detected
       # Environment protection rules should be configured in GitHub
@@ -357,10 +375,28 @@ jobs:
           echo "📸 Backup Reference: $(date -u +%Y%m%d_%H%M%S)_pre_migration"
           echo "Ensure RDS automated backups are enabled and recent snapshot exists."
 
+      - name: Acquire Migration Lock
+        id: acquire-lock
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          LOCK_TIMEOUT_MS: '120000'
+        run: |
+          echo "🔒 Acquiring production migration lock..."
+          pnpm db:lock:acquire
+          echo "lock_acquired=true" >> $GITHUB_OUTPUT
+
       - name: Apply Migrations to Production
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: pnpm db:migrate:deploy
+
+      - name: Release Migration Lock
+        if: always() && steps.acquire-lock.outputs.lock_acquired == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "🔓 Releasing production migration lock..."
+          pnpm db:lock:release || true
 
       - name: Verify Migration Success
         env:
@@ -389,7 +425,6 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         continue-on-error: true
-
       - name: Notify Slack - Production Failure
         if: failure()
         uses: slackapi/slack-github-action@v1.25.0

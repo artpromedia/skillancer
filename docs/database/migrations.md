@@ -27,7 +27,17 @@ pnpm db:generate         # Regenerate Prisma Client
 pnpm db:seed             # Seed database with test data
 pnpm db:pull             # Pull schema from existing database
 pnpm db:check-destructive # Check for destructive changes
+
+# Migration Locking (CI/CD)
+pnpm db:lock:acquire     # Acquire migration lock (prevents concurrent migrations)
+pnpm db:lock:release     # Release migration lock
+
+# Rollback
+pnpm db:migrate:rollback --dry-run          # Preview what would be rolled back
+pnpm db:migrate:rollback --steps 1 --force  # Roll back last migration
 ```
+
+> 📚 **See Also:** [Migration Runbook](./migration-runbook.md) for detailed operational procedures.
 
 ## Migration Workflow
 
@@ -38,6 +48,7 @@ pnpm db:check-destructive # Check for destructive changes
 1. **Modify the schema** in `packages/database/prisma/schema.prisma`
 
 2. **Generate migration**:
+
    ```bash
    pnpm db:migrate:dev --name add_user_verification_fields
    ```
@@ -51,6 +62,7 @@ pnpm db:check-destructive # Check for destructive changes
 Format: `YYYYMMDDHHMMSS_descriptive_name`
 
 Examples:
+
 - `20251208120000_add_user_verification_fields`
 - `20251208130000_create_audit_logs_table`
 - `20251208140000_add_index_jobs_status`
@@ -58,6 +70,7 @@ Examples:
 - `20251208160000_drop_legacy_sessions_table`
 
 Good practices:
+
 - Use **snake_case** for migration names
 - Start with a **verb** (add, create, remove, rename, update)
 - Be **descriptive** but concise
@@ -73,6 +86,7 @@ When submitting a PR with database changes:
 4. **Include data migration script** if needed
 
 The CI pipeline will:
+
 - ✅ Validate the Prisma schema
 - ✅ Check for destructive changes
 - ✅ Run migrations against a preview database
@@ -87,11 +101,13 @@ PR Created → Validate → Preview DB → Review → Merge
 ```
 
 #### Staging Deployment
+
 - Automatically triggered on merge to `main`/`master`
 - Migrations applied to staging database
 - Slack notification sent on success/failure
 
 #### Production Deployment
+
 - Requires staging migration success
 - Manual approval required for destructive changes
 - Slack notification sent on success/failure
@@ -102,11 +118,11 @@ PR Created → Validate → Preview DB → Review → Merge
 
 Configure these in GitHub repository settings:
 
-| Secret | Environment | Description |
-|--------|-------------|-------------|
-| `STAGING_DATABASE_URL` | staging | PostgreSQL connection string for staging |
-| `PRODUCTION_DATABASE_URL` | production | PostgreSQL connection string for production |
-| `SLACK_WEBHOOK_URL` | all | Slack webhook for notifications |
+| Secret                    | Environment | Description                                 |
+| ------------------------- | ----------- | ------------------------------------------- |
+| `STAGING_DATABASE_URL`    | staging     | PostgreSQL connection string for staging    |
+| `PRODUCTION_DATABASE_URL` | production  | PostgreSQL connection string for production |
+| `SLACK_WEBHOOK_URL`       | all         | Slack webhook for notifications             |
 
 ### Database URL Format
 
@@ -115,6 +131,7 @@ postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public&connection_limit=5
 ```
 
 Recommended connection parameters:
+
 - `connection_limit=5` - Prevent connection exhaustion
 - `pool_timeout=10` - Connection pool timeout
 - `connect_timeout=10` - Connection timeout
@@ -169,14 +186,15 @@ pnpm db:migrate:dev --name your_migration_name
 
 The following operations are flagged as destructive:
 
-| Severity | Operations |
-|----------|------------|
-| 🔴 High | `DROP TABLE`, `DROP COLUMN`, `DELETE FROM`, `TRUNCATE` |
-| 🟡 Medium | `DROP INDEX`, `DROP CONSTRAINT`, `ALTER COLUMN TYPE` |
+| Severity  | Operations                                             |
+| --------- | ------------------------------------------------------ |
+| 🔴 High   | `DROP TABLE`, `DROP COLUMN`, `DELETE FROM`, `TRUNCATE` |
+| 🟡 Medium | `DROP INDEX`, `DROP CONSTRAINT`, `ALTER COLUMN TYPE`   |
 
 ### Handling Destructive Migrations
 
 1. **Run the checker**:
+
    ```bash
    pnpm db:check-destructive
    ```
@@ -238,8 +256,8 @@ Ensure no active connections are using the table:
 SELECT * FROM pg_stat_activity WHERE state = 'active';
 
 -- Terminate connections (be careful!)
-SELECT pg_terminate_backend(pid) 
-FROM pg_stat_activity 
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
 WHERE datname = 'your_database' AND pid <> pg_backend_pid();
 ```
 

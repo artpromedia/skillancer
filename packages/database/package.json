@@ -40,6 +40,10 @@
     "db:seed": "tsx src/seed.ts",
     "db:studio": "prisma studio",
     "db:check-destructive": "tsx scripts/check-destructive-migrations.ts",
+    "db:migrate:rollback": "tsx scripts/rollback-migration.ts",
+    "db:lock:acquire": "tsx scripts/acquire-migration-lock.ts",
+    "db:lock:release": "tsx scripts/release-migration-lock.ts",
+    "db:lock:status": "tsx -e \"const { PrismaClient } = require('@prisma/client'); const { getMigrationLockStatus } = require('./src/migration-lock'); const p = new PrismaClient(); getMigrationLockStatus(p).then(s => { console.log(s); p.\\$disconnect(); });\"",
     "postinstall": "prisma generate",
     "clean": "rimraf dist node_modules/.prisma"
   },
