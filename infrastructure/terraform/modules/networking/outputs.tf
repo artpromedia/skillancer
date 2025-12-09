@@ -102,6 +102,45 @@ output "flow_log_group_name" {
   value       = var.enable_flow_logs ? aws_cloudwatch_log_group.flow_logs[0].name : null
 }
 
+output "flow_log_group_arn" {
+  description = "ARN of the CloudWatch log group for flow logs"
+  value       = var.enable_flow_logs ? aws_cloudwatch_log_group.flow_logs[0].arn : null
+}
+
+# =============================================================================
+# Security Group Outputs
+# =============================================================================
+
+output "alb_security_group_id" {
+  description = "Security group ID for the Application Load Balancer"
+  value       = aws_security_group.alb.id
+}
+
+output "alb_security_group_arn" {
+  description = "Security group ARN for the Application Load Balancer"
+  value       = aws_security_group.alb.arn
+}
+
+output "ecs_tasks_security_group_id" {
+  description = "Security group ID for ECS tasks"
+  value       = aws_security_group.ecs_tasks.id
+}
+
+output "ecs_tasks_security_group_arn" {
+  description = "Security group ARN for ECS tasks"
+  value       = aws_security_group.ecs_tasks.arn
+}
+
+output "database_security_group_id" {
+  description = "Security group ID for databases (RDS/ElastiCache)"
+  value       = aws_security_group.database.id
+}
+
+output "database_security_group_arn" {
+  description = "Security group ARN for databases (RDS/ElastiCache)"
+  value       = aws_security_group.database.arn
+}
+
 output "vpc_endpoints_security_group_id" {
   description = "Security group ID for VPC endpoints"
   value       = var.enable_vpc_endpoints ? aws_security_group.vpc_endpoints[0].id : null
@@ -110,4 +149,38 @@ output "vpc_endpoints_security_group_id" {
 output "availability_zones" {
   description = "Availability zones used"
   value       = length(var.availability_zones) > 0 ? var.availability_zones : data.aws_availability_zones.available.names
+}
+
+# =============================================================================
+# VPC Endpoint Outputs
+# =============================================================================
+
+output "s3_endpoint_id" {
+  description = "ID of the S3 VPC endpoint"
+  value       = var.enable_vpc_endpoints ? aws_vpc_endpoint.s3[0].id : null
+}
+
+output "dynamodb_endpoint_id" {
+  description = "ID of the DynamoDB VPC endpoint"
+  value       = var.enable_vpc_endpoints ? aws_vpc_endpoint.dynamodb[0].id : null
+}
+
+# =============================================================================
+# Summary Output (useful for debugging/reference)
+# =============================================================================
+
+output "network_summary" {
+  description = "Summary of the network configuration"
+  value = {
+    vpc_id                = aws_vpc.main.id
+    vpc_cidr              = aws_vpc.main.cidr_block
+    region                = data.aws_region.current.name
+    availability_zones    = local.az_names
+    public_subnets        = length(aws_subnet.public)
+    private_subnets       = length(aws_subnet.private)
+    database_subnets      = length(aws_subnet.database)
+    nat_gateways          = length(aws_nat_gateway.main)
+    vpc_endpoints_enabled = var.enable_vpc_endpoints
+    flow_logs_enabled     = var.enable_flow_logs
+  }
 }
