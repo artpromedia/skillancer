@@ -172,3 +172,32 @@ output "xray_api_group_name" {
   description = "Name of the X-Ray API group"
   value       = aws_xray_group.api_service.group_name
 }
+
+# =============================================================================
+# PagerDuty / Alerting Outputs
+# =============================================================================
+
+output "pagerduty_sns_topic_arn" {
+  description = "ARN of the PagerDuty SNS topic"
+  value       = var.enable_pagerduty && var.pagerduty_routing_key != null ? aws_sns_topic.pagerduty[0].arn : null
+}
+
+output "pagerduty_sns_topic_name" {
+  description = "Name of the PagerDuty SNS topic"
+  value       = var.enable_pagerduty && var.pagerduty_routing_key != null ? aws_sns_topic.pagerduty[0].name : null
+}
+
+output "pagerduty_forwarder_function_arn" {
+  description = "ARN of the PagerDuty forwarder Lambda function"
+  value       = var.enable_pagerduty && var.pagerduty_routing_key != null ? aws_lambda_function.pagerduty_forwarder[0].arn : null
+}
+
+output "pagerduty_forwarder_function_name" {
+  description = "Name of the PagerDuty forwarder Lambda function"
+  value       = var.enable_pagerduty && var.pagerduty_routing_key != null ? aws_lambda_function.pagerduty_forwarder[0].function_name : null
+}
+
+output "pagerduty_enabled" {
+  description = "Whether PagerDuty integration is enabled"
+  value       = var.enable_pagerduty && var.pagerduty_routing_key != null
+}
