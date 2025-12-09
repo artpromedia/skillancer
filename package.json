@@ -32,6 +32,10 @@
     "db:seed": "pnpm --filter @skillancer/database db:seed",
     "db:studio": "pnpm --filter @skillancer/database db:studio",
     "db:check-destructive": "pnpm --filter @skillancer/database db:check-destructive",
+    "db:seed:preview": "pnpm --filter @skillancer/database db:seed:preview",
+    "preview:local": "bash scripts/preview-local.sh",
+    "preview:cleanup": "bash scripts/preview-cleanup.sh",
+    "test:e2e:preview": "PLAYWRIGHT_BASE_URL=$PREVIEW_BASE_URL pnpm test:e2e",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -1,0 +1,94 @@
+# =============================================================================
+# Docker Compose for Preview Environment
+# =============================================================================
+# Use this for local preview testing
+# Usage: docker compose -f docker-compose.preview.yml up -d
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # PostgreSQL
+  # ===========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: skillancer-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: skillancer
+      POSTGRES_PASSWORD: skillancer
+      POSTGRES_DB: skillancer
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_preview_data:/var/lib/postgresql/data
+      - ./scripts/init-preview-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U skillancer']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # Redis
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: skillancer-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_preview_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # Mailpit (Email Testing)
+  # ===========================================================================
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: skillancer-mailpit
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP
+      - '8025:8025' # Web UI
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+  # ===========================================================================
+  # MinIO (S3-compatible storage)
+  # ===========================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: skillancer-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      MINIO_ROOT_USER: skillancer
+      MINIO_ROOT_PASSWORD: skillancer123
+    volumes:
+      - minio_preview_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  postgres_preview_data:
+  redis_preview_data:
+  minio_preview_data:
+
+networks:
+  default:
+    name: skillancer-preview-network

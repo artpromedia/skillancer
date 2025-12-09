@@ -1,0 +1,559 @@
+# =============================================================================
+# Preview Deployment Workflow
+# =============================================================================
+# Deploys preview environments for pull requests with:
+# - Branch database via Neon
+# - Web app previews via Vercel
+# - Backend service previews via Railway
+# =============================================================================
+
+name: Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, master, develop]
+
+# Cancel in-progress preview deployments for the same PR
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8.15.6'
+
+jobs:
+  # ===========================================================================
+  # Generate Preview Information
+  # ===========================================================================
+  preview-info:
+    name: 📋 Generate Preview Info
+    runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ github.event.pull_request.number }}
+      preview_id: ${{ steps.generate.outputs.preview_id }}
+      short_sha: ${{ steps.generate.outputs.short_sha }}
+      branch_name: ${{ steps.generate.outputs.branch_name }}
+    steps:
+      - name: Generate Preview Identifiers
+        id: generate
+        run: |
+          echo "preview_id=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          echo "short_sha=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          echo "branch_name=$(echo '${{ github.head_ref }}' | tr '/' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # Detect Changes
+  # ===========================================================================
+  detect-changes:
+    name: 🔍 Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      web-market: ${{ steps.filter.outputs.web-market }}
+      web-cockpit: ${{ steps.filter.outputs.web-cockpit }}
+      web-skillpod: ${{ steps.filter.outputs.web-skillpod }}
+      api-gateway: ${{ steps.filter.outputs.api-gateway }}
+      services: ${{ steps.filter.outputs.services }}
+      database: ${{ steps.filter.outputs.database }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'apps/web/**'
+              - 'packages/**'
+            web-market:
+              - 'apps/web-market/**'
+              - 'packages/**'
+            web-cockpit:
+              - 'apps/web-cockpit/**'
+              - 'packages/**'
+            web-skillpod:
+              - 'apps/web-skillpod/**'
+              - 'packages/**'
+            api-gateway:
+              - 'services/api-gateway/**'
+              - 'packages/**'
+            services:
+              - 'services/**'
+              - 'packages/**'
+            database:
+              - 'packages/database/**'
+              - 'prisma/**'
+              - '**/migrations/**'
+
+  # ===========================================================================
+  # Create Branch Database (Neon)
+  # ===========================================================================
+  create-branch-database:
+    name: 🗄️ Create Branch Database
+    needs: [preview-info, detect-changes]
+    runs-on: ubuntu-latest
+    outputs:
+      database_url: ${{ steps.neon.outputs.db_url }}
+      database_url_pooled: ${{ steps.neon.outputs.db_url_pooled }}
+      branch_id: ${{ steps.neon.outputs.branch_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Neon Branch
+        id: neon
+        uses: neondatabase/create-branch-action@v5
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch_name: preview/${{ needs.preview-info.outputs.preview_id }}
+          username: skillancer_preview
+          database: skillancer
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Database Migrations
+        run: pnpm db:migrate:deploy
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
+
+      - name: Seed Preview Data (Optional)
+        if: github.event.action == 'opened'
+        run: pnpm db:seed:preview || echo "No preview seed script found, skipping..."
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.db_url }}
+
+  # ===========================================================================
+  # Deploy Web Apps to Vercel
+  # ===========================================================================
+  deploy-web-preview:
+    name: 🌐 Deploy ${{ matrix.app }}
+    needs: [preview-info, detect-changes, create-branch-database]
+    if: |
+      needs.detect-changes.outputs.web == 'true' ||
+      needs.detect-changes.outputs.web-market == 'true' ||
+      needs.detect-changes.outputs.web-cockpit == 'true' ||
+      needs.detect-changes.outputs.web-skillpod == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: web
+            project_id_secret: VERCEL_PROJECT_ID_WEB
+            subdomain: web
+            changes_key: web
+          - app: web-market
+            project_id_secret: VERCEL_PROJECT_ID_WEB_MARKET
+            subdomain: market
+            changes_key: web-market
+          - app: web-cockpit
+            project_id_secret: VERCEL_PROJECT_ID_WEB_COCKPIT
+            subdomain: cockpit
+            changes_key: web-cockpit
+          - app: web-skillpod
+            project_id_secret: VERCEL_PROJECT_ID_WEB_SKILLPOD
+            subdomain: skillpod
+            changes_key: web-skillpod
+    outputs:
+      web-url: ${{ steps.vercel.outputs.preview-url }}
+    steps:
+      - name: Check if deployment needed
+        id: check
+        run: |
+          CHANGES_KEY="${{ matrix.changes_key }}"
+          case "$CHANGES_KEY" in
+            "web") CHANGED="${{ needs.detect-changes.outputs.web }}" ;;
+            "web-market") CHANGED="${{ needs.detect-changes.outputs.web-market }}" ;;
+            "web-cockpit") CHANGED="${{ needs.detect-changes.outputs.web-cockpit }}" ;;
+            "web-skillpod") CHANGED="${{ needs.detect-changes.outputs.web-skillpod }}" ;;
+          esac
+          echo "should_deploy=$CHANGED" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.should_deploy == 'true'
+
+      - name: Setup pnpm
+        if: steps.check.outputs.should_deploy == 'true'
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        if: steps.check.outputs.should_deploy == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install Vercel CLI
+        if: steps.check.outputs.should_deploy == 'true'
+        run: pnpm add -g vercel@latest
+
+      - name: Pull Vercel Environment
+        if: steps.check.outputs.should_deploy == 'true'
+        run: |
+          vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: apps/${{ matrix.app }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets[matrix.project_id_secret] }}
+
+      - name: Build Project
+        if: steps.check.outputs.should_deploy == 'true'
+        run: |
+          vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: apps/${{ matrix.app }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets[matrix.project_id_secret] }}
+          DATABASE_URL: ${{ needs.create-branch-database.outputs.database_url_pooled }}
+          NEXT_PUBLIC_API_URL: https://api-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev
+          NEXT_PUBLIC_PREVIEW_MODE: 'true'
+          NEXT_PUBLIC_PR_NUMBER: ${{ needs.preview-info.outputs.pr_number }}
+
+      - name: Deploy to Vercel
+        if: steps.check.outputs.should_deploy == 'true'
+        id: vercel
+        run: |
+          DEPLOY_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} \
+            --meta githubPrNumber=${{ needs.preview-info.outputs.pr_number }} \
+            --meta githubCommitSha=${{ github.event.pull_request.head.sha }})
+          echo "preview-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+
+          # Set custom alias
+          vercel alias $DEPLOY_URL ${{ matrix.subdomain }}-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev \
+            --token=${{ secrets.VERCEL_TOKEN }} || true
+        working-directory: apps/${{ matrix.app }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets[matrix.project_id_secret] }}
+
+      - name: Update Deployment Status
+        if: steps.check.outputs.should_deploy == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.pull_request.head.sha }}',
+              state: 'success',
+              target_url: '${{ steps.vercel.outputs.preview-url }}',
+              description: '${{ matrix.app }} preview deployed',
+              context: 'Preview / ${{ matrix.app }}'
+            });
+
+  # ===========================================================================
+  # Deploy Backend Services to Railway
+  # ===========================================================================
+  deploy-backend-preview:
+    name: 🚂 Deploy Backend Preview
+    needs: [preview-info, detect-changes, create-branch-database]
+    if: needs.detect-changes.outputs.services == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      api_url: ${{ steps.deploy.outputs.api_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Create Preview Environment
+        id: create-env
+        run: |
+          # Create or get preview environment
+          railway environment create ${{ needs.preview-info.outputs.preview_id }} || true
+          railway environment ${{ needs.preview-info.outputs.preview_id }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      - name: Set Environment Variables
+        run: |
+          railway variables set \
+            DATABASE_URL="${{ needs.create-branch-database.outputs.database_url }}" \
+            DATABASE_URL_POOLED="${{ needs.create-branch-database.outputs.database_url_pooled }}" \
+            REDIS_URL="${{ secrets.PREVIEW_REDIS_URL }}" \
+            NODE_ENV="preview" \
+            LOG_LEVEL="debug" \
+            PREVIEW_MODE="true" \
+            PR_NUMBER="${{ needs.preview-info.outputs.pr_number }}" \
+            CORS_ORIGINS="https://web-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev,https://market-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev,https://cockpit-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev,https://skillpod-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      - name: Deploy API Gateway
+        id: deploy
+        run: |
+          cd services/api-gateway
+          railway up --detach
+
+          # Get the deployment URL
+          sleep 30
+          API_URL="https://api-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev"
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      - name: Configure Custom Domain
+        run: |
+          railway domain add api-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev || true
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      - name: Wait for Deployment
+        run: |
+          echo "Waiting for deployment to be ready..."
+          sleep 60
+
+      - name: Health Check
+        id: health
+        run: |
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+          API_URL="https://api-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev"
+
+          until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
+            if curl -sf "$API_URL/health" > /dev/null 2>&1; then
+              echo "✅ Health check passed!"
+              echo "healthy=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "⏳ Attempt $RETRY_COUNT/$MAX_RETRIES - Waiting for service..."
+            sleep 15
+          done
+
+          echo "❌ Health check failed after $MAX_RETRIES attempts"
+          echo "healthy=false" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: Update Deployment Status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const state = '${{ steps.health.outputs.healthy }}' === 'true' ? 'success' : 'failure';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ github.event.pull_request.head.sha }}',
+              state: state,
+              target_url: 'https://api-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev',
+              description: state === 'success' ? 'API Gateway preview deployed' : 'API Gateway deployment failed',
+              context: 'Preview / api-gateway'
+            });
+
+  # ===========================================================================
+  # Run E2E Tests on Preview
+  # ===========================================================================
+  preview-e2e-tests:
+    name: 🧪 E2E Tests on Preview
+    needs: [preview-info, deploy-web-preview, deploy-backend-preview]
+    if: |
+      always() &&
+      (needs.deploy-web-preview.result == 'success' || needs.deploy-web-preview.result == 'skipped') &&
+      (needs.deploy-backend-preview.result == 'success' || needs.deploy-backend-preview.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E Tests
+        run: pnpm test:e2e:preview
+        env:
+          PREVIEW_BASE_URL: https://web-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev
+          PREVIEW_API_URL: https://api-${{ needs.preview-info.outputs.preview_id }}.skillancer.dev
+          CI: true
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-preview
+          path: playwright-report/
+          retention-days: 7
+
+  # ===========================================================================
+  # Comment Preview URLs
+  # ===========================================================================
+  comment-preview-urls:
+    name: 💬 Comment Preview URLs
+    needs: [preview-info, create-branch-database, deploy-web-preview, deploy-backend-preview]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or Update Summary Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewId = '${{ needs.preview-info.outputs.preview_id }}';
+            const prNumber = '${{ needs.preview-info.outputs.pr_number }}';
+            const shortSha = '${{ needs.preview-info.outputs.short_sha }}';
+
+            const webResult = '${{ needs.deploy-web-preview.result }}';
+            const backendResult = '${{ needs.deploy-backend-preview.result }}';
+            const dbResult = '${{ needs.create-branch-database.result }}';
+
+            const getStatusEmoji = (status) => {
+              switch(status) {
+                case 'success': return '✅';
+                case 'failure': return '❌';
+                case 'skipped': return '⏭️';
+                default: return '⏳';
+              }
+            };
+
+            const body = `
+            ## 🚀 Preview Environment
+
+            | Component | Status | URL |
+            |-----------|--------|-----|
+            | 🗄️ Database | ${getStatusEmoji(dbResult)} | \`preview/${previewId}\` |
+            | 🌐 Web (Marketing) | ${getStatusEmoji(webResult)} | [web-${previewId}.skillancer.dev](https://web-${previewId}.skillancer.dev) |
+            | 🛒 Market | ${getStatusEmoji(webResult)} | [market-${previewId}.skillancer.dev](https://market-${previewId}.skillancer.dev) |
+            | 📊 Cockpit | ${getStatusEmoji(webResult)} | [cockpit-${previewId}.skillancer.dev](https://cockpit-${previewId}.skillancer.dev) |
+            | 🎯 SkillPod | ${getStatusEmoji(webResult)} | [skillpod-${previewId}.skillancer.dev](https://skillpod-${previewId}.skillancer.dev) |
+            | 🔌 API Gateway | ${getStatusEmoji(backendResult)} | [api-${previewId}.skillancer.dev](https://api-${previewId}.skillancer.dev) |
+
+            ### 📝 Details
+            - **Preview ID:** \`${previewId}\`
+            - **Commit:** \`${shortSha}\`
+            - **Branch:** \`${{ github.head_ref }}\`
+
+            ### 🔗 Useful Links
+            - [API Health Check](https://api-${previewId}.skillancer.dev/health)
+            - [API Documentation](https://api-${previewId}.skillancer.dev/docs)
+
+            ---
+
+            <details>
+            <summary>🔧 Local Development with Preview</summary>
+
+            \`\`\`bash
+            # Connect to preview database
+            export DATABASE_URL="${{ needs.create-branch-database.outputs.database_url }}"
+
+            # Point to preview API
+            export NEXT_PUBLIC_API_URL="https://api-${previewId}.skillancer.dev"
+            \`\`\`
+
+            </details>
+
+            ---
+            _🧹 Preview will be automatically cleaned up when this PR is closed._
+            _Last updated: ${new Date().toISOString()}_
+            `;
+
+            // Find existing preview comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c => 
+              c.user.type === 'Bot' && c.body.includes('Preview Environment')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+              console.log('Updated existing preview comment');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+              console.log('Created new preview comment');
+            }
+
+  # ===========================================================================
+  # Preview Deployment Status
+  # ===========================================================================
+  preview-status:
+    name: ✅ Preview Status
+    needs:
+      [
+        preview-info,
+        create-branch-database,
+        deploy-web-preview,
+        deploy-backend-preview,
+        comment-preview-urls,
+      ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Preview Deployment Status
+        run: |
+          DB_STATUS="${{ needs.create-branch-database.result }}"
+          WEB_STATUS="${{ needs.deploy-web-preview.result }}"
+          BACKEND_STATUS="${{ needs.deploy-backend-preview.result }}"
+
+          echo "📊 Preview Deployment Summary"
+          echo "=============================="
+          echo "Database: $DB_STATUS"
+          echo "Web Apps: $WEB_STATUS"
+          echo "Backend: $BACKEND_STATUS"
+
+          # Fail if database creation failed (critical)
+          if [ "$DB_STATUS" == "failure" ]; then
+            echo "❌ Database branch creation failed"
+            exit 1
+          fi
+
+          # Warn but don't fail for skipped deployments
+          if [ "$WEB_STATUS" == "skipped" ] && [ "$BACKEND_STATUS" == "skipped" ]; then
+            echo "⚠️ No deployments were triggered (no relevant changes detected)"
+          fi
+
+          # Fail if both web and backend failed
+          if [ "$WEB_STATUS" == "failure" ] && [ "$BACKEND_STATUS" == "failure" ]; then
+            echo "❌ All deployments failed"
+            exit 1
+          fi
+
+          echo "✅ Preview deployment completed"

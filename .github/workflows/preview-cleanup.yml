@@ -1,0 +1,223 @@
+# =============================================================================
+# Preview Cleanup Workflow
+# =============================================================================
+# Automatically cleans up preview environments when PRs are closed.
+# This includes:
+# - Neon database branches
+# - Railway environments
+# - Vercel deployments
+# =============================================================================
+
+name: Preview Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  # ===========================================================================
+  # Cleanup Preview Environment
+  # ===========================================================================
+  cleanup:
+    name: 🧹 Cleanup Preview Environment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Preview ID
+        id: preview
+        run: |
+          echo "preview_id=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+
+      # -------------------------------------------------------------------------
+      # Delete Neon Database Branch
+      # -------------------------------------------------------------------------
+      - name: Delete Neon Branch
+        id: delete-neon
+        continue-on-error: true
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          branch: preview/${{ steps.preview.outputs.preview_id }}
+
+      - name: Log Neon Cleanup Result
+        run: |
+          if [ "${{ steps.delete-neon.outcome }}" == "success" ]; then
+            echo "✅ Neon branch 'preview/${{ steps.preview.outputs.preview_id }}' deleted successfully"
+          else
+            echo "⚠️ Neon branch deletion skipped or failed (branch may not exist)"
+          fi
+
+      # -------------------------------------------------------------------------
+      # Delete Railway Environment
+      # -------------------------------------------------------------------------
+      - name: Setup Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Delete Railway Environment
+        id: delete-railway
+        continue-on-error: true
+        run: |
+          railway environment delete ${{ steps.preview.outputs.preview_id }} --yes || true
+          echo "✅ Railway environment cleanup attempted"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+
+      # -------------------------------------------------------------------------
+      # Delete Vercel Deployments
+      # -------------------------------------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Delete Vercel Preview Deployments
+        id: delete-vercel
+        continue-on-error: true
+        run: |
+          PREVIEW_ID="${{ steps.preview.outputs.preview_id }}"
+
+          # List of apps to clean up
+          APPS=("web" "web-market" "web-cockpit" "web-skillpod")
+
+          for APP in "${APPS[@]}"; do
+            echo "🗑️ Cleaning up Vercel deployments for $APP..."
+            
+            # Remove alias
+            vercel alias rm "${APP}-${PREVIEW_ID}.skillancer.dev" --yes --token=${{ secrets.VERCEL_TOKEN }} 2>/dev/null || true
+            
+            # List and remove deployments with the preview metadata
+            vercel ls --meta githubPrNumber=${{ github.event.pull_request.number }} --token=${{ secrets.VERCEL_TOKEN }} 2>/dev/null | \
+              grep -E "^https://" | \
+              while read -r url; do
+                echo "  Removing: $url"
+                vercel rm "$url" --yes --token=${{ secrets.VERCEL_TOKEN }} 2>/dev/null || true
+              done
+          done
+
+          echo "✅ Vercel cleanup completed"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+
+      # -------------------------------------------------------------------------
+      # Cleanup DNS Records (Optional)
+      # -------------------------------------------------------------------------
+      - name: Cleanup DNS Records
+        id: delete-dns
+        continue-on-error: true
+        if: vars.CLEANUP_DNS == 'true'
+        run: |
+          PREVIEW_ID="${{ steps.preview.outputs.preview_id }}"
+
+          # This is a placeholder for DNS cleanup
+          # Implement based on your DNS provider (Cloudflare, Route53, etc.)
+          echo "⚠️ DNS cleanup not implemented - configure based on your DNS provider"
+
+          # Example for Cloudflare:
+          # curl -X DELETE "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$RECORD_ID" \
+          #   -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_TOKEN }}"
+
+      # -------------------------------------------------------------------------
+      # Summary Comment
+      # -------------------------------------------------------------------------
+      - name: Post Cleanup Summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewId = '${{ steps.preview.outputs.preview_id }}';
+            const neonResult = '${{ steps.delete-neon.outcome }}';
+            const railwayResult = '${{ steps.delete-railway.outcome }}';
+            const vercelResult = '${{ steps.delete-vercel.outcome }}';
+
+            const getStatusEmoji = (outcome) => outcome === 'success' ? '✅' : '⚠️';
+
+            const body = `
+            ## 🧹 Preview Environment Cleaned Up
+
+            | Resource | Status |
+            |----------|--------|
+            | Neon Database Branch | ${getStatusEmoji(neonResult)} |
+            | Railway Environment | ${getStatusEmoji(railwayResult)} |
+            | Vercel Deployments | ${getStatusEmoji(vercelResult)} |
+
+            **Preview ID:** \`${previewId}\`
+
+            ---
+            _All preview resources have been cleaned up. Thank you for contributing!_
+            `;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+  # ===========================================================================
+  # Cleanup Orphaned Previews (Weekly)
+  # ===========================================================================
+  cleanup-orphaned:
+    name: 🗑️ Cleanup Orphaned Previews
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Tools
+        run: |
+          # Install Railway CLI
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+          # Install Vercel CLI
+          npm install -g vercel@latest
+
+      - name: Find Open PRs
+        id: open-prs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+            });
+
+            const prNumbers = prs.map(pr => pr.number);
+            core.setOutput('pr_numbers', prNumbers.join(','));
+            return prNumbers;
+
+      - name: Cleanup Orphaned Neon Branches
+        continue-on-error: true
+        run: |
+          OPEN_PRS="${{ steps.open-prs.outputs.pr_numbers }}"
+
+          echo "🔍 Checking for orphaned Neon branches..."
+          echo "Open PRs: $OPEN_PRS"
+
+          # List all preview branches via Neon API
+          BRANCHES=$(curl -s -H "Authorization: Bearer ${{ secrets.NEON_API_KEY }}" \
+            "https://console.neon.tech/api/v2/projects/${{ secrets.NEON_PROJECT_ID }}/branches" | \
+            jq -r '.branches[] | select(.name | startswith("preview/pr-")) | .name')
+
+          for BRANCH in $BRANCHES; do
+            PR_NUM=$(echo "$BRANCH" | sed 's/preview\/pr-//')
+            
+            if [[ ! ",$OPEN_PRS," == *",$PR_NUM,"* ]]; then
+              echo "🗑️ Deleting orphaned branch: $BRANCH"
+              curl -X DELETE -H "Authorization: Bearer ${{ secrets.NEON_API_KEY }}" \
+                "https://console.neon.tech/api/v2/projects/${{ secrets.NEON_PROJECT_ID }}/branches/$BRANCH" || true
+            fi
+          done
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+
+      - name: Report Cleanup Results
+        run: |
+          echo "✅ Orphaned preview cleanup completed"

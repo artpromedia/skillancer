@@ -1,0 +1,57 @@
+# =============================================================================
+# Railway Configuration for API Gateway
+# =============================================================================
+# This configuration defines how the API Gateway service is built and deployed
+# on Railway for both production and preview environments.
+# =============================================================================
+
+[build]
+# Use Dockerfile for building
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+# Build-time arguments
+[build.args]
+NODE_ENV = "production"
+
+# Alternatively, use Nixpacks if no Dockerfile
+# builder = "nixpacks"
+# [build.nixpacks]
+# providers = ["node"]
+
+[deploy]
+# Deployment configuration
+numReplicas = 1
+startCommand = "node dist/main.js"
+
+# Health check configuration
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+
+# Restart policy
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# Resource limits (optional, adjust based on needs)
+# memoryMB = 512
+# cpuCount = 1
+
+[deploy.preview]
+# Preview-specific deployment settings
+numReplicas = 1
+
+[deploy.production]
+# Production-specific deployment settings
+numReplicas = 2
+
+# Environment-specific configurations
+[environments.preview]
+# Variables are set via workflow, but defaults can be specified here
+[environments.preview.variables]
+NODE_ENV = "preview"
+LOG_LEVEL = "debug"
+
+[environments.production]
+[environments.production.variables]
+NODE_ENV = "production"
+LOG_LEVEL = "info"

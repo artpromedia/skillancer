@@ -1,0 +1,32 @@
+# =============================================================================
+# Railway Configuration for Billing Service
+# =============================================================================
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[build.args]
+NODE_ENV = "production"
+
+[deploy]
+numReplicas = 1
+startCommand = "node dist/main.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[deploy.preview]
+numReplicas = 1
+
+[deploy.production]
+numReplicas = 2
+
+[environments.preview.variables]
+NODE_ENV = "preview"
+LOG_LEVEL = "debug"
+
+[environments.production.variables]
+NODE_ENV = "production"
+LOG_LEVEL = "info"
