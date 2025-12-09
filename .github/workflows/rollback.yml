@@ -1,0 +1,446 @@
+# =============================================================================
+# Manual Rollback Workflow
+# =============================================================================
+# Allows manual rollback of services to a previous version.
+# Use this when automatic rollback fails or for specific version rollbacks.
+# =============================================================================
+
+name: Manual Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      service:
+        description: 'Service to rollback (or "all" for all services)'
+        required: true
+        type: choice
+        options:
+          - all
+          - api-gateway
+          - auth-svc
+          - market-svc
+          - skillpod-svc
+          - cockpit-svc
+          - billing-svc
+          - notification-svc
+          - audit-svc
+      version:
+        description: 'Version to rollback to (leave empty for previous deployment)'
+        required: false
+        type: string
+      reason:
+        description: 'Reason for rollback'
+        required: true
+        type: string
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  # ===========================================================================
+  # Validate Rollback
+  # ===========================================================================
+  validate:
+    name: 🔍 Validate Rollback
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.services.outputs.list }}
+      target_version: ${{ steps.version.outputs.target }}
+    steps:
+      - name: Determine Services
+        id: services
+        run: |
+          if [ "${{ github.event.inputs.service }}" == "all" ]; then
+            SERVICES='["api-gateway","auth-svc","market-svc","skillpod-svc","cockpit-svc","billing-svc","notification-svc","audit-svc"]'
+          else
+            SERVICES='["${{ github.event.inputs.service }}"]'
+          fi
+
+          echo "list=$SERVICES" >> $GITHUB_OUTPUT
+          echo "📦 Services to rollback: $SERVICES"
+
+      - name: Validate Version
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+
+          if [ -z "$VERSION" ]; then
+            echo "target=previous" >> $GITHUB_OUTPUT
+            echo "🔄 Rolling back to previous deployment"
+          else
+            echo "target=$VERSION" >> $GITHUB_OUTPUT
+            echo "🔄 Rolling back to version: $VERSION"
+          fi
+
+  # ===========================================================================
+  # Rollback Services
+  # ===========================================================================
+  rollback:
+    name: 🔄 Rollback ${{ github.event.inputs.service }}
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Record Rollback Event
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          echo "{
+            \"event\": \"rollback\",
+            \"environment\": \"${{ github.event.inputs.environment }}\",
+            \"services\": ${{ needs.validate.outputs.services }},
+            \"target_version\": \"${{ needs.validate.outputs.target_version }}\",
+            \"reason\": \"${{ github.event.inputs.reason }}\",
+            \"triggered_by\": \"${{ github.actor }}\",
+            \"timestamp\": \"$TIMESTAMP\",
+            \"run_id\": \"${{ github.run_id }}\"
+          }" > rollback-record.json
+
+          # Upload to S3 for audit trail
+          aws s3 cp rollback-record.json \
+            "s3://skillancer-deployments/${{ github.event.inputs.environment }}/rollbacks/${{ github.run_id }}.json" \
+            --content-type "application/json" || true
+
+      - name: Get Current Versions (Pre-Rollback)
+        id: current
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+          CLUSTER="skillancer-$ENV"
+          SERVICES='${{ needs.validate.outputs.services }}'
+
+          echo "📝 Current versions before rollback:"
+
+          for service in $(echo "$SERVICES" | jq -r '.[]'); do
+            CURRENT_TASK=$(aws ecs describe-services \
+              --cluster "$CLUSTER" \
+              --services "$service" \
+              --query 'services[0].taskDefinition' \
+              --output text 2>/dev/null || echo "unknown")
+            
+            echo "  $service: $CURRENT_TASK"
+          done
+
+      - name: Rollback to Previous Version
+        if: needs.validate.outputs.target_version == 'previous'
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+          CLUSTER="skillancer-$ENV"
+          SERVICES='${{ needs.validate.outputs.services }}'
+
+          echo "🔄 Rolling back to previous versions..."
+
+          for service in $(echo "$SERVICES" | jq -r '.[]'); do
+            echo "----------------------------------------"
+            echo "Rolling back $service..."
+            
+            # Get deployments to find previous
+            DEPLOYMENTS=$(aws ecs describe-services \
+              --cluster "$CLUSTER" \
+              --services "$service" \
+              --query 'services[0].deployments' \
+              --output json)
+            
+            # Find the previous (not PRIMARY) deployment
+            PREV_TASK=$(echo "$DEPLOYMENTS" | jq -r '
+              sort_by(.createdAt) | 
+              reverse | 
+              map(select(.status != "PRIMARY")) | 
+              .[0].taskDefinition // empty
+            ')
+            
+            if [ -z "$PREV_TASK" ]; then
+              # No previous deployment, try to get previous task definition revision
+              CURRENT_TASK=$(aws ecs describe-services \
+                --cluster "$CLUSTER" \
+                --services "$service" \
+                --query 'services[0].taskDefinition' \
+                --output text)
+              
+              # Extract task family and revision
+              TASK_FAMILY=$(echo "$CURRENT_TASK" | sed 's/:.*$//')
+              CURRENT_REV=$(echo "$CURRENT_TASK" | sed 's/.*://')
+              PREV_REV=$((CURRENT_REV - 1))
+              
+              if [ $PREV_REV -gt 0 ]; then
+                PREV_TASK="$TASK_FAMILY:$PREV_REV"
+              else
+                echo "⚠️ No previous version found for $service, skipping..."
+                continue
+              fi
+            fi
+            
+            echo "📦 Rolling back to: $PREV_TASK"
+            
+            aws ecs update-service \
+              --cluster "$CLUSTER" \
+              --service "$service" \
+              --task-definition "$PREV_TASK" \
+              --force-new-deployment \
+              --output text > /dev/null
+            
+            echo "✅ Rollback initiated for $service"
+          done
+
+      - name: Rollback to Specific Version
+        if: needs.validate.outputs.target_version != 'previous'
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+          CLUSTER="skillancer-$ENV"
+          VERSION="${{ needs.validate.outputs.target_version }}"
+          SERVICES='${{ needs.validate.outputs.services }}'
+          ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
+
+          echo "🔄 Rolling back to version: $VERSION"
+
+          for service in $(echo "$SERVICES" | jq -r '.[]'); do
+            echo "----------------------------------------"
+            echo "Rolling back $service to $VERSION..."
+            
+            # Get current task definition
+            TASK_DEF=$(aws ecs describe-task-definition \
+              --task-definition "skillancer-$ENV-$service" \
+              --query 'taskDefinition' \
+              --output json 2>/dev/null || echo "")
+            
+            if [ -z "$TASK_DEF" ] || [ "$TASK_DEF" == "" ]; then
+              echo "⚠️ Task definition not found for $service, skipping..."
+              continue
+            fi
+            
+            # Check if the version exists in ECR
+            IMAGE="$ECR_REGISTRY/$service:$VERSION"
+            
+            if ! aws ecr describe-images \
+              --repository-name "$service" \
+              --image-ids imageTag="$VERSION" &>/dev/null; then
+              echo "⚠️ Image $IMAGE not found in ECR, skipping..."
+              continue
+            fi
+            
+            # Update task definition with rollback version
+            NEW_TASK_DEF=$(echo "$TASK_DEF" | jq \
+              --arg IMAGE "$IMAGE" \
+              '.containerDefinitions[0].image = $IMAGE | 
+               del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+            
+            # Register new task definition
+            NEW_TASK_ARN=$(aws ecs register-task-definition \
+              --cli-input-json "$NEW_TASK_DEF" \
+              --query 'taskDefinition.taskDefinitionArn' \
+              --output text)
+            
+            echo "📝 New task definition: $NEW_TASK_ARN"
+            
+            # Update service
+            aws ecs update-service \
+              --cluster "$CLUSTER" \
+              --service "$service" \
+              --task-definition "$NEW_TASK_ARN" \
+              --force-new-deployment \
+              --output text > /dev/null
+            
+            echo "✅ Rollback initiated for $service"
+          done
+
+      - name: Wait for Services to Stabilize
+        timeout-minutes: 15
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+          CLUSTER="skillancer-$ENV"
+          SERVICES='${{ needs.validate.outputs.services }}'
+
+          echo "⏳ Waiting for services to stabilize..."
+
+          for service in $(echo "$SERVICES" | jq -r '.[]'); do
+            echo "Waiting for $service..."
+            
+            if ! aws ecs wait services-stable \
+              --cluster "$CLUSTER" \
+              --services "$service" 2>/dev/null; then
+              echo "⚠️ $service did not stabilize in time"
+            else
+              echo "✅ $service is stable"
+            fi
+          done
+
+      - name: Verify Health
+        id: health
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+
+          if [ "$ENV" == "production" ]; then
+            URL="https://api.skillancer.com"
+          else
+            URL="https://api-staging.skillancer.com"
+          fi
+
+          echo "🏥 Verifying health at $URL..."
+
+          MAX_RETRIES=5
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/health" || echo "000")
+            
+            if [ "$STATUS" == "200" ]; then
+              echo "✅ Health check passed!"
+              echo "success=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            echo "Attempt $i/$MAX_RETRIES: Status $STATUS"
+            sleep 10
+          done
+
+          echo "⚠️ Health check did not pass after $MAX_RETRIES attempts"
+          echo "success=false" >> $GITHUB_OUTPUT
+
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "🔄 Manual Rollback Executed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🔄 Manual Rollback"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Environment:*\n${{ github.event.inputs.environment }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Service:*\n${{ github.event.inputs.service }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Target Version:*\n${{ needs.validate.outputs.target_version }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Triggered by:*\n${{ github.actor }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Reason:*\n${{ github.event.inputs.reason }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Health Check:* ${{ steps.health.outputs.success == 'true' && '✅ Passed' || '⚠️ Failed' }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Workflow"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ===========================================================================
+  # Post-Rollback Verification
+  # ===========================================================================
+  verify:
+    name: ✅ Verify Rollback
+    needs: [validate, rollback]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify Service Versions
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+          CLUSTER="skillancer-$ENV"
+          SERVICES='${{ needs.validate.outputs.services }}'
+
+          echo "📝 Current versions after rollback:"
+          echo ""
+
+          for service in $(echo "$SERVICES" | jq -r '.[]'); do
+            CURRENT_TASK=$(aws ecs describe-services \
+              --cluster "$CLUSTER" \
+              --services "$service" \
+              --query 'services[0].taskDefinition' \
+              --output text 2>/dev/null || echo "unknown")
+            
+            # Get running count
+            RUNNING=$(aws ecs describe-services \
+              --cluster "$CLUSTER" \
+              --services "$service" \
+              --query 'services[0].runningCount' \
+              --output text 2>/dev/null || echo "0")
+            
+            DESIRED=$(aws ecs describe-services \
+              --cluster "$CLUSTER" \
+              --services "$service" \
+              --query 'services[0].desiredCount' \
+              --output text 2>/dev/null || echo "0")
+            
+            echo "$service:"
+            echo "  Task: $CURRENT_TASK"
+            echo "  Running: $RUNNING / $DESIRED"
+            echo ""
+          done
+
+      - name: Generate Summary
+        run: |
+          echo "## 🔄 Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ github.event.inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | ${{ github.event.inputs.service }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target Version | ${{ needs.validate.outputs.target_version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Reason | ${{ github.event.inputs.reason }} |" >> $GITHUB_STEP_SUMMARY
