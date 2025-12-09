@@ -1,0 +1,19 @@
+{
+  "extends": "../config/tsconfig/node.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "types": ["node"],
+    // Disable strictest options that conflict with got/bullmq library types
+    "exactOptionalPropertyTypes": false,
+    "verbatimModuleSyntax": false,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@skillancer/types": ["../types/src"],
+      "@skillancer/types/*": ["../types/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+}
