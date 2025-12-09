@@ -1,0 +1,274 @@
+# =============================================================================
+# Dependabot Configuration
+# =============================================================================
+# Automated dependency updates for the Skillancer monorepo
+# Groups updates to reduce PR noise while keeping dependencies current
+# =============================================================================
+
+version: 2
+
+registries:
+  npm-registry:
+    type: npm-registry
+    url: https://registry.npmjs.org
+    replaces-base: true
+
+updates:
+  # ===========================================================================
+  # NPM Dependencies (Root & Workspaces)
+  # ===========================================================================
+  - package-ecosystem: 'npm'
+    directory: '/'
+    registries:
+      - npm-registry
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 10
+
+    # Reviewers and assignees
+    reviewers:
+      - 'artpromedia'
+
+    # Labels for dependency PRs
+    labels:
+      - 'type: dependencies'
+      - 'automated'
+
+    # Commit message format
+    commit-message:
+      prefix: 'chore(deps)'
+      include: 'scope'
+
+    # Group updates to reduce PR noise
+    groups:
+      # TypeScript and build tools
+      typescript-build:
+        patterns:
+          - 'typescript'
+          - '@types/*'
+          - 'tslib'
+          - 'ts-node'
+          - 'tsx'
+          - 'esbuild'
+          - 'turbo'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # ESLint and formatting
+      linting:
+        patterns:
+          - 'eslint*'
+          - '@eslint/*'
+          - '@typescript-eslint/*'
+          - 'prettier'
+          - '@prettier/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # Testing libraries
+      testing:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+          - 'jest'
+          - '@jest/*'
+          - '@testing-library/*'
+          - 'playwright'
+          - '@playwright/*'
+          - 'msw'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # React ecosystem
+      react:
+        patterns:
+          - 'react'
+          - 'react-dom'
+          - '@types/react*'
+          - 'next'
+          - '@next/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # Fastify ecosystem
+      fastify:
+        patterns:
+          - 'fastify'
+          - '@fastify/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # Database and ORM
+      database:
+        patterns:
+          - 'prisma'
+          - '@prisma/*'
+          - 'pg'
+          - '@types/pg'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # Redis and caching
+      redis:
+        patterns:
+          - 'ioredis'
+          - '@types/ioredis'
+          - 'bullmq'
+          - 'redis'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # Authentication
+      auth:
+        patterns:
+          - 'jose'
+          - 'passport*'
+          - '@types/passport*'
+          - 'bcrypt*'
+          - '@types/bcrypt*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # UI components
+      ui:
+        patterns:
+          - '@radix-ui/*'
+          - 'tailwindcss'
+          - '@tailwindcss/*'
+          - 'class-variance-authority'
+          - 'clsx'
+          - 'lucide-react'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # Utilities
+      utilities:
+        patterns:
+          - 'zod'
+          - 'date-fns'
+          - 'lodash*'
+          - '@types/lodash*'
+          - 'uuid'
+          - '@types/uuid'
+          - 'nanoid'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+    # Ignore specific packages or versions
+    ignore:
+      # Major version updates should be reviewed manually
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+      # Next.js canary/nightly builds
+      - dependency-name: 'next'
+        versions: ['>=15.0.0-canary.0']
+
+  # ===========================================================================
+  # GitHub Actions
+  # ===========================================================================
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 5
+
+    reviewers:
+      - 'artpromedia'
+
+    labels:
+      - 'type: dependencies'
+      - 'ci/cd'
+      - 'automated'
+
+    commit-message:
+      prefix: 'ci(deps)'
+
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+
+  # ===========================================================================
+  # Docker (if Dockerfiles exist)
+  # ===========================================================================
+  - package-ecosystem: 'docker'
+    directory: '/services/api-gateway'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels:
+      - 'type: dependencies'
+      - 'docker'
+      - 'automated'
+    commit-message:
+      prefix: 'build(docker)'
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: 'docker'
+    directory: '/services/auth-svc'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels:
+      - 'type: dependencies'
+      - 'docker'
+      - 'automated'
+    commit-message:
+      prefix: 'build(docker)'
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  # ===========================================================================
+  # Flutter/Pub Dependencies (Mobile App)
+  # ===========================================================================
+  - package-ecosystem: 'pub'
+    directory: '/apps/mobile'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 5
+
+    reviewers:
+      - 'artpromedia'
+
+    labels:
+      - 'type: dependencies'
+      - 'mobile'
+      - 'automated'
+
+    commit-message:
+      prefix: 'chore(mobile)'
+
+    groups:
+      flutter-deps:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']

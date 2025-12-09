@@ -1,0 +1,140 @@
+# =============================================================================
+# CODEOWNERS - Skillancer Monorepo
+# =============================================================================
+# This file defines code ownership for the repository.
+# When a PR modifies files in a path, the listed owners are automatically
+# requested for review.
+#
+# Format: <pattern> <owner1> <owner2> ...
+# Owners can be @usernames or @org/team-names
+# =============================================================================
+
+# =============================================================================
+# DEFAULT OWNERS
+# =============================================================================
+# Default reviewers for any file not matched by a more specific pattern
+* @artpromedia
+
+# =============================================================================
+# CORE INFRASTRUCTURE
+# =============================================================================
+# CI/CD, GitHub configuration, and repo-level config
+/.github/ @artpromedia
+/.husky/ @artpromedia
+/turbo.json @artpromedia
+/pnpm-workspace.yaml @artpromedia
+/package.json @artpromedia
+/tsconfig.json @artpromedia
+/.eslintrc.* @artpromedia
+/.prettierrc @artpromedia
+
+# =============================================================================
+# WEB APPLICATIONS
+# =============================================================================
+# Main landing/marketing website
+/apps/web/ @artpromedia
+
+# Skillancer Market - Freelancer marketplace
+/apps/web-market/ @artpromedia
+
+# Cockpit - Project management dashboard
+/apps/web-cockpit/ @artpromedia
+
+# SkillPod - Cloud development environments
+/apps/web-skillpod/ @artpromedia
+
+# =============================================================================
+# MOBILE APPLICATION
+# =============================================================================
+/apps/mobile/ @artpromedia
+
+# =============================================================================
+# BACKEND SERVICES
+# =============================================================================
+# API Gateway - Entry point for all services
+/services/api-gateway/ @artpromedia
+
+# Authentication Service
+/services/auth-svc/ @artpromedia
+
+# Market Service - Jobs, bids, contracts
+/services/market-svc/ @artpromedia
+
+# SkillPod Service - Pod provisioning and management
+/services/skillpod-svc/ @artpromedia
+
+# Cockpit Service - Workspace and project management
+/services/cockpit-svc/ @artpromedia
+
+# Billing Service - Payments, invoices, escrow
+/services/billing-svc/ @artpromedia
+
+# Notification Service - Email, push, SMS
+/services/notification-svc/ @artpromedia
+
+# Audit Service - Logging and compliance
+/services/audit-svc/ @artpromedia
+
+# Service Template - Base template for new services
+/services/service-template/ @artpromedia
+
+# =============================================================================
+# SHARED PACKAGES
+# =============================================================================
+# UI Component Library
+/packages/ui/ @artpromedia
+
+# TypeScript Types/Interfaces
+/packages/types/ @artpromedia
+
+# Shared Utilities
+/packages/utils/ @artpromedia
+
+# Shared Configuration (ESLint, TypeScript, etc.)
+/packages/config/ @artpromedia
+
+# Database Package (Prisma, migrations)
+/packages/database/ @artpromedia
+
+# Cache Package (Redis)
+/packages/cache/ @artpromedia
+
+# API Client (Frontend SDK)
+/packages/api-client/ @artpromedia
+
+# Service Client (Backend inter-service communication)
+/packages/service-client/ @artpromedia
+
+# =============================================================================
+# INFRASTRUCTURE
+# =============================================================================
+# Terraform, Docker, Kubernetes configs
+/infra/ @artpromedia
+
+# Docker configurations
+**/Dockerfile @artpromedia
+**/docker-compose*.yml @artpromedia
+
+# =============================================================================
+# DOCUMENTATION
+# =============================================================================
+/docs/ @artpromedia
+*.md @artpromedia
+LICENSE @artpromedia
+
+# =============================================================================
+# DATABASE & MIGRATIONS
+# =============================================================================
+# Database schema changes require extra review
+/packages/database/prisma/schema.prisma @artpromedia
+/packages/database/prisma/migrations/ @artpromedia
+
+# =============================================================================
+# SECURITY-SENSITIVE FILES
+# =============================================================================
+# Any security-related changes need careful review
+**/auth/ @artpromedia
+**/security/ @artpromedia
+**/*secret* @artpromedia
+**/*credential* @artpromedia
+**/.env* @artpromedia

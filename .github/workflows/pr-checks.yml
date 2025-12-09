@@ -1,0 +1,310 @@
+# =============================================================================
+# Skillancer PR Validation
+# =============================================================================
+# Pull Request validation workflow including:
+# - PR title format (conventional commits)
+# - Branch name format
+# - PR size check
+# - Required labels
+# - Changeset validation
+# =============================================================================
+
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, labeled, unlabeled]
+    branches: [main, master, develop]
+
+jobs:
+  # ===========================================================================
+  # PR TITLE VALIDATION
+  # ===========================================================================
+  pr-title:
+    name: 📝 PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR Title (Conventional Commits)
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Require conventional commit format
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          # Require scope from allowed list
+          scopes: |
+            web
+            web-market
+            web-cockpit
+            web-skillpod
+            mobile
+            api-gateway
+            auth-svc
+            billing-svc
+            market-svc
+            skillpod-svc
+            cockpit-svc
+            notification-svc
+            audit-svc
+            service-template
+            ui
+            types
+            utils
+            config
+            database
+            cache
+            api-client
+            service-client
+            infra
+            docs
+            deps
+            release
+          # Allow WIP prefix for draft PRs
+          wip: true
+          # Require lowercase subject
+          subjectPattern: ^[a-z].+$
+          subjectPatternError: |
+            PR title subject must start with lowercase letter.
+            Example: "feat(auth-svc): add OAuth2 support"
+
+  # ===========================================================================
+  # BRANCH NAME VALIDATION
+  # ===========================================================================
+  branch-name:
+    name: 🌿 Branch Name
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Branch Name
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          echo "Checking branch name: $BRANCH_NAME"
+
+          # Allow main, master, develop
+          if [[ "$BRANCH_NAME" =~ ^(main|master|develop)$ ]]; then
+            echo "✅ Protected branch name"
+            exit 0
+          fi
+
+          # Require format: type/description or type/scope/description
+          # Examples: feat/add-auth, fix/auth/token-refresh, chore/deps-update
+          PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|hotfix|release)\/[a-z0-9][a-z0-9\-\/]*[a-z0-9]$"
+
+          if [[ "$BRANCH_NAME" =~ $PATTERN ]]; then
+            echo "✅ Branch name follows convention: $BRANCH_NAME"
+          else
+            echo "❌ Branch name does not follow convention"
+            echo ""
+            echo "Expected format: type/description"
+            echo "  Examples:"
+            echo "    feat/add-oauth-login"
+            echo "    fix/auth/token-refresh"
+            echo "    chore/update-deps"
+            echo ""
+            echo "Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert, hotfix, release"
+            exit 1
+          fi
+
+  # ===========================================================================
+  # PR SIZE CHECK
+  # ===========================================================================
+  pr-size:
+    name: 📏 PR Size
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR Size
+        run: |
+          # Get the diff stats
+          git fetch origin ${{ github.base_ref }}
+          ADDITIONS=$(git diff --numstat origin/${{ github.base_ref }}...HEAD | awk '{sum += $1} END {print sum+0}')
+          DELETIONS=$(git diff --numstat origin/${{ github.base_ref }}...HEAD | awk '{sum += $2} END {print sum+0}')
+          FILES_CHANGED=$(git diff --numstat origin/${{ github.base_ref }}...HEAD | wc -l)
+          TOTAL_CHANGES=$((ADDITIONS + DELETIONS))
+
+          echo "## 📊 PR Size Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Files Changed | $FILES_CHANGED |" >> $GITHUB_STEP_SUMMARY
+          echo "| Additions | +$ADDITIONS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deletions | -$DELETIONS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Changes | $TOTAL_CHANGES |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Size thresholds
+          if [ $TOTAL_CHANGES -lt 100 ]; then
+            SIZE="XS"
+            echo "🟢 **Size: XS** - Great! Small PRs are easier to review." >> $GITHUB_STEP_SUMMARY
+          elif [ $TOTAL_CHANGES -lt 300 ]; then
+            SIZE="S"
+            echo "🟢 **Size: S** - Good size for thorough review." >> $GITHUB_STEP_SUMMARY
+          elif [ $TOTAL_CHANGES -lt 500 ]; then
+            SIZE="M"
+            echo "🟡 **Size: M** - Consider breaking into smaller PRs if possible." >> $GITHUB_STEP_SUMMARY
+          elif [ $TOTAL_CHANGES -lt 1000 ]; then
+            SIZE="L"
+            echo "🟠 **Size: L** - Large PR. Please ensure it's well documented." >> $GITHUB_STEP_SUMMARY
+          else
+            SIZE="XL"
+            echo "🔴 **Size: XL** - Very large PR. Strongly consider splitting it." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo ""
+          echo "PR Size: $SIZE ($TOTAL_CHANGES lines changed)"
+
+  # ===========================================================================
+  # LABEL CHECK
+  # ===========================================================================
+  labels:
+    name: 🏷️ Labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for required labels
+        uses: mheap/github-action-required-labels@v5
+        with:
+          mode: minimum
+          count: 1
+          labels: |
+            type: feature
+            type: bug
+            type: docs
+            type: chore
+            type: refactor
+            type: performance
+            type: security
+            type: dependencies
+            skip-changelog
+          add_comment: true
+          message: |
+            This PR requires at least one type label.
+
+            Please add one of:
+            - `type: feature` - New feature
+            - `type: bug` - Bug fix
+            - `type: docs` - Documentation
+            - `type: chore` - Maintenance
+            - `type: refactor` - Code refactoring
+            - `type: performance` - Performance improvement
+            - `type: security` - Security fix
+            - `type: dependencies` - Dependency update
+            - `skip-changelog` - Skip changelog entry
+
+  # ===========================================================================
+  # CHANGESET CHECK
+  # ===========================================================================
+  changeset:
+    name: 📦 Changeset
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changeset
+        id: changeset-check
+        run: |
+          # Check if this PR has a changeset
+          git fetch origin ${{ github.base_ref }}
+          CHANGESET_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E "^\.changeset\/.*\.md$" | grep -v "README.md" || true)
+
+          if [ -n "$CHANGESET_FILES" ]; then
+            echo "✅ Changeset found"
+            echo "has_changeset=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ No changeset found"
+            echo "has_changeset=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check labels for skip
+        id: label-check
+        run: |
+          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+          if echo "$LABELS" | grep -q "skip-changelog"; then
+            echo "skip_changeset=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_changeset=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Changeset warning
+        if: steps.changeset-check.outputs.has_changeset == 'false' && steps.label-check.outputs.skip_changeset == 'false'
+        run: |
+          echo "## ⚠️ Missing Changeset" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This PR doesn't include a changeset. If this PR includes changes that should be documented in the changelog, please run:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "pnpm changeset" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "If this PR doesn't need a changelog entry, add the \`skip-changelog\` label." >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
+  # CONFLICT CHECK
+  # ===========================================================================
+  conflicts:
+    name: ⚔️ Conflicts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for merge conflicts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+
+            if (pr.data.mergeable === false) {
+              core.setFailed('This PR has merge conflicts. Please resolve them before merging.');
+            } else if (pr.data.mergeable === null) {
+              core.warning('Merge status is being calculated. Please check back shortly.');
+            } else {
+              core.info('No merge conflicts detected.');
+            }
+
+  # ===========================================================================
+  # PR CHECKS STATUS
+  # ===========================================================================
+  pr-status:
+    name: ✅ PR Status
+    if: always()
+    needs: [pr-title, branch-name, pr-size, labels]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR Validation Status
+        run: |
+          echo "## 📋 PR Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| PR Title | ${{ needs.pr-title.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch Name | ${{ needs.branch-name.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PR Size | ${{ needs.pr-size.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Labels | ${{ needs.labels.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.pr-title.result }}" == "failure" ]] || \
+             [[ "${{ needs.branch-name.result }}" == "failure" ]]; then
+            echo ""
+            echo "❌ PR validation failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ PR validation passed" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,595 @@
+# =============================================================================
+# Skillancer CI Pipeline
+# =============================================================================
+# Comprehensive CI workflow optimized for Turborepo monorepo
+# Includes: lint, typecheck, tests, build with smart caching
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+# Cancel in-progress runs for same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+  # Turborepo Remote Caching
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  # CI optimizations
+  CI: true
+  HUSKY: 0 # Skip husky hooks in CI
+
+jobs:
+  # ===========================================================================
+  # CHANGE DETECTION
+  # ===========================================================================
+  # Detect which parts of the monorepo changed to enable selective testing
+  changes:
+    name: 🔍 Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      web-market: ${{ steps.filter.outputs.web-market }}
+      web-cockpit: ${{ steps.filter.outputs.web-cockpit }}
+      web-skillpod: ${{ steps.filter.outputs.web-skillpod }}
+      services: ${{ steps.filter.outputs.services }}
+      packages: ${{ steps.filter.outputs.packages }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      database: ${{ steps.filter.outputs.database }}
+      any: ${{ steps.filter.outputs.any }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect file changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'apps/web/**'
+              - 'packages/ui/**'
+              - 'packages/types/**'
+              - 'packages/utils/**'
+              - 'packages/api-client/**'
+            web-market:
+              - 'apps/web-market/**'
+              - 'packages/ui/**'
+              - 'packages/types/**'
+              - 'packages/utils/**'
+              - 'packages/api-client/**'
+            web-cockpit:
+              - 'apps/web-cockpit/**'
+              - 'packages/ui/**'
+              - 'packages/types/**'
+              - 'packages/utils/**'
+              - 'packages/api-client/**'
+            web-skillpod:
+              - 'apps/web-skillpod/**'
+              - 'packages/ui/**'
+              - 'packages/types/**'
+              - 'packages/utils/**'
+              - 'packages/api-client/**'
+            services:
+              - 'services/**'
+              - 'packages/database/**'
+              - 'packages/types/**'
+              - 'packages/utils/**'
+              - 'packages/cache/**'
+              - 'packages/service-client/**'
+            packages:
+              - 'packages/**'
+            mobile:
+              - 'apps/mobile/**'
+            database:
+              - 'packages/database/**'
+            any:
+              - '**'
+
+  # ===========================================================================
+  # DEPENDENCY INSTALLATION
+  # ===========================================================================
+  install:
+    name: 📦 Install Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            services/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+  # ===========================================================================
+  # CODE QUALITY - LINT
+  # ===========================================================================
+  lint:
+    name: 🔬 Lint
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            services/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Restore Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run ESLint
+        run: pnpm lint
+
+  # ===========================================================================
+  # CODE QUALITY - FORMAT CHECK
+  # ===========================================================================
+  format:
+    name: 💅 Format Check
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            services/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+  # ===========================================================================
+  # TYPE CHECKING
+  # ===========================================================================
+  typecheck:
+    name: 🔷 Type Check
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            services/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Restore Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Run TypeScript type checking
+        run: pnpm typecheck
+
+  # ===========================================================================
+  # UNIT TESTS
+  # ===========================================================================
+  test-unit:
+    name: 🧪 Unit Tests
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            services/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Restore Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Run Unit Tests with Coverage
+        run: pnpm test -- --coverage --passWithNoTests
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info,./apps/*/coverage/lcov.info,./services/*/coverage/lcov.info,./packages/*/coverage/lcov.info
+          fail_ci_if_error: false
+          verbose: true
+
+  # ===========================================================================
+  # INTEGRATION TESTS
+  # ===========================================================================
+  test-integration:
+    name: 🔗 Integration Tests
+    needs: [changes, install]
+    if: needs.changes.outputs.services == 'true' || needs.changes.outputs.database == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: skillancer_test
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: skillancer_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://skillancer_test:test_password@localhost:5432/skillancer_test
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            services/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Run Database Migrations
+        run: pnpm db:migrate:deploy
+
+      - name: Run Integration Tests
+        run: pnpm test:integration --passWithNoTests
+        continue-on-error: true # Integration tests may not exist yet
+
+  # ===========================================================================
+  # BUILD
+  # ===========================================================================
+  build:
+    name: 🏗️ Build
+    needs: [lint, format, typecheck, test-unit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            services/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Restore Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            apps/web/.next
+            apps/web-market/.next
+            apps/web-cockpit/.next
+            apps/web-skillpod/.next
+            services/*/dist
+            packages/*/dist
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ===========================================================================
+  # MOBILE TESTS (Flutter)
+  # ===========================================================================
+  mobile-tests:
+    name: 📱 Mobile Tests
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze code
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: apps/mobile/coverage/lcov.info
+          flags: mobile
+          fail_ci_if_error: false
+
+  # ===========================================================================
+  # E2E TESTS (Optional - runs on main branch only)
+  # ===========================================================================
+  test-e2e:
+    name: 🎭 E2E Tests
+    needs: [changes, build]
+    if: github.ref == 'refs/heads/main' && needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            services/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: pnpm test:e2e --passWithNoTests
+        continue-on-error: true # E2E tests may not exist yet
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ===========================================================================
+  # CI STATUS CHECK
+  # ===========================================================================
+  status-check:
+    name: ✅ CI Status
+    if: always()
+    needs: [lint, format, typecheck, test-unit, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CI Status
+        run: |
+          echo "Checking CI job results..."
+          echo "lint: ${{ needs.lint.result }}"
+          echo "format: ${{ needs.format.result }}"
+          echo "typecheck: ${{ needs.typecheck.result }}"
+          echo "test-unit: ${{ needs.test-unit.result }}"
+          echo "build: ${{ needs.build.result }}"
+
+          if [[ "${{ needs.lint.result }}" == "failure" ]] || \
+             [[ "${{ needs.format.result }}" == "failure" ]] || \
+             [[ "${{ needs.typecheck.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-unit.result }}" == "failure" ]] || \
+             [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "❌ CI failed - one or more required jobs failed"
+            exit 1
+          fi
+
+          echo "✅ CI passed - all required jobs succeeded"

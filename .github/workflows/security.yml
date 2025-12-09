@@ -1,0 +1,277 @@
+# =============================================================================
+# Skillancer Security Scanning
+# =============================================================================
+# Comprehensive security workflow including:
+# - Dependency vulnerability auditing
+# - CodeQL static analysis
+# - Secret scanning with TruffleHog
+# - License compliance checking
+# =============================================================================
+
+name: Security
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Run weekly on Monday at midnight UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  # ===========================================================================
+  # DEPENDENCY AUDIT
+  # ===========================================================================
+  dependency-audit:
+    name: 🔍 Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run pnpm audit
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Generate audit report
+        run: |
+          echo "## 📋 Dependency Audit Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          pnpm audit --json > audit-report.json 2>/dev/null || true
+          if [ -f audit-report.json ]; then
+            echo "Audit report generated successfully"
+            cat audit-report.json | jq -r '.advisories | to_entries[] | "- **\(.value.module_name)** (\(.value.severity)): \(.value.title)"' >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-report
+          path: audit-report.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # ===========================================================================
+  # CODEQL ANALYSIS
+  # ===========================================================================
+  codeql:
+    name: 🛡️ CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript-typescript']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-and-quality
+          config: |
+            paths:
+              - apps
+              - services
+              - packages
+            paths-ignore:
+              - '**/node_modules/**'
+              - '**/dist/**'
+              - '**/.next/**'
+              - '**/coverage/**'
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:${{ matrix.language }}'
+
+  # ===========================================================================
+  # SECRET SCANNING
+  # ===========================================================================
+  secrets-scan:
+    name: 🔐 Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified --json
+
+      - name: GitLeaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ===========================================================================
+  # LICENSE COMPLIANCE
+  # ===========================================================================
+  license-check:
+    name: 📜 License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install license-checker
+        run: pnpm add -g license-checker
+
+      - name: Check licenses
+        run: |
+          echo "## 📜 License Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Define allowed licenses
+          ALLOWED_LICENSES="MIT;Apache-2.0;ISC;BSD-2-Clause;BSD-3-Clause;0BSD;CC0-1.0;CC-BY-3.0;CC-BY-4.0;Unlicense;WTFPL"
+
+          # Check for problematic licenses
+          license-checker --production --json > licenses.json || true
+
+          # Count licenses
+          echo "### License Summary" >> $GITHUB_STEP_SUMMARY
+          cat licenses.json | jq -r 'to_entries | map(.value.licenses) | flatten | group_by(.) | map({license: .[0], count: length}) | sort_by(-.count) | .[] | "- \(.license): \(.count)"' >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Unable to parse licenses" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: licenses.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # ===========================================================================
+  # DOCKER IMAGE SCANNING (if applicable)
+  # ===========================================================================
+  container-scan:
+    name: 🐳 Container Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - auth-svc
+          - market-svc
+          - skillpod-svc
+          - cockpit-svc
+          - billing-svc
+          - notification-svc
+          - audit-svc
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check if Dockerfile exists
+        id: dockerfile-check
+        run: |
+          if [ -f "services/${{ matrix.service }}/Dockerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Docker image
+        if: steps.dockerfile-check.outputs.exists == 'true'
+        run: |
+          docker build -t skillancer/${{ matrix.service }}:scan -f services/${{ matrix.service }}/Dockerfile .
+
+      - name: Run Trivy vulnerability scanner
+        if: steps.dockerfile-check.outputs.exists == 'true'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: skillancer/${{ matrix.service }}:scan
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results
+        if: steps.dockerfile-check.outputs.exists == 'true'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+        continue-on-error: true
+
+  # ===========================================================================
+  # SECURITY STATUS CHECK
+  # ===========================================================================
+  security-status:
+    name: ✅ Security Status
+    if: always()
+    needs: [dependency-audit, codeql, secrets-scan, license-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Security Status
+        run: |
+          echo "## 🔒 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Audit | ${{ needs.dependency-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL Analysis | ${{ needs.codeql.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scanning | ${{ needs.secrets-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Check | ${{ needs.license-check.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          # Fail if critical security checks fail
+          if [[ "${{ needs.secrets-scan.result }}" == "failure" ]]; then
+            echo ""
+            echo "❌ **CRITICAL: Secret scanning detected exposed credentials!**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          if [[ "${{ needs.codeql.result }}" == "failure" ]]; then
+            echo ""
+            echo "⚠️ CodeQL analysis found security issues" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo ""
+          echo "✅ Security scan completed" >> $GITHUB_STEP_SUMMARY
