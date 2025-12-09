@@ -189,3 +189,13 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# =============================================================================
+# X-Ray / Tracing Variables
+# =============================================================================
+
+variable "xray_insights_notifications_enabled" {
+  description = "Enable X-Ray Insights notifications"
+  type        = bool
+  default     = true
+}

@@ -138,3 +138,37 @@ output "low_availability_alarm_arn" {
   description = "ARN of the low availability alarm"
   value       = aws_cloudwatch_metric_alarm.low_availability.arn
 }
+
+# =============================================================================
+# X-Ray / Tracing Outputs
+# =============================================================================
+
+output "xray_policy_arn" {
+  description = "ARN of the X-Ray IAM policy"
+  value       = aws_iam_policy.xray.arn
+}
+
+output "xray_policy_name" {
+  description = "Name of the X-Ray IAM policy"
+  value       = aws_iam_policy.xray.name
+}
+
+output "xray_log_group_name" {
+  description = "Name of the X-Ray CloudWatch log group"
+  value       = aws_cloudwatch_log_group.xray.name
+}
+
+output "xray_log_group_arn" {
+  description = "ARN of the X-Ray CloudWatch log group"
+  value       = aws_cloudwatch_log_group.xray.arn
+}
+
+output "xray_errors_group_name" {
+  description = "Name of the X-Ray errors group"
+  value       = aws_xray_group.errors.group_name
+}
+
+output "xray_api_group_name" {
+  description = "Name of the X-Ray API group"
+  value       = aws_xray_group.api_service.group_name
+}

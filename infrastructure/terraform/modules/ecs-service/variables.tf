@@ -471,3 +471,25 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# -----------------------------------------------------------------------------
+# X-Ray / Tracing Variables
+# -----------------------------------------------------------------------------
+
+variable "enable_xray" {
+  description = "Enable AWS X-Ray daemon sidecar for distributed tracing"
+  type        = bool
+  default     = false
+}
+
+variable "otlp_endpoint" {
+  description = "OpenTelemetry OTLP endpoint for trace export"
+  type        = string
+  default     = null
+}
+
+variable "additional_sidecars" {
+  description = "Additional sidecar container definitions"
+  type        = list(any)
+  default     = []
+}

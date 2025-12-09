@@ -122,5 +122,17 @@ output "service_summary" {
     service_discovery   = var.enable_service_discovery
     blue_green_enabled  = var.enable_blue_green
     auto_scaling        = var.enable_auto_scaling
+    xray_enabled        = var.enable_xray
   }
+}
+
+# X-Ray / Tracing Outputs
+output "xray_task_definition_arn" {
+  description = "ARN of the task definition with X-Ray sidecar"
+  value       = var.enable_xray ? aws_ecs_task_definition.with_xray[0].arn : null
+}
+
+output "xray_task_definition_family" {
+  description = "Family of the task definition with X-Ray sidecar"
+  value       = var.enable_xray ? aws_ecs_task_definition.with_xray[0].family : null
 }

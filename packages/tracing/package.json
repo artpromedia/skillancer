@@ -1,0 +1,102 @@
+{
+  "name": "@skillancer/tracing",
+  "version": "0.0.0",
+  "description": "Distributed tracing with OpenTelemetry and AWS X-Ray for Skillancer",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./fastify-plugin": {
+      "import": {
+        "types": "./dist/fastify-plugin.d.ts",
+        "default": "./dist/fastify-plugin.js"
+      },
+      "require": {
+        "types": "./dist/fastify-plugin.d.cts",
+        "default": "./dist/fastify-plugin.cjs"
+      }
+    },
+    "./express-middleware": {
+      "import": {
+        "types": "./dist/express-middleware.d.ts",
+        "default": "./dist/express-middleware.js"
+      },
+      "require": {
+        "types": "./dist/express-middleware.d.cts",
+        "default": "./dist/express-middleware.cjs"
+      }
+    },
+    "./prisma": {
+      "import": {
+        "types": "./dist/prisma.d.ts",
+        "default": "./dist/prisma.js"
+      },
+      "require": {
+        "types": "./dist/prisma.d.cts",
+        "default": "./dist/prisma.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.52.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.56.0",
+    "@opentelemetry/id-generator-aws-xray": "^1.2.2",
+    "@opentelemetry/instrumentation": "^0.56.0",
+    "@opentelemetry/instrumentation-http": "^0.56.0",
+    "@opentelemetry/propagator-aws-xray": "^1.26.0",
+    "@opentelemetry/resources": "^1.29.0",
+    "@opentelemetry/sdk-node": "^0.56.0",
+    "@opentelemetry/sdk-trace-base": "^1.29.0",
+    "@opentelemetry/sdk-trace-node": "^1.29.0",
+    "@opentelemetry/semantic-conventions": "^1.28.0"
+  },
+  "devDependencies": {
+    "@skillancer/config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "eslint": "^8.57.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@prisma/client": "^5.0.0",
+    "express": "^4.18.0 || ^5.0.0",
+    "fastify": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@prisma/client": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    }
+  }
+}
