@@ -1,0 +1,215 @@
+/**
+ * @module @skillancer/auth-svc/config
+ * Configuration management for auth service
+ */
+
+import { z } from 'zod';
+
+// =============================================================================
+// SCHEMA
+// =============================================================================
+
+const configSchema = z.object({
+  // Server
+  port: z.coerce.number().default(4001),
+  host: z.string().default('0.0.0.0'),
+  nodeEnv: z.enum(['development', 'test', 'staging', 'production']).default('development'),
+
+  // Database
+  databaseUrl: z.string(),
+
+  // Redis
+  redisUrl: z.string(),
+
+  // JWT
+  jwt: z.object({
+    secret: z.string().min(32),
+    accessTokenExpiresIn: z.string().default('1h'),
+    refreshTokenExpiresIn: z.string().default('7d'),
+    issuer: z.string().default('skillancer'),
+    audience: z.string().default('skillancer-api'),
+  }),
+
+  // OAuth
+  oauth: z.object({
+    google: z.object({
+      clientId: z.string().optional(),
+      clientSecret: z.string().optional(),
+      callbackUrl: z.string().optional(),
+    }),
+    microsoft: z.object({
+      clientId: z.string().optional(),
+      clientSecret: z.string().optional(),
+      tenantId: z.string().default('common'),
+      callbackUrl: z.string().optional(),
+    }),
+    apple: z.object({
+      clientId: z.string().optional(),
+      teamId: z.string().optional(),
+      keyId: z.string().optional(),
+      privateKey: z.string().optional(),
+      callbackUrl: z.string().optional(),
+    }),
+  }),
+
+  // URLs
+  appUrl: z.string().default('http://localhost:3000'),
+  apiUrl: z.string().default('http://localhost:4001'),
+
+  // Email
+  email: z.object({
+    from: z.string().default('noreply@skillancer.com'),
+    fromName: z.string().default('Skillancer'),
+  }),
+
+  // Security
+  security: z.object({
+    bcryptRounds: z.coerce.number().default(12),
+    maxLoginAttempts: z.coerce.number().default(5),
+    lockoutDuration: z.coerce.number().default(15 * 60 * 1000), // 15 minutes
+    sessionTtl: z.coerce.number().default(24 * 60 * 60), // 24 hours in seconds
+    emailVerificationTtl: z.coerce.number().default(24 * 60 * 60 * 1000), // 24 hours
+    passwordResetTtl: z.coerce.number().default(60 * 60 * 1000), // 1 hour
+  }),
+
+  // Rate limiting
+  rateLimit: z.object({
+    login: z.object({
+      maxAttempts: z.coerce.number().default(5),
+      windowMs: z.coerce.number().default(15 * 60 * 1000), // 15 minutes
+    }),
+    registration: z.object({
+      maxAttempts: z.coerce.number().default(3),
+      windowMs: z.coerce.number().default(60 * 60 * 1000), // 1 hour
+    }),
+    passwordReset: z.object({
+      maxAttempts: z.coerce.number().default(3),
+      windowMs: z.coerce.number().default(60 * 60 * 1000), // 1 hour
+    }),
+  }),
+
+  // Logging
+  logging: z.object({
+    level: z.string().default('info'),
+    pretty: z.boolean().default(false),
+  }),
+});
+
+export type Config = z.infer<typeof configSchema>;
+
+// =============================================================================
+// CONFIG SINGLETON
+// =============================================================================
+
+let cachedConfig: Config | null = null;
+
+/**
+ * Load configuration from environment variables
+ */
+export function getConfig(): Config {
+  if (cachedConfig) {
+    return cachedConfig;
+  }
+
+  const env = process.env;
+
+  const rawConfig = {
+    port: env['PORT'] ?? env['AUTH_SVC_PORT'] ?? 4001,
+    host: env['HOST'] ?? '0.0.0.0',
+    nodeEnv: env['NODE_ENV'] ?? 'development',
+
+    databaseUrl: env['DATABASE_URL'],
+    redisUrl: env['REDIS_URL'],
+
+    jwt: {
+      secret: env['JWT_SECRET'],
+      accessTokenExpiresIn: env['JWT_ACCESS_TOKEN_EXPIRES_IN'] ?? '1h',
+      refreshTokenExpiresIn: env['JWT_REFRESH_TOKEN_EXPIRES_IN'] ?? '7d',
+      issuer: env['JWT_ISSUER'] ?? 'skillancer',
+      audience: env['JWT_AUDIENCE'] ?? 'skillancer-api',
+    },
+
+    oauth: {
+      google: {
+        clientId: env['GOOGLE_CLIENT_ID'],
+        clientSecret: env['GOOGLE_CLIENT_SECRET'],
+        callbackUrl:
+          env['GOOGLE_CALLBACK_URL'] ??
+          `${env['API_URL'] ?? 'http://localhost:4001'}/auth/oauth/google/callback`,
+      },
+      microsoft: {
+        clientId: env['MICROSOFT_CLIENT_ID'],
+        clientSecret: env['MICROSOFT_CLIENT_SECRET'],
+        tenantId: env['MICROSOFT_TENANT_ID'] ?? 'common',
+        callbackUrl:
+          env['MICROSOFT_CALLBACK_URL'] ??
+          `${env['API_URL'] ?? 'http://localhost:4001'}/auth/oauth/microsoft/callback`,
+      },
+      apple: {
+        clientId: env['APPLE_CLIENT_ID'],
+        teamId: env['APPLE_TEAM_ID'],
+        keyId: env['APPLE_KEY_ID'],
+        privateKey: env['APPLE_PRIVATE_KEY'],
+        callbackUrl:
+          env['APPLE_CALLBACK_URL'] ??
+          `${env['API_URL'] ?? 'http://localhost:4001'}/auth/oauth/apple/callback`,
+      },
+    },
+
+    appUrl: env['APP_URL'] ?? 'http://localhost:3000',
+    apiUrl: env['API_URL'] ?? 'http://localhost:4001',
+
+    email: {
+      from: env['EMAIL_FROM'] ?? 'noreply@skillancer.com',
+      fromName: env['EMAIL_FROM_NAME'] ?? 'Skillancer',
+    },
+
+    security: {
+      bcryptRounds: env['BCRYPT_ROUNDS'] ?? 12,
+      maxLoginAttempts: env['MAX_LOGIN_ATTEMPTS'] ?? 5,
+      lockoutDuration: env['LOCKOUT_DURATION_MS'] ?? 15 * 60 * 1000,
+      sessionTtl: env['SESSION_TTL_SECONDS'] ?? 24 * 60 * 60,
+      emailVerificationTtl: env['EMAIL_VERIFICATION_TTL_MS'] ?? 24 * 60 * 60 * 1000,
+      passwordResetTtl: env['PASSWORD_RESET_TTL_MS'] ?? 60 * 60 * 1000,
+    },
+
+    rateLimit: {
+      login: {
+        maxAttempts: env['RATE_LIMIT_LOGIN_MAX'] ?? 5,
+        windowMs: env['RATE_LIMIT_LOGIN_WINDOW_MS'] ?? 15 * 60 * 1000,
+      },
+      registration: {
+        maxAttempts: env['RATE_LIMIT_REGISTRATION_MAX'] ?? 3,
+        windowMs: env['RATE_LIMIT_REGISTRATION_WINDOW_MS'] ?? 60 * 60 * 1000,
+      },
+      passwordReset: {
+        maxAttempts: env['RATE_LIMIT_PASSWORD_RESET_MAX'] ?? 3,
+        windowMs: env['RATE_LIMIT_PASSWORD_RESET_WINDOW_MS'] ?? 60 * 60 * 1000,
+      },
+    },
+
+    logging: {
+      level: env['LOG_LEVEL'] ?? 'info',
+      pretty: env['NODE_ENV'] === 'development',
+    },
+  };
+
+  cachedConfig = configSchema.parse(rawConfig);
+  return cachedConfig;
+}
+
+/**
+ * Clear config cache (useful for testing)
+ */
+export function clearConfigCache(): void {
+  cachedConfig = null;
+}
+
+/**
+ * Validate config and throw if invalid
+ */
+export function validateConfig(): void {
+  getConfig();
+}
+
+export { configSchema };
