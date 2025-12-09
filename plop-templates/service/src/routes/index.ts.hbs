@@ -1,0 +1,22 @@
+/**
+ * @module @skillancer/{{name}}/routes
+ * Route registration
+ */
+
+import { healthRoutes } from './health.js';
+
+import type { FastifyInstance } from 'fastify';
+
+/**
+ * Register all routes
+ */
+export async function registerRoutes(app: FastifyInstance): Promise<void> {
+  // Health check routes
+  await app.register(healthRoutes);
+
+  // TODO: Add your API routes here
+  // Example:
+  // await app.register(yourRoutes, { prefix: '/api/v1/your-resource' });
+}
+
+export { healthRoutes };

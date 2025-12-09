@@ -1,0 +1,171 @@
+/**
+ * @module @skillancer/{{name}}/config
+ * Environment configuration with Zod validation
+ */
+
+import { config as dotenvConfig } from 'dotenv';
+import { z } from 'zod';
+
+// ============================================================================
+// SCHEMAS
+// ============================================================================
+
+const envSchema = z.enum(['development', 'test', 'production']).default('development');
+
+const logLevelSchema = z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info');
+
+const configSchema = z.object({
+  // Environment
+  env: envSchema,
+
+  // Service info
+  service: z.object({
+    name: z.string().default('{{name}}'),
+    version: z.string().default('0.0.1'),
+  }),
+
+  // Server
+  server: z.object({
+    port: z.coerce.number().int().positive().default({{port}}),
+    host: z.string().default('0.0.0.0'),
+  }),
+
+  // Logging
+  logging: z.object({
+    level: logLevelSchema,
+    pretty: z.coerce.boolean().default(false),
+  }),
+
+  {{#if withDatabase}}
+  // Database
+  database: z.object({
+    url: z.string().url(),
+    poolMin: z.coerce.number().int().nonnegative().default(2),
+    poolMax: z.coerce.number().int().positive().default(10),
+  }),
+  {{/if}}
+
+  {{#if withRedis}}
+  // Redis
+  redis: z.object({
+    url: z.string().default('redis://localhost:6379'),
+  }),
+  {{/if}}
+
+  // CORS
+  cors: z.object({
+    origin: z.union([z.string(), z.array(z.string()), z.boolean()]).default('*'),
+    credentials: z.coerce.boolean().default(true),
+  }),
+
+  // Rate limiting
+  rateLimit: z.object({
+    max: z.coerce.number().int().positive().default(100),
+    windowMs: z.coerce.number().int().positive().default(60000),
+  }),
+
+  // Feature flags
+  features: z.object({
+    swagger: z.coerce.boolean().default(true),
+    metrics: z.coerce.boolean().default(true),
+  }),
+});
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export type Config = z.infer<typeof configSchema>;
+export type Environment = z.infer<typeof envSchema>;
+export type LogLevel = z.infer<typeof logLevelSchema>;
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+let cachedConfig: Config | null = null;
+
+/**
+ * Load environment variables from .env file
+ */
+export function loadEnv(): void {
+  dotenvConfig();
+}
+
+/**
+ * Build configuration object from environment variables
+ */
+function buildConfigFromEnv(): Record<string, unknown> {
+  return {
+    env: process.env.NODE_ENV,
+    service: {
+      name: process.env.SERVICE_NAME ?? '{{name}}',
+      version: process.env.SERVICE_VERSION ?? '0.0.1',
+    },
+    server: {
+      port: process.env.PORT ?? {{port}},
+      host: process.env.HOST,
+    },
+    logging: {
+      level: process.env.LOG_LEVEL,
+      pretty: process.env.LOG_PRETTY ?? process.env.NODE_ENV === 'development',
+    },
+    {{#if withDatabase}}
+    database: {
+      url: process.env.DATABASE_URL,
+      poolMin: process.env.DATABASE_POOL_MIN,
+      poolMax: process.env.DATABASE_POOL_MAX,
+    },
+    {{/if}}
+    {{#if withRedis}}
+    redis: {
+      url: process.env.REDIS_URL,
+    },
+    {{/if}}
+    cors: {
+      origin: process.env.CORS_ORIGIN,
+      credentials: process.env.CORS_CREDENTIALS,
+    },
+    rateLimit: {
+      max: process.env.RATE_LIMIT_MAX,
+      windowMs: process.env.RATE_LIMIT_WINDOW_MS,
+    },
+    features: {
+      swagger: process.env.FEATURE_SWAGGER ?? true,
+      metrics: process.env.FEATURE_METRICS ?? true,
+    },
+  };
+}
+
+/**
+ * Get validated configuration
+ */
+export function getConfig(): Config {
+  if (cachedConfig) {
+    return cachedConfig;
+  }
+
+  // Load .env file in non-production
+  if (process.env.NODE_ENV !== 'production') {
+    loadEnv();
+  }
+
+  const rawConfig = buildConfigFromEnv();
+  const result = configSchema.safeParse(rawConfig);
+
+  if (!result.success) {
+    console.error('❌ Invalid configuration:');
+    console.error(result.error.format());
+    throw new Error('Invalid configuration');
+  }
+
+  cachedConfig = result.data;
+  return cachedConfig;
+}
+
+/**
+ * Reset cached configuration (useful for testing)
+ */
+export function resetConfig(): void {
+  cachedConfig = null;
+}

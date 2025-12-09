@@ -1,0 +1,52 @@
+/**
+ * Global error handler
+ */
+
+import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+
+interface ErrorResponse {
+  statusCode: number;
+  error: string;
+  message: string;
+  requestId?: string;
+}
+
+export function errorHandler(
+  error: FastifyError,
+  request: FastifyRequest,
+  reply: FastifyReply
+): void {
+  const statusCode = error.statusCode ?? 500;
+
+  // Log the error
+  if (statusCode >= 500) {
+    request.log.error(error);
+  } else {
+    request.log.warn(error);
+  }
+
+  const response: ErrorResponse = {
+    statusCode,
+    error: getErrorName(statusCode),
+    message: statusCode >= 500 ? 'Internal Server Error' : error.message,
+    requestId: request.id,
+  };
+
+  reply.status(statusCode).send(response);
+}
+
+function getErrorName(statusCode: number): string {
+  const names: Record<number, string> = {
+    400: 'Bad Request',
+    401: 'Unauthorized',
+    403: 'Forbidden',
+    404: 'Not Found',
+    409: 'Conflict',
+    422: 'Unprocessable Entity',
+    429: 'Too Many Requests',
+    500: 'Internal Server Error',
+    502: 'Bad Gateway',
+    503: 'Service Unavailable',
+  };
+  return names[statusCode] ?? 'Error';
+}

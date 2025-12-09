@@ -1,0 +1,40 @@
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { {{name}} } from './{{kebabCase name}}';
+
+describe('{{name}}', () => {
+  it('renders children correctly', () => {
+    render(<{{name}}>Test content</{{name}}>);
+    expect(screen.getByText('Test content')).toBeInTheDocument();
+  });
+
+  it('applies custom className', () => {
+    render(<{{name}} className="custom-class">Content</{{name}}>);
+    const element = screen.getByText('Content');
+    expect(element).toHaveClass('custom-class');
+  });
+
+  it('renders with default variant', () => {
+    render(<{{name}}>Content</{{name}}>);
+    const element = screen.getByText('Content');
+    expect(element).toHaveAttribute('data-slot', '{{kebabCase name}}');
+  });
+
+  it('renders with primary variant', () => {
+    render(<{{name}} variant="primary">Content</{{name}}>);
+    const element = screen.getByText('Content');
+    expect(element).toHaveClass('bg-primary');
+  });
+
+  it('renders with secondary variant', () => {
+    render(<{{name}} variant="secondary">Content</{{name}}>);
+    const element = screen.getByText('Content');
+    expect(element).toHaveClass('bg-secondary');
+  });
+
+  it('forwards ref correctly', () => {
+    const ref = { current: null };
+    render(<{{name}} ref={ref}>Content</{{name}}>);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+  });
+});

@@ -1,0 +1,31 @@
+import { cn } from '../../lib/utils';
+
+export interface {{name}}Props {
+  /** Component children */
+  children?: React.ReactNode;
+  /** Additional CSS classes */
+  className?: string;
+  /** Optional variant */
+  variant?: 'default' | 'primary' | 'secondary';
+}
+
+export function {{name}}({ children, className, variant = 'default' }: {{name}}Props) {
+  return (
+    <div
+      data-slot="{{kebabCase name}}"
+      className={cn(
+        // Base styles
+        '{{kebabCase name}}',
+        // Variant styles
+        {
+          'bg-background text-foreground': variant === 'default',
+          'bg-primary text-primary-foreground': variant === 'primary',
+          'bg-secondary text-secondary-foreground': variant === 'secondary',
+        },
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}

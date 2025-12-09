@@ -1,0 +1,88 @@
+/**
+ * {{titleCase name}} schemas
+ */
+
+import { z } from 'zod';
+
+// ============================================================================
+// Base Schemas
+// ============================================================================
+
+const {{camelCase name}}Base = z.object({
+  // TODO: Add your fields here
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+});
+
+const {{camelCase name}}Full = {{camelCase name}}Base.extend({
+  id: z.string().uuid(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+// ============================================================================
+// Request Schemas
+// ============================================================================
+
+const params = z.object({
+  id: z.string().uuid(),
+});
+
+const create = {{camelCase name}}Base;
+
+const update = {{camelCase name}}Base.partial();
+
+const listQuery = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(10),
+  search: z.string().optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'name']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
+// ============================================================================
+// Response Schemas
+// ============================================================================
+
+const response = {{camelCase name}}Full;
+
+const listResponse = z.object({
+  data: z.array({{camelCase name}}Full),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  totalPages: z.number(),
+});
+
+const notFound = z.object({
+  statusCode: z.literal(404),
+  error: z.literal('Not Found'),
+  message: z.string(),
+});
+
+const error = z.object({
+  statusCode: z.number(),
+  error: z.string(),
+  message: z.string(),
+});
+
+// ============================================================================
+// Export
+// ============================================================================
+
+export const {{camelCase name}}Schema = {
+  params,
+  create,
+  update,
+  listQuery,
+  response,
+  listResponse,
+  notFound,
+  error,
+};
+
+// Type exports
+export type {{pascalCase name}} = z.infer<typeof {{camelCase name}}Full>;
+export type Create{{pascalCase name}} = z.infer<typeof create>;
+export type Update{{pascalCase name}} = z.infer<typeof update>;
+export type {{pascalCase name}}ListQuery = z.infer<typeof listQuery>;

@@ -1,0 +1,112 @@
+/**
+ * {{titleCase name}} service
+ */
+
+{{#if withRepository}}
+import { {{pascalCase name}}Repository } from '../repositories/{{name}}.repository.js';
+{{/if}}
+import type {
+  {{pascalCase name}},
+  Create{{pascalCase name}},
+  Update{{pascalCase name}},
+  {{pascalCase name}}ListQuery,
+} from '../schemas/{{name}}.schema.js';
+
+export class {{pascalCase name}}Service {
+  {{#if withRepository}}
+  private repository: {{pascalCase name}}Repository;
+
+  constructor() {
+    this.repository = new {{pascalCase name}}Repository();
+  }
+  {{/if}}
+
+  /**
+   * List {{name}} with pagination
+   */
+  async list(query: {{pascalCase name}}ListQuery): Promise<{
+    data: {{pascalCase name}}[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    {{#if withRepository}}
+    const { data, total } = await this.repository.findMany(query);
+    {{else}}
+    // TODO: Implement list logic
+    const data: {{pascalCase name}}[] = [];
+    const total = 0;
+    {{/if}}
+
+    return {
+      data,
+      total,
+      page: query.page,
+      limit: query.limit,
+      totalPages: Math.ceil(total / query.limit),
+    };
+  }
+
+  /**
+   * Get {{name}} by ID
+   */
+  async getById(id: string): Promise<{{pascalCase name}} | null> {
+    {{#if withRepository}}
+    return this.repository.findById(id);
+    {{else}}
+    // TODO: Implement get by ID logic
+    return null;
+    {{/if}}
+  }
+
+  /**
+   * Create new {{name}}
+   */
+  async create(data: Create{{pascalCase name}}): Promise<{{pascalCase name}}> {
+    {{#if withRepository}}
+    return this.repository.create(data);
+    {{else}}
+    // TODO: Implement create logic
+    return {
+      id: crypto.randomUUID(),
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as {{pascalCase name}};
+    {{/if}}
+  }
+
+  /**
+   * Update {{name}}
+   */
+  async update(id: string, data: Update{{pascalCase name}}): Promise<{{pascalCase name}} | null> {
+    {{#if withRepository}}
+    const existing = await this.repository.findById(id);
+    if (!existing) {
+      return null;
+    }
+    return this.repository.update(id, data);
+    {{else}}
+    // TODO: Implement update logic
+    return null;
+    {{/if}}
+  }
+
+  /**
+   * Delete {{name}}
+   */
+  async delete(id: string): Promise<boolean> {
+    {{#if withRepository}}
+    const existing = await this.repository.findById(id);
+    if (!existing) {
+      return false;
+    }
+    await this.repository.delete(id);
+    return true;
+    {{else}}
+    // TODO: Implement delete logic
+    return false;
+    {{/if}}
+  }
+}

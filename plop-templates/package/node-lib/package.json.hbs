@@ -1,0 +1,8 @@
+{ "name": "@skillancer/{{name}}", "version": "0.0.1", "description": "{{description}}", "type":
+"module", "main": "./dist/index.js", "module": "./dist/index.js", "types": "./dist/index.d.ts",
+"exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } }, "files": [
+"dist", "README.md" ], "scripts": { "build": "tsup", "dev": "tsup --watch", "lint": "eslint src
+--ext .ts", "typecheck": "tsc --noEmit", "test": "vitest run", "test:watch": "vitest", "clean":
+"rimraf dist" }, "dependencies": { "zod": "^3.23.8" }, "devDependencies": { "@skillancer/config":
+"workspace:*", "@types/node": "^20.14.2", "rimraf": "^5.0.7", "tsup": "^8.0.0", "typescript":
+"^5.4.5", "vitest": "^2.1.8" }, "peerDependencies": { "typescript": "^5.0.0" } }

@@ -1,0 +1,90 @@
+/**
+ * {{titleCase name}} repository
+ */
+
+// import { prisma } from '@skillancer/database';
+import type {
+  {{pascalCase name}},
+  Create{{pascalCase name}},
+  Update{{pascalCase name}},
+  {{pascalCase name}}ListQuery,
+} from '../schemas/{{name}}.schema.js';
+
+export class {{pascalCase name}}Repository {
+  /**
+   * Find many with pagination
+   */
+  async findMany(
+    query: {{pascalCase name}}ListQuery
+  ): Promise<{ data: {{pascalCase name}}[]; total: number }> {
+    const { page, limit, search, sortBy, sortOrder } = query;
+    const skip = (page - 1) * limit;
+
+    // TODO: Replace with actual Prisma queries
+    // Example:
+    // const where = search ? { name: { contains: search, mode: 'insensitive' } } : {};
+    // const [data, total] = await Promise.all([
+    //   prisma.{{camelCase name}}.findMany({
+    //     where,
+    //     skip,
+    //     take: limit,
+    //     orderBy: { [sortBy]: sortOrder },
+    //   }),
+    //   prisma.{{camelCase name}}.count({ where }),
+    // ]);
+
+    const data: {{pascalCase name}}[] = [];
+    const total = 0;
+
+    return { data, total };
+  }
+
+  /**
+   * Find by ID
+   */
+  async findById(id: string): Promise<{{pascalCase name}} | null> {
+    // TODO: Replace with actual Prisma query
+    // return prisma.{{camelCase name}}.findUnique({ where: { id } });
+    return null;
+  }
+
+  /**
+   * Create
+   */
+  async create(data: Create{{pascalCase name}}): Promise<{{pascalCase name}}> {
+    // TODO: Replace with actual Prisma query
+    // return prisma.{{camelCase name}}.create({ data });
+    return {
+      id: crypto.randomUUID(),
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as {{pascalCase name}};
+  }
+
+  /**
+   * Update
+   */
+  async update(id: string, data: Update{{pascalCase name}}): Promise<{{pascalCase name}}> {
+    // TODO: Replace with actual Prisma query
+    // return prisma.{{camelCase name}}.update({
+    //   where: { id },
+    //   data: { ...data, updatedAt: new Date() },
+    // });
+    return {
+      id,
+      name: data.name ?? '',
+      description: data.description,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as {{pascalCase name}};
+  }
+
+  /**
+   * Delete
+   */
+  async delete(id: string): Promise<void> {
+    // TODO: Replace with actual Prisma query
+    // await prisma.{{camelCase name}}.delete({ where: { id } });
+  }
+}

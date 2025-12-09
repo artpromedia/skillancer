@@ -1,0 +1,72 @@
+# ===========================================
+# {{name}} Dockerfile
+# ===========================================
+
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@8 --activate
+
+# ===========================================
+# Dependencies stage
+# ===========================================
+FROM base AS deps
+WORKDIR /app
+
+# Copy workspace files
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json ./
+
+# Copy package.json files
+COPY services/{{name}}/package.json ./services/{{name}}/
+COPY packages/types/package.json ./packages/types/
+COPY packages/utils/package.json ./packages/utils/
+COPY packages/config/package.json ./packages/config/
+{{#if withDatabase}}COPY packages/database/package.json ./packages/database/{{/if}}
+{{#if withRedis}}COPY packages/cache/package.json ./packages/cache/{{/if}}
+{{#if withQueue}}COPY packages/queue/package.json ./packages/queue/{{/if}}
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile --filter @skillancer/{{name}}...
+
+# ===========================================
+# Builder stage
+# ===========================================
+FROM base AS builder
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/services/{{name}}/node_modules ./services/{{name}}/node_modules
+COPY . .
+
+# Build packages first
+RUN pnpm --filter @skillancer/types build
+RUN pnpm --filter @skillancer/utils build
+{{#if withDatabase}}RUN pnpm --filter @skillancer/database build{{/if}}
+
+# Build the service
+RUN pnpm --filter @skillancer/{{name}} build
+
+# ===========================================
+# Runner stage
+# ===========================================
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 skillancer
+
+# Copy built files
+COPY --from=builder --chown=skillancer:nodejs /app/services/{{name}}/dist ./dist
+COPY --from=builder --chown=skillancer:nodejs /app/services/{{name}}/package.json ./
+COPY --from=builder --chown=skillancer:nodejs /app/node_modules ./node_modules
+
+USER skillancer
+
+EXPOSE {{port}}
+
+ENV PORT={{port}}
+ENV HOST=0.0.0.0
+
+CMD ["node", "dist/server.js"]

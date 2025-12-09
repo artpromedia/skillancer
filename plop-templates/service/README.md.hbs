@@ -1,0 +1,43 @@
+#
+{{name}}
+
+{{description}}
+
+## Quick Start ```bash # Install dependencies pnpm install # Set up environment cp .env.example .env
+# Start development server pnpm dev ``` ## Available Scripts | Command | Description |
+|---------|-------------| | `pnpm dev` | Start development server with hot reload | | `pnpm build` |
+Build for production | | `pnpm start` | Start production server | | `pnpm test` | Run tests | |
+`pnpm test:coverage` | Run tests with coverage | | `pnpm lint` | Lint source code | | `pnpm
+typecheck` | Type check without emitting | ## API Endpoints ### Health Checks | Endpoint | Method |
+Description | |----------|--------|-------------| | `/health` | GET | Basic health check | |
+`/health/ready` | GET | Readiness probe (Kubernetes) | | `/health/live` | GET | Liveness probe
+(Kubernetes) | ### API Documentation When running in development, API documentation is available at:
+- Swagger UI: http://localhost:{{port}}/docs ## Environment Variables | Variable | Required |
+Default | Description | |----------|----------|---------|-------------| | `NODE_ENV` | No |
+development | Environment mode | | `PORT` | No |
+{{port}}
+| Server port | | `HOST` | No | 0.0.0.0 | Server host | | `LOG_LEVEL` | No | info | Logging level |
+{{#if withDatabase}}
+  | `DATABASE_URL` | Yes | - | PostgreSQL connection URL |
+{{/if}}
+{{#if withRedis}}
+  | `REDIS_URL` | No | redis://localhost:6379 | Redis connection URL |
+{{/if}}
+
+## Project Structure ```
+{{name}}/ ├── src/ │ ├── app.ts # Application factory │ ├── server.ts # Server entry point │ ├──
+index.ts # Package exports │ ├── config/ # Configuration │ ├── plugins/ # Fastify plugins │ ├──
+routes/ # API routes │ ├── services/ # Business logic │ ├── repositories/ # Data access │ ├──
+middleware/ # Custom middleware │ ├── types/ # TypeScript types │ └── __tests__/ # Tests ├──
+Dockerfile ├── package.json └── tsconfig.json ``` ## Adding New Endpoints Use the plop generator to
+scaffold new endpoints: ```bash # From monorepo root pnpm plop endpoint ``` Or manually: 1. Create
+route file in `src/routes/` 2. Create service in `src/services/` (optional) 3. Create repository in
+`src/repositories/` (optional) 4. Register route in `src/routes/index.ts` ## Docker Build and run
+with Docker: ```bash # Build image docker build -t
+{{name}}
+. # Run container docker run -p
+{{port}}:{{port}}
+--env-file .env
+{{name}}
+``` ## Testing ```bash # Run all tests pnpm test # Run tests in watch mode pnpm test:watch # Run
+with coverage pnpm test:coverage ```

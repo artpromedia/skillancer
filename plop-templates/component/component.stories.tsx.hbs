@@ -1,0 +1,72 @@
+import type { Meta, StoryObj } from '@storybook/react';
+import { {{name}} } from './{{kebabCase name}}';
+
+const meta: Meta<typeof {{name}}> = {
+  title: 'Components/{{name}}',
+  component: {{name}},
+  parameters: {
+    layout: 'centered',
+  },
+  tags: ['autodocs'],
+  argTypes: {
+    variant: {
+      control: 'select',
+      options: ['default', 'primary', 'secondary'],
+      description: 'The visual variant of the component',
+    },
+    className: {
+      control: 'text',
+      description: 'Additional CSS classes',
+    },
+  },
+  args: {
+    children: '{{name}} content',
+  },
+};
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/**
+ * Default variant
+ */
+export const Default: Story = {
+  args: {
+    variant: 'default',
+    children: 'Default {{name}}',
+  },
+};
+
+/**
+ * Primary variant
+ */
+export const Primary: Story = {
+  args: {
+    variant: 'primary',
+    children: 'Primary {{name}}',
+  },
+};
+
+/**
+ * Secondary variant
+ */
+export const Secondary: Story = {
+  args: {
+    variant: 'secondary',
+    children: 'Secondary {{name}}',
+  },
+};
+
+/**
+ * With custom content
+ */
+export const WithCustomContent: Story = {
+  args: {
+    children: (
+      <div className="flex flex-col gap-2">
+        <h3 className="font-semibold">Custom Content</h3>
+        <p>This is a {{name}} with custom JSX content.</p>
+      </div>
+    ),
+  },
+};

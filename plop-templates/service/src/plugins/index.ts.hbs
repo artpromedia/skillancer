@@ -1,0 +1,96 @@
+/**
+ * @module @skillancer/{{name}}/plugins
+ * Fastify plugin registration
+ */
+
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
+import sensible from '@fastify/sensible';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
+
+import { getConfig } from '../config/index.js';
+
+import type { FastifyInstance } from 'fastify';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface PluginOptions {
+  cors?: boolean;
+  helmet?: boolean;
+  rateLimit?: boolean;
+  swagger?: boolean;
+}
+
+// ============================================================================
+// PLUGIN REGISTRATION
+// ============================================================================
+
+/**
+ * Register all Fastify plugins
+ */
+export async function registerPlugins(
+  app: FastifyInstance,
+  options: PluginOptions = {}
+): Promise<void> {
+  const config = getConfig();
+
+  // Sensible defaults (httpErrors, etc.)
+  await app.register(sensible);
+
+  // CORS
+  if (options.cors !== false) {
+    await app.register(cors, {
+      origin: config.cors.origin,
+      credentials: config.cors.credentials,
+    });
+  }
+
+  // Security headers
+  if (options.helmet !== false) {
+    await app.register(helmet, {
+      contentSecurityPolicy: config.env === 'production',
+    });
+  }
+
+  // Rate limiting
+  if (options.rateLimit !== false) {
+    await app.register(rateLimit, {
+      max: config.rateLimit.max,
+      timeWindow: config.rateLimit.windowMs,
+    });
+  }
+
+  // Swagger documentation
+  if (options.swagger !== false && config.features.swagger) {
+    await app.register(swagger, {
+      openapi: {
+        info: {
+          title: '{{titleCase name}} API',
+          description: '{{description}}',
+          version: config.service.version,
+        },
+        servers: [
+          {
+            url: `http://localhost:${config.server.port}`,
+            description: 'Development server',
+          },
+        ],
+        tags: [
+          { name: 'Health', description: 'Health check endpoints' },
+        ],
+      },
+    });
+
+    await app.register(swaggerUi, {
+      routePrefix: '/docs',
+      uiConfig: {
+        docExpansion: 'list',
+        deepLinking: true,
+      },
+    });
+  }
+}

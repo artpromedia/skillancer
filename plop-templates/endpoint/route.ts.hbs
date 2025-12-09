@@ -1,0 +1,174 @@
+/**
+ * {{titleCase name}} routes
+ */
+
+import { {{camelCase name}}Schema } from '../schemas/{{name}}.schema.js';
+{{#if withService}}
+import { {{pascalCase name}}Service } from '../services/{{name}}.service.js';
+{{/if}}
+
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { z } from 'zod';
+
+type Create{{pascalCase name}}Body = z.infer<typeof {{camelCase name}}Schema.create>;
+type Update{{pascalCase name}}Body = z.infer<typeof {{camelCase name}}Schema.update>;
+type {{pascalCase name}}Params = { id: string };
+
+export async function {{camelCase name}}Routes(app: FastifyInstance): Promise<void> {
+  {{#if withService}}
+  const service = new {{pascalCase name}}Service();
+  {{/if}}
+
+  {{#if (includes methods 'list')}}
+  // GET /{{name}} - List all
+  app.get(
+    '/',
+    {
+      schema: {
+        tags: ['{{titleCase name}}'],
+        summary: 'List all {{name}}',
+        querystring: {{camelCase name}}Schema.listQuery,
+        response: {
+          200: {{camelCase name}}Schema.listResponse,
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const query = request.query as z.infer<typeof {{camelCase name}}Schema.listQuery>;
+      {{#if withService}}
+      const result = await service.list(query);
+      return result;
+      {{else}}
+      // TODO: Implement list logic
+      return { data: [], total: 0, page: 1, limit: 10 };
+      {{/if}}
+    }
+  );
+  {{/if}}
+
+  {{#if (includes methods 'get')}}
+  // GET /{{name}}/:id - Get by ID
+  app.get(
+    '/:id',
+    {
+      schema: {
+        tags: ['{{titleCase name}}'],
+        summary: 'Get {{name}} by ID',
+        params: {{camelCase name}}Schema.params,
+        response: {
+          200: {{camelCase name}}Schema.response,
+          404: {{camelCase name}}Schema.notFound,
+        },
+      },
+    },
+    async (request: FastifyRequest<{ Params: {{pascalCase name}}Params }>, reply: FastifyReply) => {
+      const { id } = request.params;
+      {{#if withService}}
+      const result = await service.getById(id);
+      if (!result) {
+        return reply.notFound('{{titleCase name}} not found');
+      }
+      return result;
+      {{else}}
+      // TODO: Implement get by ID logic
+      return reply.notFound('{{titleCase name}} not found');
+      {{/if}}
+    }
+  );
+  {{/if}}
+
+  {{#if (includes methods 'create')}}
+  // POST /{{name}} - Create
+  app.post(
+    '/',
+    {
+      schema: {
+        tags: ['{{titleCase name}}'],
+        summary: 'Create {{name}}',
+        body: {{camelCase name}}Schema.create,
+        response: {
+          201: {{camelCase name}}Schema.response,
+          400: {{camelCase name}}Schema.error,
+        },
+      },
+    },
+    async (request: FastifyRequest<{ Body: Create{{pascalCase name}}Body }>, reply: FastifyReply) => {
+      const data = request.body;
+      {{#if withService}}
+      const result = await service.create(data);
+      return reply.status(201).send(result);
+      {{else}}
+      // TODO: Implement create logic
+      return reply.status(201).send({ id: 'new-id', ...data, createdAt: new Date().toISOString() });
+      {{/if}}
+    }
+  );
+  {{/if}}
+
+  {{#if (includes methods 'update')}}
+  // PATCH /{{name}}/:id - Update
+  app.patch(
+    '/:id',
+    {
+      schema: {
+        tags: ['{{titleCase name}}'],
+        summary: 'Update {{name}}',
+        params: {{camelCase name}}Schema.params,
+        body: {{camelCase name}}Schema.update,
+        response: {
+          200: {{camelCase name}}Schema.response,
+          404: {{camelCase name}}Schema.notFound,
+        },
+      },
+    },
+    async (
+      request: FastifyRequest<{ Params: {{pascalCase name}}Params; Body: Update{{pascalCase name}}Body }>,
+      reply: FastifyReply
+    ) => {
+      const { id } = request.params;
+      const data = request.body;
+      {{#if withService}}
+      const result = await service.update(id, data);
+      if (!result) {
+        return reply.notFound('{{titleCase name}} not found');
+      }
+      return result;
+      {{else}}
+      // TODO: Implement update logic
+      return reply.notFound('{{titleCase name}} not found');
+      {{/if}}
+    }
+  );
+  {{/if}}
+
+  {{#if (includes methods 'delete')}}
+  // DELETE /{{name}}/:id - Delete
+  app.delete(
+    '/:id',
+    {
+      schema: {
+        tags: ['{{titleCase name}}'],
+        summary: 'Delete {{name}}',
+        params: {{camelCase name}}Schema.params,
+        response: {
+          204: { type: 'null', description: 'Successfully deleted' },
+          404: {{camelCase name}}Schema.notFound,
+        },
+      },
+    },
+    async (request: FastifyRequest<{ Params: {{pascalCase name}}Params }>, reply: FastifyReply) => {
+      const { id } = request.params;
+      {{#if withService}}
+      const deleted = await service.delete(id);
+      if (!deleted) {
+        return reply.notFound('{{titleCase name}} not found');
+      }
+      return reply.status(204).send();
+      {{else}}
+      // TODO: Implement delete logic
+      return reply.notFound('{{titleCase name}} not found');
+      {{/if}}
+    }
+  );
+  {{/if}}
+}

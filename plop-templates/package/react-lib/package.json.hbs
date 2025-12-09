@@ -1,0 +1,15 @@
+{ "name": "@skillancer/{{name}}", "version": "0.0.1", "description": "{{description}}", "type":
+"module", "main": "./dist/index.js", "module": "./dist/index.js", "types": "./dist/index.d.ts",
+"exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }, "./components/*": {
+"types": "./dist/components/*/index.d.ts", "import": "./dist/components/*/index.js" } }, "files": [
+"dist", "README.md" ], "scripts": { "build": "tsup", "dev": "tsup --watch", "lint": "eslint src
+--ext .ts,.tsx", "typecheck": "tsc --noEmit", "test": "vitest run", "test:watch": "vitest",
+"storybook": "storybook dev -p 6006", "build-storybook": "storybook build", "clean": "rimraf dist"
+}, "dependencies": { "class-variance-authority": "^0.7.0", "clsx": "^2.1.0", "tailwind-merge":
+"^2.2.0" }, "devDependencies": { "@skillancer/config": "workspace:*", "@storybook/addon-essentials":
+"^8.0.0", "@storybook/addon-interactions": "^8.0.0", "@storybook/addon-links": "^8.0.0",
+"@storybook/react": "^8.0.0", "@storybook/react-vite": "^8.0.0", "@testing-library/jest-dom":
+"^6.4.0", "@testing-library/react": "^14.2.0", "@types/react": "^18.2.0", "@types/react-dom":
+"^18.2.0", "rimraf": "^5.0.7", "storybook": "^8.0.0", "tsup": "^8.0.0", "typescript": "^5.4.5",
+"vitest": "^2.1.8" }, "peerDependencies": { "react": "^18.0.0", "react-dom": "^18.0.0",
+"typescript": "^5.0.0" } }
