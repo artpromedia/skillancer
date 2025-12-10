@@ -14,13 +14,20 @@ import swaggerUi from '@fastify/swagger-ui';
 import { config } from './config/index.js';
 import { initializeStripeService } from './services/stripe.service.js';
 import { initializePaymentMethodService } from './services/payment-method.service.js';
+import { initializeSubscriptionService } from './services/subscription.service.js';
 import {
   initializeCardExpirationJob,
   scheduleCardExpirationJob,
   closeCardExpirationJob,
 } from './jobs/card-expiration.job.js';
+import {
+  initializeBillingJobs,
+  scheduleDailyBillingJobs,
+  closeBillingJobs,
+} from './jobs/subscription-billing.job.js';
 import { paymentMethodRoutes } from './routes/payment-methods.js';
 import { webhookRoutes } from './routes/webhooks.js';
+import subscriptionRoutes from './routes/subscriptions.route.js';
 import {
   StripeError,
   PaymentMethodNotFoundError,
@@ -97,6 +104,7 @@ export async function createApp(): Promise<FastifyInstance> {
         servers: [{ url: `http://localhost:${config.app.port}`, description: 'Development' }],
         tags: [
           { name: 'Payment Methods', description: 'Payment method management' },
+          { name: 'subscriptions', description: 'Subscription management' },
           { name: 'Webhooks', description: 'Stripe webhook handlers' },
           { name: 'Health', description: 'Service health checks' },
         ],
@@ -147,10 +155,19 @@ export async function createApp(): Promise<FastifyInstance> {
   initializePaymentMethodService();
   app.log.info('Payment Method service initialized');
 
+  // Initialize Subscription service
+  initializeSubscriptionService();
+  app.log.info('Subscription service initialized');
+
   // Initialize card expiration job
   initializeCardExpirationJob();
   await scheduleCardExpirationJob();
   app.log.info('Card expiration job scheduled');
+
+  // Initialize subscription billing jobs
+  await initializeBillingJobs();
+  await scheduleDailyBillingJobs();
+  app.log.info('Subscription billing jobs scheduled');
 
   // ==========================================================================
   // ROUTES
@@ -178,6 +195,7 @@ export async function createApp(): Promise<FastifyInstance> {
 
   // API routes
   await app.register(paymentMethodRoutes, { prefix: '/payment-methods' });
+  await app.register(subscriptionRoutes, { prefix: '/subscriptions' });
   await app.register(webhookRoutes, { prefix: '/webhooks' });
 
   // ==========================================================================
@@ -273,6 +291,9 @@ export async function createApp(): Promise<FastifyInstance> {
 
     // Close card expiration job
     await closeCardExpirationJob();
+
+    // Close billing jobs
+    await closeBillingJobs();
 
     // Close Fastify
     await app.close();

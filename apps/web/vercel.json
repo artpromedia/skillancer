@@ -45,22 +45,8 @@
     }
   ],
   "redirects": [],
-  "env": {
-    "DATABASE_URL": "@database-url",
-    "DATABASE_URL_POOLED": "@database-url-pooled",
-    "NEXT_PUBLIC_API_URL": "@api-url",
-    "NEXTAUTH_SECRET": "@nextauth-secret",
-    "NEXTAUTH_URL": "@nextauth-url"
-  },
-  "build": {
-    "env": {
-      "DATABASE_URL": "@database-url",
-      "SKIP_ENV_VALIDATION": "true"
-    }
-  },
   "ignoreCommand": "git diff HEAD^ HEAD --quiet -- .",
   "github": {
-    "silent": true,
     "autoAlias": true
   }
 }

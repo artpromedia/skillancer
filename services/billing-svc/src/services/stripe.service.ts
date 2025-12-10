@@ -379,6 +379,232 @@ export class StripeService {
   }
 
   // ===========================================================================
+  // SUBSCRIPTIONS
+  // ===========================================================================
+
+  /**
+   * Create a subscription
+   */
+  async createSubscription(params: Stripe.SubscriptionCreateParams): Promise<Stripe.Subscription> {
+    try {
+      return await this.stripe.subscriptions.create(params);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Get a subscription by ID
+   */
+  async getSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
+    try {
+      return await this.stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ['default_payment_method', 'latest_invoice'],
+      });
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Update a subscription
+   */
+  async updateSubscription(
+    subscriptionId: string,
+    params: Stripe.SubscriptionUpdateParams
+  ): Promise<Stripe.Subscription> {
+    try {
+      return await this.stripe.subscriptions.update(subscriptionId, params);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Cancel a subscription
+   */
+  async cancelSubscription(
+    subscriptionId: string,
+    atPeriodEnd = true
+  ): Promise<Stripe.Subscription> {
+    try {
+      if (atPeriodEnd) {
+        return await this.stripe.subscriptions.update(subscriptionId, {
+          cancel_at_period_end: true,
+        });
+      }
+      return await this.stripe.subscriptions.cancel(subscriptionId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Reactivate a canceled subscription (remove cancellation)
+   */
+  async reactivateSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
+    try {
+      return await this.stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: false,
+      });
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Schedule a subscription update for a future date
+   */
+  async scheduleSubscriptionUpdate(
+    subscriptionId: string,
+    effectiveDate: Date,
+    phases: Array<{ price: string; quantity?: number }>
+  ): Promise<Stripe.SubscriptionSchedule> {
+    try {
+      // First check if there's an existing schedule
+      const subscription = await this.getSubscription(subscriptionId);
+      const startTimestamp = Math.floor(effectiveDate.getTime() / 1000);
+
+      if (subscription.schedule) {
+        // Update existing schedule
+        const scheduleId =
+          typeof subscription.schedule === 'string'
+            ? subscription.schedule
+            : subscription.schedule.id;
+        return await this.stripe.subscriptionSchedules.update(scheduleId, {
+          phases: [
+            {
+              items: phases,
+              end_date: startTimestamp + 86400 * 365, // 1 year duration
+            },
+          ],
+        });
+      }
+
+      // Create a new schedule from the subscription
+      return await this.stripe.subscriptionSchedules.create({
+        from_subscription: subscriptionId,
+        start_date: startTimestamp,
+        end_behavior: 'release',
+        phases: [
+          {
+            items: phases,
+            iterations: 12, // 12 billing cycles
+          },
+        ],
+      });
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  // ===========================================================================
+  // USAGE / METERED BILLING
+  // ===========================================================================
+
+  /**
+   * Report usage for metered billing
+   */
+  async reportUsage(
+    subscriptionId: string,
+    quantity: number,
+    timestamp?: Date
+  ): Promise<Stripe.UsageRecord | null> {
+    try {
+      // Get the subscription to find the metered subscription item
+      const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+      const meteredItem = subscription.items.data.find(
+        (item) => item.price.recurring?.usage_type === 'metered'
+      );
+
+      if (!meteredItem) {
+        // No metered item found, usage tracking not applicable
+        return null;
+      }
+
+      return await this.stripe.subscriptionItems.createUsageRecord(meteredItem.id, {
+        quantity,
+        ...(timestamp
+          ? { timestamp: Math.floor(timestamp.getTime() / 1000) }
+          : { timestamp: 'now' }),
+        action: 'increment',
+      });
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  // ===========================================================================
+  // INVOICES
+  // ===========================================================================
+
+  /**
+   * Get an invoice by ID
+   */
+  async getInvoice(invoiceId: string): Promise<Stripe.Invoice> {
+    try {
+      return await this.stripe.invoices.retrieve(invoiceId, {
+        expand: ['charge', 'payment_intent'],
+      });
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * List invoices for a customer
+   */
+  async listInvoices(
+    customerId: string,
+    options?: {
+      subscriptionId?: string;
+      limit?: number;
+      startingAfter?: string;
+    }
+  ): Promise<Stripe.Invoice[]> {
+    try {
+      const params: Stripe.InvoiceListParams = {
+        customer: customerId,
+        limit: options?.limit ?? 10,
+      };
+
+      if (options?.subscriptionId) {
+        params.subscription = options.subscriptionId;
+      }
+      if (options?.startingAfter) {
+        params.starting_after = options.startingAfter;
+      }
+
+      const response = await this.stripe.invoices.list(params);
+      return response.data;
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Pay an invoice manually
+   */
+  async payInvoice(invoiceId: string): Promise<Stripe.Invoice> {
+    try {
+      return await this.stripe.invoices.pay(invoiceId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Void an invoice
+   */
+  async voidInvoice(invoiceId: string): Promise<Stripe.Invoice> {
+    try {
+      return await this.stripe.invoices.voidInvoice(invoiceId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  // ===========================================================================
   // WEBHOOKS
   // ===========================================================================
 
