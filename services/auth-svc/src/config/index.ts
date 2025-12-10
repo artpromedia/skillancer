@@ -86,6 +86,35 @@ const configSchema = z.object({
       maxAttempts: z.coerce.number().default(3),
       windowMs: z.coerce.number().default(60 * 60 * 1000), // 1 hour
     }),
+    mfa: z.object({
+      totpMaxAttempts: z.coerce.number().default(5), // Per challenge
+      smsMaxRequests: z.coerce.number().default(3), // Per hour per phone
+      emailMaxRequests: z.coerce.number().default(5), // Per hour per email
+      recoveryMaxAttempts: z.coerce.number().default(3), // Then lockout
+      windowMs: z.coerce.number().default(60 * 60 * 1000), // 1 hour
+    }),
+  }),
+
+  // Multi-Factor Authentication
+  mfa: z.object({
+    issuer: z.string().default('Skillancer'),
+    encryptionKey: z.string().optional(), // Falls back to JWT secret
+    totpWindow: z.coerce.number().default(1), // Time steps to allow (30 sec each)
+    challengeTtl: z.coerce.number().default(5 * 60 * 1000), // 5 minutes
+    recoveryCodeCount: z.coerce.number().default(10),
+    stepUpAuthTtl: z.coerce.number().default(15 * 60 * 1000), // 15 minutes
+    smsCodeLength: z.coerce.number().default(6),
+    emailCodeLength: z.coerce.number().default(6),
+    smsCodeTtl: z.coerce.number().default(5 * 60 * 1000), // 5 minutes
+    emailCodeTtl: z.coerce.number().default(10 * 60 * 1000), // 10 minutes
+  }),
+
+  // SMS (Twilio)
+  sms: z.object({
+    provider: z.enum(['twilio', 'mock']).default('mock'),
+    twilioAccountSid: z.string().optional(),
+    twilioAuthToken: z.string().optional(),
+    twilioPhoneNumber: z.string().optional(),
   }),
 
   // Logging
@@ -186,6 +215,33 @@ export function getConfig(): Config {
         maxAttempts: env['RATE_LIMIT_PASSWORD_RESET_MAX'] ?? 3,
         windowMs: env['RATE_LIMIT_PASSWORD_RESET_WINDOW_MS'] ?? 60 * 60 * 1000,
       },
+      mfa: {
+        totpMaxAttempts: env['MFA_TOTP_MAX_ATTEMPTS'] ?? 5,
+        smsMaxRequests: env['MFA_SMS_MAX_REQUESTS'] ?? 3,
+        emailMaxRequests: env['MFA_EMAIL_MAX_REQUESTS'] ?? 5,
+        recoveryMaxAttempts: env['MFA_RECOVERY_MAX_ATTEMPTS'] ?? 3,
+        windowMs: env['MFA_RATE_LIMIT_WINDOW_MS'] ?? 60 * 60 * 1000,
+      },
+    },
+
+    mfa: {
+      issuer: env['MFA_ISSUER'] ?? 'Skillancer',
+      encryptionKey: env['MFA_ENCRYPTION_KEY'],
+      totpWindow: env['MFA_TOTP_WINDOW'] ?? 1,
+      challengeTtl: env['MFA_CHALLENGE_TTL_MS'] ?? 5 * 60 * 1000,
+      recoveryCodeCount: env['MFA_RECOVERY_CODE_COUNT'] ?? 10,
+      stepUpAuthTtl: env['MFA_STEP_UP_AUTH_TTL_MS'] ?? 15 * 60 * 1000,
+      smsCodeLength: env['MFA_SMS_CODE_LENGTH'] ?? 6,
+      emailCodeLength: env['MFA_EMAIL_CODE_LENGTH'] ?? 6,
+      smsCodeTtl: env['MFA_SMS_CODE_TTL_MS'] ?? 5 * 60 * 1000,
+      emailCodeTtl: env['MFA_EMAIL_CODE_TTL_MS'] ?? 10 * 60 * 1000,
+    },
+
+    sms: {
+      provider: env['SMS_PROVIDER'] ?? 'mock',
+      twilioAccountSid: env['TWILIO_ACCOUNT_SID'],
+      twilioAuthToken: env['TWILIO_AUTH_TOKEN'],
+      twilioPhoneNumber: env['TWILIO_PHONE_NUMBER'],
     },
 
     logging: {

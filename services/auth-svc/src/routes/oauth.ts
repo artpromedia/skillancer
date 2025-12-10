@@ -3,9 +3,9 @@
  * OAuth provider routes
  */
 
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-
-import { getOAuthService } from '../services/oauth.service.js';
+import { getConfig } from '../config/index.js';
+import { OAuthError } from '../errors/index.js';
+import { getClientIp } from '../middleware/rate-limit.js';
 import {
   oauthCallbackQuerySchema,
   appleCallbackBodySchema,
@@ -13,9 +13,9 @@ import {
   type AppleCallbackBody,
   type DeviceInfo,
 } from '../schemas/index.js';
-import { getClientIp } from '../middleware/rate-limit.js';
-import { getConfig } from '../config/index.js';
-import { OAuthError } from '../errors/index.js';
+import { getOAuthService } from '../services/oauth.service.js';
+
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 // =============================================================================
 // HELPERS
@@ -256,7 +256,7 @@ async function appleCallbackHandler(
 /**
  * Register OAuth routes
  */
-export async function oauthRoutes(fastify: FastifyInstance): Promise<void> {
+export function oauthRoutes(fastify: FastifyInstance): void {
   // Google OAuth
   fastify.get(
     '/oauth/google',

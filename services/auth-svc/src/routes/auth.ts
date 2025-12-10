@@ -3,9 +3,13 @@
  * Authentication routes for email/password auth
  */
 
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-
-import { getAuthService } from '../services/auth.service.js';
+import { InvalidTokenError as _InvalidTokenError } from '../errors/index.js';
+import {
+  getClientIp,
+  loginRateLimitHook,
+  registrationRateLimitHook,
+  passwordResetRateLimitHook,
+} from '../middleware/rate-limit.js';
 import {
   registerRequestSchema,
   loginRequestSchema,
@@ -25,14 +29,10 @@ import {
   type ResendVerificationRequest,
   type DeviceInfo,
 } from '../schemas/index.js';
-import {
-  getClientIp,
-  loginRateLimitHook,
-  registrationRateLimitHook,
-  passwordResetRateLimitHook,
-} from '../middleware/rate-limit.js';
+import { getAuthService, type LoginResult } from '../services/auth.service.js';
 import { getTokenService } from '../services/token.service.js';
-import { InvalidTokenError } from '../errors/index.js';
+
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 // =============================================================================
 // HELPERS
@@ -95,7 +95,24 @@ async function loginHandler(
   const authService = getAuthService();
   const deviceInfo = getDeviceInfo(request);
 
-  const { user, tokens, session } = await authService.login(data.email, data.password, deviceInfo);
+  const result = await authService.login(data.email, data.password, deviceInfo);
+
+  // Check if MFA is required
+  if ('mfaRequired' in result && result.mfaRequired) {
+    const mfaPending = result;
+    void reply.status(200).send({
+      mfaRequired: true,
+      pendingSessionId: mfaPending.pendingSessionId,
+      availableMethods: mfaPending.availableMethods,
+      expiresAt: mfaPending.expiresAt.toISOString(),
+      message: 'MFA verification required to complete login',
+    });
+    return;
+  }
+
+  // MFA not required or already verified - complete login
+  const loginResult = result as LoginResult;
+  const { user, tokens, session: _session } = loginResult;
 
   // Reset rate limit on successful login
   await request.server.rateLimit.resetLogin(data.email.toLowerCase());
@@ -118,9 +135,10 @@ async function loginHandler(
       tokenType: tokens.tokenType,
     },
     session: {
-      id: session.sessionId,
-      expiresAt: session.expiresAt.toISOString(),
+      id: loginResult.session.sessionId,
+      expiresAt: loginResult.session.expiresAt.toISOString(),
     },
+    mfaVerified: loginResult.mfaVerified ?? false,
   });
 }
 
@@ -176,7 +194,10 @@ async function refreshHandler(
   const authService = getAuthService();
   const deviceInfo = getDeviceInfo(request);
 
-  const { tokens, session } = await authService.refreshToken(data.refreshToken, deviceInfo);
+  const { tokens, session: _session } = await authService.refreshToken(
+    data.refreshToken,
+    deviceInfo
+  );
 
   void reply.status(200).send({
     accessToken: tokens.accessToken,
@@ -284,11 +305,12 @@ async function resendVerificationHandler(
 /**
  * Register authentication routes
  */
-export async function authRoutes(fastify: FastifyInstance): Promise<void> {
+export function authRoutes(fastify: FastifyInstance): void {
   // Registration
   fastify.post<{ Body: RegisterRequest }>(
     '/register',
     {
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       preHandler: registrationRateLimitHook,
       schema: {
         body: {
@@ -325,13 +347,14 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (request, reply) => registerHandler(request, reply)
+    registerHandler
   );
 
   // Login
   fastify.post<{ Body: LoginRequest }>(
     '/login',
     {
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       preHandler: loginRateLimitHook,
       schema: {
         body: {
@@ -355,7 +378,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (request, reply) => loginHandler(request, reply)
+    loginHandler
   );
 
   // Logout
@@ -381,7 +404,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (request, reply) => logoutHandler(request, reply)
+    logoutHandler
   );
 
   // Refresh token
@@ -409,13 +432,14 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (request, reply) => refreshHandler(request, reply)
+    refreshHandler
   );
 
   // Forgot password
   fastify.post<{ Body: ForgotPasswordRequest }>(
     '/forgot-password',
     {
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       preHandler: passwordResetRateLimitHook,
       schema: {
         body: {
@@ -436,7 +460,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (request, reply) => forgotPasswordHandler(request, reply)
+    forgotPasswordHandler
   );
 
   // Reset password
@@ -464,7 +488,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (request, reply) => resetPasswordHandler(request, reply)
+    resetPasswordHandler
   );
 
   // Verify email
@@ -491,7 +515,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (request, reply) => verifyEmailHandler(request, reply)
+    verifyEmailHandler
   );
 
   // Resend verification email
@@ -517,6 +541,78 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         },
       },
     },
-    async (request, reply) => resendVerificationHandler(request, reply)
+    resendVerificationHandler
+  );
+
+  // Complete MFA login after verification
+  fastify.post<{
+    Body: { pendingSessionId: string; challengeId: string };
+  }>(
+    '/login/mfa/complete',
+    {
+      schema: {
+        summary: 'Complete MFA login',
+        description: 'Complete login after MFA verification',
+        body: {
+          type: 'object',
+          required: ['pendingSessionId', 'challengeId'],
+          properties: {
+            pendingSessionId: { type: 'string' },
+            challengeId: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              user: { type: 'object' },
+              tokens: { type: 'object' },
+              session: { type: 'object' },
+              mfaVerified: { type: 'boolean' },
+            },
+          },
+          401: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+              code: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { pendingSessionId, challengeId } = request.body;
+      const authService = getAuthService();
+
+      const { user, tokens, session, mfaVerified } = await authService.completeMfaLogin(
+        pendingSessionId,
+        challengeId
+      );
+
+      void reply.status(200).send({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+          status: user.status,
+          verificationLevel: user.verificationLevel,
+        },
+        tokens: {
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          expiresIn: tokens.expiresIn,
+          tokenType: tokens.tokenType,
+        },
+        session: {
+          id: session.sessionId,
+          expiresAt: session.expiresAt.toISOString(),
+        },
+        mfaVerified,
+      });
+    }
   );
 }

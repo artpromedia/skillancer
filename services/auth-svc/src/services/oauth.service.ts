@@ -4,16 +4,17 @@
  */
 
 import crypto from 'crypto';
-import type { Redis } from 'ioredis';
 
+import { CacheService, type DeviceInfo as _CacheDeviceInfo } from '@skillancer/cache';
 import { prisma, type User } from '@skillancer/database';
-import { CacheService, type DeviceInfo as CacheDeviceInfo } from '@skillancer/cache';
 
+import { getSessionService, type SessionInfo } from './session.service.js';
+import { getTokenService, type TokenPair, type UserTokenData } from './token.service.js';
 import { getConfig } from '../config/index.js';
 import { OAuthError, OAuthNotConfiguredError } from '../errors/index.js';
-import { getTokenService, type TokenPair, type UserTokenData } from './token.service.js';
-import { getSessionService, type SessionInfo } from './session.service.js';
+
 import type { DeviceInfo, OAuthState } from '../schemas/index.js';
+import type { Redis } from 'ioredis';
 
 // =============================================================================
 // TYPES
@@ -33,6 +34,19 @@ export interface OAuthResult {
   tokens: TokenPair;
   session: SessionInfo;
   isNewUser: boolean;
+}
+
+interface AppleIdToken {
+  iss: string;
+  sub: string;
+  aud: string;
+  iat: number;
+  exp: number;
+  email?: string;
+  email_verified?: boolean | string;
+  is_private_email?: boolean | string;
+  nonce?: string;
+  nonce_supported?: boolean;
 }
 
 type OAuthProvider = 'google' | 'microsoft' | 'apple';
@@ -91,7 +105,7 @@ export class OAuthService {
   async getGoogleAuthUrl(redirectUrl?: string): Promise<{ url: string; state: string }> {
     const { google } = this.config.oauth;
 
-    if (!google.clientId || !google.clientSecret) {
+    if (!google.clientId || !google.clientSecret || !google.callbackUrl) {
       throw new OAuthNotConfiguredError('google');
     }
 
@@ -99,7 +113,7 @@ export class OAuthService {
 
     const params = new URLSearchParams({
       client_id: google.clientId,
-      redirect_uri: google.callbackUrl!,
+      redirect_uri: google.callbackUrl,
       response_type: 'code',
       scope: 'openid email profile',
       state,
@@ -129,7 +143,7 @@ export class OAuthService {
   ): Promise<OAuthResult> {
     const { google } = this.config.oauth;
 
-    if (!google.clientId || !google.clientSecret) {
+    if (!google.clientId || !google.clientSecret || !google.callbackUrl) {
       throw new OAuthNotConfiguredError('google');
     }
 
@@ -144,7 +158,7 @@ export class OAuthService {
         code,
         client_id: google.clientId,
         client_secret: google.clientSecret,
-        redirect_uri: google.callbackUrl!,
+        redirect_uri: google.callbackUrl,
         grant_type: 'authorization_code',
       }),
     });
@@ -203,7 +217,7 @@ export class OAuthService {
   async getMicrosoftAuthUrl(redirectUrl?: string): Promise<{ url: string; state: string }> {
     const { microsoft } = this.config.oauth;
 
-    if (!microsoft.clientId || !microsoft.clientSecret) {
+    if (!microsoft.clientId || !microsoft.clientSecret || !microsoft.callbackUrl) {
       throw new OAuthNotConfiguredError('microsoft');
     }
 
@@ -211,7 +225,7 @@ export class OAuthService {
 
     const params = new URLSearchParams({
       client_id: microsoft.clientId,
-      redirect_uri: microsoft.callbackUrl!,
+      redirect_uri: microsoft.callbackUrl,
       response_type: 'code',
       scope: 'openid email profile User.Read',
       state,
@@ -242,7 +256,7 @@ export class OAuthService {
   ): Promise<OAuthResult> {
     const { microsoft } = this.config.oauth;
 
-    if (!microsoft.clientId || !microsoft.clientSecret) {
+    if (!microsoft.clientId || !microsoft.clientSecret || !microsoft.callbackUrl) {
       throw new OAuthNotConfiguredError('microsoft');
     }
 
@@ -261,7 +275,7 @@ export class OAuthService {
           code,
           client_id: microsoft.clientId,
           client_secret: microsoft.clientSecret,
-          redirect_uri: microsoft.callbackUrl!,
+          redirect_uri: microsoft.callbackUrl,
           grant_type: 'authorization_code',
           scope: 'openid email profile User.Read',
         }),
@@ -319,7 +333,13 @@ export class OAuthService {
   async getAppleAuthUrl(redirectUrl?: string): Promise<{ url: string; state: string }> {
     const { apple } = this.config.oauth;
 
-    if (!apple.clientId || !apple.teamId || !apple.keyId || !apple.privateKey) {
+    if (
+      !apple.clientId ||
+      !apple.teamId ||
+      !apple.keyId ||
+      !apple.privateKey ||
+      !apple.callbackUrl
+    ) {
       throw new OAuthNotConfiguredError('apple');
     }
 
@@ -327,7 +347,7 @@ export class OAuthService {
 
     const params = new URLSearchParams({
       client_id: apple.clientId,
-      redirect_uri: apple.callbackUrl!,
+      redirect_uri: apple.callbackUrl,
       response_type: 'code id_token',
       scope: 'name email',
       state,
@@ -362,7 +382,13 @@ export class OAuthService {
   ): Promise<OAuthResult> {
     const { apple } = this.config.oauth;
 
-    if (!apple.clientId || !apple.teamId || !apple.keyId || !apple.privateKey) {
+    if (
+      !apple.clientId ||
+      !apple.teamId ||
+      !apple.keyId ||
+      !apple.privateKey ||
+      !apple.callbackUrl
+    ) {
       throw new OAuthNotConfiguredError('apple');
     }
 
@@ -380,7 +406,7 @@ export class OAuthService {
         code,
         client_id: apple.clientId,
         client_secret: clientSecret,
-        redirect_uri: apple.callbackUrl!,
+        redirect_uri: apple.callbackUrl,
         grant_type: 'authorization_code',
       }),
     });
@@ -600,7 +626,7 @@ export class OAuthService {
       throw new OAuthError('apple', 'Invalid ID token format');
     }
     const decoded = Buffer.from(payload, 'base64url').toString();
-    return JSON.parse(decoded);
+    return JSON.parse(decoded) as AppleIdToken;
   }
 
   /**

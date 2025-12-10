@@ -89,6 +89,17 @@ export class InvalidTokenError extends AppError {
 }
 
 /**
+ * Error thrown when authentication is required but missing or invalid
+ */
+export class UnauthorizedError extends AppError {
+  public override readonly name = 'UnauthorizedError';
+
+  constructor(message = 'Authentication required') {
+    super(message, 'UNAUTHORIZED', 401);
+  }
+}
+
+/**
  * Error thrown when session is invalid or expired
  */
 export class SessionExpiredError extends AppError {
@@ -145,5 +156,126 @@ export class RateLimitExceededError extends AppError {
     public readonly retryAfter?: number
   ) {
     super(message, 'RATE_LIMIT_EXCEEDED', 429, { retryAfter });
+  }
+}
+
+// =============================================================================
+// MFA ERRORS
+// =============================================================================
+
+/**
+ * Error thrown when MFA is not enabled for the user
+ */
+export class MfaNotEnabledError extends AppError {
+  public override readonly name = 'MfaNotEnabledError';
+
+  constructor(message = 'MFA is not enabled for this account') {
+    super(message, 'MFA_NOT_ENABLED', 400);
+  }
+}
+
+/**
+ * Error thrown when MFA is already enabled
+ */
+export class MfaAlreadyEnabledError extends AppError {
+  public override readonly name = 'MfaAlreadyEnabledError';
+
+  constructor(message = 'MFA is already enabled') {
+    super(message, 'MFA_ALREADY_ENABLED', 409);
+  }
+}
+
+/**
+ * Error thrown when MFA code is invalid
+ */
+export class InvalidMfaCodeError extends AppError {
+  public override readonly name = 'InvalidMfaCodeError';
+
+  constructor(message = 'Invalid MFA code') {
+    super(message, 'INVALID_MFA_CODE', 401);
+  }
+}
+
+/**
+ * Error thrown when MFA setup is incomplete or not started
+ */
+export class MfaSetupIncompleteError extends AppError {
+  public override readonly name = 'MfaSetupIncompleteError';
+
+  constructor(message = 'MFA setup not initiated or expired') {
+    super(message, 'MFA_SETUP_INCOMPLETE', 400);
+  }
+}
+
+/**
+ * Error thrown when MFA challenge has expired
+ */
+export class MfaChallengeExpiredError extends AppError {
+  public override readonly name = 'MfaChallengeExpiredError';
+
+  constructor(message = 'MFA challenge expired') {
+    super(message, 'MFA_CHALLENGE_EXPIRED', 410);
+  }
+}
+
+/**
+ * Error thrown when max MFA attempts exceeded
+ */
+export class MfaMaxAttemptsExceededError extends AppError {
+  public override readonly name = 'MfaMaxAttemptsExceededError';
+
+  constructor(message = 'Maximum MFA attempts exceeded') {
+    super(message, 'MFA_MAX_ATTEMPTS_EXCEEDED', 429);
+  }
+}
+
+/**
+ * Error thrown when all recovery codes have been used
+ */
+export class RecoveryCodesExhaustedError extends AppError {
+  public override readonly name = 'RecoveryCodesExhaustedError';
+
+  constructor(message = 'All recovery codes have been used') {
+    super(message, 'RECOVERY_CODES_EXHAUSTED', 400);
+  }
+}
+
+/**
+ * Error thrown when phone number is not verified
+ */
+export class PhoneNotVerifiedError extends AppError {
+  public override readonly name = 'PhoneNotVerifiedError';
+
+  constructor(message = 'Phone number not verified') {
+    super(message, 'PHONE_NOT_VERIFIED', 400);
+  }
+}
+
+/**
+ * Error thrown when MFA is required for the operation
+ */
+export class MfaRequiredError extends AppError {
+  public override readonly name = 'MfaRequiredError';
+
+  constructor(
+    public readonly pendingSessionId: string,
+    public readonly availableMethods: string[],
+    message = 'MFA verification required'
+  ) {
+    super(message, 'MFA_REQUIRED', 401, { pendingSessionId, availableMethods });
+  }
+}
+
+/**
+ * Error thrown when step-up authentication is required
+ */
+export class StepUpAuthRequiredError extends AppError {
+  public override readonly name = 'StepUpAuthRequiredError';
+
+  constructor(
+    public readonly operation: string,
+    message = 'Step-up authentication required'
+  ) {
+    super(message, 'STEP_UP_AUTH_REQUIRED', 401, { operation });
   }
 }

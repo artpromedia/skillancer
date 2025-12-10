@@ -20,6 +20,8 @@ import { getConfig, validateConfig } from './config/index.js';
 // STARTUP
 // =============================================================================
 
+/* eslint-disable n/no-process-exit -- Process lifecycle management requires process.exit */
+
 async function start(): Promise<void> {
   // Validate configuration
   try {
@@ -52,8 +54,8 @@ async function start(): Promise<void> {
     }
   };
 
-  process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', async () => shutdown('SIGINT'));
+  process.on('SIGTERM', async () => shutdown('SIGTERM'));
 
   // Start server
   try {

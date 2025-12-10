@@ -3,11 +3,13 @@
  * JWT token generation and verification service
  */
 
-import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
 import crypto from 'crypto';
+
+import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
 
 import { getConfig } from '../config/index.js';
 import { InvalidTokenError } from '../errors/index.js';
+
 import type { AccessTokenPayload, RefreshTokenPayload } from '../schemas/index.js';
 
 // =============================================================================

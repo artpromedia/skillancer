@@ -3,14 +3,15 @@
  * Rate limiting middleware for authentication endpoints
  */
 
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import fp from 'fastify-plugin';
-import type { Redis } from 'ioredis';
-
 import { RateLimiter, type RateLimitConfig, type RateLimitResult } from '@skillancer/cache';
+import fp from 'fastify-plugin';
 
 import { getConfig } from '../config/index.js';
 import { RateLimitExceededError } from '../errors/index.js';
+
+import type { AuthenticatedUser } from './auth.js';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { Redis } from 'ioredis';
 
 // =============================================================================
 // TYPES
@@ -26,12 +27,17 @@ declare module 'fastify' {
       login: (key: string) => Promise<RateLimitResult>;
       registration: (key: string) => Promise<RateLimitResult>;
       passwordReset: (key: string) => Promise<RateLimitResult>;
+      mfaTotp: (key: string) => Promise<RateLimitResult>;
+      mfaSms: (key: string) => Promise<RateLimitResult>;
+      mfaEmail: (key: string) => Promise<RateLimitResult>;
+      mfaRecovery: (key: string) => Promise<RateLimitResult>;
       checkLogin: (key: string) => Promise<RateLimitResult>;
       checkRegistration: (key: string) => Promise<RateLimitResult>;
       checkPasswordReset: (key: string) => Promise<RateLimitResult>;
       resetLogin: (key: string) => Promise<void>;
       resetRegistration: (key: string) => Promise<void>;
       resetPasswordReset: (key: string) => Promise<void>;
+      resetMfa: (key: string) => Promise<void>;
     };
   }
 }
@@ -47,6 +53,10 @@ function getRateLimitConfigs(): {
   login: RateLimitConfig;
   registration: RateLimitConfig;
   passwordReset: RateLimitConfig;
+  mfaTotp: RateLimitConfig;
+  mfaSms: RateLimitConfig;
+  mfaEmail: RateLimitConfig;
+  mfaRecovery: RateLimitConfig;
 } {
   const config = getConfig();
 
@@ -62,6 +72,22 @@ function getRateLimitConfigs(): {
     passwordReset: {
       maxRequests: config.rateLimit.passwordReset.maxAttempts,
       windowMs: config.rateLimit.passwordReset.windowMs,
+    },
+    mfaTotp: {
+      maxRequests: config.rateLimit.mfa.totpMaxAttempts,
+      windowMs: 15 * 60 * 1000, // 15 minutes
+    },
+    mfaSms: {
+      maxRequests: config.rateLimit.mfa.smsMaxRequests,
+      windowMs: 60 * 60 * 1000, // 1 hour
+    },
+    mfaEmail: {
+      maxRequests: config.rateLimit.mfa.emailMaxRequests,
+      windowMs: 60 * 60 * 1000, // 1 hour
+    },
+    mfaRecovery: {
+      maxRequests: config.rateLimit.mfa.recoveryMaxAttempts,
+      windowMs: 60 * 60 * 1000, // 1 hour
     },
   };
 }
@@ -87,22 +113,27 @@ function getRateLimitConfigs(): {
  * }
  * ```
  */
-async function rateLimitPluginImpl(
-  fastify: FastifyInstance,
-  options: RateLimitOptions
-): Promise<void> {
+function rateLimitPluginImpl(fastify: FastifyInstance, options: RateLimitOptions): void {
   const { redis } = options;
   const configs = getRateLimitConfigs();
 
   const loginLimiter = new RateLimiter(redis, 'auth:ratelimit:login');
   const registrationLimiter = new RateLimiter(redis, 'auth:ratelimit:registration');
   const passwordResetLimiter = new RateLimiter(redis, 'auth:ratelimit:password_reset');
+  const mfaTotpLimiter = new RateLimiter(redis, 'auth:ratelimit:mfa_totp');
+  const mfaSmsLimiter = new RateLimiter(redis, 'auth:ratelimit:mfa_sms');
+  const mfaEmailLimiter = new RateLimiter(redis, 'auth:ratelimit:mfa_email');
+  const mfaRecoveryLimiter = new RateLimiter(redis, 'auth:ratelimit:mfa_recovery');
 
   fastify.decorate('rateLimit', {
     // Consume and check
     login: async (key: string) => loginLimiter.consume(key, configs.login),
     registration: async (key: string) => registrationLimiter.consume(key, configs.registration),
     passwordReset: async (key: string) => passwordResetLimiter.consume(key, configs.passwordReset),
+    mfaTotp: async (key: string) => mfaTotpLimiter.consume(key, configs.mfaTotp),
+    mfaSms: async (key: string) => mfaSmsLimiter.consume(key, configs.mfaSms),
+    mfaEmail: async (key: string) => mfaEmailLimiter.consume(key, configs.mfaEmail),
+    mfaRecovery: async (key: string) => mfaRecoveryLimiter.consume(key, configs.mfaRecovery),
 
     // Check without consuming
     checkLogin: async (key: string) => loginLimiter.check(key, configs.login),
@@ -114,6 +145,14 @@ async function rateLimitPluginImpl(
     resetLogin: async (key: string) => loginLimiter.reset(key),
     resetRegistration: async (key: string) => registrationLimiter.reset(key),
     resetPasswordReset: async (key: string) => passwordResetLimiter.reset(key),
+    resetMfa: async (key: string) => {
+      await Promise.all([
+        mfaTotpLimiter.reset(key),
+        mfaSmsLimiter.reset(key),
+        mfaEmailLimiter.reset(key),
+        mfaRecoveryLimiter.reset(key),
+      ]);
+    },
   });
 }
 
@@ -243,3 +282,69 @@ export const passwordResetRateLimitHook = createRateLimitHook('passwordReset', (
   const body = request.body as { email?: string };
   return body.email?.toLowerCase().trim() || getClientIp(request);
 });
+
+// =============================================================================
+// MFA RATE LIMIT MIDDLEWARE
+// =============================================================================
+
+type MfaRateLimitType = 'totp' | 'sms' | 'email' | 'recovery' | 'mfa';
+
+/**
+ * Create MFA rate limit middleware
+ *
+ * @param type - MFA rate limit type ('totp', 'sms', 'email', 'recovery', or 'mfa' for all)
+ * @returns Fastify preHandler hook
+ *
+ * @example
+ * ```typescript
+ * fastify.post('/mfa/verify', {
+ *   preHandler: [rateLimitMiddleware('totp')],
+ * }, verifyHandler);
+ * ```
+ */
+export function rateLimitMiddleware(type: MfaRateLimitType) {
+  return async function mfaRateLimitHook(
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<void> {
+    const fastify = request.server;
+    const user = request.user as AuthenticatedUser | undefined;
+    const userId = user?.id;
+    const key = userId ?? getClientIp(request);
+
+    let result: RateLimitResult;
+
+    switch (type) {
+      case 'totp':
+        result = await fastify.rateLimit.mfaTotp(key);
+        break;
+      case 'sms':
+        result = await fastify.rateLimit.mfaSms(key);
+        break;
+      case 'email':
+        result = await fastify.rateLimit.mfaEmail(key);
+        break;
+      case 'recovery':
+        result = await fastify.rateLimit.mfaRecovery(key);
+        break;
+      case 'mfa':
+      default:
+        // For general MFA operations, use TOTP limit
+        result = await fastify.rateLimit.mfaTotp(key);
+        break;
+    }
+
+    // Set rate limit headers
+    void reply.header('X-RateLimit-Limit', result.current + result.remaining);
+    void reply.header('X-RateLimit-Remaining', result.remaining);
+    void reply.header('X-RateLimit-Reset', result.resetAt.toISOString());
+
+    if (!result.allowed) {
+      void reply.header('Retry-After', result.retryAfter);
+      throw new RateLimitExceededError(
+        `Too many MFA ${type} attempts. Please try again later.`,
+        result.retryAfter
+      );
+    }
+  };
+}

@@ -6,3 +6,4 @@
 export * from './auth.js';
 export * from './oauth.js';
 export * from './health.js';
+export * from './mfa.js';

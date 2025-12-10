@@ -3,5 +3,7 @@
  * Middleware exports
  */
 
-export * from './rate-limit.js';
+export * from './auth.js';
 export * from './error-handler.js';
+export * from './rate-limit.js';
+export * from './step-up-auth.js';

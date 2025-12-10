@@ -3,7 +3,6 @@
  * Session management service using Redis
  */
 
-import type { Redis } from 'ioredis';
 import crypto from 'crypto';
 
 import {
@@ -14,7 +13,9 @@ import {
 
 import { getConfig } from '../config/index.js';
 import { SessionExpiredError } from '../errors/index.js';
+
 import type { DeviceInfo } from '../schemas/index.js';
+import type { Redis } from 'ioredis';
 
 // =============================================================================
 // TYPES
@@ -261,7 +262,9 @@ export class SessionService {
     const sessionIds = await this.sessionStore.getUserSessions(userId);
 
     await Promise.all(
-      sessionIds.filter((id) => id !== currentSessionId).map((id) => this.sessionStore.delete(id))
+      sessionIds
+        .filter((id) => id !== currentSessionId)
+        .map(async (id) => this.sessionStore.delete(id))
     );
   }
 

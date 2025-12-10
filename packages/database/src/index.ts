@@ -62,4 +62,9 @@ export type {
   NotificationType,
   NotificationChannel,
   AuditLog,
+  UserMfa,
+  MfaChallenge,
 } from '@prisma/client';
+
+// Enums (re-exported from Prisma - using value import for runtime access)
+export { MfaMethod } from '@prisma/client';

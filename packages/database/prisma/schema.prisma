@@ -61,6 +61,7 @@ model User {
   notifications         Notification[]
   refreshTokens         RefreshToken[]
   auditLogs             AuditLog[]         @relation("UserAuditLogs")
+  mfa                   UserMfa?
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -84,6 +85,60 @@ enum VerificationLevel {
   BASIC
   ENHANCED
   PREMIUM
+}
+
+// ============================================================================
+// MULTI-FACTOR AUTHENTICATION
+// ============================================================================
+
+enum MfaMethod {
+  TOTP
+  SMS
+  EMAIL
+  RECOVERY_CODE
+}
+
+model UserMfa {
+  id                       String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                   String    @unique @map("user_id") @db.Uuid
+  enabled                  Boolean   @default(false)
+  primaryMethod            MfaMethod @default(TOTP) @map("primary_method")
+
+  // TOTP
+  totpSecret               String?   @map("totp_secret") @db.VarChar(500) // Encrypted
+  totpVerified             Boolean   @default(false) @map("totp_verified")
+
+  // SMS
+  phoneNumber              String?   @map("phone_number") @db.VarChar(20)
+  phoneVerified            Boolean   @default(false) @map("phone_verified")
+
+  // Recovery codes (hashed)
+  recoveryCodes            String[]  @map("recovery_codes")
+  recoveryCodesGeneratedAt DateTime? @map("recovery_codes_generated_at")
+  recoveryCodesUsedCount   Int       @default(0) @map("recovery_codes_used_count")
+
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_mfa")
+}
+
+model MfaChallenge {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  sessionId String    @map("session_id") @db.VarChar(100)
+  method    MfaMethod
+  code      String?   @db.VarChar(100) // Hashed, for email/SMS codes
+  attempts  Int       @default(0)
+  verified  Boolean   @default(false)
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, sessionId])
+  @@index([expiresAt])
+  @@map("mfa_challenges")
 }
 
 model RefreshToken {

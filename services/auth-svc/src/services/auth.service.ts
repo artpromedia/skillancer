@@ -3,25 +3,26 @@
  * Core authentication service for user registration, login, and password management
  */
 
-import bcrypt from 'bcrypt';
-import type { Redis } from 'ioredis';
+import crypto from 'crypto';
 
-import { prisma, type User } from '@skillancer/database';
 import { CacheService } from '@skillancer/cache';
+import { prisma, type User, MfaMethod } from '@skillancer/database';
+import bcrypt from 'bcrypt';
 
+import { getMfaService } from './mfa.service.js';
+import { getSessionService, type SessionInfo } from './session.service.js';
+import { getTokenService, type TokenPair, type UserTokenData } from './token.service.js';
 import { getConfig } from '../config/index.js';
 import {
   InvalidCredentialsError,
   AccountLockedError,
-  EmailNotVerifiedError,
   AccountSuspendedError,
   EmailExistsError,
   InvalidTokenError,
-  WeakPasswordError,
 } from '../errors/index.js';
-import { getTokenService, type TokenPair, type UserTokenData } from './token.service.js';
-import { getSessionService, type SessionInfo, type CreateSessionInput } from './session.service.js';
+
 import type { RegisterRequest, DeviceInfo } from '../schemas/index.js';
+import type { Redis } from 'ioredis';
 
 // =============================================================================
 // TYPES
@@ -36,6 +37,17 @@ export interface LoginResult {
   user: User;
   tokens: TokenPair;
   session: SessionInfo;
+  /** True if MFA was verified as part of login */
+  mfaVerified?: boolean;
+}
+
+/** Result when MFA is required to complete login */
+export interface MfaPendingResult {
+  mfaRequired: true;
+  pendingSessionId: string;
+  availableMethods: MfaMethod[];
+  expiresAt: Date;
+  userId: string;
 }
 
 export interface RefreshResult {
@@ -170,20 +182,26 @@ export class AuthService {
    * @param email - User email
    * @param password - User password
    * @param deviceInfo - Device information for session
-   * @returns User, tokens, and session
+   * @returns User, tokens, and session OR MFA pending result
    * @throws InvalidCredentialsError if credentials are invalid
    * @throws AccountLockedError if account is locked
    * @throws AccountSuspendedError if account is suspended
+   * @throws MfaRequiredError if MFA verification is required
    */
-  async login(email: string, password: string, deviceInfo: DeviceInfo): Promise<LoginResult> {
+  async login(
+    email: string,
+    password: string,
+    deviceInfo: DeviceInfo
+  ): Promise<LoginResult | MfaPendingResult> {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check for lockout
     await this.checkLockout(normalizedEmail);
 
-    // Find user
+    // Find user with MFA configuration
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail },
+      include: { mfa: true },
     });
 
     if (!user || !user.passwordHash) {
@@ -202,13 +220,103 @@ export class AuthService {
     // Check account status
     this.checkAccountStatus(user);
 
-    // Clear failed attempts on successful login
+    // Clear failed attempts on successful password verification
     await this.clearFailedAttempts(normalizedEmail);
 
+    // Check if MFA is required
+    if (user.mfa?.enabled) {
+      return this.handleMfaRequired(user, deviceInfo);
+    }
+
+    // No MFA - complete login directly
+    return this.completeLogin(user, deviceInfo);
+  }
+
+  /**
+   * Handle case where MFA is required
+   */
+  private async handleMfaRequired(
+    user: User & {
+      mfa: { enabled: boolean; totpVerified: boolean; phoneVerified: boolean } | null;
+    },
+    deviceInfo: DeviceInfo
+  ): Promise<MfaPendingResult> {
+    const mfaService = getMfaService();
+
+    // Create pending session
+    const { pendingSessionId, expiresAt } = await mfaService.createPendingSession(user.id, {
+      userAgent: deviceInfo.userAgent,
+      ip: deviceInfo.ip,
+    });
+
+    // Get available methods
+    const methods = await mfaService.getAvailableMethods(user.id);
+    const availableMethods: MfaMethod[] = [];
+
+    if (methods.totp) availableMethods.push(MfaMethod.TOTP);
+    if (methods.sms) availableMethods.push(MfaMethod.SMS);
+    if (methods.email) availableMethods.push(MfaMethod.EMAIL);
+    if (methods.recoveryCode) availableMethods.push(MfaMethod.RECOVERY_CODE);
+
+    return {
+      mfaRequired: true,
+      pendingSessionId,
+      availableMethods,
+      expiresAt,
+      userId: user.id,
+    };
+  }
+
+  /**
+   * Complete login after MFA verification
+   *
+   * @param pendingSessionId - ID of the pending session from MFA challenge
+   * @param challengeId - ID of the verified MFA challenge
+   */
+  async completeMfaLogin(pendingSessionId: string, challengeId: string): Promise<LoginResult> {
+    const mfaService = getMfaService();
+
+    // Validate pending session
+    const pendingSession = await mfaService.getPendingSession(pendingSessionId);
+    if (!pendingSession) {
+      throw new InvalidCredentialsError('Session expired');
+    }
+
+    // Get the challenge and verify it was completed
+    const challenge = await prisma.mfaChallenge.findUnique({
+      where: { id: challengeId },
+    });
+
+    if (!challenge || !challenge.verified || challenge.userId !== pendingSession.userId) {
+      throw new InvalidCredentialsError('MFA verification required');
+    }
+
+    // Get user
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: pendingSession.userId },
+    });
+
+    // Complete the login
+    const result = await this.completeLogin(user, pendingSession.deviceInfo);
+
+    // Clean up
+    await mfaService.deletePendingSession(pendingSessionId);
+    await prisma.mfaChallenge.delete({ where: { id: challengeId } });
+
+    return {
+      ...result,
+      mfaVerified: true,
+    };
+  }
+
+  /**
+   * Complete login flow (create session and tokens)
+   */
+  private async completeLogin(user: User, deviceInfo: DeviceInfo): Promise<LoginResult> {
     // Create session and tokens
     const sessionService = getSessionService();
 
-    const { tokenId, ...tokens } = this.tokenService.generateTokenPair(
+    const { tokenId } = this.tokenService.generateTokenPair(
       this.toUserTokenData(user),
       crypto.randomUUID() // Temporary session ID
     );
@@ -669,6 +777,3 @@ export function getAuthService(): AuthService {
 export function resetAuthService(): void {
   authServiceInstance = null;
 }
-
-// Need crypto for UUID generation
-import crypto from 'crypto';

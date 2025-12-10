@@ -3,12 +3,11 @@
  * Centralized error handling middleware
  */
 
-import type { FastifyError, FastifyRequest, FastifyReply } from 'fastify';
+import { AppError } from '@skillancer/utils';
 import { ZodError } from 'zod';
 
-import { AppError } from '@skillancer/utils';
-
 import type { ErrorResponse } from '../schemas/index.js';
+import type { FastifyError, FastifyRequest, FastifyReply } from 'fastify';
 
 /**
  * Format Zod validation errors into a readable format

@@ -3,9 +3,9 @@
  * Health check routes
  */
 
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-
 import { prisma } from '@skillancer/database';
+
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 // =============================================================================
 // ROUTE HANDLERS
@@ -14,7 +14,7 @@ import { prisma } from '@skillancer/database';
 /**
  * GET /health - Basic health check
  */
-async function healthHandler(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+function healthHandler(_request: FastifyRequest, reply: FastifyReply): void {
   void reply.status(200).send({
     status: 'ok',
     service: 'auth-svc',
@@ -60,7 +60,7 @@ async function readyHandler(request: FastifyRequest, reply: FastifyReply): Promi
 /**
  * GET /health/live - Liveness check
  */
-async function liveHandler(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+function liveHandler(_request: FastifyRequest, reply: FastifyReply): void {
   void reply.status(200).send({
     status: 'alive',
     service: 'auth-svc',
@@ -77,7 +77,7 @@ async function liveHandler(request: FastifyRequest, reply: FastifyReply): Promis
 /**
  * Register health check routes
  */
-export async function healthRoutes(fastify: FastifyInstance): Promise<void> {
+export function healthRoutes(fastify: FastifyInstance): void {
   fastify.get(
     '/health',
     {

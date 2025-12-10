@@ -3,28 +3,30 @@
  * Fastify application factory
  */
 
+import cors from '@fastify/cors';
+import formBody from '@fastify/formbody';
+import helmet from '@fastify/helmet';
+import sensible from '@fastify/sensible';
 import Fastify, {
   type FastifyInstance,
   type FastifyServerOptions,
   type FastifyError,
-  type FastifyRequest,
-  type FastifyReply,
 } from 'fastify';
-import cors from '@fastify/cors';
-import helmet from '@fastify/helmet';
-import sensible from '@fastify/sensible';
-import formBody from '@fastify/formbody';
-import type { Redis } from 'ioredis';
 
 import { getConfig } from './config/index.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { rateLimitPlugin } from './middleware/rate-limit.js';
 import { authRoutes } from './routes/auth.js';
-import { oauthRoutes } from './routes/oauth.js';
 import { healthRoutes } from './routes/health.js';
-import { initializeSessionService } from './services/session.service.js';
+import { mfaRoutes } from './routes/mfa.js';
+import { oauthRoutes } from './routes/oauth.js';
 import { initializeAuthService } from './services/auth.service.js';
+import { initializeMfaService } from './services/mfa.service.js';
 import { initializeOAuthService } from './services/oauth.service.js';
+import { initializeSessionService } from './services/session.service.js';
+import { initializeStepUpService } from './services/step-up-auth.service.js';
+
+import type { Redis } from 'ioredis';
 
 // =============================================================================
 // TYPES
@@ -32,7 +34,7 @@ import { initializeOAuthService } from './services/oauth.service.js';
 
 export interface BuildAppOptions {
   redis: Redis;
-  logger?: FastifyServerOptions['logger'] | boolean;
+  logger?: FastifyServerOptions['logger'];
   disableRequestLogging?: boolean;
 }
 
@@ -124,6 +126,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   initializeSessionService(redis);
   initializeAuthService(redis);
   initializeOAuthService(redis);
+  initializeMfaService(redis);
+  initializeStepUpService(redis);
 
   // ==========================================================================
   // ROUTES
@@ -137,6 +141,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // OAuth routes (/auth prefix for consistency)
   await app.register(oauthRoutes, { prefix: '/auth' });
+
+  // MFA routes (/mfa prefix)
+  await app.register(mfaRoutes, { prefix: '/mfa' });
 
   return app;
 }

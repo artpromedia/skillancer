@@ -12,12 +12,7 @@
     { "pattern": "services/*" },
     { "pattern": "packages/*" }
   ],
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact",
-    "typescript",
-    "typescriptreact"
-  ],
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
   "files.associations": {
     "*.css": "tailwindcss"
   },
@@ -46,5 +41,6 @@
   },
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "prisma.pinToPrisma6": true
 }
