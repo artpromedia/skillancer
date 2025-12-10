@@ -54,6 +54,8 @@ export type {
   PaymentStatus,
   PaymentType,
   PaymentMethodType,
+  PaymentMethodStatus,
+  StripeCustomer,
   Invoice,
   InvoiceStatus,
   Review,

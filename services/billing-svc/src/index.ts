@@ -1,25 +1,51 @@
-// @skillancer/billing-svc
-// Billing and payment processing service
+/**
+ * @module @skillancer/billing-svc
+ * Billing and payment processing service
+ *
+ * Features:
+ * - Payment method management (Cards, ACH, SEPA)
+ * - Stripe integration
+ * - Card expiration monitoring
+ * - Webhook handling
+ */
 
-import Fastify from 'fastify';
+// Re-export app factory
+export { createApp } from './app.js';
 
-const server = Fastify({
-  logger: true,
-});
+// Re-export services
+export { getStripeService, initializeStripeService } from './services/stripe.service.js';
+export {
+  getPaymentMethodService,
+  initializePaymentMethodService,
+} from './services/payment-method.service.js';
 
-server.get('/health', async () => {
-  return { status: 'ok' };
-});
+// Re-export types
+export type {
+  PaymentMethodResponse,
+  PaymentMethodFilters,
+  AddPaymentMethodResult,
+  SyncResult,
+  SetupIntentResult,
+} from './services/payment-method.service.js';
 
-const start = async () => {
-  try {
-    await server.listen({ port: 4002, host: '0.0.0.0' });
-  } catch (err) {
-    server.log.error(err);
-    process.exit(1);
-  }
-};
+// Re-export errors
+export {
+  StripeError,
+  PaymentMethodNotFoundError,
+  PaymentMethodInUseError,
+  InvalidPaymentMethodError,
+  SetupIntentError,
+  CustomerNotFoundError,
+} from './errors/index.js';
 
-start();
+// Re-export job utilities
+export {
+  initializeCardExpirationJob,
+  scheduleCardExpirationJob,
+  triggerCardExpirationCheck,
+  closeCardExpirationJob,
+  getQueueStatus,
+} from './jobs/card-expiration.job.js';
 
-export { server };
+// Run as main module
+import './app.js';

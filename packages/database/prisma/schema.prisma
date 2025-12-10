@@ -58,6 +58,7 @@ model User {
   skills                UserSkill[]
   portfolioItems        PortfolioItem[]
   paymentMethods        PaymentMethod[]
+  stripeCustomer        StripeCustomer?
   notifications         Notification[]
   refreshTokens         RefreshToken[]
   auditLogs             AuditLog[]         @relation("UserAuditLogs")
@@ -809,32 +810,89 @@ model Payment {
   @@map("payments")
 }
 
+// ============================================================================
+// STRIPE CUSTOMER
+// ============================================================================
+
+model StripeCustomer {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String   @unique @map("user_id") @db.Uuid
+  stripeCustomerId String   @unique @map("stripe_customer_id") @db.VarChar(100)
+  
+  // Metadata
+  currency         String   @default("USD") @db.VarChar(3)
+  
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("stripe_customers")
+}
+
+// ============================================================================
+// PAYMENT METHOD
+// ============================================================================
+
 model PaymentMethod {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  type      PaymentMethodType
-  isDefault Boolean  @default(false) @map("is_default")
+  id                    String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String              @map("user_id") @db.Uuid
+  stripePaymentMethodId String              @unique @map("stripe_payment_method_id") @db.VarChar(100)
+  stripeCustomerId      String              @map("stripe_customer_id") @db.VarChar(100)
   
-  // Stripe
-  stripePaymentMethodId String? @map("stripe_payment_method_id") @db.VarChar(100)
+  type                  PaymentMethodType
+  isDefault             Boolean             @default(false) @map("is_default")
+  status                PaymentMethodStatus @default(ACTIVE)
   
-  // Card details (masked)
-  last4     String?  @db.VarChar(4)
-  brand     String?  @db.VarChar(20)
-  expiryMonth Int?   @map("expiry_month")
-  expiryYear  Int?   @map("expiry_year")
+  // Card details (for display only - PCI compliant)
+  cardBrand             String?             @map("card_brand") @db.VarChar(20)
+  cardLast4             String?             @map("card_last4") @db.VarChar(4)
+  cardExpMonth          Int?                @map("card_exp_month")
+  cardExpYear           Int?                @map("card_exp_year")
+  cardFunding           String?             @map("card_funding") @db.VarChar(20) // credit, debit, prepaid
+  
+  // Bank account details (for display only - PCI compliant)
+  bankName              String?             @map("bank_name") @db.VarChar(100)
+  bankLast4             String?             @map("bank_last4") @db.VarChar(4)
+  bankAccountType       String?             @map("bank_account_type") @db.VarChar(20) // checking, savings
+  bankRoutingLast4      String?             @map("bank_routing_last4") @db.VarChar(4)
+  
+  // SEPA details
+  sepaCountry           String?             @map("sepa_country") @db.VarChar(2)
+  sepaBankCode          String?             @map("sepa_bank_code") @db.VarChar(20)
+  
+  // Billing address (for verification)
+  billingName           String?             @map("billing_name") @db.VarChar(200)
+  billingEmail          String?             @map("billing_email") @db.VarChar(255)
+  billingCountry        String?             @map("billing_country") @db.VarChar(2)
+  billingPostalCode     String?             @map("billing_postal_code") @db.VarChar(20)
+  
+  // Expiration handling
+  expirationWarningAt   DateTime?           @map("expiration_warning_at")
+  
+  // Metadata
+  fingerprint           String?             @db.VarChar(100) // Stripe fingerprint for dedup
+  
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
 
-  // Bank details (masked)
-  bankName  String?  @map("bank_name") @db.VarChar(100)
-  
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payments Payment[]
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments              Payment[]
 
   @@index([userId])
+  @@index([stripeCustomerId])
+  @@index([status])
+  @@index([cardExpYear, cardExpMonth])
   @@map("payment_methods")
+}
+
+enum PaymentMethodStatus {
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+  VERIFICATION_PENDING
+  VERIFICATION_FAILED
+  REMOVED
 }
 
 enum PaymentStatus {
@@ -858,8 +916,9 @@ enum PaymentType {
 
 enum PaymentMethodType {
   CARD
-  BANK_ACCOUNT
-  PAYPAL
+  ACH_DEBIT
+  SEPA_DEBIT
+  WIRE
 }
 
 model Invoice {
