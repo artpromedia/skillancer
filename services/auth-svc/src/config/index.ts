@@ -117,6 +117,24 @@ const configSchema = z.object({
     twilioPhoneNumber: z.string().optional(),
   }),
 
+  // Storage (S3)
+  storage: z.object({
+    s3Bucket: z.string().default('skillancer-uploads'),
+    s3Region: z.string().default('us-east-1'),
+    s3Endpoint: z.string().optional(), // For LocalStack or MinIO
+    s3AccessKeyId: z.string().optional(),
+    s3SecretAccessKey: z.string().optional(),
+    s3ForcePathStyle: z.boolean().default(false),
+    s3CdnUrl: z.string().optional(), // CloudFront or CDN URL
+  }),
+
+  // Profile
+  profile: z.object({
+    maxAvatarSize: z.coerce.number().default(10 * 1024 * 1024), // 10MB
+    maxSkills: z.coerce.number().default(50),
+    publicProfileCacheTtl: z.coerce.number().default(5 * 60), // 5 minutes
+  }),
+
   // Logging
   logging: z.object({
     level: z.string().default('info'),
@@ -242,6 +260,22 @@ export function getConfig(): Config {
       twilioAccountSid: env['TWILIO_ACCOUNT_SID'],
       twilioAuthToken: env['TWILIO_AUTH_TOKEN'],
       twilioPhoneNumber: env['TWILIO_PHONE_NUMBER'],
+    },
+
+    storage: {
+      s3Bucket: env['S3_BUCKET'] ?? 'skillancer-uploads',
+      s3Region: env['S3_REGION'] ?? env['AWS_REGION'] ?? 'us-east-1',
+      s3Endpoint: env['S3_ENDPOINT'], // For LocalStack: http://localhost:4566
+      s3AccessKeyId: env['S3_ACCESS_KEY_ID'] ?? env['AWS_ACCESS_KEY_ID'],
+      s3SecretAccessKey: env['S3_SECRET_ACCESS_KEY'] ?? env['AWS_SECRET_ACCESS_KEY'],
+      s3ForcePathStyle: env['S3_FORCE_PATH_STYLE'] === 'true',
+      s3CdnUrl: env['S3_CDN_URL'],
+    },
+
+    profile: {
+      maxAvatarSize: env['PROFILE_MAX_AVATAR_SIZE'] ?? 10 * 1024 * 1024,
+      maxSkills: env['PROFILE_MAX_SKILLS'] ?? 50,
+      publicProfileCacheTtl: env['PROFILE_CACHE_TTL'] ?? 5 * 60,
     },
 
     logging: {

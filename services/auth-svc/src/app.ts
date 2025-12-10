@@ -6,6 +6,7 @@
 import cors from '@fastify/cors';
 import formBody from '@fastify/formbody';
 import helmet from '@fastify/helmet';
+import multipart from '@fastify/multipart';
 import sensible from '@fastify/sensible';
 import Fastify, {
   type FastifyInstance,
@@ -20,10 +21,14 @@ import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
 import { mfaRoutes } from './routes/mfa.js';
 import { oauthRoutes } from './routes/oauth.js';
+import { profileRoutes } from './routes/profile.js';
 import { initializeAuthService } from './services/auth.service.js';
+import { initializeAvatarService } from './services/avatar.service.js';
 import { initializeMfaService } from './services/mfa.service.js';
 import { initializeOAuthService } from './services/oauth.service.js';
+import { initializeProfileService } from './services/profile.service.js';
 import { initializeSessionService } from './services/session.service.js';
+import { initializeSkillsService } from './services/skills.service.js';
 import { initializeStepUpService } from './services/step-up-auth.service.js';
 
 import type { Redis } from 'ioredis';
@@ -116,6 +121,14 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   // Form body parser (for OAuth callbacks)
   await app.register(formBody);
 
+  // Multipart file upload (for avatar uploads)
+  await app.register(multipart, {
+    limits: {
+      fileSize: config.profile.maxAvatarSize,
+      files: 1,
+    },
+  });
+
   // Rate limiting
   await app.register(rateLimitPlugin, { redis });
 
@@ -128,6 +141,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   initializeOAuthService(redis);
   initializeMfaService(redis);
   initializeStepUpService(redis);
+  initializeProfileService(redis);
+  initializeAvatarService();
+  initializeSkillsService();
 
   // ==========================================================================
   // ROUTES
@@ -144,6 +160,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // MFA routes (/mfa prefix)
   await app.register(mfaRoutes, { prefix: '/mfa' });
+
+  // Profile routes (includes /profile, /profiles, /skills)
+  await app.register(profileRoutes);
 
   return app;
 }

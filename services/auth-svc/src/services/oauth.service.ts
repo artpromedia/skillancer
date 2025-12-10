@@ -438,8 +438,8 @@ export class OAuthService {
     }
 
     const userInfo: OAuthUserInfo = {
-      id: idTokenPayload.sub as string,
-      email: idTokenPayload.email as string,
+      id: idTokenPayload.sub,
+      email: idTokenPayload.email ?? '',
       firstName: firstName || 'Apple',
       lastName: lastName || 'User',
       displayName: firstName && lastName ? `${firstName} ${lastName}` : undefined,
@@ -620,7 +620,7 @@ export class OAuthService {
   /**
    * Decode JWT payload without verification (for ID tokens we already trust)
    */
-  private decodeJwtPayload(token: string): Record<string, unknown> {
+  private decodeJwtPayload(token: string): AppleIdToken {
     const [, payload] = token.split('.');
     if (!payload) {
       throw new OAuthError('apple', 'Invalid ID token format');

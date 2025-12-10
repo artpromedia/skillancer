@@ -545,14 +545,11 @@ export function authRoutes(fastify: FastifyInstance): void {
   );
 
   // Complete MFA login after verification
-  fastify.post<{
-    Body: { pendingSessionId: string; challengeId: string };
-  }>(
+  fastify.post(
     '/login/mfa/complete',
     {
       schema: {
-        summary: 'Complete MFA login',
-        description: 'Complete login after MFA verification',
+        tags: ['Auth'],
         body: {
           type: 'object',
           required: ['pendingSessionId', 'challengeId'],
@@ -582,7 +579,10 @@ export function authRoutes(fastify: FastifyInstance): void {
       },
     },
     async (request, reply) => {
-      const { pendingSessionId, challengeId } = request.body;
+      const { pendingSessionId, challengeId } = request.body as {
+        pendingSessionId: string;
+        challengeId: string;
+      };
       const authService = getAuthService();
 
       const { user, tokens, session, mfaVerified } = await authService.completeMfaLogin(

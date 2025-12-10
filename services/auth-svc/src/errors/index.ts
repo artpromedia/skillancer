@@ -279,3 +279,106 @@ export class StepUpAuthRequiredError extends AppError {
     super(message, 'STEP_UP_AUTH_REQUIRED', 401, { operation });
   }
 }
+
+// =============================================================================
+// PROFILE ERRORS
+// =============================================================================
+
+/**
+ * Error thrown when profile is not found
+ */
+export class ProfileNotFoundError extends AppError {
+  public override readonly name = 'ProfileNotFoundError';
+
+  constructor(identifier: string) {
+    super(`Profile not found: ${identifier}`, 'PROFILE_NOT_FOUND', 404);
+  }
+}
+
+/**
+ * Error thrown when username is not available
+ */
+export class UsernameNotAvailableError extends AppError {
+  public override readonly name = 'UsernameNotAvailableError';
+
+  constructor(username: string) {
+    super(`Username "${username}" is not available`, 'USERNAME_NOT_AVAILABLE', 409);
+  }
+}
+
+/**
+ * Error thrown when username format is invalid
+ */
+export class InvalidUsernameError extends AppError {
+  public override readonly name = 'InvalidUsernameError';
+
+  constructor(message = 'Invalid username format') {
+    super(message, 'INVALID_USERNAME', 400);
+  }
+}
+
+/**
+ * Error thrown when file type is invalid
+ */
+export class InvalidFileTypeError extends AppError {
+  public override readonly name = 'InvalidFileTypeError';
+
+  constructor(message = 'Invalid file type') {
+    super(message, 'INVALID_FILE_TYPE', 400);
+  }
+}
+
+/**
+ * Error thrown when file is too large
+ */
+export class FileTooLargeError extends AppError {
+  public override readonly name = 'FileTooLargeError';
+
+  constructor(message = 'File too large') {
+    super(message, 'FILE_TOO_LARGE', 413);
+  }
+}
+
+/**
+ * Error thrown when image processing fails
+ */
+export class ImageProcessingError extends AppError {
+  public override readonly name = 'ImageProcessingError';
+
+  constructor(message = 'Image processing failed') {
+    super(message, 'IMAGE_PROCESSING_ERROR', 500);
+  }
+}
+
+/**
+ * Error thrown when skill is not found
+ */
+export class SkillNotFoundError extends AppError {
+  public override readonly name = 'SkillNotFoundError';
+
+  constructor(identifier: string) {
+    super(`Skill not found: ${identifier}`, 'SKILL_NOT_FOUND', 404);
+  }
+}
+
+/**
+ * Error thrown when skill already exists
+ */
+export class SkillAlreadyExistsError extends AppError {
+  public override readonly name = 'SkillAlreadyExistsError';
+
+  constructor(name: string) {
+    super(`Skill "${name}" already exists`, 'SKILL_ALREADY_EXISTS', 409);
+  }
+}
+
+/**
+ * Error thrown when max skills limit is exceeded
+ */
+export class MaxSkillsExceededError extends AppError {
+  public override readonly name = 'MaxSkillsExceededError';
+
+  constructor(maxSkills: number) {
+    super(`Maximum of ${maxSkills} skills allowed`, 'MAX_SKILLS_EXCEEDED', 400);
+  }
+}

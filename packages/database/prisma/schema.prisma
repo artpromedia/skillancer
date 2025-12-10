@@ -62,6 +62,7 @@ model User {
   refreshTokens         RefreshToken[]
   auditLogs             AuditLog[]         @relation("UserAuditLogs")
   mfa                   UserMfa?
+  profile               UserProfile?
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -141,6 +142,61 @@ model MfaChallenge {
   @@map("mfa_challenges")
 }
 
+// ============================================================================
+// USER PROFILE
+// ============================================================================
+
+model UserProfile {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String   @unique @map("user_id") @db.Uuid
+  username        String?  @unique @db.VarChar(30) // For public URL (skillancer.com/@username)
+  
+  // Professional
+  title           String?  @db.VarChar(200)
+  bio             String?  @db.Text
+  hourlyRate      Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  currency        String   @default("USD") @db.VarChar(3)
+  yearsExperience Int?     @map("years_experience")
+  
+  // Avatar (multiple sizes for performance)
+  avatarOriginal  String?  @map("avatar_original") @db.VarChar(500)
+  avatarThumbnail String?  @map("avatar_thumbnail") @db.VarChar(500) // 64x64
+  avatarSmall     String?  @map("avatar_small") @db.VarChar(500)     // 128x128
+  avatarMedium    String?  @map("avatar_medium") @db.VarChar(500)    // 256x256
+  avatarLarge     String?  @map("avatar_large") @db.VarChar(500)     // 512x512
+  
+  // Social Links
+  linkedinUrl     String?  @map("linkedin_url") @db.VarChar(500)
+  githubUrl       String?  @map("github_url") @db.VarChar(500)
+  portfolioUrl    String?  @map("portfolio_url") @db.VarChar(500)
+  twitterUrl      String?  @map("twitter_url") @db.VarChar(500)
+  
+  // Location
+  country         String?  @db.VarChar(2) // ISO 3166-1 alpha-2
+  city            String?  @db.VarChar(100)
+  
+  // Visibility Settings
+  isPublic        Boolean  @default(false) @map("is_public")
+  showEmail       Boolean  @default(false) @map("show_email")
+  showRate        Boolean  @default(true) @map("show_rate")
+  showLocation    Boolean  @default(true) @map("show_location")
+  
+  // Completeness tracking
+  completenessScore Int    @default(0) @map("completeness_score")
+  
+  // Timestamps
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([username])
+  @@index([isPublic])
+  @@index([country])
+  @@index([hourlyRate])
+  @@map("user_profiles")
+}
+
 model RefreshToken {
   id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   token     String   @unique @db.VarChar(500)
@@ -160,18 +216,21 @@ model RefreshToken {
 }
 
 model UserSkill {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  skillId     String   @map("skill_id") @db.Uuid
+  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  skillId     String     @map("skill_id") @db.Uuid
   level       SkillLevel @default(INTERMEDIATE)
-  yearsExp    Int?     @map("years_exp")
-  verified    Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
+  yearsExp    Int?       @map("years_exp")
+  verified    Boolean    @default(false)
+  isPrimary   Boolean    @default(false) @map("is_primary")
+  sortOrder   Int        @default(0) @map("sort_order")
+  createdAt   DateTime   @default(now()) @map("created_at")
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@unique([userId, skillId])
+  @@index([userId, sortOrder])
   @@map("user_skills")
 }
 
@@ -188,14 +247,18 @@ model Skill {
   slug        String      @unique @db.VarChar(100)
   category    String      @db.VarChar(100)
   description String?     @db.Text
+  isCustom    Boolean     @default(false) @map("is_custom")
+  createdById String?     @map("created_by_id") @db.Uuid
+  isApproved  Boolean     @default(true) @map("is_approved")
   createdAt   DateTime    @default(now()) @map("created_at")
 
-  userSkills  UserSkill[]
-  jobSkills   JobSkill[]
+  userSkills    UserSkill[]
+  jobSkills     JobSkill[]
   serviceSkills ServiceSkill[]
 
   @@index([category])
   @@index([slug])
+  @@index([isCustom])
   @@map("skills")
 }
 

@@ -57,11 +57,11 @@ const recoveryCodeSchema = z.object({
 // TYPES
 // =============================================================================
 
-interface TotpCodeBody {
+interface _TotpCodeBody {
   code: string;
 }
 
-interface SmsSetupBody {
+interface _SmsSetupBody {
   phoneNumber: string;
 }
 
@@ -69,7 +69,7 @@ interface ChallengeRequestBody {
   method: MfaMethod;
 }
 
-interface ChallengeVerifyBody {
+interface _ChallengeVerifyBody {
   challengeId: string;
   code: string;
 }
@@ -249,7 +249,7 @@ export function mfaRoutes(fastify: FastifyInstance): void {
         },
       },
     },
-    async (request: FastifyRequest<{ Body: TotpCodeBody }>, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const { code } = totpCodeSchema.parse(request.body);
 
       // Verify setup returns recovery codes on first setup
@@ -346,7 +346,7 @@ export function mfaRoutes(fastify: FastifyInstance): void {
         },
       },
     },
-    async (request: FastifyRequest<{ Body: SmsSetupBody }>, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const { phoneNumber } = smsSetupSchema.parse(request.body);
 
       await mfaService.initiateSmsSetup(getUserId(request), phoneNumber);
@@ -389,7 +389,7 @@ export function mfaRoutes(fastify: FastifyInstance): void {
         },
       },
     },
-    async (request: FastifyRequest<{ Body: TotpCodeBody }>, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const { code } = totpCodeSchema.parse(request.body);
 
       await mfaService.verifySmsSetup(getUserId(request), code);
@@ -506,7 +506,7 @@ export function mfaRoutes(fastify: FastifyInstance): void {
         },
       },
     },
-    async (request: FastifyRequest<{ Body: ChallengeVerifyBody }>, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const { challengeId, code } = challengeVerifySchema.parse(request.body);
 
       const verified = await mfaService.verifyChallenge(challengeId, code);
@@ -600,11 +600,10 @@ export function mfaRoutes(fastify: FastifyInstance): void {
         },
       },
     },
-    async (
-      request: FastifyRequest<{ Body: RecoveryCodeBody & { pendingSessionId: string } }>,
-      reply: FastifyReply
-    ) => {
-      const { code, pendingSessionId } = request.body;
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { code, pendingSessionId } = request.body as RecoveryCodeBody & {
+        pendingSessionId: string;
+      };
 
       const validatedCode = recoveryCodeSchema.parse({ code }).code;
 

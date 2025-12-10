@@ -19,6 +19,7 @@ export type {
   UserStatus,
   VerificationLevel,
   RefreshToken,
+  UserProfile,
   UserSkill,
   SkillLevel,
   Skill,

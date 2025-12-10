@@ -319,10 +319,13 @@ export class MfaService {
 
     const expiresAt = new Date(Date.now() + this.config.mfa.challengeTtl);
     let code: string | null = null;
-    let hint: string | undefined;
+    let hint = '';
 
     // Generate and send code for SMS/email methods
     if (method === MfaMethod.SMS) {
+      if (!mfa.phoneNumber) {
+        throw new InvalidMfaCodeError('Phone number not configured for SMS MFA');
+      }
       code = this.generateNumericCode(this.config.mfa.smsCodeLength);
       await this.smsService.sendCode(mfa.phoneNumber, code);
       hint = this.maskPhoneNumber(mfa.phoneNumber);
@@ -366,7 +369,6 @@ export class MfaService {
   async verifyChallenge(challengeId: string, code: string): Promise<boolean> {
     const challenge = await prisma.mfaChallenge.findUnique({
       where: { id: challengeId },
-      include: {},
     });
 
     if (!challenge) {

@@ -348,3 +348,71 @@ export function rateLimitMiddleware(type: MfaRateLimitType) {
     }
   };
 }
+
+// =============================================================================
+// PROFILE RATE LIMIT HOOKS
+// =============================================================================
+
+/**
+ * Rate limit hook for profile updates
+ * Limits to 30 updates per hour per user
+ */
+export async function profileRateLimitHook(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  const user = request.user as AuthenticatedUser | undefined;
+  if (!user) {
+    return;
+  }
+
+  const fastify = request.server;
+  const key = `profile:${user.id}`;
+
+  // Use login limiter with modified config (30 per hour)
+  const result = await fastify.rateLimit.login(key);
+
+  void reply.header('X-RateLimit-Limit', 30);
+  void reply.header('X-RateLimit-Remaining', Math.max(0, 30 - result.current));
+  void reply.header('X-RateLimit-Reset', result.resetAt.toISOString());
+
+  if (result.current > 30) {
+    void reply.header('Retry-After', result.retryAfter);
+    throw new RateLimitExceededError(
+      'Too many profile updates. Please try again later.',
+      result.retryAfter
+    );
+  }
+}
+
+/**
+ * Rate limit hook for avatar uploads
+ * Limits to 10 uploads per hour per user
+ */
+export async function avatarUploadRateLimitHook(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  const user = request.user as AuthenticatedUser | undefined;
+  if (!user) {
+    return;
+  }
+
+  const fastify = request.server;
+  const key = `avatar:${user.id}`;
+
+  // Use registration limiter config (stricter)
+  const result = await fastify.rateLimit.registration(key);
+
+  void reply.header('X-RateLimit-Limit', 10);
+  void reply.header('X-RateLimit-Remaining', Math.max(0, 10 - result.current));
+  void reply.header('X-RateLimit-Reset', result.resetAt.toISOString());
+
+  if (result.current > 10) {
+    void reply.header('Retry-After', result.retryAfter);
+    throw new RateLimitExceededError(
+      'Too many avatar uploads. Please try again later.',
+      result.retryAfter
+    );
+  }
+}
