@@ -29,11 +29,10 @@ async function stripeWebhook(request: WebhookRequest, reply: FastifyReply): Prom
   const signature = request.headers['stripe-signature'];
 
   if (!signature) {
-    reply.status(400).send({
+    return reply.status(400).send({
       success: false,
       error: 'Missing stripe-signature header',
     });
-    return;
   }
 
   const stripeService = getStripeService();
@@ -45,7 +44,7 @@ async function stripeWebhook(request: WebhookRequest, reply: FastifyReply): Prom
     // Handle the event
     const result = await handleStripeWebhook(event);
 
-    reply.status(200).send({
+    return reply.status(200).send({
       success: true,
       received: true,
       eventId: event.id,
@@ -57,16 +56,15 @@ async function stripeWebhook(request: WebhookRequest, reply: FastifyReply): Prom
     console.error('[Stripe Webhook] Error processing webhook:', error);
 
     if (error instanceof StripeError) {
-      reply.status(400).send({
+      return reply.status(400).send({
         success: false,
         error: 'Webhook signature verification failed',
         message: error.message,
       });
-      return;
     }
 
     // Don't expose internal errors
-    reply.status(500).send({
+    return reply.status(500).send({
       success: false,
       error: 'Webhook processing failed',
     });
@@ -80,18 +78,22 @@ async function stripeWebhook(request: WebhookRequest, reply: FastifyReply): Prom
 /**
  * Register webhook routes
  */
-export async function webhookRoutes(fastify: FastifyInstance): Promise<void> {
+export function webhookRoutes(fastify: FastifyInstance): void {
   // Register raw body content type parser for webhook
-  fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => {
-    // Store raw body for signature verification
-    (req as WebhookRequest).rawBody = body as Buffer;
-    try {
-      const json = JSON.parse(body.toString());
-      done(null, json);
-    } catch (err) {
-      done(err as Error, undefined);
+  fastify.addContentTypeParser(
+    'application/json',
+    { parseAs: 'buffer' },
+    (req, body: Buffer, done) => {
+      // Store raw body for signature verification
+      (req as WebhookRequest).rawBody = body;
+      try {
+        const json: unknown = JSON.parse(body.toString());
+        done(null, json);
+      } catch (err) {
+        done(err as Error, undefined);
+      }
     }
-  });
+  );
 
   // Stripe webhook endpoint - no auth required (verified by signature)
   fastify.post('/stripe', {

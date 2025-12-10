@@ -5,11 +5,11 @@
 
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
-import fastifyCors from '@fastify/cors';
-import fastifyHelmet from '@fastify/helmet';
-import fastifyRateLimit from '@fastify/rate-limit';
-import fastifySwagger from '@fastify/swagger';
-import fastifySwaggerUi from '@fastify/swagger-ui';
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 
 import { config } from './config/index.js';
 import { initializeStripeService } from './services/stripe.service.js';
@@ -19,8 +19,8 @@ import {
   scheduleCardExpirationJob,
   closeCardExpirationJob,
 } from './jobs/card-expiration.job.js';
-import paymentMethodRoutes from './routes/payment-methods.js';
-import webhookRoutes from './routes/webhooks.js';
+import { paymentMethodRoutes } from './routes/payment-methods.js';
+import { webhookRoutes } from './routes/webhooks.js';
 import {
   StripeError,
   PaymentMethodNotFoundError,
@@ -64,19 +64,19 @@ export async function createApp(): Promise<FastifyInstance> {
   // ==========================================================================
 
   // CORS
-  await app.register(fastifyCors, {
+  await app.register(cors, {
     origin: config.app.corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   });
 
   // Security headers
-  await app.register(fastifyHelmet, {
+  await app.register(helmet, {
     contentSecurityPolicy: false, // Handled by API gateway
   });
 
   // Rate limiting
-  await app.register(fastifyRateLimit, {
+  await app.register(rateLimit, {
     max: 100,
     timeWindow: '1 minute',
     keyGenerator: (request) => {
@@ -87,7 +87,7 @@ export async function createApp(): Promise<FastifyInstance> {
 
   // Swagger documentation
   if (config.app.nodeEnv !== 'production') {
-    await app.register(fastifySwagger, {
+    await app.register(swagger, {
       openapi: {
         info: {
           title: 'Skillancer Billing Service API',
@@ -113,7 +113,7 @@ export async function createApp(): Promise<FastifyInstance> {
       },
     });
 
-    await app.register(fastifySwaggerUi, {
+    await app.register(swaggerUi, {
       routePrefix: '/docs',
       uiConfig: {
         docExpansion: 'list',

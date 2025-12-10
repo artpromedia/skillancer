@@ -160,7 +160,7 @@ async function handlePaymentMethodAttached(
   });
 
   // Send notification
-  await sendPaymentMethodAddedNotification(userId, paymentMethod);
+  sendPaymentMethodAddedNotification(userId, paymentMethod);
 
   console.log(`[Stripe Webhook] Payment method ${paymentMethod.id} attached for user ${userId}`);
   return { handled: true, message: 'Payment method created' };
@@ -275,7 +275,7 @@ async function handlePaymentMethodAutoUpdated(
   });
 
   // Send notification about card update
-  await sendCardAutoUpdatedNotification(existing.user, paymentMethod);
+  sendCardAutoUpdatedNotification(existing.user, paymentMethod);
 
   console.log(`[Stripe Webhook] Payment method ${paymentMethod.id} auto-updated`);
   return { handled: true, message: 'Payment method auto-updated' };
@@ -423,7 +423,7 @@ async function handleSetupIntentFailed(
   // Send notification about failure
   const userId = setupIntent.metadata?.userId;
   if (userId) {
-    await sendSetupFailedNotification(userId, setupIntent);
+    sendSetupFailedNotification(userId, setupIntent);
   }
 
   console.log(`[Stripe Webhook] Setup intent ${setupIntent.id} failed`);
@@ -437,7 +437,7 @@ async function handleSetupIntentFailed(
 /**
  * Handle card/source expiring notification
  */
-async function handleSourceExpiring(source: Stripe.CustomerSource): Promise<WebhookHandlerResult> {
+async function handleSourceExpiring(_source: Stripe.CustomerSource): Promise<WebhookHandlerResult> {
   // This event is sent for legacy sources, not PaymentMethods
   // But we handle it for completeness
   const paymentMethodService = getPaymentMethodService();
@@ -472,12 +472,12 @@ function mapStripeType(stripeType: string): 'CARD' | 'ACH_DEBIT' | 'SEPA_DEBIT' 
 
 /**
  * Send payment method added notification
+ * TODO: Integrate with notification service
  */
-async function sendPaymentMethodAddedNotification(
+function sendPaymentMethodAddedNotification(
   userId: string,
   paymentMethod: Stripe.PaymentMethod
-): Promise<void> {
-  // TODO: Integrate with notification service
+): void {
   console.log(`[NOTIFICATION] Payment method added for user ${userId}:`, {
     type: paymentMethod.type,
     last4: paymentMethod.card?.last4 ?? paymentMethod.us_bank_account?.last4,
@@ -486,12 +486,12 @@ async function sendPaymentMethodAddedNotification(
 
 /**
  * Send card auto-updated notification
+ * TODO: Integrate with notification service
  */
-async function sendCardAutoUpdatedNotification(
+function sendCardAutoUpdatedNotification(
   user: { id: string; email: string; firstName: string },
   paymentMethod: Stripe.PaymentMethod
-): Promise<void> {
-  // TODO: Integrate with notification service
+): void {
   console.log(`[NOTIFICATION] Card auto-updated for user ${user.email}:`, {
     brand: paymentMethod.card?.brand,
     last4: paymentMethod.card?.last4,
@@ -502,12 +502,12 @@ async function sendCardAutoUpdatedNotification(
 
 /**
  * Send setup failed notification
+ * TODO: Integrate with notification service
  */
-async function sendSetupFailedNotification(
+function sendSetupFailedNotification(
   userId: string,
   setupIntent: Stripe.SetupIntent
-): Promise<void> {
-  // TODO: Integrate with notification service
+): void {
   console.log(`[NOTIFICATION] Setup intent failed for user ${userId}:`, {
     setupIntentId: setupIntent.id,
     error: setupIntent.last_setup_error?.message,

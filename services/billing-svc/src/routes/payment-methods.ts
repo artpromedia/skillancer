@@ -11,11 +11,7 @@ import {
   type PaymentMethodResponse,
   type PaymentMethodFilters,
 } from '../services/payment-method.service.js';
-import {
-  PaymentMethodNotFoundError,
-  PaymentMethodInUseError,
-  InvalidPaymentMethodError,
-} from '../errors/index.js';
+import { PaymentMethodNotFoundError, PaymentMethodInUseError } from '../errors/index.js';
 
 // =============================================================================
 // SCHEMAS
@@ -47,16 +43,16 @@ const attachPaymentMethodSchema = z.object({
   setAsDefault: z.boolean().default(false),
 });
 
-const setDefaultPaymentMethodSchema = z.object({
+const _setDefaultPaymentMethodSchema = z.object({
   paymentMethodId: z.string().min(1, 'Payment method ID is required'),
 });
 
-const removePaymentMethodSchema = z.object({
+const _removePaymentMethodSchema = z.object({
   paymentMethodId: z.string().min(1, 'Payment method ID is required'),
 });
 
 // Response schemas (for documentation)
-const paymentMethodResponseSchema = z.object({
+const _paymentMethodResponseSchema = z.object({
   id: z.string(),
   type: z.enum(['CARD', 'ACH_DEBIT', 'SEPA_DEBIT', 'WIRE']),
   isDefault: z.boolean(),
@@ -137,7 +133,7 @@ async function getPaymentMethods(
 
   const paymentMethods = await service.getPaymentMethods(request.user.id, filters);
 
-  reply.send({
+  return reply.send({
     success: true,
     data: {
       paymentMethods: paymentMethods.map(formatPaymentMethod),
@@ -160,7 +156,7 @@ async function getPaymentMethod(request: AuthenticatedRequest, reply: FastifyRep
     throw new PaymentMethodNotFoundError(id);
   }
 
-  reply.send({
+  return reply.send({
     success: true,
     data: formatPaymentMethod(paymentMethod),
   });
@@ -179,7 +175,7 @@ async function createSetupIntent(
 
   const setupIntent = await service.createSetupIntent(request.user.id, body.paymentMethodType);
 
-  reply.status(201).send({
+  return reply.status(201).send({
     success: true,
     data: {
       clientSecret: setupIntent.clientSecret,
@@ -206,7 +202,7 @@ async function attachPaymentMethod(
     body.setAsDefault
   );
 
-  reply.status(201).send({
+  return reply.status(201).send({
     success: true,
     message: 'Payment method added successfully',
     data: formatPaymentMethod(paymentMethod),
@@ -226,7 +222,7 @@ async function setDefaultPaymentMethod(
 
   const paymentMethod = await service.setDefaultPaymentMethod(request.user.id, id);
 
-  reply.send({
+  return reply.send({
     success: true,
     message: 'Default payment method updated',
     data: formatPaymentMethod(paymentMethod),
@@ -253,7 +249,7 @@ async function removePaymentMethod(
 
   await service.removePaymentMethod(request.user.id, id);
 
-  reply.send({
+  return reply.send({
     success: true,
     message: 'Payment method removed successfully',
   });
@@ -271,7 +267,7 @@ async function syncPaymentMethods(
 
   const result = await service.syncPaymentMethods(request.user.id);
 
-  reply.send({
+  return reply.send({
     success: true,
     message: 'Payment methods synchronized',
     data: {
@@ -296,15 +292,14 @@ async function getDefaultPaymentMethod(
   const paymentMethod = await service.getDefaultPaymentMethod(request.user.id);
 
   if (!paymentMethod) {
-    reply.send({
+    return reply.send({
       success: true,
       data: null,
       message: 'No default payment method set',
     });
-    return;
   }
 
-  reply.send({
+  return reply.send({
     success: true,
     data: formatPaymentMethod(paymentMethod),
   });
@@ -396,7 +391,7 @@ function formatPaymentMethod(pm: PaymentMethodResponse): {
 /**
  * Register payment method routes
  */
-export async function paymentMethodRoutes(fastify: FastifyInstance): Promise<void> {
+export function paymentMethodRoutes(fastify: FastifyInstance): void {
   // All routes require authentication
   fastify.addHook('preHandler', async (request, reply) => {
     // This should be handled by your auth middleware

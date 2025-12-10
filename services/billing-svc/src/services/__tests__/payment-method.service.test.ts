@@ -116,7 +116,7 @@ describe('PaymentMethodService', () => {
       const result = await service.getPaymentMethods('user-123');
 
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('pm-1');
+      expect(result[0]?.id).toBe('pm-1');
       expect(prisma.paymentMethod.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({

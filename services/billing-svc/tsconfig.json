@@ -4,7 +4,7 @@
     "baseUrl": ".",
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["node"],
+    "types": ["node", "vitest/globals"],
     "paths": {
       "@/*": ["./src/*"],
       "@skillancer/types": ["../../packages/types/src"],
@@ -16,5 +16,5 @@
     }
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": ["node_modules", "dist"]
 }

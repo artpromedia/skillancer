@@ -204,11 +204,7 @@ describe('StripeService', () => {
       const mockEvent = { id: 'evt_123', type: 'payment_method.attached' };
       mockStripeApi.webhooks.constructEvent.mockReturnValue(mockEvent);
 
-      const result = service.constructWebhookEvent(
-        Buffer.from('payload'),
-        'signature',
-        'whsec_xxx'
-      );
+      const result = service.constructWebhookEvent(Buffer.from('payload'), 'signature');
 
       expect(result.id).toBe('evt_123');
     });

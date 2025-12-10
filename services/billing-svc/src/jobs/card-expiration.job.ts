@@ -4,9 +4,10 @@
  */
 
 import { Job, Queue, Worker } from 'bullmq';
+import type { RedisOptions } from 'ioredis';
 import { Redis } from 'ioredis';
 
-import { getConfig, type Config } from '../config/index.js';
+import { getConfig } from '../config/index.js';
 import { getPaymentMethodService } from '../services/payment-method.service.js';
 
 // =============================================================================
@@ -49,7 +50,7 @@ let redisConnection: Redis | null = null;
 function getRedisConnection(): Redis {
   if (!redisConnection) {
     const cfg = getConfig();
-    const options: Record<string, unknown> = {
+    const options: RedisOptions = {
       host: cfg.redis.host,
       port: cfg.redis.port,
       maxRetriesPerRequest: null,
@@ -57,8 +58,7 @@ function getRedisConnection(): Redis {
     if (cfg.redis.password) {
       options.password = cfg.redis.password;
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    redisConnection = new Redis(options as any);
+    redisConnection = new Redis(options);
   }
   return redisConnection;
 }
@@ -261,7 +261,7 @@ async function processCardExpirationJob(
  * Send expiration warning email
  * TODO: Integrate with actual notification service
  */
-async function sendExpirationWarningEmail(card: {
+function _sendExpirationWarningEmail(card: {
   id: string;
   userId: string;
   cardBrand: string | null;
@@ -272,7 +272,7 @@ async function sendExpirationWarningEmail(card: {
     email: string;
     firstName: string;
   };
-}): Promise<void> {
+}): void {
   // TODO: Integrate with notification/email service
   console.log(`[CardExpirationJob] Sending expiration warning:`, {
     userId: card.userId,
@@ -299,7 +299,7 @@ async function sendExpirationWarningEmail(card: {
 /**
  * Send card expired email
  */
-async function sendCardExpiredEmail(card: {
+function _sendCardExpiredEmail(card: {
   id: string;
   userId: string;
   cardBrand: string | null;
@@ -308,7 +308,7 @@ async function sendCardExpiredEmail(card: {
     email: string;
     firstName: string;
   };
-}): Promise<void> {
+}): void {
   // TODO: Integrate with notification/email service
   console.log(`[CardExpirationJob] Sending card expired notification:`, {
     userId: card.userId,

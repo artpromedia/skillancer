@@ -5,7 +5,7 @@
 
 import type Stripe from 'stripe';
 import { prisma } from '@skillancer/database';
-import type { PaymentMethod, PaymentMethodType, PaymentMethodStatus } from '@prisma/client';
+import type { PaymentMethod, PaymentMethodType, PaymentMethodStatus } from '@skillancer/database';
 
 import { getConfig } from '../config/index.js';
 import { getStripeService } from './stripe.service.js';
@@ -570,7 +570,7 @@ export class PaymentMethodService {
       });
 
       // Send notification (via notification service)
-      await this.sendCardExpirationWarning(card.user, card);
+      this.sendCardExpirationWarning(card.user, card);
     }
 
     return expiringCards.length;
@@ -847,12 +847,12 @@ export class PaymentMethodService {
 
   /**
    * Send card expiration warning notification
+   * TODO: Implement notification service integration
    */
-  private async sendCardExpirationWarning(
+  private sendCardExpirationWarning(
     user: { id: string; email: string; firstName: string },
     card: PaymentMethod
-  ): Promise<void> {
-    // TODO: Implement notification service integration
+  ): void {
     console.log(`[NOTIFICATION] Card expiring for user ${user.email}:`, {
       userId: user.id,
       cardLast4: card.cardLast4,
