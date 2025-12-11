@@ -9,7 +9,6 @@ import { getStripeService } from '../services/stripe.service.js';
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
-
 // =============================================================================
 // TYPES
 // =============================================================================

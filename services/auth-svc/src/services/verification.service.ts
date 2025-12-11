@@ -26,7 +26,13 @@ type PrismaClient = Parameters<Exclude<Prisma.Middleware, undefined>>[0]['__inte
 type VerificationLevel = 'NONE' | 'BASIC' | 'STANDARD' | 'ENHANCED';
 type VerificationType = 'ID_VERIFICATION' | 'ADDRESS_VERIFICATION' | 'BUSINESS_VERIFICATION';
 type VerificationStatus = 'PENDING' | 'APPROVED' | 'DECLINED' | 'EXPIRED' | 'CANCELLED';
-type DocumentType = 'PASSPORT' | 'DRIVERS_LICENSE' | 'NATIONAL_ID' | 'UTILITY_BILL' | 'BANK_STATEMENT' | 'BUSINESS_LICENSE';
+type DocumentType =
+  | 'PASSPORT'
+  | 'DRIVERS_LICENSE'
+  | 'NATIONAL_ID'
+  | 'UTILITY_BILL'
+  | 'BANK_STATEMENT'
+  | 'BUSINESS_LICENSE';
 type DocumentStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
 const logger = createLogger({ serviceName: 'verification-service' });
