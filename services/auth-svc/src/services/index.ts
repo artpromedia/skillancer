@@ -42,3 +42,8 @@ export * from './freelancer-profile.service.js';
 export * from './client-profile.service.js';
 export * from './skills.service.js';
 export * from './avatar.service.js';
+export * from './portfolio.service.js';
+export * from './work-history.service.js';
+export * from './education.service.js';
+export * from './certification.service.js';
+export * from './profile-completion.service.js';

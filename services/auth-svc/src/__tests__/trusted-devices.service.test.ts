@@ -3,7 +3,20 @@
  * Unit tests for Trusted Devices Service
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/unbound-method */
+
+import { prisma } from '@skillancer/database';
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+
+import {
+  TrustedDevicesService,
+  initializeTrustedDevicesService,
+  getTrustedDevicesService,
+  resetTrustedDevicesService,
+  type TrustDeviceInfo,
+} from '../services/trusted-devices.service.js';
 
 // Mock dependencies
 vi.mock('@skillancer/database', () => ({
@@ -37,21 +50,20 @@ vi.mock('../config/index.js', () => ({
   }),
 }));
 
-import { prisma } from '@skillancer/database';
-import {
-  TrustedDevicesService,
-  initializeTrustedDevicesService,
-  getTrustedDevicesService,
-  resetTrustedDevicesService,
-  type TrustDeviceInfo,
-} from '../services/trusted-devices.service.js';
-
 // =============================================================================
 // TEST SETUP
 // =============================================================================
 
+interface MockRedis {
+  get: ReturnType<typeof vi.fn>;
+  set: ReturnType<typeof vi.fn>;
+  setex: ReturnType<typeof vi.fn>;
+  del: ReturnType<typeof vi.fn>;
+  pipeline: ReturnType<typeof vi.fn>;
+}
+
 describe('TrustedDevicesService', () => {
-  let mockRedis: any;
+  let mockRedis: MockRedis;
   let service: TrustedDevicesService;
 
   beforeEach(() => {
@@ -146,7 +158,7 @@ describe('TrustedDevicesService', () => {
         ipAddress: deviceInfo.ipAddress,
       });
 
-      const result = await service.trustDevice('user-123', deviceInfo);
+      await service.trustDevice('user-123', deviceInfo);
 
       expect(prisma.trustedDevice.update).toHaveBeenCalled();
       expect(prisma.trustedDevice.create).not.toHaveBeenCalled();
@@ -343,7 +355,7 @@ describe('TrustedDevicesService', () => {
 
       const result = await service.getUserDevices('user-123', 'current-fingerprint');
 
-      expect(result[0].isCurrent).toBe(true);
+      expect(result[0]?.isCurrent).toBe(true);
     });
   });
 

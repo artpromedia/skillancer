@@ -19,21 +19,29 @@ import {
 } from './persona.service.js';
 import { getConfig } from '../config/index.js';
 
-import type { Prisma } from '@skillancer/database';
+import type { PrismaClient } from '@skillancer/database';
 
-// Re-map types from Prisma namespace
-type PrismaClient = Parameters<Exclude<Prisma.Middleware, undefined>>[0]['__internal']['prisma'];
-type VerificationLevel = 'NONE' | 'BASIC' | 'STANDARD' | 'ENHANCED';
-type VerificationType = 'ID_VERIFICATION' | 'ADDRESS_VERIFICATION' | 'BUSINESS_VERIFICATION';
-type VerificationStatus = 'PENDING' | 'APPROVED' | 'DECLINED' | 'EXPIRED' | 'CANCELLED';
+// Re-map types from Prisma namespace - match the actual Prisma enum values
+type VerificationLevel = 'NONE' | 'EMAIL' | 'BASIC' | 'ENHANCED' | 'PREMIUM';
+type VerificationType = 'BASIC' | 'GOVERNMENT_ID' | 'ADDRESS' | 'ENHANCED' | 'PREMIUM';
+type VerificationStatus =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'NEEDS_REVIEW'
+  | 'APPROVED'
+  | 'DECLINED'
+  | 'EXPIRED'
+  | 'CANCELLED';
 type DocumentType =
   | 'PASSPORT'
   | 'DRIVERS_LICENSE'
   | 'NATIONAL_ID'
+  | 'RESIDENCE_PERMIT'
   | 'UTILITY_BILL'
   | 'BANK_STATEMENT'
-  | 'BUSINESS_LICENSE';
-type DocumentStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+  | 'TAX_DOCUMENT'
+  | 'OTHER';
+type DocumentStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'EXPIRED';
 
 const logger = createLogger({ serviceName: 'verification-service' });
 
@@ -282,7 +290,7 @@ export class VerificationService {
     }
 
     return {
-      inquiries: inquiries.map((i) => ({
+      inquiries: inquiries.map((i: (typeof inquiries)[number]) => ({
         id: i.id,
         verificationType: i.verificationType,
         status: i.status,
@@ -290,7 +298,7 @@ export class VerificationService {
         completedAt: i.completedAt,
         resultLevel: i.verificationLevel,
       })),
-      currentBadges: badges.map((b) => ({
+      currentBadges: badges.map((b: (typeof badges)[number]) => ({
         id: b.id,
         level: b.level,
         grantedAt: b.grantedAt,
@@ -355,11 +363,11 @@ export class VerificationService {
     // Update inquiry status
     if (inquiry.status !== newStatus) {
       const updateData: {
-        status: string;
+        status: VerificationStatus;
         completedAt?: Date;
         failureReasons?: string[];
       } = {
-        status: newStatus,
+        status: newStatus as VerificationStatus,
       };
 
       // Set completion time for terminal states

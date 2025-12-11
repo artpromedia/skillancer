@@ -9,6 +9,8 @@
  * - Webhook handling
  */
 
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+
 import { prisma } from '@skillancer/database';
 import { z } from 'zod';
 
@@ -442,4 +444,5 @@ const verificationRoutes: FastifyPluginAsync = async (fastify) => {
   );
 };
 
+export { verificationRoutes };
 export default verificationRoutes;

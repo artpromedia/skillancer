@@ -3,6 +3,8 @@
  * Unit tests for OAuthService
  */
 
+/* eslint-disable import/order */
+
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Redis } from 'ioredis';
 
@@ -243,7 +245,13 @@ describe('OAuthService', () => {
       mockCacheService.get.mockResolvedValue(null);
 
       await expect(
-        oauthService.handleMicrosoftCallback('code', 'invalid-state', mockDeviceInfo)
+        oauthService.handleAppleCallback(
+          'code',
+          undefined,
+          'invalid-state',
+          undefined,
+          mockDeviceInfo
+        )
       ).rejects.toThrow(OAuthError);
     });
 
@@ -251,7 +259,7 @@ describe('OAuthService', () => {
       mockCacheService.get.mockResolvedValue({ provider: 'google' });
 
       await expect(
-        oauthService.handleMicrosoftCallback('code', 'some-state', mockDeviceInfo)
+        oauthService.handleAppleCallback('code', undefined, 'some-state', undefined, mockDeviceInfo)
       ).rejects.toThrow(OAuthError);
     });
   });
@@ -266,7 +274,13 @@ describe('OAuthService', () => {
       mockCacheService.get.mockResolvedValue(null);
 
       await expect(
-        oauthService.handleAppleCallback('code', 'invalid-state', mockDeviceInfo)
+        oauthService.handleAppleCallback(
+          'code',
+          undefined,
+          'invalid-state',
+          undefined,
+          mockDeviceInfo
+        )
       ).rejects.toThrow(OAuthError);
     });
 
@@ -274,7 +288,7 @@ describe('OAuthService', () => {
       mockCacheService.get.mockResolvedValue({ provider: 'google' });
 
       await expect(
-        oauthService.handleAppleCallback('code', 'some-state', mockDeviceInfo)
+        oauthService.handleAppleCallback('code', undefined, 'some-state', undefined, mockDeviceInfo)
       ).rejects.toThrow(OAuthError);
     });
   });

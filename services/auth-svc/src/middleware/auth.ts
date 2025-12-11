@@ -197,3 +197,37 @@ export function requireVerificationLevel(
     done();
   };
 }
+
+/**
+ * Admin middleware that checks if user has admin role
+ *
+ * @example
+ * ```typescript
+ * fastify.get('/admin/users', {
+ *   preHandler: [authMiddleware, adminMiddleware],
+ * }, async (request, reply) => {
+ *   // Only admin users can access
+ * });
+ * ```
+ */
+export function adminMiddleware(
+  request: FastifyRequest,
+  _reply: FastifyReply,
+  done: (err?: Error) => void
+): void {
+  const user = request.user;
+
+  if (!user) {
+    done(new UnauthorizedError('Authentication required'));
+    return;
+  }
+
+  const isAdmin = user.roles.includes('admin') || user.roles.includes('superadmin');
+
+  if (!isAdmin) {
+    done(new ForbiddenError('Admin access required'));
+    return;
+  }
+
+  done();
+}

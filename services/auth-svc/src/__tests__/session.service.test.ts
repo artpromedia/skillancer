@@ -4,6 +4,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+import { SessionService } from '../services/session.service.js';
+
 import type { Redis } from 'ioredis';
 
 // Mock ioredis
@@ -67,8 +70,6 @@ vi.mock('../config/index.js', () => ({
     },
   })),
 }));
-
-import { SessionService } from '../services/session.service.js';
 
 describe('SessionService', () => {
   let sessionService: SessionService;
@@ -273,8 +274,8 @@ describe('SessionService', () => {
       const sessions = await sessionService.getUserSessions('user-123');
 
       expect(sessions).toHaveLength(2);
-      expect(sessions[0].sessionId).toBe('session-1');
-      expect(sessions[1].sessionId).toBe('session-2');
+      expect(sessions[0]?.sessionId).toBe('session-1');
+      expect(sessions[1]?.sessionId).toBe('session-2');
     });
 
     it('should return empty array when no sessions', async () => {

@@ -3,6 +3,8 @@
  * SMS service for sending verification codes via Twilio
  */
 
+/* eslint-disable @typescript-eslint/consistent-type-imports */
+
 import { createLogger } from '@skillancer/logger';
 
 import { getConfig } from '../config/index.js';
@@ -186,7 +188,7 @@ export class MockSmsService implements SmsService {
   /**
    * Mock send message - logs to console
    */
-  sendMessage(phoneNumber: string, message: string): SmsResult {
+  async sendMessage(phoneNumber: string, message: string): Promise<SmsResult> {
     const messageId = `mock_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
     this.sentMessages.push({
@@ -209,10 +211,10 @@ export class MockSmsService implements SmsService {
     console.log(`   Message: ${message}`);
     console.log(`   ID: ${messageId}\n`);
 
-    return {
+    return Promise.resolve({
       success: true,
       messageId,
-    };
+    });
   }
 
   /**

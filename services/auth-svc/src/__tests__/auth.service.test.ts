@@ -3,6 +3,11 @@
  * Unit tests for AuthService
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable import/order */
+
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import bcrypt from 'bcrypt';
 
@@ -281,6 +286,11 @@ describe('AuthService', () => {
         validCredentials.password,
         mockDeviceInfo
       );
+
+      // Type guard to check if result is LoginResult
+      if ('mfaRequired' in result) {
+        throw new Error('Expected LoginResult, got MfaPendingResult');
+      }
 
       expect(result.user).toBeDefined();
       expect(result.tokens).toBeDefined();

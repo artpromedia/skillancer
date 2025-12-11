@@ -67,6 +67,9 @@ model User {
   trustScore            TrustScore?
   skills                UserSkill[]
   portfolioItems        PortfolioItem[]
+  workHistory           WorkHistory[]
+  education             Education[]
+  certifications        Certification[]
   paymentMethods        PaymentMethod[]
   subscriptions         Subscription[]
   stripeCustomer        StripeCustomer?
@@ -733,18 +736,113 @@ model PortfolioItem {
   userId      String   @map("user_id") @db.Uuid
   title       String   @db.VarChar(200)
   description String?  @db.Text
-  imageUrl    String?  @map("image_url") @db.VarChar(500)
   projectUrl  String?  @map("project_url") @db.VarChar(500)
-  tags        String[] @default([])
-  featured    Boolean  @default(false)
-  sortOrder   Int      @default(0) @map("sort_order")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Media
+  thumbnailUrl String?  @map("thumbnail_url") @db.VarChar(500)
+  images       String[] @default([]) // S3 URLs
+  videoUrl     String?  @map("video_url") @db.VarChar(500)
+
+  // Metadata
+  skills        String[] @default([])
+  completedAt   DateTime? @map("completed_at")
+  clientName    String?  @map("client_name") @db.VarChar(200) // Optional, anonymized
+  isConfidential Boolean @default(false) @map("is_confidential")
+
+  // Ordering & Display
+  displayOrder Int     @default(0) @map("display_order")
+  isFeatured   Boolean @default(false) @map("is_featured")
+
+  // Legacy field (kept for backward compatibility)
+  imageUrl  String?  @map("image_url") @db.VarChar(500)
+  tags      String[] @default([])
+  featured  Boolean  @default(false)
+  sortOrder Int      @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([isFeatured])
   @@map("portfolio_items")
+}
+
+// ============================================================================
+// WORK HISTORY & CREDENTIALS
+// ============================================================================
+
+model WorkHistory {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  companyName String  @map("company_name") @db.VarChar(200)
+  title       String  @db.VarChar(200)
+  location    String? @db.VarChar(200)
+  description String? @db.Text
+
+  startDate DateTime  @map("start_date")
+  endDate   DateTime? @map("end_date")
+  isCurrent Boolean   @default(false) @map("is_current")
+
+  skills String[] @default([])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("work_history")
+}
+
+model Education {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  institution  String  @db.VarChar(200)
+  degree       String? @db.VarChar(200)
+  fieldOfStudy String? @map("field_of_study") @db.VarChar(200)
+
+  startDate DateTime? @map("start_date")
+  endDate   DateTime? @map("end_date")
+
+  description String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("education")
+}
+
+model Certification {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  name                String  @db.VarChar(200)
+  issuingOrganization String  @map("issuing_organization") @db.VarChar(200)
+  credentialId        String? @map("credential_id") @db.VarChar(200)
+  credentialUrl       String? @map("credential_url") @db.VarChar(500)
+
+  issueDate      DateTime? @map("issue_date")
+  expirationDate DateTime? @map("expiration_date")
+
+  // Verification
+  isVerified Boolean   @default(false) @map("is_verified")
+  verifiedAt DateTime? @map("verified_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isVerified])
+  @@map("certifications")
 }
 
 // ============================================================================

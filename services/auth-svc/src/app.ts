@@ -19,25 +19,35 @@ import { getConfig } from './config/index.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { rateLimitPlugin } from './middleware/rate-limit.js';
 import { authRoutes } from './routes/auth.js';
+import { certificationRoutes } from './routes/certification.js';
 import { clientProfileRoutes } from './routes/client-profile.js';
+import { educationRoutes } from './routes/education.js';
 import { freelancerProfileRoutes } from './routes/freelancer-profile.js';
 import { healthRoutes } from './routes/health.js';
 import { mfaRoutes } from './routes/mfa.js';
 import { oauthRoutes } from './routes/oauth.js';
+import { portfolioRoutes } from './routes/portfolio.js';
+import { profileCompletionRoutes } from './routes/profile-completion.js';
 import { profileRoutes } from './routes/profile.js';
-import verificationRoutes from './routes/verification.js';
-import webhookRoutes from './routes/webhooks.js';
+import { verificationRoutes } from './routes/verification.js';
+import { webhookRoutes } from './routes/webhooks.js';
+import { workHistoryRoutes } from './routes/work-history.js';
 import { initializeAuthService } from './services/auth.service.js';
 import { initializeAvatarService } from './services/avatar.service.js';
+import { initializeCertificationService } from './services/certification.service.js';
 import { initializeClientProfileService } from './services/client-profile.service.js';
+import { initializeEducationService } from './services/education.service.js';
 import { initializeFreelancerProfileService } from './services/freelancer-profile.service.js';
 import { initializeMfaService } from './services/mfa.service.js';
 import { initializeOAuthService } from './services/oauth.service.js';
+import { initializePortfolioService } from './services/portfolio.service.js';
+import { initializeProfileCompletionService } from './services/profile-completion.service.js';
 import { initializeProfileService } from './services/profile.service.js';
 import { initializeSessionService } from './services/session.service.js';
 import { initializeSkillsService } from './services/skills.service.js';
 import { initializeStepUpService } from './services/step-up-auth.service.js';
 import { initializeTrustedDevicesService } from './services/trusted-devices.service.js';
+import { initializeWorkHistoryService } from './services/work-history.service.js';
 
 import type { Redis } from 'ioredis';
 
@@ -161,6 +171,11 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   initializeClientProfileService(redis);
   initializeAvatarService();
   initializeSkillsService();
+  initializePortfolioService(redis);
+  initializeWorkHistoryService(redis);
+  initializeEducationService(redis);
+  initializeCertificationService(redis);
+  initializeProfileCompletionService(redis);
 
   // ==========================================================================
   // ROUTES
@@ -192,6 +207,21 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Webhook routes (/webhooks prefix)
   await app.register(webhookRoutes, { prefix: '/webhooks' });
+
+  // Portfolio routes (/portfolio prefix)
+  await app.register(portfolioRoutes, { prefix: '/portfolio' });
+
+  // Work history routes (/work-history prefix)
+  await app.register(workHistoryRoutes, { prefix: '/work-history' });
+
+  // Education routes (/education prefix)
+  await app.register(educationRoutes, { prefix: '/education' });
+
+  // Certification routes (/certifications prefix)
+  await app.register(certificationRoutes, { prefix: '/certifications' });
+
+  // Profile completion routes (/profile-completion prefix)
+  await app.register(profileCompletionRoutes, { prefix: '/profile-completion' });
 
   return app;
 }
