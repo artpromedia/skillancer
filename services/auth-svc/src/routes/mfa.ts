@@ -3,12 +3,20 @@
  * Multi-Factor Authentication API routes
  */
 
+import crypto from 'crypto';
+
+import { prisma } from '@skillancer/database';
 import { z } from 'zod';
 
 import { authMiddleware } from '../middleware/auth.js';
 import { rateLimitMiddleware } from '../middleware/rate-limit.js';
 import { requireStepUpAuth } from '../middleware/step-up-auth.js';
 import { getMfaService, MfaMethod, type MfaSetupInitResult } from '../services/mfa.service.js';
+import {
+  getTrustedDevicesService,
+  type TrustDeviceInfo,
+} from '../services/trusted-devices.service.js';
+import { getMfaRecoveryService } from '../services/mfa-recovery.service.js';
 
 import type { AuthenticatedUser } from '../middleware/auth.js';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -53,6 +61,10 @@ const recoveryCodeSchema = z.object({
   code: z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/i, 'Invalid recovery code format'),
 });
 
+const deviceNameSchema = z.object({
+  name: z.string().min(1).max(100),
+});
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -82,7 +94,8 @@ interface RecoveryCodeBody {
 // PLUGIN
 // =============================================================================
 
-export function mfaRoutes(fastify: FastifyInstance): void {
+export async function mfaRoutes(fastify: FastifyInstance): Promise<void> {
+  await Promise.resolve();
   const mfaService = getMfaService();
 
   // ==========================================================================
@@ -683,6 +696,701 @@ export function mfaRoutes(fastify: FastifyInstance): void {
       return reply.send({
         success: true,
         message: 'MFA has been completely disabled',
+      });
+    }
+  );
+
+  // ==========================================================================
+  // TRUSTED DEVICES
+  // ==========================================================================
+
+  const trustedDevicesService = getTrustedDevicesService();
+
+  /**
+   * GET /mfa/trusted-devices
+   * Get all trusted devices for the authenticated user
+   */
+  fastify.get(
+    '/trusted-devices',
+    {
+      preHandler: [authMiddleware],
+      schema: {
+        tags: ['MFA', 'Trusted Devices'],
+        summary: 'List trusted devices',
+        description: 'Returns all trusted devices that can bypass MFA',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              devices: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    deviceName: { type: 'string' },
+                    deviceFingerprint: { type: 'string' },
+                    lastUsedAt: { type: 'string', format: 'date-time' },
+                    lastIpAddress: { type: 'string' },
+                    expiresAt: { type: 'string', format: 'date-time', nullable: true },
+                    isCurrent: { type: 'boolean' },
+                  },
+                },
+              },
+              rememberDevicesEnabled: { type: 'boolean' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = getUserId(request);
+      const deviceToken = request.cookies?.['device_token'];
+
+      const [devices, rememberDevicesEnabled] = await Promise.all([
+        trustedDevicesService.getUserDevices(userId, deviceToken),
+        trustedDevicesService.userHasTrustedDevicesEnabled(userId),
+      ]);
+
+      return reply.send({ devices, rememberDevicesEnabled });
+    }
+  );
+
+  /**
+   * POST /mfa/trusted-devices
+   * Trust the current device (after MFA verification)
+   */
+  fastify.post(
+    '/trusted-devices',
+    {
+      preHandler: [authMiddleware, requireStepUpAuth('trust_device')],
+      schema: {
+        tags: ['MFA', 'Trusted Devices'],
+        summary: 'Trust current device',
+        description: 'Trust the current device to skip MFA in the future. Requires step-up auth.',
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          properties: {
+            deviceName: { type: 'string', description: 'Optional custom name for the device' },
+            trustDays: { type: 'number', description: 'Days to trust device (default: 30)' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              deviceToken: { type: 'string' },
+              expiresAt: { type: 'string', format: 'date-time' },
+              device: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  deviceName: { type: 'string' },
+                  deviceFingerprint: { type: 'string' },
+                  lastUsedAt: { type: 'string', format: 'date-time' },
+                  lastIpAddress: { type: 'string' },
+                  expiresAt: { type: 'string', format: 'date-time', nullable: true },
+                  isCurrent: { type: 'boolean' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = getUserId(request);
+      const body = request.body as { deviceName?: string; trustDays?: number } | undefined;
+
+      // Check if user has remember devices enabled
+      const enabled = await trustedDevicesService.userHasTrustedDevicesEnabled(userId);
+      if (!enabled) {
+        return reply.status(400).send({
+          error: 'Trusted devices feature is not enabled',
+          code: 'TRUSTED_DEVICES_DISABLED',
+        });
+      }
+
+      const deviceInfo: TrustDeviceInfo = {
+        userAgent: request.headers['user-agent'] || 'Unknown',
+        ipAddress: request.ip,
+        ...(body?.deviceName && { deviceName: body.deviceName }),
+        ...((request.headers['x-device-fingerprint'] as string) && {
+          clientFingerprint: request.headers['x-device-fingerprint'] as string,
+        }),
+      };
+
+      const result = await trustedDevicesService.trustDevice(userId, deviceInfo, {
+        ...(body?.trustDays && { trustDays: body.trustDays }),
+      });
+
+      // Set device token cookie
+      void reply.setCookie('device_token', result.deviceToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        expires: result.expiresAt,
+      });
+
+      return reply.send({
+        success: true,
+        deviceToken: result.deviceToken,
+        expiresAt: result.expiresAt,
+        device: result.device,
+      });
+    }
+  );
+
+  /**
+   * PATCH /mfa/trusted-devices/:deviceId
+   * Rename a trusted device
+   */
+  fastify.patch(
+    '/trusted-devices/:deviceId',
+    {
+      preHandler: [authMiddleware],
+      schema: {
+        tags: ['MFA', 'Trusted Devices'],
+        summary: 'Rename trusted device',
+        description: 'Update the display name of a trusted device',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            deviceId: { type: 'string' },
+          },
+          required: ['deviceId'],
+        },
+        body: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+          },
+          required: ['name'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              device: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  deviceName: { type: 'string' },
+                  deviceFingerprint: { type: 'string' },
+                  lastUsedAt: { type: 'string', format: 'date-time' },
+                  lastIpAddress: { type: 'string' },
+                  expiresAt: { type: 'string', format: 'date-time', nullable: true },
+                  isCurrent: { type: 'boolean' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = getUserId(request);
+      const { deviceId } = request.params as { deviceId: string };
+      const { name } = deviceNameSchema.parse(request.body);
+
+      const device = await trustedDevicesService.renameDevice(userId, deviceId, name);
+
+      return reply.send({ success: true, device });
+    }
+  );
+
+  /**
+   * DELETE /mfa/trusted-devices/:deviceId
+   * Revoke a specific trusted device
+   */
+  fastify.delete(
+    '/trusted-devices/:deviceId',
+    {
+      preHandler: [authMiddleware],
+      schema: {
+        tags: ['MFA', 'Trusted Devices'],
+        summary: 'Revoke trusted device',
+        description: 'Revoke trust for a specific device',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            deviceId: { type: 'string' },
+          },
+          required: ['deviceId'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = getUserId(request);
+      const { deviceId } = request.params as { deviceId: string };
+
+      await trustedDevicesService.revokeDevice(userId, deviceId);
+
+      return reply.send({
+        success: true,
+        message: 'Device trust has been revoked',
+      });
+    }
+  );
+
+  /**
+   * DELETE /mfa/trusted-devices
+   * Revoke all trusted devices
+   */
+  fastify.delete(
+    '/trusted-devices',
+    {
+      preHandler: [authMiddleware, requireStepUpAuth('revoke_all_devices')],
+      schema: {
+        tags: ['MFA', 'Trusted Devices'],
+        summary: 'Revoke all trusted devices',
+        description: 'Revoke trust for all devices. Requires step-up authentication.',
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            keepCurrent: { type: 'boolean', description: 'Keep the current device trusted' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              revokedCount: { type: 'number' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = getUserId(request);
+      const { keepCurrent } = request.query as { keepCurrent?: boolean };
+
+      let currentDeviceId: string | undefined;
+      if (keepCurrent) {
+        const deviceToken = request.cookies?.['device_token'];
+        if (deviceToken) {
+          const devices = await trustedDevicesService.getUserDevices(userId, deviceToken);
+          const currentDevice = devices.find((d) => d.isCurrent);
+          currentDeviceId = currentDevice?.id;
+        }
+      }
+
+      const revokedCount = await trustedDevicesService.revokeAllDevices(userId, currentDeviceId);
+
+      return reply.send({
+        success: true,
+        revokedCount,
+        message: `${revokedCount} device(s) have been revoked`,
+      });
+    }
+  );
+
+  /**
+   * PUT /mfa/trusted-devices/settings
+   * Update trusted devices preference
+   */
+  fastify.put(
+    '/trusted-devices/settings',
+    {
+      preHandler: [authMiddleware],
+      schema: {
+        tags: ['MFA', 'Trusted Devices'],
+        summary: 'Update trusted devices settings',
+        description: 'Enable or disable the trusted devices feature',
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          properties: {
+            enabled: { type: 'boolean' },
+          },
+          required: ['enabled'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              enabled: { type: 'boolean' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = getUserId(request);
+      const { enabled } = request.body as { enabled: boolean };
+
+      await trustedDevicesService.updateTrustedDevicesPreference(userId, enabled);
+
+      return reply.send({
+        success: true,
+        enabled,
+        message: enabled
+          ? 'Trusted devices feature has been enabled'
+          : 'Trusted devices feature has been disabled. All trusted devices have been revoked.',
+      });
+    }
+  );
+
+  // ==========================================================================
+  // MFA RECOVERY
+  // ==========================================================================
+
+  const recoveryService = getMfaRecoveryService();
+
+  /**
+   * POST /mfa/recovery/initiate
+   * Initiate MFA recovery process
+   */
+  fastify.post(
+    '/recovery/initiate',
+    {
+      schema: {
+        tags: ['MFA', 'Recovery'],
+        summary: 'Initiate MFA recovery',
+        description:
+          'Start the MFA recovery process when user has lost access to their MFA methods',
+        body: {
+          type: 'object',
+          properties: {
+            email: { type: 'string', format: 'email' },
+            preferAdmin: { type: 'boolean', description: 'Prefer admin-assisted recovery' },
+          },
+          required: ['email'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              requestId: { type: 'string' },
+              method: { type: 'string', enum: ['email', 'admin'] },
+              hint: { type: 'string' },
+              expiresAt: { type: 'string', format: 'date-time' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { email, preferAdmin } = request.body as { email: string; preferAdmin?: boolean };
+
+      // Find user by email
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+        select: { id: true },
+      });
+
+      if (!user) {
+        // Don't reveal if user exists
+        return reply.send({
+          requestId: crypto.randomUUID(),
+          method: 'email',
+          hint: 'If an account exists, recovery instructions have been sent',
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          message: 'Recovery process initiated',
+        });
+      }
+
+      const result = await recoveryService.initiateRecovery(user.id, {
+        ...(preferAdmin && { preferAdmin }),
+      });
+
+      return reply.send(result);
+    }
+  );
+
+  /**
+   * POST /mfa/recovery/verify
+   * Verify recovery code
+   */
+  fastify.post(
+    '/recovery/verify',
+    {
+      schema: {
+        tags: ['MFA', 'Recovery'],
+        summary: 'Verify recovery code',
+        description: 'Verify the recovery code sent to recovery email',
+        body: {
+          type: 'object',
+          properties: {
+            requestId: { type: 'string' },
+            code: { type: 'string' },
+          },
+          required: ['requestId', 'code'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              requestId: { type: 'string' },
+              message: { type: 'string' },
+              nextStep: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { requestId, code } = request.body as { requestId: string; code: string };
+
+      const result = await recoveryService.verifyRecoveryCode(requestId, code);
+
+      return reply.send(result);
+    }
+  );
+
+  /**
+   * POST /mfa/recovery/complete
+   * Complete MFA recovery and reset MFA
+   */
+  fastify.post(
+    '/recovery/complete',
+    {
+      schema: {
+        tags: ['MFA', 'Recovery'],
+        summary: 'Complete MFA recovery',
+        description: 'Complete the recovery process and reset MFA settings',
+        body: {
+          type: 'object',
+          properties: {
+            requestId: { type: 'string' },
+          },
+          required: ['requestId'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { requestId } = request.body as { requestId: string };
+
+      const result = await recoveryService.completeRecovery(requestId);
+
+      return reply.send(result);
+    }
+  );
+
+  /**
+   * POST /mfa/recovery/resend
+   * Resend recovery code
+   */
+  fastify.post(
+    '/recovery/resend',
+    {
+      schema: {
+        tags: ['MFA', 'Recovery'],
+        summary: 'Resend recovery code',
+        description: 'Resend the recovery verification code',
+        body: {
+          type: 'object',
+          properties: {
+            requestId: { type: 'string' },
+          },
+          required: ['requestId'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              expiresAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { requestId } = request.body as { requestId: string };
+
+      const result = await recoveryService.resendRecoveryCode(requestId);
+
+      return reply.send(result);
+    }
+  );
+
+  /**
+   * GET /mfa/recovery-email
+   * Get recovery email status
+   */
+  fastify.get(
+    '/recovery-email',
+    {
+      preHandler: [authMiddleware],
+      schema: {
+        tags: ['MFA', 'Recovery'],
+        summary: 'Get recovery email status',
+        description: 'Check if a recovery email is configured',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              hasRecoveryEmail: { type: 'boolean' },
+              recoveryEmailHint: { type: 'string', nullable: true },
+              verified: { type: 'boolean' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = getUserId(request);
+
+      const status = await recoveryService.getRecoveryEmailStatus(userId);
+
+      return reply.send(status);
+    }
+  );
+
+  /**
+   * POST /mfa/recovery-email
+   * Set up recovery email
+   */
+  fastify.post(
+    '/recovery-email',
+    {
+      preHandler: [authMiddleware, requireStepUpAuth('setup_recovery_email')],
+      schema: {
+        tags: ['MFA', 'Recovery'],
+        summary: 'Set up recovery email',
+        description: 'Configure a recovery email for MFA recovery. Requires step-up auth.',
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          properties: {
+            email: { type: 'string', format: 'email' },
+          },
+          required: ['email'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              verificationSent: { type: 'boolean' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = getUserId(request);
+      const { email } = request.body as { email: string };
+
+      const result = await recoveryService.setupRecoveryEmail(userId, email);
+
+      return reply.send({
+        ...result,
+        message: 'Verification code sent to your recovery email',
+      });
+    }
+  );
+
+  /**
+   * POST /mfa/recovery-email/verify
+   * Verify recovery email
+   */
+  fastify.post(
+    '/recovery-email/verify',
+    {
+      preHandler: [authMiddleware],
+      schema: {
+        tags: ['MFA', 'Recovery'],
+        summary: 'Verify recovery email',
+        description: 'Verify the recovery email with the code sent',
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          properties: {
+            code: { type: 'string' },
+          },
+          required: ['code'],
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              verified: { type: 'boolean' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = getUserId(request);
+      const { code } = request.body as { code: string };
+
+      const result = await recoveryService.verifyRecoveryEmail(userId, code);
+
+      return reply.send({
+        ...result,
+        message: 'Recovery email verified successfully',
+      });
+    }
+  );
+
+  /**
+   * DELETE /mfa/recovery-email
+   * Remove recovery email
+   */
+  fastify.delete(
+    '/recovery-email',
+    {
+      preHandler: [authMiddleware, requireStepUpAuth('remove_recovery_email')],
+      schema: {
+        tags: ['MFA', 'Recovery'],
+        summary: 'Remove recovery email',
+        description: 'Remove the configured recovery email. Requires step-up auth.',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = getUserId(request);
+
+      await recoveryService.removeRecoveryEmail(userId);
+
+      return reply.send({
+        success: true,
+        message: 'Recovery email has been removed',
       });
     }
   );

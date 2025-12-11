@@ -418,6 +418,12 @@ export class AuthService {
   /**
    * Refresh access token using refresh token
    *
+   * Implements refresh token rotation with reuse detection:
+   * - Each refresh token can only be used once
+   * - When a token is used, it's invalidated and a new one is issued
+   * - If a token that was already rotated is reused, the entire family is revoked
+   *   (indicates token theft - the attacker tries to use an old token)
+   *
    * @param refreshToken - Refresh token
    * @param deviceInfo - Device information
    * @returns New tokens and session info
@@ -433,7 +439,19 @@ export class AuthService {
       include: { user: true },
     });
 
-    if (!storedToken || storedToken.revokedAt || storedToken.expiresAt < new Date()) {
+    if (!storedToken || storedToken.expiresAt < new Date()) {
+      throw new InvalidTokenError('refresh');
+    }
+
+    // Detect token reuse (token was already rotated)
+    if (await this.detectTokenReuse(payload.tokenId)) {
+      // Token reuse detected! Revoke entire family
+      await this.revokeRefreshToken(payload.tokenId, true);
+      throw new InvalidTokenError('refresh');
+    }
+
+    // Check if token was revoked
+    if (storedToken.revokedAt) {
       throw new InvalidTokenError('refresh');
     }
 
@@ -450,8 +468,8 @@ export class AuthService {
       throw new InvalidTokenError('refresh');
     }
 
-    // Revoke old refresh token (token rotation)
-    await this.revokeRefreshToken(payload.tokenId);
+    // Revoke old refresh token (normal rotation)
+    await this.revokeRefreshToken(payload.tokenId, false);
 
     // Generate new token pair
     const { tokenId, ...tokens } = this.tokenService.generateTokenPair(
@@ -459,8 +477,15 @@ export class AuthService {
       session.sessionId
     );
 
-    // Store new refresh token
-    await this.storeRefreshToken(user.id, tokens.refreshToken, tokenId, deviceInfo);
+    // Store new refresh token in the same family
+    await this.storeRefreshToken(
+      user.id,
+      tokens.refreshToken,
+      tokenId,
+      deviceInfo,
+      storedToken.family, // Keep the same family
+      payload.tokenId // Mark which token this replaced
+    );
 
     // Update session with new refresh token ID
     await sessionService.updateRefreshTokenId(session.sessionId, tokenId);
@@ -503,12 +528,14 @@ export class AuthService {
       throw new InvalidTokenError('verification');
     }
 
-    // Update user status
+    // Update user status and email verification fields
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
         status: 'ACTIVE',
         verificationLevel: 'EMAIL',
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
       },
     });
 
@@ -602,10 +629,16 @@ export class AuthService {
     // Hash new password
     const passwordHash = await this.hashPassword(newPassword);
 
-    // Update password
+    // Update password and set password changed timestamp
     await prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        passwordChangedAt: new Date(),
+        // Clear any lockout on password reset
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
     });
 
     // Delete token from cache
@@ -695,40 +728,80 @@ export class AuthService {
   }
 
   /**
-   * Store refresh token in database
+   * Store refresh token in database with token family for rotation tracking
    */
   private async storeRefreshToken(
     userId: string,
     token: string,
     tokenId: string,
-    deviceInfo: DeviceInfo
+    deviceInfo: DeviceInfo,
+    family?: string,
+    replacedTokenId?: string
   ): Promise<void> {
     const expiresAt = new Date(Date.now() + this.tokenService.getRefreshTokenExpiresIn() * 1000);
+
+    // Generate new family ID if not provided (first token in family)
+    const tokenFamily = family || crypto.randomUUID();
 
     await prisma.refreshToken.create({
       data: {
         id: tokenId,
         token,
         userId,
+        family: tokenFamily,
         expiresAt,
         userAgent: deviceInfo.userAgent,
         ipAddress: deviceInfo.ip,
       },
     });
+
+    // If replacing an old token, update it to point to this one
+    if (replacedTokenId) {
+      await prisma.refreshToken.update({
+        where: { id: replacedTokenId },
+        data: { replacedBy: token },
+      });
+    }
   }
 
   /**
-   * Revoke refresh token
+   * Revoke refresh token and optionally the entire family (for reuse detection)
    */
-  private async revokeRefreshToken(tokenId: string): Promise<void> {
-    await prisma.refreshToken
-      .update({
+  private async revokeRefreshToken(tokenId: string, revokeFamily = false): Promise<void> {
+    const token = await prisma.refreshToken.findUnique({
+      where: { id: tokenId },
+    });
+
+    if (!token) return;
+
+    if (revokeFamily) {
+      // Token reuse detected - revoke entire family
+      await prisma.refreshToken.updateMany({
+        where: {
+          family: token.family,
+          revokedAt: null,
+        },
+        data: { revokedAt: new Date() },
+      });
+    } else {
+      // Normal rotation - just revoke this token
+      await prisma.refreshToken.update({
         where: { id: tokenId },
         data: { revokedAt: new Date() },
-      })
-      .catch(() => {
-        // Ignore if token doesn't exist
       });
+    }
+  }
+
+  /**
+   * Detect token reuse (token was already rotated)
+   */
+  private async detectTokenReuse(tokenId: string): Promise<boolean> {
+    const token = await prisma.refreshToken.findUnique({
+      where: { id: tokenId },
+    });
+
+    // If token was already replaced, this is a reuse attempt
+    return token?.replacedBy != null;
   }
 
   /**

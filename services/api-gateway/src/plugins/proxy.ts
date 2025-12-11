@@ -25,7 +25,8 @@ const HOP_BY_HOP_HEADERS = new Set([
   'host',
 ]);
 
-function proxyPluginImpl(app: FastifyInstance): void {
+async function proxyPluginImpl(app: FastifyInstance): Promise<void> {
+  await Promise.resolve();
   const routes = getServiceRoutes();
 
   for (const route of routes) {

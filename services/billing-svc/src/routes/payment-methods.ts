@@ -3,15 +3,16 @@
  * Payment method management API routes
  */
 
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 
+import { PaymentMethodNotFoundError, PaymentMethodInUseError } from '../errors/index.js';
 import {
   getPaymentMethodService,
   type PaymentMethodResponse,
   type PaymentMethodFilters,
 } from '../services/payment-method.service.js';
-import { PaymentMethodNotFoundError, PaymentMethodInUseError } from '../errors/index.js';
+
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 // =============================================================================
 // SCHEMAS
@@ -126,8 +127,7 @@ async function getPaymentMethods(
   if (query.type) filters.type = query.type;
   // Cast to satisfy exactOptionalPropertyTypes
   if (query.status) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (filters as any).status = query.status;
+    filters.status = query.status as PaymentMethodFilters['status'];
   }
   if (query.includeRemoved) filters.includeRemoved = query.includeRemoved;
 
@@ -391,13 +391,14 @@ function formatPaymentMethod(pm: PaymentMethodResponse): {
 /**
  * Register payment method routes
  */
-export function paymentMethodRoutes(fastify: FastifyInstance): void {
+export async function paymentMethodRoutes(fastify: FastifyInstance): Promise<void> {
+  await Promise.resolve();
   // All routes require authentication
   fastify.addHook('preHandler', async (request, reply) => {
     // This should be handled by your auth middleware
     // For now, we expect request.user to be set by auth plugin
     if (!request.user) {
-      reply.status(401).send({
+      void reply.status(401).send({
         success: false,
         error: 'Unauthorized',
         message: 'Authentication required',

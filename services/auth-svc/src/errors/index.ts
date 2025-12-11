@@ -100,6 +100,17 @@ export class UnauthorizedError extends AppError {
 }
 
 /**
+ * Error thrown when user doesn't have permission to access a resource
+ */
+export class ForbiddenError extends AppError {
+  public override readonly name = 'ForbiddenError';
+
+  constructor(message = 'Access denied') {
+    super(message, 'FORBIDDEN', 403);
+  }
+}
+
+/**
  * Error thrown when session is invalid or expired
  */
 export class SessionExpiredError extends AppError {
@@ -380,5 +391,42 @@ export class MaxSkillsExceededError extends AppError {
 
   constructor(maxSkills: number) {
     super(`Maximum of ${maxSkills} skills allowed`, 'MAX_SKILLS_EXCEEDED', 400);
+  }
+}
+
+// =============================================================================
+// GENERIC ERRORS
+// =============================================================================
+
+/**
+ * Error thrown when a resource is not found
+ */
+export class NotFoundError extends AppError {
+  public override readonly name = 'NotFoundError';
+
+  constructor(message = 'Resource not found') {
+    super(message, 'NOT_FOUND', 404);
+  }
+}
+
+/**
+ * Error thrown when input validation fails
+ */
+export class ValidationError extends AppError {
+  public override readonly name = 'ValidationError';
+
+  constructor(message = 'Validation failed', details?: Record<string, unknown>) {
+    super(message, 'VALIDATION_ERROR', 400, details);
+  }
+}
+
+/**
+ * Error thrown when there's a conflict (e.g., duplicate resource)
+ */
+export class ConflictError extends AppError {
+  public override readonly name = 'ConflictError';
+
+  constructor(message = 'Resource conflict') {
+    super(message, 'CONFLICT', 409);
   }
 }

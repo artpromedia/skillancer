@@ -76,10 +76,19 @@ export type {
   SubscriptionInvoiceStatus,
   UsageRecord,
   UsageAction,
+  // Profile types
+  FreelancerProfile,
+  ClientProfile,
 } from '@prisma/client';
 
 // Prisma namespace for types like JsonValue
-export { Prisma } from '@prisma/client';
+// export { Prisma } from '@prisma/client';
 
 // Enums (re-exported from Prisma - using value import for runtime access)
-export { MfaMethod } from '@prisma/client';
+export {
+  MfaMethod,
+  FreelancerAvailability,
+  CompanySize,
+  HiringFrequency,
+  JobType,
+} from '@prisma/client';

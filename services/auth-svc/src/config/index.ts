@@ -140,6 +140,21 @@ const configSchema = z.object({
     level: z.string().default('info'),
     pretty: z.boolean().default(false),
   }),
+
+  // Identity Verification (Persona)
+  persona: z.object({
+    apiKey: z.string().optional(),
+    apiVersion: z.string().default('2023-01-05'),
+    baseUrl: z.string().default('https://withpersona.com/api/v1'),
+    webhookSecret: z.string().optional(),
+    templates: z.object({
+      basic: z.string().optional(), // Government ID verification
+      enhanced: z.string().optional(), // ID + Selfie verification
+      premium: z.string().optional(), // ID + Selfie + Address
+    }),
+    badgeValidityDays: z.coerce.number().default(365), // Badge expires after 1 year
+    inquiryExpiryHours: z.coerce.number().default(48), // Inquiry expires after 48 hours
+  }),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -281,6 +296,20 @@ export function getConfig(): Config {
     logging: {
       level: env['LOG_LEVEL'] ?? 'info',
       pretty: env['NODE_ENV'] === 'development',
+    },
+
+    persona: {
+      apiKey: env['PERSONA_API_KEY'],
+      apiVersion: env['PERSONA_API_VERSION'] ?? '2023-01-05',
+      baseUrl: env['PERSONA_BASE_URL'] ?? 'https://withpersona.com/api/v1',
+      webhookSecret: env['PERSONA_WEBHOOK_SECRET'],
+      templates: {
+        basic: env['PERSONA_TEMPLATE_BASIC'],
+        enhanced: env['PERSONA_TEMPLATE_ENHANCED'],
+        premium: env['PERSONA_TEMPLATE_PREMIUM'],
+      },
+      badgeValidityDays: env['PERSONA_BADGE_VALIDITY_DAYS'] ?? 365,
+      inquiryExpiryHours: env['PERSONA_INQUIRY_EXPIRY_HOURS'] ?? 48,
     },
   };
 

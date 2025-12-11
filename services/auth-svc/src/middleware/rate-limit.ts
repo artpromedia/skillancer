@@ -113,7 +113,11 @@ function getRateLimitConfigs(): {
  * }
  * ```
  */
-function rateLimitPluginImpl(fastify: FastifyInstance, options: RateLimitOptions): void {
+async function rateLimitPluginImpl(
+  fastify: FastifyInstance,
+  options: RateLimitOptions
+): Promise<void> {
+  await Promise.resolve();
   const { redis } = options;
   const configs = getRateLimitConfigs();
 

@@ -6,11 +6,7 @@
     "rootDir": "./src",
     "types": ["node"],
     "paths": {
-      "@/*": ["./src/*"],
-      "@skillancer/types": ["../../packages/types/src"],
-      "@skillancer/types/*": ["../../packages/types/src/*"],
-      "@skillancer/utils": ["../../packages/utils/src"],
-      "@skillancer/utils/*": ["../../packages/utils/src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts"],

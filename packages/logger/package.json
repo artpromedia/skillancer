@@ -4,34 +4,34 @@
   "private": true,
   "description": "Structured logging package for Skillancer services",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
     "./fastify": {
       "types": "./dist/fastify-plugin.d.ts",
-      "import": "./dist/fastify-plugin.mjs",
-      "require": "./dist/fastify-plugin.js"
+      "import": "./dist/fastify-plugin.js",
+      "require": "./dist/fastify-plugin.cjs"
     },
     "./express": {
       "types": "./dist/express-middleware.d.ts",
-      "import": "./dist/express-middleware.mjs",
-      "require": "./dist/express-middleware.js"
+      "import": "./dist/express-middleware.js",
+      "require": "./dist/express-middleware.cjs"
     },
     "./context": {
       "types": "./dist/context.d.ts",
-      "import": "./dist/context.mjs",
-      "require": "./dist/context.js"
+      "import": "./dist/context.js",
+      "require": "./dist/context.cjs"
     },
     "./serializers": {
       "types": "./dist/serializers.d.ts",
-      "import": "./dist/serializers.mjs",
-      "require": "./dist/serializers.js"
+      "import": "./dist/serializers.js",
+      "require": "./dist/serializers.cjs"
     }
   },
   "files": [

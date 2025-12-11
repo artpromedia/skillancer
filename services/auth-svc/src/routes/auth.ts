@@ -305,7 +305,8 @@ async function resendVerificationHandler(
 /**
  * Register authentication routes
  */
-export function authRoutes(fastify: FastifyInstance): void {
+export async function authRoutes(fastify: FastifyInstance): Promise<void> {
+  await Promise.resolve();
   // Registration
   fastify.post<{ Body: RegisterRequest }>(
     '/register',

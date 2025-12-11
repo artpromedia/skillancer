@@ -256,7 +256,8 @@ async function appleCallbackHandler(
 /**
  * Register OAuth routes
  */
-export function oauthRoutes(fastify: FastifyInstance): void {
+export async function oauthRoutes(fastify: FastifyInstance): Promise<void> {
+  await Promise.resolve();
   // Google OAuth
   fastify.get(
     '/oauth/google',

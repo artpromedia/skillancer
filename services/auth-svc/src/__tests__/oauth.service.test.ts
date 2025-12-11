@@ -48,12 +48,12 @@ vi.mock('../config/index.js', () => ({
       google: {
         clientId: 'google-client-id',
         clientSecret: 'google-client-secret',
-        redirectUri: 'http://localhost:3001/auth/oauth/google/callback',
+        callbackUrl: 'http://localhost:3001/auth/oauth/google/callback',
       },
       microsoft: {
         clientId: 'microsoft-client-id',
         clientSecret: 'microsoft-client-secret',
-        redirectUri: 'http://localhost:3001/auth/oauth/microsoft/callback',
+        callbackUrl: 'http://localhost:3001/auth/oauth/microsoft/callback',
         tenantId: 'common',
       },
       apple: {
@@ -61,7 +61,7 @@ vi.mock('../config/index.js', () => ({
         teamId: 'apple-team-id',
         keyId: 'apple-key-id',
         privateKey: 'apple-private-key',
-        redirectUri: 'http://localhost:3001/auth/oauth/apple/callback',
+        callbackUrl: 'http://localhost:3001/auth/oauth/apple/callback',
       },
     },
     jwt: {

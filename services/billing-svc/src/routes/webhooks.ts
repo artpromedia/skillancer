@@ -3,11 +3,12 @@
  * Stripe webhook endpoint
  */
 
+import { StripeError } from '../errors/index.js';
+import { handleStripeWebhook } from '../handlers/stripe-webhook.handler.js';
+import { getStripeService } from '../services/stripe.service.js';
+
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
-import { getStripeService } from '../services/stripe.service.js';
-import { handleStripeWebhook } from '../handlers/stripe-webhook.handler.js';
-import { StripeError } from '../errors/index.js';
 
 // =============================================================================
 // TYPES
@@ -44,7 +45,7 @@ async function stripeWebhook(request: WebhookRequest, reply: FastifyReply): Prom
     // Handle the event
     const result = await handleStripeWebhook(event);
 
-    return reply.status(200).send({
+    return await reply.status(200).send({
       success: true,
       received: true,
       eventId: event.id,
@@ -78,24 +79,10 @@ async function stripeWebhook(request: WebhookRequest, reply: FastifyReply): Prom
 /**
  * Register webhook routes
  */
-export function webhookRoutes(fastify: FastifyInstance): void {
-  // Register raw body content type parser for webhook
-  fastify.addContentTypeParser(
-    'application/json',
-    { parseAs: 'buffer' },
-    (req, body: Buffer, done) => {
-      // Store raw body for signature verification
-      (req as WebhookRequest).rawBody = body;
-      try {
-        const json: unknown = JSON.parse(body.toString());
-        done(null, json);
-      } catch (err) {
-        done(err as Error, undefined);
-      }
-    }
-  );
-
+export async function webhookRoutes(fastify: FastifyInstance): Promise<void> {
+  await Promise.resolve();
   // Stripe webhook endpoint - no auth required (verified by signature)
+  // Raw body handling is done in app.ts via addContentTypeParser
   fastify.post('/stripe', {
     schema: {
       tags: ['Webhooks'],

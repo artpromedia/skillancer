@@ -33,7 +33,11 @@ export type SensitiveOperation =
   | 'delete_account'
   | 'change_billing'
   | 'api_key_create'
-  | 'export_data';
+  | 'export_data'
+  | 'trust_device'
+  | 'revoke_all_devices'
+  | 'setup_recovery_email'
+  | 'remove_recovery_email';
 
 /**
  * Step-up authentication state

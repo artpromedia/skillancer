@@ -492,41 +492,80 @@ export class OAuthService {
   }
 
   /**
+   * Get the OAuthProvider enum value from a string
+   */
+  private getOAuthProviderEnum(provider: OAuthProvider): 'GOOGLE' | 'MICROSOFT' | 'APPLE' {
+    return provider.toUpperCase() as 'GOOGLE' | 'MICROSOFT' | 'APPLE';
+  }
+
+  /**
    * Find existing user or create new one from OAuth data
+   * Uses the OAuthAccount model to support multiple OAuth providers per user
    */
   private async findOrCreateUser(
     provider: OAuthProvider,
     userInfo: OAuthUserInfo,
-    deviceInfo: DeviceInfo
+    deviceInfo: DeviceInfo,
+    tokenData?: { accessToken?: string; refreshToken?: string; expiresAt?: Date }
   ): Promise<OAuthResult> {
     let user: User | null = null;
     let isNewUser = false;
+    const providerEnum = this.getOAuthProviderEnum(provider);
 
-    // First, try to find by OAuth provider + ID
-    user = await prisma.user.findFirst({
+    // First, try to find by OAuth account (provider + ID)
+    const oauthAccount = await prisma.oAuthAccount.findUnique({
       where: {
-        oauthProvider: provider.toUpperCase(),
-        oauthId: userInfo.id,
+        provider_providerAccountId: {
+          provider: providerEnum,
+          providerAccountId: userInfo.id,
+        },
       },
+      include: { user: true },
     });
 
-    // If not found, try to find by email
+    if (oauthAccount) {
+      user = oauthAccount.user;
+
+      // Update OAuth account tokens if provided
+      if (tokenData) {
+        await prisma.oAuthAccount.update({
+          where: { id: oauthAccount.id },
+          data: {
+            accessToken: tokenData.accessToken ?? null,
+            refreshToken: tokenData.refreshToken ?? null,
+            expiresAt: tokenData.expiresAt ?? null,
+          },
+        });
+      }
+    }
+
+    // If not found by OAuth, try to find by email
     if (!user && userInfo.email) {
       user = await prisma.user.findUnique({
         where: { email: userInfo.email.toLowerCase() },
       });
 
-      // Link OAuth to existing account
+      // Link OAuth account to existing user
       if (user) {
-        user = await prisma.user.update({
-          where: { id: user.id },
+        await prisma.oAuthAccount.create({
           data: {
-            oauthProvider: provider.toUpperCase(),
-            oauthId: userInfo.id,
-            // Update avatar if not set
-            avatarUrl: user.avatarUrl ?? userInfo.avatarUrl ?? null,
+            userId: user.id,
+            provider: providerEnum,
+            providerAccountId: userInfo.id,
+            email: userInfo.email.toLowerCase(),
+            accessToken: tokenData?.accessToken ?? null,
+            refreshToken: tokenData?.refreshToken ?? null,
+            expiresAt: tokenData?.expiresAt ?? null,
           },
         });
+
+        // Update avatar if not set
+        if (!user.avatarUrl && userInfo.avatarUrl) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { avatarUrl: userInfo.avatarUrl },
+          });
+        }
       }
     }
 
@@ -540,10 +579,20 @@ export class OAuthService {
           lastName: userInfo.lastName,
           displayName: userInfo.displayName ?? `${userInfo.firstName} ${userInfo.lastName}`,
           avatarUrl: userInfo.avatarUrl ?? null,
-          oauthProvider: provider.toUpperCase(),
-          oauthId: userInfo.id,
           status: 'ACTIVE', // OAuth users are automatically verified
           verificationLevel: 'EMAIL',
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+          oauthAccounts: {
+            create: {
+              provider: providerEnum,
+              providerAccountId: userInfo.id,
+              email: userInfo.email.toLowerCase(),
+              accessToken: tokenData?.accessToken ?? null,
+              refreshToken: tokenData?.refreshToken ?? null,
+              expiresAt: tokenData?.expiresAt ?? null,
+            },
+          },
         },
       });
     }
@@ -568,10 +617,13 @@ export class OAuthService {
     // Store refresh token in database
     await this.storeRefreshToken(user.id, tokens.refreshToken, tokenId, deviceInfo);
 
-    // Update last login time
+    // Update last login time and IP
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: {
+        lastLoginAt: new Date(),
+        lastLoginIp: deviceInfo.ip,
+      },
     });
 
     return {
@@ -640,11 +692,15 @@ export class OAuthService {
   ): Promise<void> {
     const expiresAt = new Date(Date.now() + this.tokenService.getRefreshTokenExpiresIn() * 1000);
 
+    // Generate a new family ID for OAuth logins (each OAuth login starts a new family)
+    const family = crypto.randomUUID();
+
     await prisma.refreshToken.create({
       data: {
         id: tokenId,
         token,
         userId,
+        family,
         expiresAt,
         userAgent: deviceInfo.userAgent,
         ipAddress: deviceInfo.ip,

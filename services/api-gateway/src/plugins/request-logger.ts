@@ -7,7 +7,8 @@ import fp from 'fastify-plugin';
 
 import type { FastifyInstance } from 'fastify';
 
-function requestLoggerPluginImpl(app: FastifyInstance): void {
+async function requestLoggerPluginImpl(app: FastifyInstance): Promise<void> {
+  await Promise.resolve();
   // Log incoming requests
   app.addHook('onRequest', (request, _reply, done) => {
     request.log.info(

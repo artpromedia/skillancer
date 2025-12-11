@@ -100,11 +100,6 @@ ${serviceRoutes.map((r) => `- **${r.prefix}** → ${r.serviceName} (${r.auth})`)
     },
     staticCSP: true,
   });
-
-  // Redirect /docs to /docs/
-  app.get('/docs', (_request, reply) => {
-    return reply.redirect('/docs/');
-  });
 }
 
 export const swaggerPlugin = fp(swaggerPluginImpl, {

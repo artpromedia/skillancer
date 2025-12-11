@@ -32,9 +32,19 @@ model User {
   timezone          String            @default("UTC") @db.VarChar(50)
   locale            String            @default("en") @db.VarChar(10)
 
-  // OAuth fields
-  oauthProvider String? @map("oauth_provider") @db.VarChar(50)
-  oauthId       String? @map("oauth_id") @db.VarChar(255)
+  // Email verification
+  emailVerified   Boolean   @default(false) @map("email_verified")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+
+  // Password management
+  passwordChangedAt    DateTime? @map("password_changed_at")
+  passwordResetToken   String?   @map("password_reset_token") @db.VarChar(255)
+  passwordResetExpires DateTime? @map("password_reset_expires")
+
+  // Account security
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  lastLoginIp         String?   @map("last_login_ip") @db.VarChar(45)
 
   // Timestamps
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -44,16 +54,16 @@ model User {
 
   // Relations
   tenantMemberships     TenantMember[]
-  jobsPosted            Job[]              @relation("ClientJobs")
+  jobsPosted            Job[]                   @relation("ClientJobs")
   bids                  Bid[]
-  contractsAsClient     Contract[]         @relation("ClientContracts")
-  contractsAsFreelancer Contract[]         @relation("FreelancerContracts")
+  contractsAsClient     Contract[]              @relation("ClientContracts")
+  contractsAsFreelancer Contract[]              @relation("FreelancerContracts")
   services              Service[]
   sessions              Session[]
-  messagesSent          Message[]          @relation("SenderMessages")
-  messagesReceived      Message[]          @relation("ReceiverMessages")
-  reviewsGiven          Review[]           @relation("ReviewerReviews")
-  reviewsReceived       Review[]           @relation("RevieweeReviews")
+  messagesSent          Message[]               @relation("SenderMessages")
+  messagesReceived      Message[]               @relation("ReceiverMessages")
+  reviewsGiven          Review[]                @relation("ReviewerReviews")
+  reviewsReceived       Review[]                @relation("RevieweeReviews")
   trustScore            TrustScore?
   skills                UserSkill[]
   portfolioItems        PortfolioItem[]
@@ -62,11 +72,15 @@ model User {
   stripeCustomer        StripeCustomer?
   notifications         Notification[]
   refreshTokens         RefreshToken[]
-  auditLogs             AuditLog[]         @relation("UserAuditLogs")
+  auditLogs             AuditLog[]              @relation("UserAuditLogs")
   mfa                   UserMfa?
   profile               UserProfile?
+  oauthAccounts         OAuthAccount[]
+  userSessions          UserSession[]
+  verificationInquiries VerificationInquiry[]
+  verificationBadges    UserVerificationBadge[]
+  trustedDevices        TrustedDevice[]
 
-  @@unique([oauthProvider, oauthId])
   @@index([email])
   @@index([status])
   @@index([deletedAt])
@@ -102,28 +116,42 @@ enum MfaMethod {
 }
 
 model UserMfa {
-  id                       String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId                   String    @unique @map("user_id") @db.Uuid
-  enabled                  Boolean   @default(false)
-  primaryMethod            MfaMethod @default(TOTP) @map("primary_method")
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId        String    @unique @map("user_id") @db.Uuid
+  enabled       Boolean   @default(false)
+  primaryMethod MfaMethod @default(TOTP) @map("primary_method")
+
+  // MFA enforcement
+  enforcedAt DateTime? @map("enforced_at") // When MFA was enforced (tenant policy, admin role, etc.)
+  enforcedBy String?   @map("enforced_by") @db.VarChar(50) // "tenant_policy", "admin_role", "user"
 
   // TOTP
-  totpSecret               String?   @map("totp_secret") @db.VarChar(500) // Encrypted
-  totpVerified             Boolean   @default(false) @map("totp_verified")
+  totpSecret     String?   @map("totp_secret") @db.VarChar(500) // Encrypted
+  totpVerified   Boolean   @default(false) @map("totp_verified")
+  totpVerifiedAt DateTime? @map("totp_verified_at")
 
   // SMS
-  phoneNumber              String?   @map("phone_number") @db.VarChar(20)
-  phoneVerified            Boolean   @default(false) @map("phone_verified")
+  phoneNumber     String?   @map("phone_number") @db.VarChar(20) // Encrypted
+  phoneVerified   Boolean   @default(false) @map("phone_verified")
+  phoneVerifiedAt DateTime? @map("phone_verified_at")
 
   // Recovery codes (hashed)
   recoveryCodes            String[]  @map("recovery_codes")
   recoveryCodesGeneratedAt DateTime? @map("recovery_codes_generated_at")
   recoveryCodesUsedCount   Int       @default(0) @map("recovery_codes_used_count")
 
-  createdAt                DateTime  @default(now()) @map("created_at")
-  updatedAt                DateTime  @updatedAt @map("updated_at")
+  // Recovery email (for account recovery)
+  recoveryEmail         String? @map("recovery_email") @db.VarChar(255)
+  recoveryEmailVerified Boolean @default(false) @map("recovery_email_verified")
 
-  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Preferences
+  rememberDevices      Boolean @default(true) @map("remember_devices")
+  trustedDeviceMaxDays Int     @default(30) @map("trusted_device_max_days")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_mfa")
 }
@@ -144,53 +172,260 @@ model MfaChallenge {
   @@map("mfa_challenges")
 }
 
+// Trusted Devices - Skip MFA for recognized devices
+model TrustedDevice {
+  id                String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String  @map("user_id") @db.Uuid
+  deviceFingerprint String  @map("device_fingerprint") @db.VarChar(255) // Hashed fingerprint
+  deviceName        String? @map("device_name") @db.VarChar(100) // User-friendly name
+
+  // Device metadata
+  browser   String? @db.VarChar(100)
+  os        String? @db.VarChar(100)
+  ipAddress String? @map("ip_address") @db.VarChar(45)
+  location  String? @db.VarChar(200) // Geo location (city, country)
+
+  // Trust lifecycle
+  trustedAt  DateTime @default(now()) @map("trusted_at")
+  expiresAt  DateTime @map("expires_at")
+  lastUsedAt DateTime @default(now()) @map("last_used_at")
+
+  // Revocation
+  revokedAt     DateTime? @map("revoked_at")
+  revokedReason String?   @map("revoked_reason") @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceFingerprint])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("trusted_devices")
+}
+
+// MFA Recovery Request - For lost device recovery flow
+model MfaRecoveryRequest {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // Recovery token (hashed)
+  tokenHash String @unique @map("token_hash") @db.VarChar(255)
+
+  // Status
+  status    MfaRecoveryStatus @default(PENDING)
+  expiresAt DateTime          @map("expires_at")
+
+  // Identity verification
+  verificationMethod String?   @map("verification_method") @db.VarChar(50)
+  verifiedAt         DateTime? @map("verified_at")
+
+  // Request metadata
+  ipAddress String? @map("ip_address") @db.VarChar(45)
+  userAgent String? @map("user_agent") @db.VarChar(500)
+
+  // Completion
+  completedAt DateTime? @map("completed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("mfa_recovery_requests")
+}
+
+enum MfaRecoveryStatus {
+  PENDING // Recovery initiated, email sent
+  VERIFIED // Identity verified
+  COMPLETED // MFA reset completed
+  EXPIRED // Request expired
+  CANCELLED // Request cancelled
+}
+
+// ============================================================================
+// IDENTITY VERIFICATION (PERSONA INTEGRATION)
+// ============================================================================
+
+model VerificationInquiry {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // Persona integration
+  personaInquiryId  String @unique @map("persona_inquiry_id") @db.VarChar(100)
+  personaTemplateId String @map("persona_template_id") @db.VarChar(100)
+
+  // Verification details
+  verificationType VerificationType   @map("verification_type")
+  status           VerificationStatus @default(PENDING)
+
+  // Results (no PII stored)
+  verificationLevel VerificationLevel? @map("verification_level")
+  failureReasons    String[]           @map("failure_reasons")
+
+  // Metadata
+  initiatedAt DateTime  @default(now()) @map("initiated_at")
+  completedAt DateTime? @map("completed_at")
+  expiresAt   DateTime? @map("expires_at")
+
+  // Compliance
+  reviewedBy  String?   @map("reviewed_by") @db.Uuid
+  reviewedAt  DateTime? @map("reviewed_at")
+  reviewNotes String?   @map("review_notes") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents VerificationDocument[]
+  badges    UserVerificationBadge[]
+
+  @@index([userId])
+  @@index([personaInquiryId])
+  @@index([status])
+  @@index([verificationType])
+  @@map("verification_inquiries")
+}
+
+model VerificationDocument {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  inquiryId String @map("inquiry_id") @db.Uuid
+
+  // Document info (no actual document stored)
+  documentType    DocumentType @map("document_type")
+  documentCountry String       @map("document_country") @db.VarChar(2) // ISO 3166-1 alpha-2
+
+  // Verification result
+  status     DocumentStatus @default(PENDING)
+  verifiedAt DateTime?      @map("verified_at")
+
+  // Expiration tracking
+  documentExpiresAt DateTime? @map("document_expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  inquiry VerificationInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  @@index([inquiryId])
+  @@index([documentType])
+  @@map("verification_documents")
+}
+
+model UserVerificationBadge {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+  inquiryId String @map("inquiry_id") @db.Uuid
+
+  level VerificationLevel
+
+  // Badge validity
+  grantedAt     DateTime  @default(now()) @map("granted_at")
+  expiresAt     DateTime  @map("expires_at")
+  revokedAt     DateTime? @map("revoked_at")
+  revokedReason String?   @map("revoked_reason") @db.VarChar(500)
+
+  // Display
+  isActive         Boolean @default(true) @map("is_active")
+  displayOnProfile Boolean @default(true) @map("display_on_profile")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inquiry VerificationInquiry @relation(fields: [inquiryId], references: [id])
+
+  @@index([userId])
+  @@index([level])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@map("user_verification_badges")
+}
+
+enum VerificationType {
+  BASIC // Email only
+  GOVERNMENT_ID // ID document verification
+  ADDRESS // Proof of address
+  ENHANCED // ID + selfie
+  PREMIUM // ID + selfie + address
+}
+
+enum VerificationStatus {
+  PENDING // Inquiry created, waiting for user
+  IN_PROGRESS // User started verification
+  NEEDS_REVIEW // Requires manual review
+  APPROVED // Verification passed
+  DECLINED // Verification failed
+  EXPIRED // Inquiry expired
+  CANCELLED // User cancelled
+}
+
+enum DocumentType {
+  PASSPORT
+  DRIVERS_LICENSE
+  NATIONAL_ID
+  RESIDENCE_PERMIT
+  UTILITY_BILL
+  BANK_STATEMENT
+  TAX_DOCUMENT
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
 // ============================================================================
 // USER PROFILE
 // ============================================================================
 
 model UserProfile {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId          String   @unique @map("user_id") @db.Uuid
-  username        String?  @unique @db.VarChar(30) // For public URL (skillancer.com/@username)
-  
+  id       String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId   String  @unique @map("user_id") @db.Uuid
+  username String? @unique @db.VarChar(30) // For public URL (skillancer.com/@username)
+
   // Professional
   title           String?  @db.VarChar(200)
   bio             String?  @db.Text
   hourlyRate      Decimal? @map("hourly_rate") @db.Decimal(10, 2)
   currency        String   @default("USD") @db.VarChar(3)
   yearsExperience Int?     @map("years_experience")
-  
-  // Avatar (multiple sizes for performance)
-  avatarOriginal  String?  @map("avatar_original") @db.VarChar(500)
-  avatarThumbnail String?  @map("avatar_thumbnail") @db.VarChar(500) // 64x64
-  avatarSmall     String?  @map("avatar_small") @db.VarChar(500)     // 128x128
-  avatarMedium    String?  @map("avatar_medium") @db.VarChar(500)    // 256x256
-  avatarLarge     String?  @map("avatar_large") @db.VarChar(500)     // 512x512
-  
-  // Social Links
-  linkedinUrl     String?  @map("linkedin_url") @db.VarChar(500)
-  githubUrl       String?  @map("github_url") @db.VarChar(500)
-  portfolioUrl    String?  @map("portfolio_url") @db.VarChar(500)
-  twitterUrl      String?  @map("twitter_url") @db.VarChar(500)
-  
-  // Location
-  country         String?  @db.VarChar(2) // ISO 3166-1 alpha-2
-  city            String?  @db.VarChar(100)
-  
-  // Visibility Settings
-  isPublic        Boolean  @default(false) @map("is_public")
-  showEmail       Boolean  @default(false) @map("show_email")
-  showRate        Boolean  @default(true) @map("show_rate")
-  showLocation    Boolean  @default(true) @map("show_location")
-  
-  // Completeness tracking
-  completenessScore Int    @default(0) @map("completeness_score")
-  
-  // Timestamps
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Avatar (multiple sizes for performance)
+  avatarOriginal  String? @map("avatar_original") @db.VarChar(500)
+  avatarThumbnail String? @map("avatar_thumbnail") @db.VarChar(500) // 64x64
+  avatarSmall     String? @map("avatar_small") @db.VarChar(500) // 128x128
+  avatarMedium    String? @map("avatar_medium") @db.VarChar(500) // 256x256
+  avatarLarge     String? @map("avatar_large") @db.VarChar(500) // 512x512
+
+  // Social Links
+  linkedinUrl  String? @map("linkedin_url") @db.VarChar(500)
+  githubUrl    String? @map("github_url") @db.VarChar(500)
+  portfolioUrl String? @map("portfolio_url") @db.VarChar(500)
+  twitterUrl   String? @map("twitter_url") @db.VarChar(500)
+
+  // Location
+  country String? @db.VarChar(2) // ISO 3166-1 alpha-2
+  city    String? @db.VarChar(100)
+
+  // Visibility Settings
+  isPublic     Boolean @default(false) @map("is_public")
+  showEmail    Boolean @default(false) @map("show_email")
+  showRate     Boolean @default(true) @map("show_rate")
+  showLocation Boolean @default(true) @map("show_location")
+
+  // Completeness tracking
+  completenessScore Int @default(0) @map("completeness_score")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  freelancerProfile FreelancerProfile?
+  clientProfile     ClientProfile?
 
   @@index([username])
   @@index([isPublic])
@@ -199,34 +434,263 @@ model UserProfile {
   @@map("user_profiles")
 }
 
-model RefreshToken {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  token     String   @unique @db.VarChar(500)
-  userId    String   @map("user_id") @db.Uuid
-  expiresAt DateTime @map("expires_at")
+// ============================================================================
+// FREELANCER PROFILE
+// Extended profile for users who offer services
+// ============================================================================
+
+model FreelancerProfile {
+  id            String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userProfileId String @unique @map("user_profile_id") @db.Uuid
+
+  // Headline and specialization
+  headline        String?  @db.VarChar(200) // "Senior Full-Stack Developer | React & Node.js Expert"
+  specializations String[] // Areas of expertise
+
+  // Availability
+  availability  FreelancerAvailability @default(AVAILABLE)
+  hoursPerWeek  Int?                   @map("hours_per_week") // Max hours available
+  availableFrom DateTime?              @map("available_from") // When they'll be available next
+
+  // Rates
+  hourlyRateMin     Decimal? @map("hourly_rate_min") @db.Decimal(10, 2)
+  hourlyRateMax     Decimal? @map("hourly_rate_max") @db.Decimal(10, 2)
+  preferredCurrency String   @default("USD") @map("preferred_currency") @db.VarChar(3)
+
+  // Work preferences
+  preferredJobTypes   JobType[] @map("preferred_job_types") // FIXED_PRICE, HOURLY, RETAINER
+  preferredDurations  String[]  @map("preferred_durations") // SHORT_TERM, LONG_TERM, CONTRACT
+  preferredProjectMin Decimal?  @map("preferred_project_min") @db.Decimal(10, 2)
+  preferredProjectMax Decimal?  @map("preferred_project_max") @db.Decimal(10, 2)
+
+  // Location preferences
+  remoteOnly      Boolean @default(true) @map("remote_only")
+  willingToTravel Boolean @default(false) @map("willing_to_travel")
+  travelRadius    Int?    @map("travel_radius") // km radius willing to travel
+
+  // Industry focus
+  industries String[] // Industries they work in
+
+  // Contact preferences
+  allowDirectContact Boolean @default(true) @map("allow_direct_contact")
+  responseTime       String? @map("response_time") @db.VarChar(50) // "Within 24 hours", "Same day"
+
+  // Stats (denormalized for performance)
+  totalProjects   Int     @default(0) @map("total_projects")
+  completedJobs   Int     @default(0) @map("completed_jobs")
+  totalEarnings   Decimal @default(0) @map("total_earnings") @db.Decimal(12, 2)
+  avgRating       Decimal @default(0) @map("avg_rating") @db.Decimal(3, 2)
+  reviewCount     Int     @default(0) @map("review_count")
+  repeatClientPct Decimal @default(0) @map("repeat_client_pct") @db.Decimal(5, 2) // % of repeat clients
+
+  // Profile status
+  isVerified        Boolean   @default(false) @map("is_verified")
+  isFeatured        Boolean   @default(false) @map("is_featured")
+  verifiedAt        DateTime? @map("verified_at")
+  lastActiveAt      DateTime  @default(now()) @map("last_active_at")
+  profileViewsCount Int       @default(0) @map("profile_views_count")
+  proposalsSent     Int       @default(0) @map("proposals_sent")
+
+  // Search optimization
+  searchRank Int @default(0) @map("search_rank") // Calculated ranking for search results
+
+  // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
-  revokedAt DateTime? @map("revoked_at")
-  userAgent String?  @map("user_agent") @db.VarChar(500)
-  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userProfile UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@index([availability])
+  @@index([hourlyRateMin, hourlyRateMax])
+  @@index([searchRank])
+  @@index([lastActiveAt])
+  @@index([isVerified])
+  @@map("freelancer_profiles")
+}
+
+enum FreelancerAvailability {
+  AVAILABLE // Open for new projects
+  PARTIALLY // Has some capacity
+  BUSY // Fully booked but accepting inquiries
+  NOT_AVAILABLE // Not taking new work
+  ON_VACATION // Temporarily unavailable
+}
+
+// ============================================================================
+// CLIENT PROFILE
+// Extended profile for users who hire freelancers
+// ============================================================================
+
+model ClientProfile {
+  id            String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userProfileId String @unique @map("user_profile_id") @db.Uuid
+
+  // Company information
+  companyName    String?      @map("company_name") @db.VarChar(200)
+  companySize    CompanySize? @map("company_size")
+  companyWebsite String?      @map("company_website") @db.VarChar(500)
+  companyLogoUrl String?      @map("company_logo_url") @db.VarChar(500)
+  industry       String?      @db.VarChar(100)
+  companyBio     String?      @map("company_bio") @db.Text
+
+  // Hiring preferences
+  typicalBudgetMin    Decimal?         @map("typical_budget_min") @db.Decimal(10, 2)
+  typicalBudgetMax    Decimal?         @map("typical_budget_max") @db.Decimal(10, 2)
+  preferredCurrency   String           @default("USD") @map("preferred_currency") @db.VarChar(3)
+  typicalProjectTypes JobType[]        @map("typical_project_types")
+  hiringFrequency     HiringFrequency? @map("hiring_frequency")
+
+  // Team info
+  teamSize        Int?    @map("team_size")
+  hasHrDepartment Boolean @default(false) @map("has_hr_department")
+
+  // Verification and trust
+  isVerified        Boolean   @default(false) @map("is_verified")
+  paymentVerified   Boolean   @default(false) @map("payment_verified")
+  verifiedAt        DateTime? @map("verified_at")
+  paymentVerifiedAt DateTime? @map("payment_verified_at")
+
+  // Stats (denormalized for performance)
+  totalJobsPosted    Int     @default(0) @map("total_jobs_posted")
+  totalHires         Int     @default(0) @map("total_hires")
+  totalSpent         Decimal @default(0) @map("total_spent") @db.Decimal(12, 2)
+  avgRatingGiven     Decimal @default(0) @map("avg_rating_given") @db.Decimal(3, 2)
+  avgProjectDuration Int     @default(0) @map("avg_project_duration") // in days
+  rehireRate         Decimal @default(0) @map("rehire_rate") @db.Decimal(5, 2)
+
+  // Activity tracking
+  lastJobPostedAt   DateTime? @map("last_job_posted_at")
+  lastHireAt        DateTime? @map("last_hire_at")
+  lastActiveAt      DateTime  @default(now()) @map("last_active_at")
+  profileViewsCount Int       @default(0) @map("profile_views_count")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userProfile UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@index([companySize])
+  @@index([industry])
+  @@index([isVerified])
+  @@index([lastActiveAt])
+  @@map("client_profiles")
+}
+
+enum CompanySize {
+  SOLO // 1 person
+  SMALL // 2-10
+  MEDIUM // 11-50
+  LARGE // 51-200
+  ENTERPRISE // 200+
+}
+
+enum HiringFrequency {
+  ONE_TIME // Single project
+  OCCASIONAL // Few times a year
+  REGULAR // Monthly
+  FREQUENT // Weekly
+}
+
+enum JobType {
+  FIXED_PRICE // One-time fixed payment
+  HOURLY // Hourly rate billing
+  RETAINER // Monthly retainer
+  CONTRACT // Long-term contract
+}
+
+model RefreshToken {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  token      String    @unique @db.VarChar(500)
+  userId     String    @map("user_id") @db.Uuid
+  family     String    @db.VarChar(36) // UUID for refresh token rotation tracking
+  expiresAt  DateTime  @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  revokedAt  DateTime? @map("revoked_at")
+  replacedBy String?   @map("replaced_by") @db.VarChar(500) // Token that replaced this one
+  userAgent  String?   @map("user_agent") @db.VarChar(500)
+  ipAddress  String?   @map("ip_address") @db.VarChar(45)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
+  @@index([family])
   @@index([expiresAt])
   @@map("refresh_tokens")
 }
 
+// OAuth Accounts - Support multiple OAuth providers per user
+model OAuthAccount {
+  id                String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String        @map("user_id") @db.Uuid
+  provider          OAuthProvider
+  providerAccountId String        @map("provider_account_id") @db.VarChar(255)
+  email             String?       @db.VarChar(255)
+  accessToken       String?       @map("access_token") @db.Text
+  refreshToken      String?       @map("refresh_token") @db.Text
+  expiresAt         DateTime?     @map("expires_at")
+  tokenType         String?       @map("token_type") @db.VarChar(50)
+  scope             String?       @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+// User Sessions - Persistent session tracking
+model UserSession {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  userAgent    String?  @map("user_agent") @db.VarChar(500)
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  lastActiveAt DateTime @default(now()) @map("last_active_at")
+  expiresAt    DateTime @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+// Email Verification Tokens
+model EmailVerificationToken {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email     String   @db.VarChar(255)
+  token     String   @unique @db.VarChar(255)
+  expiresAt DateTime @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@index([email])
+  @@map("email_verification_tokens")
+}
+
+enum OAuthProvider {
+  GOOGLE
+  MICROSOFT
+  APPLE
+}
+
 model UserSkill {
-  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId      String     @map("user_id") @db.Uuid
-  skillId     String     @map("skill_id") @db.Uuid
-  level       SkillLevel @default(INTERMEDIATE)
-  yearsExp    Int?       @map("years_exp")
-  verified    Boolean    @default(false)
-  isPrimary   Boolean    @default(false) @map("is_primary")
-  sortOrder   Int        @default(0) @map("sort_order")
-  createdAt   DateTime   @default(now()) @map("created_at")
+  id        String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String     @map("user_id") @db.Uuid
+  skillId   String     @map("skill_id") @db.Uuid
+  level     SkillLevel @default(INTERMEDIATE)
+  yearsExp  Int?       @map("years_exp")
+  verified  Boolean    @default(false)
+  isPrimary Boolean    @default(false) @map("is_primary")
+  sortOrder Int        @default(0) @map("sort_order")
+  createdAt DateTime   @default(now()) @map("created_at")
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
@@ -244,15 +708,15 @@ enum SkillLevel {
 }
 
 model Skill {
-  id          String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name        String      @unique @db.VarChar(100)
-  slug        String      @unique @db.VarChar(100)
-  category    String      @db.VarChar(100)
-  description String?     @db.Text
-  isCustom    Boolean     @default(false) @map("is_custom")
-  createdById String?     @map("created_by_id") @db.Uuid
-  isApproved  Boolean     @default(true) @map("is_approved")
-  createdAt   DateTime    @default(now()) @map("created_at")
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String   @unique @db.VarChar(100)
+  slug        String   @unique @db.VarChar(100)
+  category    String   @db.VarChar(100)
+  description String?  @db.Text
+  isCustom    Boolean  @default(false) @map("is_custom")
+  createdById String?  @map("created_by_id") @db.Uuid
+  isApproved  Boolean  @default(true) @map("is_approved")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   userSkills    UserSkill[]
   jobSkills     JobSkill[]
@@ -355,29 +819,29 @@ enum TenantRole {
 // ============================================================================
 
 model Job {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  clientId    String    @map("client_id") @db.Uuid
-  tenantId    String?   @map("tenant_id") @db.Uuid
-  title       String    @db.VarChar(200)
-  description String    @db.Text
-  slug        String    @unique @db.VarChar(250)
-  status      JobStatus @default(DRAFT)
+  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clientId    String        @map("client_id") @db.Uuid
+  tenantId    String?       @map("tenant_id") @db.Uuid
+  title       String        @db.VarChar(200)
+  description String        @db.Text
+  slug        String        @unique @db.VarChar(250)
+  status      JobStatus     @default(DRAFT)
   visibility  JobVisibility @default(PUBLIC)
 
   // Budget
-  budgetType  BudgetType @default(FIXED) @map("budget_type")
-  budgetMin   Decimal?   @map("budget_min") @db.Decimal(12, 2)
-  budgetMax   Decimal?   @map("budget_max") @db.Decimal(12, 2)
-  currency    String     @default("USD") @db.VarChar(3)
+  budgetType BudgetType @default(FIXED) @map("budget_type")
+  budgetMin  Decimal?   @map("budget_min") @db.Decimal(12, 2)
+  budgetMax  Decimal?   @map("budget_max") @db.Decimal(12, 2)
+  currency   String     @default("USD") @db.VarChar(3)
 
   // Duration & Location
-  duration        JobDuration? 
+  duration        JobDuration?
   experienceLevel ExperienceLevel @default(INTERMEDIATE) @map("experience_level")
-  location        String?      @db.VarChar(200)
-  isRemote        Boolean      @default(true) @map("is_remote")
+  location        String?         @db.VarChar(200)
+  isRemote        Boolean         @default(true) @map("is_remote")
 
   // Content
-  attachments Json    @default("[]")
+  attachments Json     @default("[]")
   tags        String[] @default([])
 
   // Timestamps
@@ -388,12 +852,12 @@ model Job {
   deletedAt   DateTime? @map("deleted_at")
 
   // Relations
-  client    User           @relation("ClientJobs", fields: [clientId], references: [id])
-  tenant    Tenant?        @relation(fields: [tenantId], references: [id])
+  client    User       @relation("ClientJobs", fields: [clientId], references: [id])
+  tenant    Tenant?    @relation(fields: [tenantId], references: [id])
   bids      Bid[]
   contracts Contract[]
   skills    JobSkill[]
-  messages  Message[]      @relation("JobMessages")
+  messages  Message[]  @relation("JobMessages")
 
   @@index([clientId])
   @@index([tenantId])
@@ -466,16 +930,16 @@ model Bid {
   status       BidStatus @default(PENDING)
 
   // Proposal
-  coverLetter  String    @map("cover_letter") @db.Text
-  proposedRate Decimal   @map("proposed_rate") @db.Decimal(12, 2)
+  coverLetter  String     @map("cover_letter") @db.Text
+  proposedRate Decimal    @map("proposed_rate") @db.Decimal(12, 2)
   rateType     BudgetType @default(FIXED) @map("rate_type")
-  deliveryDays Int?      @map("delivery_days")
-  attachments  Json      @default("[]")
+  deliveryDays Int?       @map("delivery_days")
+  attachments  Json       @default("[]")
 
   // Timestamps
-  submittedAt  DateTime  @default(now()) @map("submitted_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  withdrawnAt  DateTime? @map("withdrawn_at")
+  submittedAt DateTime  @default(now()) @map("submitted_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  withdrawnAt DateTime? @map("withdrawn_at")
 
   // Relations
   job        Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
@@ -510,24 +974,24 @@ model Contract {
   status       ContractStatus @default(PENDING)
 
   // Terms
-  title        String    @db.VarChar(200)
-  description  String    @db.Text
-  agreedRate   Decimal   @map("agreed_rate") @db.Decimal(12, 2)
-  rateType     BudgetType @default(FIXED) @map("rate_type")
-  currency     String    @default("USD") @db.VarChar(3)
-  totalAmount  Decimal?  @map("total_amount") @db.Decimal(12, 2)
+  title       String     @db.VarChar(200)
+  description String     @db.Text
+  agreedRate  Decimal    @map("agreed_rate") @db.Decimal(12, 2)
+  rateType    BudgetType @default(FIXED) @map("rate_type")
+  currency    String     @default("USD") @db.VarChar(3)
+  totalAmount Decimal?   @map("total_amount") @db.Decimal(12, 2)
 
   // Timeline
-  startDate    DateTime? @map("start_date")
-  endDate      DateTime? @map("end_date")
-  deadlineAt   DateTime? @map("deadline_at")
+  startDate  DateTime? @map("start_date")
+  endDate    DateTime? @map("end_date")
+  deadlineAt DateTime? @map("deadline_at")
 
   // Timestamps
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  signedAt     DateTime? @map("signed_at")
-  completedAt  DateTime? @map("completed_at")
-  cancelledAt  DateTime? @map("cancelled_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  signedAt    DateTime? @map("signed_at")
+  completedAt DateTime? @map("completed_at")
+  cancelledAt DateTime? @map("cancelled_at")
 
   // Relations
   job        Job         @relation(fields: [jobId], references: [id])
@@ -603,24 +1067,24 @@ model Service {
   status       ServiceStatus @default(DRAFT)
 
   // Pricing Tiers
-  tiers        Json          @default("[]") // Array of ServiceTier
+  tiers Json @default("[]") // Array of ServiceTier
 
   // Content
-  category     String        @db.VarChar(100)
-  tags         String[]      @default([])
-  images       Json          @default("[]")
-  faqs         Json          @default("[]")
+  category String   @db.VarChar(100)
+  tags     String[] @default([])
+  images   Json     @default("[]")
+  faqs     Json     @default("[]")
 
   // Stats
-  orderCount   Int           @default(0) @map("order_count")
-  rating       Decimal?      @db.Decimal(3, 2)
-  reviewCount  Int           @default(0) @map("review_count")
+  orderCount  Int      @default(0) @map("order_count")
+  rating      Decimal? @db.Decimal(3, 2)
+  reviewCount Int      @default(0) @map("review_count")
 
   // Timestamps
-  publishedAt  DateTime?     @map("published_at")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  deletedAt    DateTime?     @map("deleted_at")
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
 
   // Relations
   freelancer User           @relation(fields: [freelancerId], references: [id])
@@ -661,32 +1125,32 @@ enum ServiceStatus {
 // ============================================================================
 
 model Session {
-  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId      String        @map("user_id") @db.Uuid
-  tenantId    String?       @map("tenant_id") @db.Uuid
-  status      SessionStatus @default(PENDING)
-  type        SessionType   @default(DEVELOPMENT)
+  id       String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId   String        @map("user_id") @db.Uuid
+  tenantId String?       @map("tenant_id") @db.Uuid
+  status   SessionStatus @default(PENDING)
+  type     SessionType   @default(DEVELOPMENT)
 
   // Session Config
-  instanceType String       @map("instance_type") @db.VarChar(50)
-  region       String       @db.VarChar(50)
-  image        String       @db.VarChar(200)
-  config       Json         @default("{}")
+  instanceType String @map("instance_type") @db.VarChar(50)
+  region       String @db.VarChar(50)
+  image        String @db.VarChar(200)
+  config       Json   @default("{}")
 
   // Connection
-  connectionUrl String?     @map("connection_url") @db.VarChar(500)
-  publicIp      String?     @map("public_ip") @db.VarChar(45)
-  privateIp     String?     @map("private_ip") @db.VarChar(45)
+  connectionUrl String? @map("connection_url") @db.VarChar(500)
+  publicIp      String? @map("public_ip") @db.VarChar(45)
+  privateIp     String? @map("private_ip") @db.VarChar(45)
 
   // Usage
-  startedAt     DateTime?   @map("started_at")
-  endedAt       DateTime?   @map("ended_at")
-  durationMins  Int         @default(0) @map("duration_mins")
-  costCredits   Decimal     @default(0) @map("cost_credits") @db.Decimal(10, 2)
+  startedAt    DateTime? @map("started_at")
+  endedAt      DateTime? @map("ended_at")
+  durationMins Int       @default(0) @map("duration_mins")
+  costCredits  Decimal   @default(0) @map("cost_credits") @db.Decimal(10, 2)
 
   // Timestamps
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   user   User    @relation(fields: [userId], references: [id])
@@ -722,22 +1186,22 @@ enum SessionType {
 // ============================================================================
 
 model Message {
-  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  senderId    String        @map("sender_id") @db.Uuid
-  receiverId  String        @map("receiver_id") @db.Uuid
-  jobId       String?       @map("job_id") @db.Uuid
-  contractId  String?       @map("contract_id") @db.Uuid
-  threadId    String?       @map("thread_id") @db.Uuid
-  
-  content     String        @db.Text
-  type        MessageType   @default(TEXT)
-  attachments Json          @default("[]")
-  metadata    Json          @default("{}")
+  id         String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  senderId   String  @map("sender_id") @db.Uuid
+  receiverId String  @map("receiver_id") @db.Uuid
+  jobId      String? @map("job_id") @db.Uuid
+  contractId String? @map("contract_id") @db.Uuid
+  threadId   String? @map("thread_id") @db.Uuid
+
+  content     String      @db.Text
+  type        MessageType @default(TEXT)
+  attachments Json        @default("[]")
+  metadata    Json        @default("{}")
 
   // Status
-  readAt      DateTime?     @map("read_at")
-  deletedAt   DateTime?     @map("deleted_at")
-  createdAt   DateTime      @default(now()) @map("created_at")
+  readAt    DateTime? @map("read_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   // Relations
   sender   User      @relation("SenderMessages", fields: [senderId], references: [id])
@@ -769,34 +1233,34 @@ enum MessageType {
 // ============================================================================
 
 model Payment {
-  id           String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  contractId   String        @map("contract_id") @db.Uuid
-  milestoneId  String?       @map("milestone_id") @db.Uuid
-  payerId      String        @map("payer_id") @db.Uuid
-  payeeId      String        @map("payee_id") @db.Uuid
-  paymentMethodId String?    @map("payment_method_id") @db.Uuid
-  
-  amount       Decimal       @db.Decimal(12, 2)
-  currency     String        @default("USD") @db.VarChar(3)
-  fee          Decimal       @default(0) @db.Decimal(12, 2)
-  netAmount    Decimal       @map("net_amount") @db.Decimal(12, 2)
-  
-  status       PaymentStatus @default(PENDING)
-  type         PaymentType   @default(MILESTONE)
+  id              String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId      String  @map("contract_id") @db.Uuid
+  milestoneId     String? @map("milestone_id") @db.Uuid
+  payerId         String  @map("payer_id") @db.Uuid
+  payeeId         String  @map("payee_id") @db.Uuid
+  paymentMethodId String? @map("payment_method_id") @db.Uuid
+
+  amount    Decimal @db.Decimal(12, 2)
+  currency  String  @default("USD") @db.VarChar(3)
+  fee       Decimal @default(0) @db.Decimal(12, 2)
+  netAmount Decimal @map("net_amount") @db.Decimal(12, 2)
+
+  status PaymentStatus @default(PENDING)
+  type   PaymentType   @default(MILESTONE)
 
   // External references
   stripePaymentIntentId String? @unique @map("stripe_payment_intent_id") @db.VarChar(100)
   stripeTransferId      String? @map("stripe_transfer_id") @db.VarChar(100)
 
   // Escrow
-  escrowedAt   DateTime?     @map("escrowed_at")
-  releasedAt   DateTime?     @map("released_at")
-  refundedAt   DateTime?     @map("refunded_at")
+  escrowedAt DateTime? @map("escrowed_at")
+  releasedAt DateTime? @map("released_at")
+  refundedAt DateTime? @map("refunded_at")
 
   // Timestamps
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  completedAt  DateTime?     @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  completedAt DateTime? @map("completed_at")
 
   contract      Contract       @relation(fields: [contractId], references: [id])
   milestone     Milestone?     @relation(fields: [milestoneId], references: [id])
@@ -817,17 +1281,17 @@ model Payment {
 // ============================================================================
 
 model StripeCustomer {
-  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId           String   @unique @map("user_id") @db.Uuid
-  stripeCustomerId String   @unique @map("stripe_customer_id") @db.VarChar(100)
-  
-  // Metadata
-  currency         String   @default("USD") @db.VarChar(3)
-  
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String @unique @map("user_id") @db.Uuid
+  stripeCustomerId String @unique @map("stripe_customer_id") @db.VarChar(100)
 
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Metadata
+  currency String @default("USD") @db.VarChar(3)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("stripe_customers")
 }
@@ -837,49 +1301,49 @@ model StripeCustomer {
 // ============================================================================
 
 model PaymentMethod {
-  id                    String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId                String              @map("user_id") @db.Uuid
-  stripePaymentMethodId String              @unique @map("stripe_payment_method_id") @db.VarChar(100)
-  stripeCustomerId      String              @map("stripe_customer_id") @db.VarChar(100)
-  
-  type                  PaymentMethodType
-  isDefault             Boolean             @default(false) @map("is_default")
-  status                PaymentMethodStatus @default(ACTIVE)
-  
-  // Card details (for display only - PCI compliant)
-  cardBrand             String?             @map("card_brand") @db.VarChar(20)
-  cardLast4             String?             @map("card_last4") @db.VarChar(4)
-  cardExpMonth          Int?                @map("card_exp_month")
-  cardExpYear           Int?                @map("card_exp_year")
-  cardFunding           String?             @map("card_funding") @db.VarChar(20) // credit, debit, prepaid
-  
-  // Bank account details (for display only - PCI compliant)
-  bankName              String?             @map("bank_name") @db.VarChar(100)
-  bankLast4             String?             @map("bank_last4") @db.VarChar(4)
-  bankAccountType       String?             @map("bank_account_type") @db.VarChar(20) // checking, savings
-  bankRoutingLast4      String?             @map("bank_routing_last4") @db.VarChar(4)
-  
-  // SEPA details
-  sepaCountry           String?             @map("sepa_country") @db.VarChar(2)
-  sepaBankCode          String?             @map("sepa_bank_code") @db.VarChar(20)
-  
-  // Billing address (for verification)
-  billingName           String?             @map("billing_name") @db.VarChar(200)
-  billingEmail          String?             @map("billing_email") @db.VarChar(255)
-  billingCountry        String?             @map("billing_country") @db.VarChar(2)
-  billingPostalCode     String?             @map("billing_postal_code") @db.VarChar(20)
-  
-  // Expiration handling
-  expirationWarningAt   DateTime?           @map("expiration_warning_at")
-  
-  // Metadata
-  fingerprint           String?             @db.VarChar(100) // Stripe fingerprint for dedup
-  
-  createdAt             DateTime            @default(now()) @map("created_at")
-  updatedAt             DateTime            @updatedAt @map("updated_at")
+  id                    String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String @map("user_id") @db.Uuid
+  stripePaymentMethodId String @unique @map("stripe_payment_method_id") @db.VarChar(100)
+  stripeCustomerId      String @map("stripe_customer_id") @db.VarChar(100)
 
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payments              Payment[]
+  type      PaymentMethodType
+  isDefault Boolean             @default(false) @map("is_default")
+  status    PaymentMethodStatus @default(ACTIVE)
+
+  // Card details (for display only - PCI compliant)
+  cardBrand    String? @map("card_brand") @db.VarChar(20)
+  cardLast4    String? @map("card_last4") @db.VarChar(4)
+  cardExpMonth Int?    @map("card_exp_month")
+  cardExpYear  Int?    @map("card_exp_year")
+  cardFunding  String? @map("card_funding") @db.VarChar(20) // credit, debit, prepaid
+
+  // Bank account details (for display only - PCI compliant)
+  bankName         String? @map("bank_name") @db.VarChar(100)
+  bankLast4        String? @map("bank_last4") @db.VarChar(4)
+  bankAccountType  String? @map("bank_account_type") @db.VarChar(20) // checking, savings
+  bankRoutingLast4 String? @map("bank_routing_last4") @db.VarChar(4)
+
+  // SEPA details
+  sepaCountry  String? @map("sepa_country") @db.VarChar(2)
+  sepaBankCode String? @map("sepa_bank_code") @db.VarChar(20)
+
+  // Billing address (for verification)
+  billingName       String? @map("billing_name") @db.VarChar(200)
+  billingEmail      String? @map("billing_email") @db.VarChar(255)
+  billingCountry    String? @map("billing_country") @db.VarChar(2)
+  billingPostalCode String? @map("billing_postal_code") @db.VarChar(20)
+
+  // Expiration handling
+  expirationWarningAt DateTime? @map("expiration_warning_at")
+
+  // Metadata
+  fingerprint String? @db.VarChar(100) // Stripe fingerprint for dedup
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments Payment[]
 
   @@index([userId])
   @@index([stripeCustomerId])
@@ -924,31 +1388,31 @@ enum PaymentMethodType {
 }
 
 model Invoice {
-  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId    String?       @map("tenant_id") @db.Uuid
-  number      String        @unique @db.VarChar(50)
-  status      InvoiceStatus @default(DRAFT)
+  id       String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String?       @map("tenant_id") @db.Uuid
+  number   String        @unique @db.VarChar(50)
+  status   InvoiceStatus @default(DRAFT)
 
   // Amounts
-  subtotal    Decimal       @db.Decimal(12, 2)
-  tax         Decimal       @default(0) @db.Decimal(12, 2)
-  total       Decimal       @db.Decimal(12, 2)
-  currency    String        @default("USD") @db.VarChar(3)
+  subtotal Decimal @db.Decimal(12, 2)
+  tax      Decimal @default(0) @db.Decimal(12, 2)
+  total    Decimal @db.Decimal(12, 2)
+  currency String  @default("USD") @db.VarChar(3)
 
   // Dates
-  issuedAt    DateTime?     @map("issued_at")
-  dueAt       DateTime?     @map("due_at")
-  paidAt      DateTime?     @map("paid_at")
+  issuedAt DateTime? @map("issued_at")
+  dueAt    DateTime? @map("due_at")
+  paidAt   DateTime? @map("paid_at")
 
   // Line items
-  lineItems   Json          @default("[]") @map("line_items")
-  
+  lineItems Json @default("[]") @map("line_items")
+
   // External
-  stripeInvoiceId String?   @unique @map("stripe_invoice_id") @db.VarChar(100)
+  stripeInvoiceId String? @unique @map("stripe_invoice_id") @db.VarChar(100)
 
   // Timestamps
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   tenant Tenant? @relation(fields: [tenantId], references: [id])
 
@@ -972,30 +1436,30 @@ enum InvoiceStatus {
 // ============================================================================
 
 model Review {
-  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  reviewerId  String     @map("reviewer_id") @db.Uuid
-  revieweeId  String     @map("reviewee_id") @db.Uuid
-  contractId  String?    @map("contract_id") @db.Uuid
-  serviceId   String?    @map("service_id") @db.Uuid
-  
-  rating      Int        @db.SmallInt // 1-5
-  title       String?    @db.VarChar(200)
-  comment     String?    @db.Text
-  
+  id         String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  reviewerId String  @map("reviewer_id") @db.Uuid
+  revieweeId String  @map("reviewee_id") @db.Uuid
+  contractId String? @map("contract_id") @db.Uuid
+  serviceId  String? @map("service_id") @db.Uuid
+
+  rating  Int     @db.SmallInt // 1-5
+  title   String? @db.VarChar(200)
+  comment String? @db.Text
+
   // Detailed ratings
-  communication  Int?    @db.SmallInt
-  quality        Int?    @db.SmallInt
-  expertise      Int?    @db.SmallInt
-  professionalism Int?   @db.SmallInt
-  wouldRecommend Boolean @default(true) @map("would_recommend")
+  communication   Int?    @db.SmallInt
+  quality         Int?    @db.SmallInt
+  expertise       Int?    @db.SmallInt
+  professionalism Int?    @db.SmallInt
+  wouldRecommend  Boolean @default(true) @map("would_recommend")
 
   // Moderation
-  status      ReviewStatus @default(PENDING)
-  reportedAt  DateTime?    @map("reported_at")
-  
+  status     ReviewStatus @default(PENDING)
+  reportedAt DateTime?    @map("reported_at")
+
   // Timestamps
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   reviewer User      @relation("ReviewerReviews", fields: [reviewerId], references: [id])
   reviewee User      @relation("RevieweeReviews", fields: [revieweeId], references: [id])
@@ -1019,27 +1483,27 @@ enum ReviewStatus {
 }
 
 model TrustScore {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId          String   @unique @map("user_id") @db.Uuid
-  
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
   // Overall score
-  overallScore    Decimal  @default(0) @map("overall_score") @db.Decimal(5, 2)
-  
+  overallScore Decimal @default(0) @map("overall_score") @db.Decimal(5, 2)
+
   // Component scores
-  completionRate  Decimal  @default(0) @map("completion_rate") @db.Decimal(5, 2)
-  responseTime    Decimal  @default(0) @map("response_time") @db.Decimal(5, 2)
-  qualityScore    Decimal  @default(0) @map("quality_score") @db.Decimal(5, 2)
+  completionRate     Decimal @default(0) @map("completion_rate") @db.Decimal(5, 2)
+  responseTime       Decimal @default(0) @map("response_time") @db.Decimal(5, 2)
+  qualityScore       Decimal @default(0) @map("quality_score") @db.Decimal(5, 2)
   communicationScore Decimal @default(0) @map("communication_score") @db.Decimal(5, 2)
-  
+
   // Stats
-  totalJobs       Int      @default(0) @map("total_jobs")
-  completedJobs   Int      @default(0) @map("completed_jobs")
-  totalEarnings   Decimal  @default(0) @map("total_earnings") @db.Decimal(12, 2)
-  repeatClients   Int      @default(0) @map("repeat_clients")
-  
+  totalJobs     Int     @default(0) @map("total_jobs")
+  completedJobs Int     @default(0) @map("completed_jobs")
+  totalEarnings Decimal @default(0) @map("total_earnings") @db.Decimal(12, 2)
+  repeatClients Int     @default(0) @map("repeat_clients")
+
   // Timestamps
-  calculatedAt    DateTime @default(now()) @map("calculated_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  calculatedAt DateTime @default(now()) @map("calculated_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1051,17 +1515,17 @@ model TrustScore {
 // ============================================================================
 
 model Notification {
-  id        String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId    String           @map("user_id") @db.Uuid
-  type      NotificationType
-  title     String           @db.VarChar(200)
-  message   String           @db.Text
-  data      Json             @default("{}")
-  channel   NotificationChannel @default(IN_APP)
-  
-  readAt    DateTime?        @map("read_at")
-  sentAt    DateTime?        @map("sent_at")
-  createdAt DateTime         @default(now()) @map("created_at")
+  id      String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId  String              @map("user_id") @db.Uuid
+  type    NotificationType
+  title   String              @db.VarChar(200)
+  message String              @db.Text
+  data    Json                @default("{}")
+  channel NotificationChannel @default(IN_APP)
+
+  readAt    DateTime? @map("read_at")
+  sentAt    DateTime? @map("sent_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1099,22 +1563,22 @@ enum NotificationChannel {
 // ============================================================================
 
 model AuditLog {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId      String?  @map("user_id") @db.Uuid
-  action      String   @db.VarChar(100)
-  entityType  String   @map("entity_type") @db.VarChar(100)
-  entityId    String?  @map("entity_id") @db.Uuid
-  
+  id         String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId     String? @map("user_id") @db.Uuid
+  action     String  @db.VarChar(100)
+  entityType String  @map("entity_type") @db.VarChar(100)
+  entityId   String? @map("entity_id") @db.Uuid
+
   // Change data
-  oldValues   Json?    @map("old_values")
-  newValues   Json?    @map("new_values")
-  
+  oldValues Json? @map("old_values")
+  newValues Json? @map("new_values")
+
   // Context
-  ipAddress   String?  @map("ip_address") @db.VarChar(45)
-  userAgent   String?  @map("user_agent") @db.VarChar(500)
-  metadata    Json     @default("{}")
-  
-  createdAt   DateTime @default(now()) @map("created_at")
+  ipAddress String? @map("ip_address") @db.VarChar(45)
+  userAgent String? @map("user_agent") @db.VarChar(500)
+  metadata  Json    @default("{}")
+
+  createdAt DateTime @default(now()) @map("created_at")
 
   user User? @relation("UserAuditLogs", fields: [userId], references: [id])
 
@@ -1130,53 +1594,53 @@ model AuditLog {
 // ============================================================================
 
 model Subscription {
-  id                    String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId                String              @map("user_id") @db.Uuid
-  tenantId              String?             @map("tenant_id") @db.Uuid
-  
-  // Stripe references
-  stripeSubscriptionId  String              @unique @map("stripe_subscription_id") @db.VarChar(100)
-  stripeCustomerId      String              @map("stripe_customer_id") @db.VarChar(100)
-  stripePriceId         String              @map("stripe_price_id") @db.VarChar(100)
-  stripeProductId       String?             @map("stripe_product_id") @db.VarChar(100)
-  
-  // Plan details
-  product               SubscriptionProduct
-  plan                  String              @db.VarChar(50) // 'starter', 'professional', 'enterprise'
-  billingInterval       BillingInterval     @map("billing_interval")
-  
-  // Status
-  status                SubscriptionStatus
-  trialEndsAt           DateTime?           @map("trial_ends_at")
-  currentPeriodStart    DateTime            @map("current_period_start")
-  currentPeriodEnd      DateTime            @map("current_period_end")
-  cancelAt              DateTime?           @map("cancel_at")
-  canceledAt            DateTime?           @map("canceled_at")
-  endedAt               DateTime?           @map("ended_at")
-  
-  // Pending changes (for scheduled downgrades)
-  pendingPlan           String?             @map("pending_plan") @db.VarChar(50)
-  pendingPriceId        String?             @map("pending_price_id") @db.VarChar(100)
-  pendingChangeAt       DateTime?           @map("pending_change_at")
-  
-  // Usage tracking (for SkillPod)
-  usageThisPeriod       Int                 @default(0) @map("usage_this_period") // minutes
-  usageLimit            Int?                @map("usage_limit") // minutes per period, null = unlimited
-  
-  // Pricing info (for display/history)
-  unitAmount            Int?                @map("unit_amount") // cents
-  currency              String              @default("usd") @db.VarChar(3)
-  
-  // Metadata
-  metadata              Json                @default("{}")
-  
-  createdAt             DateTime            @default(now()) @map("created_at")
-  updatedAt             DateTime            @updatedAt @map("updated_at")
+  id       String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId   String  @map("user_id") @db.Uuid
+  tenantId String? @map("tenant_id") @db.Uuid
 
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant                Tenant?             @relation(fields: [tenantId], references: [id])
-  subscriptionInvoices  SubscriptionInvoice[]
-  usageRecords          UsageRecord[]
+  // Stripe references
+  stripeSubscriptionId String  @unique @map("stripe_subscription_id") @db.VarChar(100)
+  stripeCustomerId     String  @map("stripe_customer_id") @db.VarChar(100)
+  stripePriceId        String  @map("stripe_price_id") @db.VarChar(100)
+  stripeProductId      String? @map("stripe_product_id") @db.VarChar(100)
+
+  // Plan details
+  product         SubscriptionProduct
+  plan            String              @db.VarChar(50) // 'starter', 'professional', 'enterprise'
+  billingInterval BillingInterval     @map("billing_interval")
+
+  // Status
+  status             SubscriptionStatus
+  trialEndsAt        DateTime?          @map("trial_ends_at")
+  currentPeriodStart DateTime           @map("current_period_start")
+  currentPeriodEnd   DateTime           @map("current_period_end")
+  cancelAt           DateTime?          @map("cancel_at")
+  canceledAt         DateTime?          @map("canceled_at")
+  endedAt            DateTime?          @map("ended_at")
+
+  // Pending changes (for scheduled downgrades)
+  pendingPlan     String?   @map("pending_plan") @db.VarChar(50)
+  pendingPriceId  String?   @map("pending_price_id") @db.VarChar(100)
+  pendingChangeAt DateTime? @map("pending_change_at")
+
+  // Usage tracking (for SkillPod)
+  usageThisPeriod Int  @default(0) @map("usage_this_period") // minutes
+  usageLimit      Int? @map("usage_limit") // minutes per period, null = unlimited
+
+  // Pricing info (for display/history)
+  unitAmount Int?   @map("unit_amount") // cents
+  currency   String @default("usd") @db.VarChar(3)
+
+  // Metadata
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant               Tenant?               @relation(fields: [tenantId], references: [id])
+  subscriptionInvoices SubscriptionInvoice[]
+  usageRecords         UsageRecord[]
 
   @@index([userId])
   @@index([tenantId])
@@ -1189,44 +1653,44 @@ model Subscription {
 }
 
 model SubscriptionInvoice {
-  id                    String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  subscriptionId        String              @map("subscription_id") @db.Uuid
-  stripeInvoiceId       String              @unique @map("stripe_invoice_id") @db.VarChar(100)
-  
-  // Invoice details
-  number                String?             @db.VarChar(100)
-  amountDue             Int                 @map("amount_due") // cents
-  amountPaid            Int                 @default(0) @map("amount_paid") // cents
-  amountRemaining       Int                 @default(0) @map("amount_remaining") // cents
-  subtotal              Int                 @default(0) // cents
-  tax                   Int                 @default(0) // cents
-  total                 Int                 @default(0) // cents
-  currency              String              @default("usd") @db.VarChar(3)
-  status                SubscriptionInvoiceStatus
-  
-  // Billing period
-  periodStart           DateTime            @map("period_start")
-  periodEnd             DateTime            @map("period_end")
-  
-  // URLs for customer access
-  pdfUrl                String?             @map("pdf_url") @db.VarChar(500)
-  hostedInvoiceUrl      String?             @map("hosted_invoice_url") @db.VarChar(500)
-  
-  // Line items (for detailed breakdown)
-  lineItems             Json                @default("[]") @map("line_items")
-  
-  // Payment info
-  attemptCount          Int                 @default(0) @map("attempt_count")
-  nextPaymentAttempt    DateTime?           @map("next_payment_attempt")
-  
-  // Timestamps
-  paidAt                DateTime?           @map("paid_at")
-  voidedAt              DateTime?           @map("voided_at")
-  dueDate               DateTime?           @map("due_date")
-  createdAt             DateTime            @default(now()) @map("created_at")
-  updatedAt             DateTime            @updatedAt @map("updated_at")
+  id              String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  subscriptionId  String @map("subscription_id") @db.Uuid
+  stripeInvoiceId String @unique @map("stripe_invoice_id") @db.VarChar(100)
 
-  subscription          Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  // Invoice details
+  number          String?                   @db.VarChar(100)
+  amountDue       Int                       @map("amount_due") // cents
+  amountPaid      Int                       @default(0) @map("amount_paid") // cents
+  amountRemaining Int                       @default(0) @map("amount_remaining") // cents
+  subtotal        Int                       @default(0) // cents
+  tax             Int                       @default(0) // cents
+  total           Int                       @default(0) // cents
+  currency        String                    @default("usd") @db.VarChar(3)
+  status          SubscriptionInvoiceStatus
+
+  // Billing period
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+
+  // URLs for customer access
+  pdfUrl           String? @map("pdf_url") @db.VarChar(500)
+  hostedInvoiceUrl String? @map("hosted_invoice_url") @db.VarChar(500)
+
+  // Line items (for detailed breakdown)
+  lineItems Json @default("[]") @map("line_items")
+
+  // Payment info
+  attemptCount       Int       @default(0) @map("attempt_count")
+  nextPaymentAttempt DateTime? @map("next_payment_attempt")
+
+  // Timestamps
+  paidAt    DateTime? @map("paid_at")
+  voidedAt  DateTime? @map("voided_at")
+  dueDate   DateTime? @map("due_date")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@index([subscriptionId])
   @@index([stripeInvoiceId])
@@ -1236,25 +1700,25 @@ model SubscriptionInvoice {
 }
 
 model UsageRecord {
-  id                    String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  subscriptionId        String              @map("subscription_id") @db.Uuid
-  
-  // Usage details
-  quantity              Int                 // minutes used
-  action                UsageAction         // 'increment' or 'set'
-  timestamp             DateTime
-  
-  // Metadata for tracking source
-  sessionId             String?             @map("session_id") @db.VarChar(100)
-  podId                 String?             @map("pod_id") @db.VarChar(100)
-  description           String?             @db.VarChar(500)
-  
-  // Stripe metered billing reference
-  stripeUsageRecordId   String?             @map("stripe_usage_record_id") @db.VarChar(100)
-  
-  createdAt             DateTime            @default(now()) @map("created_at")
+  id             String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  subscriptionId String @map("subscription_id") @db.Uuid
 
-  subscription          Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  // Usage details
+  quantity  Int // minutes used
+  action    UsageAction // 'increment' or 'set'
+  timestamp DateTime
+
+  // Metadata for tracking source
+  sessionId   String? @map("session_id") @db.VarChar(100)
+  podId       String? @map("pod_id") @db.VarChar(100)
+  description String? @db.VarChar(500)
+
+  // Stripe metered billing reference
+  stripeUsageRecordId String? @map("stripe_usage_record_id") @db.VarChar(100)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@index([subscriptionId])
   @@index([subscriptionId, timestamp])

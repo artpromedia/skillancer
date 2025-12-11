@@ -77,7 +77,8 @@ function liveHandler(_request: FastifyRequest, reply: FastifyReply): void {
 /**
  * Register health check routes
  */
-export function healthRoutes(fastify: FastifyInstance): void {
+export async function healthRoutes(fastify: FastifyInstance): Promise<void> {
+  await Promise.resolve();
   fastify.get(
     '/health',
     {

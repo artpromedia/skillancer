@@ -495,7 +495,8 @@ async function searchProfilesHandler(request: FastifyRequest, reply: FastifyRepl
 // ROUTE REGISTRATION
 // =============================================================================
 
-export function profileRoutes(fastify: FastifyInstance): void {
+export async function profileRoutes(fastify: FastifyInstance): Promise<void> {
+  await Promise.resolve();
   // =========================================================================
   // AUTHENTICATED PROFILE ROUTES
   // =========================================================================

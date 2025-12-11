@@ -3,6 +3,7 @@
  * Fastify application factory
  */
 
+import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import formBody from '@fastify/formbody';
 import helmet from '@fastify/helmet';
@@ -18,18 +19,25 @@ import { getConfig } from './config/index.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { rateLimitPlugin } from './middleware/rate-limit.js';
 import { authRoutes } from './routes/auth.js';
+import { clientProfileRoutes } from './routes/client-profile.js';
+import { freelancerProfileRoutes } from './routes/freelancer-profile.js';
 import { healthRoutes } from './routes/health.js';
 import { mfaRoutes } from './routes/mfa.js';
 import { oauthRoutes } from './routes/oauth.js';
 import { profileRoutes } from './routes/profile.js';
+import verificationRoutes from './routes/verification.js';
+import webhookRoutes from './routes/webhooks.js';
 import { initializeAuthService } from './services/auth.service.js';
 import { initializeAvatarService } from './services/avatar.service.js';
+import { initializeClientProfileService } from './services/client-profile.service.js';
+import { initializeFreelancerProfileService } from './services/freelancer-profile.service.js';
 import { initializeMfaService } from './services/mfa.service.js';
 import { initializeOAuthService } from './services/oauth.service.js';
 import { initializeProfileService } from './services/profile.service.js';
 import { initializeSessionService } from './services/session.service.js';
 import { initializeSkillsService } from './services/skills.service.js';
 import { initializeStepUpService } from './services/step-up-auth.service.js';
+import { initializeTrustedDevicesService } from './services/trusted-devices.service.js';
 
 import type { Redis } from 'ioredis';
 
@@ -118,6 +126,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   // Sensible defaults (error utilities)
   await app.register(sensible);
 
+  // Cookie support (for trusted devices)
+  await app.register(cookie, {
+    secret: config.jwt.secret, // Use JWT secret for cookie signing
+    parseOptions: {}, // default cookie parsing options
+  });
+
   // Form body parser (for OAuth callbacks)
   await app.register(formBody);
 
@@ -141,7 +155,10 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   initializeOAuthService(redis);
   initializeMfaService(redis);
   initializeStepUpService(redis);
+  initializeTrustedDevicesService(redis);
   initializeProfileService(redis);
+  initializeFreelancerProfileService(redis);
+  initializeClientProfileService(redis);
   initializeAvatarService();
   initializeSkillsService();
 
@@ -163,6 +180,18 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Profile routes (includes /profile, /profiles, /skills)
   await app.register(profileRoutes);
+
+  // Freelancer profile routes (/freelancer prefix)
+  await app.register(freelancerProfileRoutes, { prefix: '/freelancer' });
+
+  // Client profile routes (/client prefix)
+  await app.register(clientProfileRoutes, { prefix: '/client' });
+
+  // Verification routes (/verification prefix)
+  await app.register(verificationRoutes, { prefix: '/verification' });
+
+  // Webhook routes (/webhooks prefix)
+  await app.register(webhookRoutes, { prefix: '/webhooks' });
 
   return app;
 }
