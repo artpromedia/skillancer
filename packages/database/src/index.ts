@@ -24,10 +24,6 @@ export type {
   SkillLevel,
   Skill,
   PortfolioItem,
-  WorkHistory,
-  Education,
-  Certification,
-  TrustedDevice,
   Tenant,
   TenantMember,
   TenantPlan,
@@ -80,19 +76,9 @@ export type {
   SubscriptionInvoiceStatus,
   UsageRecord,
   UsageAction,
-  // Profile types
-  FreelancerProfile,
-  ClientProfile,
 } from '@prisma/client';
 
-// Prisma namespace for types like JsonValue
-// export { Prisma } from '@prisma/client';
+// Prisma namespace is already exported via client.ts
 
 // Enums (re-exported from Prisma - using value import for runtime access)
-export {
-  MfaMethod,
-  FreelancerAvailability,
-  CompanySize,
-  HiringFrequency,
-  JobType,
-} from '@prisma/client';
+export { MfaMethod } from '@prisma/client';
