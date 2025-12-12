@@ -1659,3 +1659,63 @@ enum UsageAction {
   INCREMENT
   SET
 }
+
+// ============================================================================
+// AUDIT LOGGING (Analytics & Export tracked in PostgreSQL)
+// ============================================================================
+
+model AuditAnalytics {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+  metricType  String   @map("metric_type") @db.VarChar(100)
+  dimensions  Json     @default("{}")
+  value       Decimal  @db.Decimal(20, 4)
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([metricType])
+  @@index([periodStart, periodEnd])
+  @@index([metricType, periodStart])
+  @@map("audit_analytics")
+}
+
+model AuditExport {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  status        String    @db.VarChar(50)
+  requestedBy   String    @map("requested_by") @db.VarChar(100)
+  filters       Json      @default("{}")
+  format        String    @db.VarChar(20)
+  includeFields String[]  @map("include_fields")
+  fileUrl       String?   @map("file_url") @db.VarChar(500)
+  fileSize      Int?      @map("file_size")
+  recordCount   Int?      @map("record_count")
+  errorMessage  String?   @map("error_message") @db.Text
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  expiresAt     DateTime? @map("expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([status])
+  @@index([requestedBy])
+  @@index([createdAt])
+  @@map("audit_exports")
+}
+
+model AuditBaseline {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  actorId      String   @map("actor_id") @db.VarChar(100)
+  eventType    String   @map("event_type") @db.VarChar(100)
+  avgCount     Decimal  @map("avg_count") @db.Decimal(10, 2)
+  stdDev       Decimal  @map("std_dev") @db.Decimal(10, 2)
+  minCount     Int      @map("min_count")
+  maxCount     Int      @map("max_count")
+  sampleSize   Int      @map("sample_size")
+  calculatedAt DateTime @default(now()) @map("calculated_at")
+
+  @@unique([actorId, eventType])
+  @@index([actorId])
+  @@index([eventType])
+  @@map("audit_baselines")
+}
+
