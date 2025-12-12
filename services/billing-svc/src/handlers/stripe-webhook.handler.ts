@@ -3,12 +3,13 @@
  * Stripe webhook event handlers
  */
 
-import type Stripe from 'stripe';
 import { prisma } from '@skillancer/database';
 
-import { getStripeService } from '../services/stripe.service.js';
 import { getPaymentMethodService } from '../services/payment-method.service.js';
+import { getStripeService } from '../services/stripe.service.js';
 import { getSubscriptionService } from '../services/subscription.service.js';
+
+import type Stripe from 'stripe';
 
 // =============================================================================
 // HELPERS
@@ -17,12 +18,13 @@ import { getSubscriptionService } from '../services/subscription.service.js';
 /**
  * Remove undefined values from object (for Prisma exactOptionalPropertyTypes)
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function stripUndefined<T extends Record<string, unknown>>(obj: T): any {
-  const result: Record<string, unknown> = {};
+function stripUndefined<T extends Record<string, unknown>>(
+  obj: T
+): { [K in keyof T]: Exclude<T[K], undefined> } {
+  const result = {} as { [K in keyof T]: Exclude<T[K], undefined> };
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {
-      result[key] = value;
+      (result as Record<string, unknown>)[key] = value;
     }
   }
   return result;
@@ -50,67 +52,91 @@ export async function handleStripeWebhook(event: Stripe.Event): Promise<WebhookH
   switch (event.type) {
     // Payment Method Events
     case 'payment_method.attached':
-      return handlePaymentMethodAttached(event.data.object as Stripe.PaymentMethod);
+      return handlePaymentMethodAttached(event.data.object);
 
     case 'payment_method.detached':
-      return handlePaymentMethodDetached(event.data.object as Stripe.PaymentMethod);
+      return handlePaymentMethodDetached(event.data.object);
 
     case 'payment_method.updated':
-      return handlePaymentMethodUpdated(event.data.object as Stripe.PaymentMethod);
+      return handlePaymentMethodUpdated(event.data.object);
 
     case 'payment_method.automatically_updated':
-      return handlePaymentMethodAutoUpdated(event.data.object as Stripe.PaymentMethod);
+      return handlePaymentMethodAutoUpdated(event.data.object);
 
     // Customer Events
     case 'customer.updated':
-      return handleCustomerUpdated(event.data.object as Stripe.Customer);
+      return handleCustomerUpdated(event.data.object);
 
     case 'customer.deleted':
-      return handleCustomerDeleted(event.data.object as Stripe.Customer);
+      return handleCustomerDeleted(event.data.object);
 
     // Setup Intent Events
     case 'setup_intent.succeeded':
-      return handleSetupIntentSucceeded(event.data.object as Stripe.SetupIntent);
+      return handleSetupIntentSucceeded(event.data.object);
 
     case 'setup_intent.setup_failed':
-      return handleSetupIntentFailed(event.data.object as Stripe.SetupIntent);
+      return handleSetupIntentFailed(event.data.object);
 
     // Source/Card Expiring (legacy but still sent)
     case 'customer.source.expiring':
       return handleSourceExpiring(event.data.object);
 
+    // Payment Intent Events
+    case 'payment_intent.succeeded':
+      return handlePaymentIntentSucceeded(event.data.object);
+
+    case 'payment_intent.payment_failed':
+      return handlePaymentIntentFailed(event.data.object);
+
+    // Charge Events
+    case 'charge.refunded':
+      return handleChargeRefunded(event.data.object);
+
+    // Connect Account Events
+    case 'account.updated':
+      return handleConnectAccountUpdated(event.data.object);
+
+    // Transfer Events (eslint incorrectly flags these due to Stripe's event typing)
+    /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/no-unsafe-member-access */
+    case 'transfer.created':
+      return handleTransferCreated(event.data.object as Stripe.Transfer);
+
+    case 'transfer.failed':
+      return handleTransferFailed(event.data.object as Stripe.Transfer);
+    /* eslint-enable @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/no-unsafe-member-access */
+
     // Subscription Events
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
-      return handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+      return handleSubscriptionUpdated(event.data.object);
 
     case 'customer.subscription.deleted':
-      return handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+      return handleSubscriptionDeleted(event.data.object);
 
     case 'customer.subscription.trial_will_end':
-      return handleTrialWillEnd(event.data.object as Stripe.Subscription);
+      return handleTrialWillEnd(event.data.object);
 
     case 'customer.subscription.paused':
     case 'customer.subscription.resumed':
-      return handleSubscriptionStatusChange(event.data.object as Stripe.Subscription);
+      return handleSubscriptionStatusChange(event.data.object);
 
     // Invoice Events
     case 'invoice.created':
     case 'invoice.updated':
     case 'invoice.finalized':
-      return handleInvoiceUpdated(event.data.object as Stripe.Invoice);
+      return handleInvoiceUpdated(event.data.object);
 
     case 'invoice.paid':
-      return handleInvoicePaid(event.data.object as Stripe.Invoice);
+      return handleInvoicePaid(event.data.object);
 
     case 'invoice.payment_failed':
-      return handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+      return handleInvoicePaymentFailed(event.data.object);
 
     case 'invoice.voided':
-      return handleInvoiceVoided(event.data.object as Stripe.Invoice);
+      return handleInvoiceVoided(event.data.object);
 
     case 'invoice.upcoming':
-      return handleInvoiceUpcoming(event.data.object as Stripe.Invoice);
+      return handleInvoiceUpcoming(event.data.object);
 
     default:
       console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
@@ -841,4 +867,245 @@ function sendUpcomingChargeNotification(userId: string, invoice: Stripe.Invoice)
     currency: invoice.currency,
     dueDate: invoice.due_date ? new Date(invoice.due_date * 1000).toISOString() : null,
   });
+}
+
+// =============================================================================
+// PAYMENT INTENT HANDLERS
+// =============================================================================
+
+/**
+ * Handle payment intent succeeded
+ */
+async function handlePaymentIntentSucceeded(
+  paymentIntent: Stripe.PaymentIntent
+): Promise<WebhookHandlerResult> {
+  try {
+    // Update transaction if we have one
+    const transaction = await prisma.paymentTransaction.findUnique({
+      where: { stripePaymentIntentId: paymentIntent.id },
+    });
+
+    if (transaction) {
+      await prisma.paymentTransaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'SUCCEEDED',
+          stripeChargeId:
+            typeof paymentIntent.latest_charge === 'string'
+              ? paymentIntent.latest_charge
+              : paymentIntent.latest_charge?.id,
+          processedAt: new Date(),
+        },
+      });
+
+      console.log(
+        `[Stripe Webhook] Payment intent ${paymentIntent.id} succeeded for transaction ${transaction.id}`
+      );
+    } else {
+      console.log(
+        `[Stripe Webhook] Payment intent ${paymentIntent.id} succeeded (no matching transaction)`
+      );
+    }
+
+    return { handled: true, message: 'Payment intent succeeded processed' };
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error processing payment intent succeeded:`, error);
+    return { handled: false, message: 'Failed to process payment intent succeeded' };
+  }
+}
+
+/**
+ * Handle payment intent failed
+ */
+async function handlePaymentIntentFailed(
+  paymentIntent: Stripe.PaymentIntent
+): Promise<WebhookHandlerResult> {
+  try {
+    const transaction = await prisma.paymentTransaction.findUnique({
+      where: { stripePaymentIntentId: paymentIntent.id },
+    });
+
+    if (transaction) {
+      await prisma.paymentTransaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'FAILED',
+          failureCode: paymentIntent.last_payment_error?.code ?? 'payment_failed',
+          failureMessage: paymentIntent.last_payment_error?.message ?? 'Payment failed',
+        },
+      });
+
+      console.log(
+        `[Stripe Webhook] Payment intent ${paymentIntent.id} failed for transaction ${transaction.id}`
+      );
+    }
+
+    return { handled: true, message: 'Payment intent failed processed' };
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error processing payment intent failed:`, error);
+    return { handled: false, message: 'Failed to process payment intent failed' };
+  }
+}
+
+/**
+ * Handle charge refunded
+ */
+async function handleChargeRefunded(charge: Stripe.Charge): Promise<WebhookHandlerResult> {
+  try {
+    const paymentIntentId =
+      typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
+
+    const transaction = await prisma.paymentTransaction.findFirst({
+      where: {
+        OR: [{ stripeChargeId: charge.id }, { stripePaymentIntentId: paymentIntentId }].filter(
+          Boolean
+        ),
+      },
+    });
+
+    if (transaction) {
+      const isFullRefund = charge.amount_refunded === charge.amount;
+
+      await prisma.paymentTransaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: isFullRefund ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+        },
+      });
+
+      console.log(`[Stripe Webhook] Charge ${charge.id} refunded (full: ${isFullRefund})`);
+    }
+
+    return { handled: true, message: 'Charge refunded processed' };
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error processing charge refunded:`, error);
+    return { handled: false, message: 'Failed to process charge refunded' };
+  }
+}
+
+// =============================================================================
+// CONNECT ACCOUNT HANDLERS
+// =============================================================================
+
+/**
+ * Handle Connect account updated
+ */
+async function handleConnectAccountUpdated(account: Stripe.Account): Promise<WebhookHandlerResult> {
+  try {
+    const payoutAccount = await prisma.payoutAccount.findUnique({
+      where: { stripeConnectAccountId: account.id },
+    });
+
+    if (!payoutAccount) {
+      console.log(`[Stripe Webhook] No payout account found for Stripe account ${account.id}`);
+      return { handled: true, message: 'No matching payout account' };
+    }
+
+    // Determine status
+    let status: 'PENDING' | 'ONBOARDING' | 'ACTIVE' | 'RESTRICTED' | 'DISABLED' = 'PENDING';
+    if (account.requirements?.disabled_reason) {
+      status = 'DISABLED';
+    } else if (account.requirements?.past_due?.length) {
+      status = 'RESTRICTED';
+    } else if (account.payouts_enabled && account.charges_enabled) {
+      status = 'ACTIVE';
+    } else if (account.details_submitted) {
+      status = 'ONBOARDING';
+    }
+
+    // Extract external account info
+    const updateData: Record<string, unknown> = {
+      status,
+      detailsSubmitted: account.details_submitted,
+      chargesEnabled: account.charges_enabled,
+      payoutsEnabled: account.payouts_enabled,
+      currentlyDue: account.requirements?.currently_due ?? [],
+      eventuallyDue: account.requirements?.eventually_due ?? [],
+      pastDue: account.requirements?.past_due ?? [],
+      country: account.country,
+      businessType: account.business_type,
+    };
+
+    if (account.external_accounts?.data?.[0]) {
+      const extAccount = account.external_accounts.data[0];
+      if (extAccount.object === 'bank_account') {
+        updateData.externalAccountType = 'bank_account';
+        updateData.externalAccountLast4 = extAccount.last4;
+        updateData.externalAccountBank = extAccount.bank_name;
+      }
+    }
+
+    if (account.settings?.payouts?.schedule) {
+      updateData.payoutSchedule = account.settings.payouts.schedule;
+    }
+
+    await prisma.payoutAccount.update({
+      where: { id: payoutAccount.id },
+      data: updateData,
+    });
+
+    console.log(`[Stripe Webhook] Connect account ${account.id} updated to status ${status}`);
+    return { handled: true, message: 'Connect account updated' };
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error processing Connect account update:`, error);
+    return { handled: false, message: 'Failed to process Connect account update' };
+  }
+}
+
+/**
+ * Handle transfer created
+ */
+async function handleTransferCreated(transfer: Stripe.Transfer): Promise<WebhookHandlerResult> {
+  try {
+    const payout = await prisma.payout.findUnique({
+      where: { stripeTransferId: transfer.id },
+    });
+
+    if (payout) {
+      await prisma.payout.update({
+        where: { id: payout.id },
+        data: {
+          status: 'IN_TRANSIT',
+          processedAt: new Date(),
+        },
+      });
+
+      console.log(`[Stripe Webhook] Transfer ${transfer.id} created`);
+    }
+
+    return { handled: true, message: 'Transfer created processed' };
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error processing transfer created:`, error);
+    return { handled: false, message: 'Failed to process transfer created' };
+  }
+}
+
+/**
+ * Handle transfer failed
+ */
+async function handleTransferFailed(transfer: Stripe.Transfer): Promise<WebhookHandlerResult> {
+  try {
+    const payout = await prisma.payout.findUnique({
+      where: { stripeTransferId: transfer.id },
+    });
+
+    if (payout) {
+      await prisma.payout.update({
+        where: { id: payout.id },
+        data: {
+          status: 'FAILED',
+          // Transfer failures are usually due to destination account issues
+          failureCode: 'transfer_failed',
+          failureMessage: 'Transfer to destination account failed',
+        },
+      });
+
+      console.log(`[Stripe Webhook] Transfer ${transfer.id} failed`);
+    }
+
+    return { handled: true, message: 'Transfer failed processed' };
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error processing transfer failed:`, error);
+    return { handled: false, message: 'Failed to process transfer failed' };
+  }
 }

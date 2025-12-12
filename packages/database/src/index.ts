@@ -81,6 +81,18 @@ export type {
   AuditLog,
   UserMfa,
   MfaChallenge,
+  // Product and Pricing types
+  Product,
+  ProductType,
+  Price,
+  PriceBillingInterval,
+  PriceTier,
+  PriceUsageType,
+  // Coupon types
+  Coupon,
+  CouponDiscountType,
+  CouponDuration,
+  CouponRedemption,
   // Subscription types
   Subscription,
   SubscriptionProduct,
@@ -90,6 +102,15 @@ export type {
   SubscriptionInvoiceStatus,
   UsageRecord,
   UsageAction,
+  // Payout and Transaction types
+  PayoutAccount,
+  PayoutAccountType,
+  PayoutAccountStatus,
+  PaymentTransaction,
+  TransactionType,
+  TransactionStatus,
+  Payout,
+  PayoutStatus,
 } from '@prisma/client';
 
 // Prisma namespace is already exported via client.ts

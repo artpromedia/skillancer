@@ -3,8 +3,8 @@
  * Stripe API integration service
  */
 
-import Stripe from 'stripe';
 import { prisma } from '@skillancer/database';
+import Stripe from 'stripe';
 
 import { getConfig } from '../config/index.js';
 import { StripeError, StripeWebhookError, StripeCustomerNotFoundError } from '../errors/index.js';
@@ -599,6 +599,498 @@ export class StripeService {
   async voidInvoice(invoiceId: string): Promise<Stripe.Invoice> {
     try {
       return await this.stripe.invoices.voidInvoice(invoiceId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Preview upcoming invoice (for proration preview)
+   * Shows what the next invoice will look like with proposed changes
+   */
+  async previewUpcomingInvoice(
+    customerId: string,
+    subscriptionId: string,
+    subscriptionItems?: Array<{
+      id?: string;
+      price?: string;
+      quantity?: number;
+      deleted?: boolean;
+    }>,
+    prorationDate?: Date
+  ): Promise<Stripe.UpcomingInvoice> {
+    try {
+      const params: Stripe.InvoiceRetrieveUpcomingParams = {
+        customer: customerId,
+        subscription: subscriptionId,
+      };
+
+      if (subscriptionItems) {
+        params.subscription_items = subscriptionItems.map((item) => {
+          const itemParams: Stripe.InvoiceRetrieveUpcomingParams.SubscriptionItem = {};
+          if (item.id) itemParams.id = item.id;
+          if (item.price) itemParams.price = item.price;
+          if (item.quantity !== undefined) itemParams.quantity = item.quantity;
+          if (item.deleted !== undefined) itemParams.deleted = item.deleted;
+          return itemParams;
+        });
+      }
+
+      if (prorationDate) {
+        params.subscription_proration_date = Math.floor(prorationDate.getTime() / 1000);
+      }
+
+      return await this.stripe.invoices.retrieveUpcoming(params);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Create an invoice item (for one-time charges)
+   */
+  async createInvoiceItem(params: {
+    customerId: string;
+    amount: number;
+    currency: string;
+    description?: string;
+    subscriptionId?: string;
+    metadata?: Record<string, string>;
+  }): Promise<Stripe.InvoiceItem> {
+    try {
+      const itemParams: Stripe.InvoiceItemCreateParams = {
+        customer: params.customerId,
+        amount: Math.round(params.amount * 100),
+        currency: params.currency.toLowerCase(),
+      };
+      if (params.description) itemParams.description = params.description;
+      if (params.subscriptionId) itemParams.subscription = params.subscriptionId;
+      if (params.metadata) itemParams.metadata = params.metadata;
+
+      return await this.stripe.invoiceItems.create(itemParams);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  // ===========================================================================
+  // COUPONS & PROMOTIONS
+  // ===========================================================================
+
+  /**
+   * Create a coupon
+   */
+  async createCoupon(params: {
+    id?: string;
+    name: string;
+    percentOff?: number;
+    amountOff?: number;
+    currency?: string;
+    duration: 'forever' | 'once' | 'repeating';
+    durationInMonths?: number;
+    maxRedemptions?: number;
+    metadata?: Record<string, string>;
+  }): Promise<Stripe.Coupon> {
+    try {
+      const couponParams: Stripe.CouponCreateParams = {
+        name: params.name,
+        duration: params.duration,
+      };
+      if (params.id) couponParams.id = params.id;
+      if (params.percentOff) couponParams.percent_off = params.percentOff;
+      if (params.amountOff && params.currency) {
+        couponParams.amount_off = Math.round(params.amountOff * 100);
+        couponParams.currency = params.currency.toLowerCase();
+      }
+      if (params.duration === 'repeating' && params.durationInMonths) {
+        couponParams.duration_in_months = params.durationInMonths;
+      }
+      if (params.maxRedemptions) couponParams.max_redemptions = params.maxRedemptions;
+      if (params.metadata) couponParams.metadata = params.metadata;
+
+      return await this.stripe.coupons.create(couponParams);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Get a coupon by ID
+   */
+  async getCoupon(couponId: string): Promise<Stripe.Coupon> {
+    try {
+      return await this.stripe.coupons.retrieve(couponId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Delete a coupon
+   */
+  async deleteCoupon(couponId: string): Promise<Stripe.DeletedCoupon> {
+    try {
+      return await this.stripe.coupons.del(couponId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Create a promotion code for a coupon
+   */
+  async createPromotionCode(params: {
+    couponId: string;
+    code: string;
+    active?: boolean;
+    maxRedemptions?: number;
+    expiresAt?: Date;
+    firstTimeTransaction?: boolean;
+    metadata?: Record<string, string>;
+  }): Promise<Stripe.PromotionCode> {
+    try {
+      const promoParams: Stripe.PromotionCodeCreateParams = {
+        coupon: params.couponId,
+        code: params.code,
+      };
+      if (params.active !== undefined) promoParams.active = params.active;
+      if (params.maxRedemptions) promoParams.max_redemptions = params.maxRedemptions;
+      if (params.expiresAt) {
+        promoParams.expires_at = Math.floor(params.expiresAt.getTime() / 1000);
+      }
+      if (params.firstTimeTransaction !== undefined) {
+        promoParams.restrictions = {
+          first_time_transaction: params.firstTimeTransaction,
+        };
+      }
+      if (params.metadata) promoParams.metadata = params.metadata;
+
+      return await this.stripe.promotionCodes.create(promoParams);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Retrieve a promotion code by code string
+   */
+  async getPromotionCodeByCode(code: string): Promise<Stripe.PromotionCode | null> {
+    try {
+      const promotionCodes = await this.stripe.promotionCodes.list({
+        code,
+        limit: 1,
+      });
+      return promotionCodes.data[0] ?? null;
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Apply a promotion code to a subscription
+   */
+  async applyPromotionCode(
+    subscriptionId: string,
+    promotionCodeId: string
+  ): Promise<Stripe.Subscription> {
+    try {
+      return await this.stripe.subscriptions.update(subscriptionId, {
+        promotion_code: promotionCodeId,
+      });
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  // ===========================================================================
+  // CONNECT ACCOUNTS (Payouts)
+  // ===========================================================================
+
+  /**
+   * Create a Stripe Connect account for payouts
+   */
+  async createConnectAccount(params: {
+    email: string;
+    country: string;
+    type?: 'express' | 'standard' | 'custom';
+    businessType?: 'individual' | 'company';
+    metadata?: Record<string, string>;
+  }): Promise<Stripe.Account> {
+    try {
+      return await this.stripe.accounts.create({
+        type: params.type ?? 'express',
+        country: params.country,
+        email: params.email,
+        business_type: params.businessType ?? 'individual',
+        capabilities: {
+          transfers: { requested: true },
+        },
+        metadata: params.metadata,
+      });
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Get a Connect account by ID
+   */
+  async getConnectAccount(accountId: string): Promise<Stripe.Account> {
+    try {
+      return await this.stripe.accounts.retrieve(accountId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Create an account link for onboarding
+   */
+  async createAccountLink(params: {
+    accountId: string;
+    refreshUrl: string;
+    returnUrl: string;
+    type?: 'account_onboarding' | 'account_update';
+  }): Promise<Stripe.AccountLink> {
+    try {
+      return await this.stripe.accountLinks.create({
+        account: params.accountId,
+        refresh_url: params.refreshUrl,
+        return_url: params.returnUrl,
+        type: params.type ?? 'account_onboarding',
+      });
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Create a login link for Express dashboard access
+   */
+  async createLoginLink(accountId: string): Promise<Stripe.LoginLink> {
+    try {
+      return await this.stripe.accounts.createLoginLink(accountId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Update a Connect account
+   */
+  async updateConnectAccount(
+    accountId: string,
+    params: Stripe.AccountUpdateParams
+  ): Promise<Stripe.Account> {
+    try {
+      return await this.stripe.accounts.update(accountId, params);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Delete a Connect account
+   */
+  async deleteConnectAccount(accountId: string): Promise<Stripe.DeletedAccount> {
+    try {
+      return await this.stripe.accounts.del(accountId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  // ===========================================================================
+  // TRANSFERS (Payouts to Connect Accounts)
+  // ===========================================================================
+
+  /**
+   * Create a transfer to a Connect account
+   */
+  async createTransfer(params: {
+    amount: number;
+    currency: string;
+    destinationAccountId: string;
+    description?: string;
+    metadata?: Record<string, string>;
+    sourceTransaction?: string;
+  }): Promise<Stripe.Transfer> {
+    try {
+      const transferParams: Stripe.TransferCreateParams = {
+        amount: Math.round(params.amount * 100), // Convert to cents
+        currency: params.currency.toLowerCase(),
+        destination: params.destinationAccountId,
+      };
+      if (params.description) transferParams.description = params.description;
+      if (params.metadata) transferParams.metadata = params.metadata;
+      if (params.sourceTransaction) transferParams.source_transaction = params.sourceTransaction;
+
+      return await this.stripe.transfers.create(transferParams);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Get a transfer by ID
+   */
+  async getTransfer(transferId: string): Promise<Stripe.Transfer> {
+    try {
+      return await this.stripe.transfers.retrieve(transferId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * List transfers
+   */
+  async listTransfers(params?: {
+    destination?: string;
+    limit?: number;
+    startingAfter?: string;
+  }): Promise<Stripe.Transfer[]> {
+    try {
+      const listParams: Stripe.TransferListParams = {
+        limit: params?.limit ?? 10,
+      };
+      if (params?.destination) listParams.destination = params.destination;
+      if (params?.startingAfter) listParams.starting_after = params.startingAfter;
+
+      const response = await this.stripe.transfers.list(listParams);
+      return response.data;
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Create a transfer reversal (claw back funds)
+   */
+  async reverseTransfer(
+    transferId: string,
+    amount?: number,
+    metadata?: Record<string, string>
+  ): Promise<Stripe.TransferReversal> {
+    try {
+      const params: Stripe.TransferReversalCreateParams = {};
+      if (amount !== undefined) params.amount = Math.round(amount * 100);
+      if (metadata) params.metadata = metadata;
+
+      return await this.stripe.transfers.createReversal(transferId, params);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  // ===========================================================================
+  // PAYMENT INTENTS
+  // ===========================================================================
+
+  /**
+   * Create a payment intent
+   */
+  async createPaymentIntent(params: {
+    amount: number;
+    currency: string;
+    customerId: string;
+    paymentMethodId: string;
+    description?: string;
+    metadata?: Record<string, string>;
+    captureMethod?: 'automatic' | 'manual';
+    confirm?: boolean;
+  }): Promise<Stripe.PaymentIntent> {
+    try {
+      const intentParams: Stripe.PaymentIntentCreateParams = {
+        amount: Math.round(params.amount * 100),
+        currency: params.currency.toLowerCase(),
+        customer: params.customerId,
+        payment_method: params.paymentMethodId,
+        capture_method: params.captureMethod ?? 'automatic',
+        confirm: params.confirm ?? true,
+        off_session: true,
+      };
+      if (params.description) intentParams.description = params.description;
+      if (params.metadata) intentParams.metadata = params.metadata;
+
+      return await this.stripe.paymentIntents.create(intentParams);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Retrieve a payment intent
+   */
+  async getPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
+    try {
+      return await this.stripe.paymentIntents.retrieve(paymentIntentId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Capture a payment intent (for manual capture)
+   */
+  async capturePaymentIntent(
+    paymentIntentId: string,
+    amount?: number
+  ): Promise<Stripe.PaymentIntent> {
+    try {
+      const params: Stripe.PaymentIntentCaptureParams = {};
+      if (amount !== undefined) params.amount_to_capture = Math.round(amount * 100);
+
+      return await this.stripe.paymentIntents.capture(paymentIntentId, params);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Cancel a payment intent
+   */
+  async cancelPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
+    try {
+      return await this.stripe.paymentIntents.cancel(paymentIntentId);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  // ===========================================================================
+  // REFUNDS
+  // ===========================================================================
+
+  /**
+   * Create a refund
+   */
+  async createRefund(params: {
+    paymentIntentId: string;
+    amount?: number;
+    reason?: 'requested_by_customer' | 'duplicate' | 'fraudulent';
+    metadata?: Record<string, string>;
+  }): Promise<Stripe.Refund> {
+    try {
+      const refundParams: Stripe.RefundCreateParams = {
+        payment_intent: params.paymentIntentId,
+      };
+      if (params.amount !== undefined) refundParams.amount = Math.round(params.amount * 100);
+      if (params.reason) refundParams.reason = params.reason;
+      if (params.metadata) refundParams.metadata = params.metadata;
+
+      return await this.stripe.refunds.create(refundParams);
+    } catch (error) {
+      throw this.handleStripeError(error);
+    }
+  }
+
+  /**
+   * Get a refund by ID
+   */
+  async getRefund(refundId: string): Promise<Stripe.Refund> {
+    try {
+      return await this.stripe.refunds.retrieve(refundId);
     } catch (error) {
       throw this.handleStripeError(error);
     }

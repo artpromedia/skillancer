@@ -71,6 +71,8 @@ model User {
   mfa                   UserMfa?
   profile               UserProfile?
   UserBadge             UserBadge[]
+  payoutAccount         PayoutAccount?
+  paymentTransactions   PaymentTransaction[]
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -885,14 +887,200 @@ model PaymentMethod {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payments Payment[]
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments     Payment[]
+  transactions PaymentTransaction[]
 
   @@index([userId])
   @@index([stripeCustomerId])
   @@index([status])
   @@index([cardExpYear, cardExpMonth])
   @@map("payment_methods")
+}
+
+// ============================================================================
+// PAYOUT ACCOUNT (Stripe Connect)
+// ============================================================================
+
+model PayoutAccount {
+  id                     String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                 String              @unique @map("user_id") @db.Uuid
+  stripeConnectAccountId String?             @unique @map("stripe_connect_account_id") @db.VarChar(100)
+
+  // Account type
+  accountType PayoutAccountType @default(EXPRESS) @map("account_type")
+
+  // Status
+  status PayoutAccountStatus @default(PENDING)
+
+  // Verification
+  detailsSubmitted Boolean @default(false) @map("details_submitted")
+  chargesEnabled   Boolean @default(false) @map("charges_enabled")
+  payoutsEnabled   Boolean @default(false) @map("payouts_enabled")
+
+  // Requirements (JSON arrays)
+  currentlyDue  String[] @default([]) @map("currently_due")
+  eventuallyDue String[] @default([]) @map("eventually_due")
+  pastDue       String[] @default([]) @map("past_due")
+
+  // Payout settings
+  defaultCurrency String @default("USD") @map("default_currency") @db.VarChar(3)
+  payoutSchedule  Json?  @map("payout_schedule")
+
+  // Business info
+  country      String? @db.VarChar(2)
+  businessType String? @map("business_type") @db.VarChar(50)
+
+  // External account (bank) info for display
+  externalAccountType   String? @map("external_account_type") @db.VarChar(20)
+  externalAccountLast4  String? @map("external_account_last4") @db.VarChar(4)
+  externalAccountBank   String? @map("external_account_bank") @db.VarChar(100)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payouts Payout[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("payout_accounts")
+}
+
+enum PayoutAccountType {
+  EXPRESS  // Stripe-hosted onboarding
+  STANDARD // Full Stripe dashboard access
+  CUSTOM   // Full API control
+}
+
+enum PayoutAccountStatus {
+  PENDING     // Not yet onboarded
+  ONBOARDING  // In progress
+  ACTIVE      // Can receive payouts
+  RESTRICTED  // Action required
+  DISABLED    // Cannot receive payouts
+}
+
+// ============================================================================
+// PAYOUT (Transfer to Connect Account)
+// ============================================================================
+
+model Payout {
+  id              String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  payoutAccountId String @map("payout_account_id") @db.Uuid
+
+  // Stripe references
+  stripeTransferId String? @unique @map("stripe_transfer_id") @db.VarChar(100)
+  stripePayoutId   String? @map("stripe_payout_id") @db.VarChar(100)
+
+  // Amount
+  amount   Decimal      @db.Decimal(12, 2)
+  currency String       @default("USD") @db.VarChar(3)
+  status   PayoutStatus @default(PENDING)
+
+  // Reference to what this payout is for
+  referenceType String? @map("reference_type") @db.VarChar(50)
+  referenceId   String? @map("reference_id") @db.Uuid
+
+  // Description
+  description String? @db.VarChar(500)
+
+  // Error info
+  failureCode    String? @map("failure_code") @db.VarChar(50)
+  failureMessage String? @map("failure_message") @db.VarChar(500)
+
+  // Timestamps
+  processedAt DateTime? @map("processed_at")
+  arrivedAt   DateTime? @map("arrived_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  payoutAccount PayoutAccount @relation(fields: [payoutAccountId], references: [id])
+
+  @@index([payoutAccountId])
+  @@index([status])
+  @@index([referenceType, referenceId])
+  @@map("payouts")
+}
+
+enum PayoutStatus {
+  PENDING
+  IN_TRANSIT
+  PAID
+  FAILED
+  CANCELED
+}
+
+// ============================================================================
+// PAYMENT TRANSACTION
+// ============================================================================
+
+model PaymentTransaction {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // Stripe references
+  stripePaymentIntentId String? @unique @map("stripe_payment_intent_id") @db.VarChar(100)
+  stripeChargeId        String? @map("stripe_charge_id") @db.VarChar(100)
+  paymentMethodId       String? @map("payment_method_id") @db.Uuid
+
+  // Transaction details
+  type   TransactionType   @default(PAYMENT)
+  status TransactionStatus @default(PENDING)
+
+  // Amounts (in smallest currency unit stored as decimal)
+  amount      Decimal  @db.Decimal(12, 2)
+  currency    String   @default("USD") @db.VarChar(3)
+  platformFee Decimal? @map("platform_fee") @db.Decimal(12, 2)
+  stripeFee   Decimal? @map("stripe_fee") @db.Decimal(12, 2)
+  netAmount   Decimal? @map("net_amount") @db.Decimal(12, 2)
+
+  // Reference to what this payment is for
+  referenceType String? @map("reference_type") @db.VarChar(50) // 'subscription', 'contract', 'escrow'
+  referenceId   String? @map("reference_id") @db.Uuid
+
+  // Description and metadata
+  description String? @db.VarChar(500)
+  metadata    Json?
+
+  // Error handling
+  failureCode    String? @map("failure_code") @db.VarChar(50)
+  failureMessage String? @map("failure_message") @db.VarChar(500)
+
+  // Timestamps
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user          User           @relation(fields: [userId], references: [id])
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([referenceType, referenceId])
+  @@map("payment_transactions")
+}
+
+enum TransactionType {
+  PAYMENT
+  REFUND
+  ESCROW_HOLD
+  ESCROW_RELEASE
+  SUBSCRIPTION
+  PAYOUT
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  REQUIRES_ACTION
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
 }
 
 enum PaymentMethodStatus {
@@ -1490,6 +1678,201 @@ model AuditLog {
 }
 
 // ============================================================================
+// PRODUCTS & PRICING
+// ============================================================================
+
+model Product {
+  id              String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  stripeProductId String      @unique @map("stripe_product_id") @db.VarChar(100)
+
+  // Product details
+  name        String      @db.VarChar(200)
+  slug        String      @unique @db.VarChar(100)
+  description String?     @db.Text
+  productType ProductType @map("product_type")
+
+  // Features (list of features for display)
+  features Json? @default("[]")
+
+  // Limits (plan-specific limits like hours, clients, etc.)
+  limits Json? @default("{}")
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  prices        Price[]
+  subscriptions Subscription[]
+
+  @@index([productType])
+  @@index([isActive])
+  @@index([slug])
+  @@map("products")
+}
+
+model Price {
+  id            String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  productId     String @map("product_id") @db.Uuid
+  stripePriceId String @unique @map("stripe_price_id") @db.VarChar(100)
+
+  // Pricing details
+  nickname   String?           @db.VarChar(100) // "Pro Monthly", "Enterprise Annual"
+  unitAmount Decimal           @map("unit_amount") @db.Decimal(10, 2)
+  currency   String            @default("USD") @db.VarChar(3)
+
+  // Billing cycle
+  billingInterval     PriceBillingInterval @map("billing_interval")
+  intervalCount       Int                  @default(1) @map("interval_count")
+
+  // Tier information
+  tier PriceTier
+
+  // Trial
+  trialPeriodDays Int? @map("trial_period_days")
+
+  // Usage-based pricing
+  usageType     PriceUsageType? @map("usage_type")
+  tieredPricing Json?           @map("tiered_pricing") // For usage tiers
+
+  // Seat-based pricing
+  isPerSeat           Boolean  @default(false) @map("is_per_seat")
+  includedSeats       Int?     @map("included_seats")
+  maxSeats            Int?     @map("max_seats")
+  additionalSeatPrice Decimal? @map("additional_seat_price") @db.Decimal(10, 2)
+
+  // Features specific to this price tier
+  features Json? @default("[]")
+
+  // Limits specific to this price tier
+  limits Json? @default("{}")
+
+  // Display
+  isPopular     Boolean @default(false) @map("is_popular")
+  isRecommended Boolean @default(false) @map("is_recommended")
+
+  // Status
+  isActive  Boolean @default(true) @map("is_active")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  product       Product        @relation(fields: [productId], references: [id])
+  subscriptions Subscription[]
+
+  @@index([productId])
+  @@index([tier])
+  @@index([isActive])
+  @@map("prices")
+}
+
+enum ProductType {
+  SKILLPOD
+  COCKPIT
+  MARKET_PREMIUM
+}
+
+enum PriceBillingInterval {
+  MONTH
+  YEAR
+}
+
+enum PriceTier {
+  FREE
+  STARTER
+  BASIC
+  PRO
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum PriceUsageType {
+  METERED    // Pay for what you use
+  LICENSED   // Fixed quantity
+}
+
+// ============================================================================
+// COUPONS & DISCOUNTS
+// ============================================================================
+
+model Coupon {
+  id             String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  stripeCouponId String @unique @map("stripe_coupon_id") @db.VarChar(100)
+
+  // Coupon details
+  code        String     @unique @db.VarChar(50)
+  name        String     @db.VarChar(200)
+  description String?    @db.Text
+
+  // Discount type
+  discountType CouponDiscountType @map("discount_type")
+  amountOff    Decimal?           @map("amount_off") @db.Decimal(10, 2)
+  percentOff   Decimal?           @map("percent_off") @db.Decimal(5, 2)
+  currency     String?            @db.VarChar(3)
+
+  // Duration
+  duration       CouponDuration
+  durationMonths Int?           @map("duration_months")
+
+  // Restrictions
+  maxRedemptions    Int?      @map("max_redemptions")
+  currentRedemptions Int      @default(0) @map("current_redemptions")
+  validProductTypes  String[] @default([]) @map("valid_product_types") // Restrict to specific products
+  minimumAmount     Decimal?  @map("minimum_amount") @db.Decimal(10, 2)
+
+  // Validity
+  validFrom DateTime  @default(now()) @map("valid_from")
+  validUntil DateTime? @map("valid_until")
+  isActive  Boolean   @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  redemptions CouponRedemption[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([validUntil])
+  @@map("coupons")
+}
+
+model CouponRedemption {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  couponId String @map("coupon_id") @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+
+  // Redemption context
+  subscriptionId String? @map("subscription_id") @db.Uuid
+
+  // Discount applied
+  discountAmount Decimal @map("discount_amount") @db.Decimal(10, 2)
+  currency       String  @db.VarChar(3)
+
+  redeemedAt DateTime @default(now()) @map("redeemed_at")
+
+  coupon Coupon @relation(fields: [couponId], references: [id])
+
+  @@unique([couponId, userId, subscriptionId])
+  @@index([userId])
+  @@index([subscriptionId])
+  @@map("coupon_redemptions")
+}
+
+enum CouponDiscountType {
+  PERCENT
+  AMOUNT
+}
+
+enum CouponDuration {
+  ONCE
+  REPEATING
+  FOREVER
+}
+
+// ============================================================================
 // SUBSCRIPTIONS
 // ============================================================================
 
@@ -1497,6 +1880,10 @@ model Subscription {
   id       String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   userId   String  @map("user_id") @db.Uuid
   tenantId String? @map("tenant_id") @db.Uuid
+
+  // Product reference (new - links to Product/Price catalog)
+  productId String? @map("product_id") @db.Uuid
+  priceId   String? @map("price_id") @db.Uuid
 
   // Stripe references
   stripeSubscriptionId String  @unique @map("stripe_subscription_id") @db.VarChar(100)
@@ -1511,12 +1898,21 @@ model Subscription {
 
   // Status
   status             SubscriptionStatus
+  trialStart         DateTime?          @map("trial_start")
   trialEndsAt        DateTime?          @map("trial_ends_at")
   currentPeriodStart DateTime           @map("current_period_start")
   currentPeriodEnd   DateTime           @map("current_period_end")
   cancelAt           DateTime?          @map("cancel_at")
   canceledAt         DateTime?          @map("canceled_at")
+  cancellationReason String?            @map("cancellation_reason") @db.VarChar(500)
   endedAt            DateTime?          @map("ended_at")
+
+  // Seats (for team subscriptions)
+  quantity Int @default(1)
+
+  // Pause support
+  pausedAt DateTime? @map("paused_at")
+  resumeAt DateTime? @map("resume_at")
 
   // Pending changes (for scheduled downgrades)
   pendingPlan     String?   @map("pending_plan") @db.VarChar(50)
@@ -1539,11 +1935,15 @@ model Subscription {
 
   user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant               Tenant?               @relation(fields: [tenantId], references: [id])
+  productRef           Product?              @relation(fields: [productId], references: [id])
+  priceRef             Price?                @relation(fields: [priceId], references: [id])
   subscriptionInvoices SubscriptionInvoice[]
   usageRecords         UsageRecord[]
 
   @@index([userId])
   @@index([tenantId])
+  @@index([productId])
+  @@index([priceId])
   @@index([stripeSubscriptionId])
   @@index([stripeCustomerId])
   @@index([status])

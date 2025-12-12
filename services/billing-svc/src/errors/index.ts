@@ -315,6 +315,91 @@ export class InvoicePaymentFailedError extends InvoiceError {
 }
 
 // =============================================================================
+// PAYOUT ACCOUNT ERRORS
+// =============================================================================
+
+export class PayoutAccountError extends BillingError {
+  constructor(message: string, code = 'PAYOUT_ACCOUNT_ERROR', statusCode = 400) {
+    super(message, code, statusCode);
+    this.name = 'PayoutAccountError';
+  }
+}
+
+export class PayoutAccountNotFoundError extends PayoutAccountError {
+  constructor(userId: string) {
+    super(`Payout account not found for user ${userId}`, 'PAYOUT_ACCOUNT_NOT_FOUND', 404);
+  }
+}
+
+export class PayoutAccountExistsError extends PayoutAccountError {
+  constructor(userId: string) {
+    super(`Payout account already exists for user ${userId}`, 'PAYOUT_ACCOUNT_EXISTS', 409);
+  }
+}
+
+export class PayoutAccountNotActiveError extends PayoutAccountError {
+  constructor(userId: string) {
+    super(
+      `Payout account is not active for user ${userId}. Complete onboarding first.`,
+      'PAYOUT_ACCOUNT_NOT_ACTIVE',
+      400
+    );
+  }
+}
+
+export class PayoutAccountRestrictedError extends PayoutAccountError {
+  constructor(userId: string, reason?: string) {
+    super(
+      `Payout account is restricted for user ${userId}${reason ? `: ${reason}` : ''}`,
+      'PAYOUT_ACCOUNT_RESTRICTED',
+      403
+    );
+  }
+}
+
+// =============================================================================
+// TRANSACTION ERRORS
+// =============================================================================
+
+export class TransactionError extends BillingError {
+  constructor(message: string, code = 'TRANSACTION_ERROR', statusCode = 400) {
+    super(message, code, statusCode);
+    this.name = 'TransactionError';
+  }
+}
+
+export class TransactionNotFoundError extends TransactionError {
+  constructor(transactionId: string) {
+    super(`Transaction ${transactionId} not found`, 'TRANSACTION_NOT_FOUND', 404);
+  }
+}
+
+export class TransactionAlreadyProcessedError extends TransactionError {
+  constructor(transactionId: string) {
+    super(
+      `Transaction ${transactionId} has already been processed`,
+      'TRANSACTION_ALREADY_PROCESSED',
+      409
+    );
+  }
+}
+
+export class TransactionFailedError extends TransactionError {
+  public readonly failureCode: string | undefined;
+
+  constructor(transactionId: string, failureCode?: string, failureMessage?: string) {
+    super(failureMessage ?? `Transaction ${transactionId} failed`, 'TRANSACTION_FAILED', 402);
+    this.failureCode = failureCode;
+  }
+}
+
+export class InsufficientFundsError extends TransactionError {
+  constructor() {
+    super('Insufficient funds to complete this transaction', 'INSUFFICIENT_FUNDS', 402);
+  }
+}
+
+// =============================================================================
 // PAYMENT METHOD REQUIRED ERROR
 // =============================================================================
 

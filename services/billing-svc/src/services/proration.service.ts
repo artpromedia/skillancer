@@ -1,13 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 /**
  * @module @skillancer/billing-svc/services/proration
  * Proration calculation service for plan changes
- *
- * NOTE: This service requires the Price model with relations to be added to the schema.
- * Run the schema migration before using this service in production.
  */
 
 import { getStripeService } from './stripe.service.js';
+import {
+  getStripePriceId,
+  isUpgrade as _isPlanUpgrade,
+  isDowngrade as _isPlanDowngrade,
+  type ProductType,
+  type BillingIntervalType,
+} from '../config/plans.js';
 import { BillingError } from '../errors/index.js';
 import { getSubscriptionRepository } from '../repositories/index.js';
 
@@ -19,20 +23,30 @@ export interface ProrationPreview {
   currentPlan: {
     name: string;
     amount: number;
+    interval: string;
   };
   newPlan: {
     name: string;
     amount: number;
+    interval: string;
   };
   proration: {
     amount: number; // Positive = charge, negative = credit
     description: string;
     immediateCharge: boolean;
+    creditAmount: number;
+    debitAmount: number;
   };
   nextInvoice: {
     amount: number;
     date: string;
+    lineItems: Array<{
+      description: string;
+      amount: number;
+      quantity: number;
+    }>;
   };
+  effectiveDate: string;
 }
 
 export interface ProrationCalculation {
@@ -46,8 +60,17 @@ export interface ProrationCalculation {
 
 export type ProrationBehavior = 'create_prorations' | 'none' | 'always_invoice';
 
+export interface SeatChangePreview extends ProrationPreview {
+  seats: {
+    current: number;
+    new: number;
+    change: number;
+  };
+  perSeatPrice: number;
+}
+
 // =============================================================================
-// PRORATION SERVICE (STUB)
+// PRORATION SERVICE
 // =============================================================================
 
 export class ProrationService {
@@ -62,18 +85,17 @@ export class ProrationService {
   }
 
   // ===========================================================================
-  // PREVIEW PRORATION (STUB)
+  // PREVIEW PRORATION USING STRIPE
   // ===========================================================================
 
   /**
-   * Preview plan change proration
-   *
-   * NOTE: Full implementation requires Price model with relations
+   * Preview plan change proration using Stripe's upcoming invoice API
+   * This gives an accurate preview of what the customer will be charged
    */
   async previewPlanChange(
     subscriptionId: string,
-    _newPriceId: string,
-    _newQuantity?: number
+    newPlan: string,
+    options?: { newBillingInterval?: BillingIntervalType }
   ): Promise<ProrationPreview> {
     const subscription = await this.subscriptionRepository.findById(subscriptionId);
 
@@ -81,65 +103,208 @@ export class ProrationService {
       throw new BillingError('Subscription not found', 'SUBSCRIPTION_NOT_FOUND', 404);
     }
 
-    console.warn('[Proration Service] Full proration preview requires schema migration');
-    console.warn('[Proration Service] Using stub implementation');
+    const product = subscription.product as ProductType;
+    const billingInterval =
+      options?.newBillingInterval ?? (subscription.billingInterval as BillingIntervalType);
 
-    // Return stub preview - in production, this would use Stripe's API
-    // to calculate actual proration based on Price relations
+    // Get the new Stripe price ID
+    const newStripePriceId = getStripePriceId(product, newPlan, billingInterval);
+    if (!newStripePriceId) {
+      throw new BillingError('Invalid plan', 'INVALID_PLAN', 400);
+    }
+
+    // Get current Stripe subscription
+    const stripeSubscription = await this.stripeService.getSubscription(
+      subscription.stripeSubscriptionId
+    );
+    const currentItemId = stripeSubscription.items.data[0]?.id;
+
+    if (!currentItemId) {
+      throw new BillingError('Subscription has no items', 'NO_SUBSCRIPTION_ITEMS', 500);
+    }
+
+    // Use Stripe's upcoming invoice preview
+    const upcomingInvoice = await this.stripeService.previewUpcomingInvoice(
+      subscription.stripeCustomerId,
+      subscription.stripeSubscriptionId,
+      [
+        {
+          id: currentItemId,
+          price: newStripePriceId,
+        },
+      ]
+    );
+
+    // Calculate proration details
+    let creditAmount = 0;
+    let debitAmount = 0;
+    const lineItems: Array<{ description: string; amount: number; quantity: number }> = [];
+
+    for (const line of upcomingInvoice.lines.data) {
+      if (line.proration) {
+        if (line.amount < 0) {
+          creditAmount += Math.abs(line.amount);
+        } else {
+          debitAmount += line.amount;
+        }
+      }
+
+      lineItems.push({
+        description: line.description ?? 'Subscription',
+        amount: line.amount,
+        quantity: line.quantity ?? 1,
+      });
+    }
+
+    const prorationAmount = debitAmount - creditAmount;
+    const isUpgrade = prorationAmount > 0;
+
     return {
       currentPlan: {
         name: subscription.plan,
         amount: subscription.unitAmount ?? 0,
+        interval: subscription.billingInterval,
       },
       newPlan: {
-        name: 'New Plan',
-        amount: 0, // Would come from Price lookup
+        name: newPlan,
+        amount: stripeSubscription.items.data[0]?.price.unit_amount ?? 0,
+        interval: billingInterval,
       },
       proration: {
-        amount: 0,
-        description: 'Proration calculation requires schema migration',
-        immediateCharge: false,
+        amount: prorationAmount,
+        description: isUpgrade
+          ? `Prorated charge for upgrading to ${newPlan}`
+          : `Credit for downgrading to ${newPlan}`,
+        immediateCharge: isUpgrade,
+        creditAmount,
+        debitAmount,
       },
       nextInvoice: {
-        amount: 0,
-        date: subscription.currentPeriodEnd.toISOString(),
+        amount: upcomingInvoice.total,
+        date: new Date(upcomingInvoice.period_end * 1000).toISOString(),
+        lineItems,
       },
+      effectiveDate: isUpgrade
+        ? new Date().toISOString()
+        : subscription.currentPeriodEnd.toISOString(),
     };
   }
 
   /**
-   * Preview seat change proration
-   *
-   * NOTE: Full implementation requires Price model with isPerSeat field
+   * Preview seat/quantity change proration
    */
-  async previewSeatChange(subscriptionId: string, _newQuantity: number): Promise<ProrationPreview> {
+  async previewSeatChange(subscriptionId: string, newQuantity: number): Promise<SeatChangePreview> {
     const subscription = await this.subscriptionRepository.findById(subscriptionId);
 
     if (!subscription) {
       throw new BillingError('Subscription not found', 'SUBSCRIPTION_NOT_FOUND', 404);
     }
 
-    console.warn('[Proration Service] Full seat change preview requires schema migration');
+    // Get current Stripe subscription
+    const stripeSubscription = await this.stripeService.getSubscription(
+      subscription.stripeSubscriptionId
+    );
+    const currentItem = stripeSubscription.items.data[0];
+
+    if (!currentItem) {
+      throw new BillingError('Subscription has no items', 'NO_SUBSCRIPTION_ITEMS', 500);
+    }
+
+    const currentQuantity = currentItem.quantity ?? 1;
+    const quantityChange = newQuantity - currentQuantity;
+
+    // Use Stripe's upcoming invoice preview with quantity change
+    const upcomingInvoice = await this.stripeService.previewUpcomingInvoice(
+      subscription.stripeCustomerId,
+      subscription.stripeSubscriptionId,
+      [
+        {
+          id: currentItem.id,
+          quantity: newQuantity,
+        },
+      ]
+    );
+
+    // Calculate proration details
+    let creditAmount = 0;
+    let debitAmount = 0;
+    const lineItems: Array<{ description: string; amount: number; quantity: number }> = [];
+
+    for (const line of upcomingInvoice.lines.data) {
+      if (line.proration) {
+        if (line.amount < 0) {
+          creditAmount += Math.abs(line.amount);
+        } else {
+          debitAmount += line.amount;
+        }
+      }
+
+      lineItems.push({
+        description: line.description ?? 'Subscription',
+        amount: line.amount,
+        quantity: line.quantity ?? 1,
+      });
+    }
+
+    const prorationAmount = debitAmount - creditAmount;
+    const isAddingSeats = quantityChange > 0;
+    const perSeatPrice = currentItem.price.unit_amount ?? 0;
 
     return {
       currentPlan: {
         name: subscription.plan,
-        amount: subscription.unitAmount ?? 0,
+        amount: (subscription.unitAmount ?? 0) * currentQuantity,
+        interval: subscription.billingInterval,
       },
       newPlan: {
         name: subscription.plan,
-        amount: subscription.unitAmount ?? 0,
+        amount: perSeatPrice * newQuantity,
+        interval: subscription.billingInterval,
       },
       proration: {
-        amount: 0,
-        description: 'Seat change calculation requires schema migration',
-        immediateCharge: false,
+        amount: prorationAmount,
+        description: isAddingSeats
+          ? `Adding ${quantityChange} seat(s)`
+          : `Removing ${Math.abs(quantityChange)} seat(s)`,
+        immediateCharge: isAddingSeats,
+        creditAmount,
+        debitAmount,
       },
       nextInvoice: {
-        amount: subscription.unitAmount ?? 0,
-        date: subscription.currentPeriodEnd.toISOString(),
+        amount: upcomingInvoice.total,
+        date: new Date(upcomingInvoice.period_end * 1000).toISOString(),
+        lineItems,
       },
+      effectiveDate: new Date().toISOString(),
+      seats: {
+        current: currentQuantity,
+        new: newQuantity,
+        change: quantityChange,
+      },
+      perSeatPrice,
     };
+  }
+
+  /**
+   * Preview billing interval change (monthly <-> annual)
+   */
+  async previewIntervalChange(
+    subscriptionId: string,
+    newInterval: BillingIntervalType
+  ): Promise<ProrationPreview> {
+    const subscription = await this.subscriptionRepository.findById(subscriptionId);
+
+    if (!subscription) {
+      throw new BillingError('Subscription not found', 'SUBSCRIPTION_NOT_FOUND', 404);
+    }
+
+    if (subscription.billingInterval === newInterval) {
+      throw new BillingError('Same billing interval', 'SAME_INTERVAL', 400);
+    }
+
+    return this.previewPlanChange(subscriptionId, subscription.plan, {
+      newBillingInterval: newInterval,
+    });
   }
 
   // ===========================================================================

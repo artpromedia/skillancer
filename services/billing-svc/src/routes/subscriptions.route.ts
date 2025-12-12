@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/require-await */
 /**
  * @module @skillancer/billing-svc/routes/subscriptions
  * Subscription management routes
@@ -13,6 +14,7 @@ import {
   type BillingIntervalType,
 } from '../config/plans.js';
 import { getErrorResponse } from '../errors/index.js';
+import { getProrationService } from '../services/proration.service.js';
 import {
   getSubscriptionService,
   type CreateSubscriptionOptions,
@@ -66,6 +68,12 @@ const CancelSubscriptionSchema = z.object({
 // Upgrade/downgrade subscription request
 const ChangePlanSchema = z.object({
   plan: z.string().min(1),
+});
+
+// Preview plan change request
+const PreviewPlanChangeSchema = z.object({
+  plan: z.string().min(1),
+  billingInterval: BillingIntervalEnum.optional(),
 });
 
 // Change billing interval request
@@ -401,6 +409,103 @@ const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
   // ===========================================================================
   // PLAN CHANGES
   // ===========================================================================
+
+  /**
+   * POST /subscriptions/:subscriptionId/preview-change
+   * Preview the cost of changing subscription plan
+   */
+  fastify.post<{
+    Params: { subscriptionId: string };
+  }>(
+    '/:subscriptionId/preview-change',
+    {
+      schema: {
+        description: 'Preview the cost of changing subscription plan (proration preview)',
+        tags: ['subscriptions'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            subscriptionId: { type: 'string', format: 'uuid' },
+          },
+          required: ['subscriptionId'],
+        },
+        body: zodToJsonSchema(PreviewPlanChangeSchema),
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              immediateCharge: { type: 'number' },
+              nextInvoiceTotal: { type: 'number' },
+              creditApplied: { type: 'number' },
+              prorationAmount: { type: 'number' },
+              currency: { type: 'string' },
+              billingPeriodEnd: { type: 'string' },
+              effectiveDate: { type: 'string' },
+              lineItems: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    description: { type: 'string' },
+                    amount: { type: 'number' },
+                    quantity: { type: 'number' },
+                  },
+                },
+              },
+            },
+          },
+          400: { type: 'object' },
+          404: { type: 'object' },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const user = requireUser(request);
+        const body = PreviewPlanChangeSchema.parse(request.body);
+
+        // Verify ownership
+        const subscription = await subscriptionService.getSubscription(
+          request.params.subscriptionId,
+          user.id
+        );
+
+        const prorationService = getProrationService();
+        const preview = await prorationService.previewPlanChangeFromStripe(
+          subscription,
+          body.plan,
+          body.billingInterval?.toLowerCase() as BillingIntervalType | undefined
+        );
+
+        return await reply.send({
+          immediateCharge: preview.immediateCharge / 100, // Convert cents to dollars
+          nextInvoiceTotal: preview.nextInvoiceTotal / 100,
+          creditApplied: preview.creditApplied / 100,
+          prorationAmount: preview.prorationAmount / 100,
+          currency: preview.currency,
+          billingPeriodEnd: subscription.currentPeriodEnd?.toISOString(),
+          effectiveDate: new Date().toISOString(),
+          lineItems: preview.lineItems.map((item) => ({
+            description: item.description,
+            amount: item.amount / 100,
+            quantity: item.quantity,
+          })),
+        });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return reply.code(400).send({
+            error: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid request body',
+            details: error.errors,
+          });
+        }
+        const { statusCode, body } = getErrorResponse(error);
+        return reply.code(statusCode).send(body);
+      }
+    }
+  );
 
   /**
    * POST /subscriptions/:subscriptionId/upgrade
