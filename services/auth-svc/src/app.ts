@@ -29,6 +29,7 @@ import { oauthRoutes } from './routes/oauth.js';
 import { portfolioRoutes } from './routes/portfolio.js';
 import { profileCompletionRoutes } from './routes/profile-completion.js';
 import { profileRoutes } from './routes/profile.js';
+import { createTrustScoreRoutes } from './routes/trust-score.js';
 import { verificationRoutes } from './routes/verification.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { workHistoryRoutes } from './routes/work-history.js';
@@ -222,6 +223,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Profile completion routes (/profile-completion prefix)
   await app.register(profileCompletionRoutes, { prefix: '/profile-completion' });
+
+  // Trust score routes (/trust-score prefix)
+  await app.register(createTrustScoreRoutes(redis), { prefix: '/trust-score' });
 
   return app;
 }

@@ -70,8 +70,11 @@ export type {
   ReviewInvitation,
   ReviewInvitationStatus,
   UserRatingAggregation,
-  // Trust
+  // Trust Score types
   TrustScore,
+  TrustScoreHistory,
+  SkillPodComplianceRecord,
+  TrustScoreThreshold,
   Notification,
   NotificationType,
   NotificationChannel,
@@ -92,4 +95,11 @@ export type {
 // Prisma namespace is already exported via client.ts
 
 // Enums (re-exported from Prisma - using value import for runtime access)
-export { MfaMethod } from '@prisma/client';
+export {
+  MfaMethod,
+  TrustTier,
+  TrustTrend,
+  ComplianceEventType,
+  ComplianceSeverity,
+  ThresholdContextType,
+} from '@prisma/client';
