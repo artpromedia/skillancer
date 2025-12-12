@@ -828,6 +828,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.948.0
         version: 3.948.0
+      '@fastify/cookie':
+        specifier: ^11.0.2
+        version: 11.0.2
       '@fastify/cors':
         specifier: ^9.0.1
         version: 9.0.1
@@ -841,8 +844,8 @@ importers:
         specifier: ^8.0.0
         version: 8.0.1
       '@fastify/multipart':
-        specifier: ^9.3.0
-        version: 9.3.0
+        specifier: ^8.3.1
+        version: 8.3.1
       '@fastify/sensible':
         specifier: ^5.5.0
         version: 5.6.0
@@ -852,6 +855,9 @@ importers:
       '@skillancer/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@skillancer/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@skillancer/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -882,6 +888,9 @@ importers:
       sharp:
         specifier: ^0.34.5
         version: 0.34.5
+      twilio:
+        specifier: ^5.10.7
+        version: 5.10.7
       zod:
         specifier: ^3.22.0
         version: 3.25.76
@@ -1029,6 +1038,9 @@ importers:
       '@skillancer/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@skillancer/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@skillancer/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -1038,6 +1050,9 @@ importers:
       fastify:
         specifier: ^4.26.0
         version: 4.29.1
+      ioredis:
+        specifier: ^5.3.2
+        version: 5.8.2
       zod:
         specifier: ^3.22.0
         version: 3.25.76
@@ -6987,6 +7002,16 @@ packages:
       }
     dev: false
 
+  /@fastify/cookie@11.0.2:
+    resolution:
+      {
+        integrity: sha512-GWdwdGlgJxyvNv+QcKiGNevSspMQXncjMZ1J8IvuDQk0jvkzgWWZFNC2En3s+nHndZBGV8IbLwOI/sxCZw/mzA==,
+      }
+    dependencies:
+      cookie: 1.1.1
+      fastify-plugin: 5.1.0
+    dev: false
+
   /@fastify/cors@9.0.1:
     resolution:
       {
@@ -6997,10 +7022,10 @@ packages:
       mnemonist: 0.39.6
     dev: false
 
-  /@fastify/deepmerge@3.1.0:
+  /@fastify/deepmerge@2.0.2:
     resolution:
       {
-        integrity: sha512-lCVONBQINyNhM6LLezB6+2afusgEYR4G8xenMsfe+AT+iZ7Ca6upM5Ha8UkZuYSnuMw3GWl/BiPXnLMi/gSxuQ==,
+        integrity: sha512-3wuLdX5iiiYeZWP6bQrjqhrcvBIf0NHbQH1Ur1WbHvoiuTYUEItgygea3zs8aHpiitn0lOB8gX20u1qO+FDm7Q==,
       }
     dev: false
 
@@ -7069,17 +7094,18 @@ packages:
       fast-deep-equal: 3.1.3
     dev: false
 
-  /@fastify/multipart@9.3.0:
+  /@fastify/multipart@8.3.1:
     resolution:
       {
-        integrity: sha512-NpeKipTOjjL1dA7SSlRMrOWWtrE8/0yKOmeudkdQoEaz4sVDJw5MVdZIahsWhvpc3YTN7f04f9ep/Y65RKoOWA==,
+        integrity: sha512-pncbnG28S6MIskFSVRtzTKE9dK+GrKAJl0NbaQ/CG8ded80okWFsYKzSlP9haaLNQhNRDOoHqmGQNvgbiPVpWQ==,
       }
     dependencies:
       '@fastify/busboy': 3.2.0
-      '@fastify/deepmerge': 3.1.0
+      '@fastify/deepmerge': 2.0.2
       '@fastify/error': 4.2.0
-      fastify-plugin: 5.1.0
-      secure-json-parse: 4.1.0
+      fastify-plugin: 4.5.1
+      secure-json-parse: 2.7.0
+      stream-wormhole: 1.1.0
     dev: false
 
   /@fastify/rate-limit@9.1.0:
@@ -18428,6 +18454,14 @@ packages:
       }
     engines: { node: '>= 0.6' }
 
+  /cookie@1.1.1:
+    resolution:
+      {
+        integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==,
+      }
+    engines: { node: '>=18' }
+    dev: false
+
   /copy-webpack-plugin@11.0.0(webpack@5.103.0):
     resolution:
       {
@@ -18914,6 +18948,13 @@ packages:
       {
         integrity: sha512-2P0p0pFGzHS5EMnhdxQi7aJN+iMheud0UhG4dlE1DLAlvL8JHjJJTX/CSm4JXwV0Ka5nGk3zC5mcb5bUQUxxMA==,
       }
+
+  /dayjs@1.11.19:
+    resolution:
+      {
+        integrity: sha512-t5EcLVS6QPBNqM2z8fakk/NKel+Xzshgt8FFKAn+qwlD1pzZWxh0nVCrvFK7ZDb6XucZeF9z8C7CBWTRIVApAw==,
+      }
+    dev: false
 
   /debounce@1.2.1:
     resolution:
@@ -30389,6 +30430,13 @@ packages:
       ajv-formats: 2.1.1(ajv@8.17.1)
       ajv-keywords: 5.1.0(ajv@8.17.1)
 
+  /scmp@2.1.0:
+    resolution:
+      {
+        integrity: sha512-o/mRQGk9Rcer/jEEw/yw4mwo3EU/NvYvp577/Btqrym9Qy5/MdWGBqipbALgd2lrdWTJ5/gqDusxfnQBxOxT2Q==,
+      }
+    dev: false
+
   /search-insights@2.17.3:
     resolution:
       {
@@ -30412,13 +30460,6 @@ packages:
       {
         integrity: sha512-6aU+Rwsezw7VR8/nyvKTx8QpWH9FrcYiXXlqC4z5d5XQBDRqtbfsRjnwGyqbi3gddNtWHuEk9OANUotL26qKUw==,
       }
-
-  /secure-json-parse@4.1.0:
-    resolution:
-      {
-        integrity: sha512-l4KnYfEyqYJxDwlNVyRfO2E4NTHfMKAWdUuA8J0yve2Dz/E/PdBepY03RvyJpssIpRFwJoCD55wA+mEDs6ByWA==,
-      }
-    dev: false
 
   /select-hose@2.0.0:
     resolution:
@@ -31193,6 +31234,14 @@ packages:
         integrity: sha512-76ORR0DO1o1hlKwTbi/DM3EXWGf3ZJYO8cXX5RJwnul2DEg2oyoZyjLNoQM8WsvZiFKCRfC1O0J7iCvie3RZmQ==,
       }
     requiresBuild: true
+
+  /stream-wormhole@1.1.0:
+    resolution:
+      {
+        integrity: sha512-gHFfL3px0Kctd6Po0M8TzEvt3De/xu6cnRrjlfYNhwbhLPLwigI2t1nc6jrzNuaYg5C4YF78PPFuQPzRiqn9ew==,
+      }
+    engines: { node: '>=4.0.0' }
+    dev: false
 
   /streamsearch@1.1.0:
     resolution:
@@ -32369,6 +32418,25 @@ packages:
       turbo-windows-64: 2.6.3
       turbo-windows-arm64: 2.6.3
     dev: true
+
+  /twilio@5.10.7:
+    resolution:
+      {
+        integrity: sha512-pELNeyQqkJMW/UkbcdNGDfOjMyt1FXoYOKXBDqOViHmcdJ04cq8Ty3VsrEAabi97YesK3T2v5KP5XKPY8uUx9w==,
+      }
+    engines: { node: '>=14.0' }
+    dependencies:
+      axios: 1.13.2
+      dayjs: 1.11.19
+      https-proxy-agent: 5.0.1
+      jsonwebtoken: 9.0.3
+      qs: 6.14.0
+      scmp: 2.1.0
+      xmlbuilder: 13.0.2
+    transitivePeerDependencies:
+      - debug
+      - supports-color
+    dev: false
 
   /type-check@0.4.0:
     resolution:
@@ -33860,6 +33928,14 @@ packages:
     hasBin: true
     dependencies:
       sax: 1.4.3
+    dev: false
+
+  /xmlbuilder@13.0.2:
+    resolution:
+      {
+        integrity: sha512-Eux0i2QdDYKbdbA6AM6xE4m6ZTZr4G4xF9kahI2ukSEMCzwce2eX9WlTI5J3s+NU7hpasFsr8hWIONae7LluAQ==,
+      }
+    engines: { node: '>=6.0' }
     dev: false
 
   /xtend@4.0.2:

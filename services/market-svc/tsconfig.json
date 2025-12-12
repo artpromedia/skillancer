@@ -14,7 +14,9 @@
       "@skillancer/database": ["../../packages/database/src"],
       "@skillancer/database/*": ["../../packages/database/src/*"],
       "@skillancer/cache": ["../../packages/cache/src"],
-      "@skillancer/cache/*": ["../../packages/cache/src/*"]
+      "@skillancer/cache/*": ["../../packages/cache/src/*"],
+      "@skillancer/logger": ["../../packages/logger/src"],
+      "@skillancer/logger/*": ["../../packages/logger/src/*"]
     }
   },
   "include": ["src/**/*.ts"],

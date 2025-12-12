@@ -54,6 +54,10 @@ model User {
   messagesReceived      Message[]          @relation("ReceiverMessages")
   reviewsGiven          Review[]           @relation("ReviewerReviews")
   reviewsReceived       Review[]           @relation("RevieweeReviews")
+  reviewHelpfulVotes    ReviewHelpfulVote[]
+  reviewReports         ReviewReport[]
+  reviewInvitations     ReviewInvitation[]
+  ratingAggregation     UserRatingAggregation?
   trustScore            TrustScore?
   skills                UserSkill[]
   portfolioItems        PortfolioItem[]
@@ -530,14 +534,15 @@ model Contract {
   cancelledAt  DateTime? @map("cancelled_at")
 
   // Relations
-  job        Job         @relation(fields: [jobId], references: [id])
-  bid        Bid?        @relation(fields: [bidId], references: [id])
-  client     User        @relation("ClientContracts", fields: [clientId], references: [id])
-  freelancer User        @relation("FreelancerContracts", fields: [freelancerId], references: [id])
-  milestones Milestone[]
-  payments   Payment[]
-  reviews    Review[]
-  messages   Message[]   @relation("ContractMessages")
+  job               Job                @relation(fields: [jobId], references: [id])
+  bid               Bid?               @relation(fields: [bidId], references: [id])
+  client            User               @relation("ClientContracts", fields: [clientId], references: [id])
+  freelancer        User               @relation("FreelancerContracts", fields: [freelancerId], references: [id])
+  milestones        Milestone[]
+  payments          Payment[]
+  reviews           Review[]
+  reviewInvitations ReviewInvitation[]
+  messages          Message[]          @relation("ContractMessages")
 
   @@index([clientId])
   @@index([freelancerId])
@@ -972,50 +977,241 @@ enum InvoiceStatus {
 // ============================================================================
 
 model Review {
-  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  reviewerId  String     @map("reviewer_id") @db.Uuid
-  revieweeId  String     @map("reviewee_id") @db.Uuid
-  contractId  String?    @map("contract_id") @db.Uuid
-  serviceId   String?    @map("service_id") @db.Uuid
+  id                String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   
-  rating      Int        @db.SmallInt // 1-5
-  title       String?    @db.VarChar(200)
-  comment     String?    @db.Text
+  // Contract reference (for contract-based reviews)
+  contractId        String?      @map("contract_id") @db.Uuid
   
-  // Detailed ratings
-  communication  Int?    @db.SmallInt
-  quality        Int?    @db.SmallInt
-  expertise      Int?    @db.SmallInt
-  professionalism Int?   @db.SmallInt
-  wouldRecommend Boolean @default(true) @map("would_recommend")
-
+  // Service reference (for service-based reviews)
+  serviceId         String?      @map("service_id") @db.Uuid
+  
+  // Reviewer and reviewee
+  reviewerId        String       @map("reviewer_id") @db.Uuid
+  revieweeId        String       @map("reviewee_id") @db.Uuid
+  
+  // Review direction
+  reviewType        ReviewType   @map("review_type")
+  
+  // Overall rating
+  overallRating     Int          @map("overall_rating") @db.SmallInt // 1-5
+  
+  // Category ratings (JSON to support different categories per type)
+  // Client reviewing freelancer: { quality: 5, communication: 4, expertise: 5, professionalism: 4, wouldHireAgain: true }
+  // Freelancer reviewing client: { clarity: 4, responsiveness: 5, payment: 5, professionalism: 4, wouldWorkAgain: true }
+  categoryRatings   Json         @map("category_ratings")
+  
+  // Review content
+  title             String?      @db.VarChar(200)
+  content           String?      @db.Text
+  
+  // Private feedback (only visible to Skillancer)
+  privateFeedback   String?      @map("private_feedback") @db.Text
+  
+  // Visibility
+  isPublic          Boolean      @default(true) @map("is_public")
+  
+  // Reveal status (for simultaneous reveal)
+  status            ReviewStatus @default(PENDING)
+  revealedAt        DateTime?    @map("revealed_at")
+  
+  // Response from reviewee
+  responseId        String?      @unique @map("response_id") @db.Uuid
+  
   // Moderation
-  status      ReviewStatus @default(PENDING)
-  reportedAt  DateTime?    @map("reported_at")
+  isModerated       Boolean      @default(false) @map("is_moderated")
+  moderatedAt       DateTime?    @map("moderated_at")
+  moderatedBy       String?      @map("moderated_by") @db.Uuid
+  moderationReason  String?      @map("moderation_reason") @db.VarChar(500)
+  originalContent   String?      @map("original_content") @db.Text
   
-  // Timestamps
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  reviewer User      @relation("ReviewerReviews", fields: [reviewerId], references: [id])
-  reviewee User      @relation("RevieweeReviews", fields: [revieweeId], references: [id])
-  contract Contract? @relation(fields: [contractId], references: [id])
-  service  Service?  @relation(fields: [serviceId], references: [id])
-
-  @@unique([reviewerId, contractId])
-  @@index([revieweeId])
-  @@index([contractId])
-  @@index([serviceId])
-  @@index([rating])
-  @@index([status])
+  // Helpfulness
+  helpfulCount      Int          @default(0) @map("helpful_count")
+  notHelpfulCount   Int          @default(0) @map("not_helpful_count")
+  
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  
+  contract          Contract?    @relation(fields: [contractId], references: [id])
+  service           Service?     @relation(fields: [serviceId], references: [id])
+  reviewer          User         @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  reviewee          User         @relation("RevieweeReviews", fields: [revieweeId], references: [id])
+  response          ReviewResponse? @relation(fields: [responseId], references: [id])
+  helpfulVotes      ReviewHelpfulVote[]
+  reports           ReviewReport[]
+  
   @@map("reviews")
+  @@unique([contractId, reviewType])
+  @@index([reviewerId])
+  @@index([revieweeId])
+  @@index([serviceId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([overallRating])
+}
+
+model ReviewResponse {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  
+  // Response content
+  content           String    @db.Text
+  
+  // Moderation
+  isModerated       Boolean   @default(false) @map("is_moderated")
+  moderatedAt       DateTime? @map("moderated_at")
+  originalContent   String?   @map("original_content") @db.Text
+  
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  review            Review?
+  
+  @@map("review_responses")
+}
+
+model ReviewHelpfulVote {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  reviewId          String    @map("review_id") @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  
+  isHelpful         Boolean   @map("is_helpful")
+  
+  createdAt         DateTime  @default(now()) @map("created_at")
+  
+  review            Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("review_helpful_votes")
+  @@unique([reviewId, userId])
+  @@index([reviewId])
+  @@index([userId])
+}
+
+model ReviewReport {
+  id                String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  reviewId          String              @map("review_id") @db.Uuid
+  reporterId        String              @map("reporter_id") @db.Uuid
+  
+  reason            ReviewReportReason
+  description       String?             @db.Text
+  
+  status            ReportStatus        @default(PENDING)
+  
+  // Resolution
+  resolvedBy        String?             @map("resolved_by") @db.Uuid
+  resolvedAt        DateTime?           @map("resolved_at")
+  resolution        String?             @db.VarChar(500)
+  
+  createdAt         DateTime            @default(now()) @map("created_at")
+  
+  review            Review              @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reporter          User                @relation(fields: [reporterId], references: [id])
+  
+  @@map("review_reports")
+  @@index([reviewId])
+  @@index([status])
+  @@index([reporterId])
+}
+
+model UserRatingAggregation {
+  id                          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                      String    @unique @map("user_id") @db.Uuid
+  
+  // As freelancer (receiving reviews from clients)
+  freelancerTotalReviews      Int       @default(0) @map("freelancer_total_reviews")
+  freelancerAverageRating     Decimal   @default(0) @map("freelancer_average_rating") @db.Decimal(3, 2)
+  freelancerRatingBreakdown   Json      @default("{}") @map("freelancer_rating_breakdown") // { "5": 10, "4": 5, "3": 2, "2": 0, "1": 1 }
+  
+  // Category averages (freelancer)
+  freelancerQualityAvg        Decimal?  @map("freelancer_quality_avg") @db.Decimal(3, 2)
+  freelancerCommunicationAvg  Decimal?  @map("freelancer_communication_avg") @db.Decimal(3, 2)
+  freelancerExpertiseAvg      Decimal?  @map("freelancer_expertise_avg") @db.Decimal(3, 2)
+  freelancerProfessionalismAvg Decimal? @map("freelancer_professionalism_avg") @db.Decimal(3, 2)
+  freelancerRepeatRate        Decimal?  @map("freelancer_repeat_rate") @db.Decimal(5, 2) // % of clients who would hire again
+  
+  // As client (receiving reviews from freelancers)
+  clientTotalReviews          Int       @default(0) @map("client_total_reviews")
+  clientAverageRating         Decimal   @default(0) @map("client_average_rating") @db.Decimal(3, 2)
+  clientRatingBreakdown       Json      @default("{}") @map("client_rating_breakdown")
+  
+  // Category averages (client)
+  clientClarityAvg            Decimal?  @map("client_clarity_avg") @db.Decimal(3, 2)
+  clientResponsivenessAvg     Decimal?  @map("client_responsiveness_avg") @db.Decimal(3, 2)
+  clientPaymentAvg            Decimal?  @map("client_payment_avg") @db.Decimal(3, 2)
+  clientProfessionalismAvg    Decimal?  @map("client_professionalism_avg") @db.Decimal(3, 2)
+  clientRepeatRate            Decimal?  @map("client_repeat_rate") @db.Decimal(5, 2)
+  
+  // Last calculation
+  lastCalculatedAt            DateTime  @default(now()) @map("last_calculated_at")
+  
+  updatedAt                   DateTime  @updatedAt @map("updated_at")
+  
+  user                        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_rating_aggregations")
+}
+
+model ReviewInvitation {
+  id                String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId        String                   @map("contract_id") @db.Uuid
+  userId            String                   @map("user_id") @db.Uuid
+  reviewType        ReviewType               @map("review_type")
+  
+  // Status
+  status            ReviewInvitationStatus   @default(PENDING)
+  
+  // Timing
+  sentAt            DateTime                 @default(now()) @map("sent_at")
+  expiresAt         DateTime                 @map("expires_at")
+  completedAt       DateTime?                @map("completed_at")
+  
+  // Reminders
+  reminderCount     Int                      @default(0) @map("reminder_count")
+  lastReminderAt    DateTime?                @map("last_reminder_at")
+  
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  
+  contract          Contract                 @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  user              User                     @relation(fields: [userId], references: [id])
+  
+  @@map("review_invitations")
+  @@unique([contractId, reviewType])
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+enum ReviewType {
+  CLIENT_TO_FREELANCER
+  FREELANCER_TO_CLIENT
 }
 
 enum ReviewStatus {
+  PENDING    // Submitted but not yet revealed
+  REVEALED   // Both parties submitted or window closed
+  HIDDEN     // Hidden due to moderation
+}
+
+enum ReviewReportReason {
+  INAPPROPRIATE_CONTENT
+  FALSE_INFORMATION
+  HARASSMENT
+  SPAM
+  CONFLICT_OF_INTEREST
+  OTHER
+}
+
+enum ReportStatus {
   PENDING
-  PUBLISHED
-  HIDDEN
-  FLAGGED
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum ReviewInvitationStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+  SKIPPED
 }
 
 model TrustScore {
