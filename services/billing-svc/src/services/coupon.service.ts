@@ -226,6 +226,47 @@ export class CouponService {
   // ===========================================================================
 
   /**
+   * Check if coupon validity period is valid
+   */
+  private checkValidityPeriod(coupon: { validFrom: Date; validUntil: Date | null }): string | null {
+    const now = new Date();
+    if (now < coupon.validFrom) return 'Coupon is not yet valid';
+    if (coupon.validUntil && now > coupon.validUntil) return 'Coupon has expired';
+    return null;
+  }
+
+  /**
+   * Check coupon restrictions
+   */
+  private checkCouponRestrictions(
+    coupon: {
+      maxRedemptions: number | null;
+      currentRedemptions: number;
+      validProductTypes: string[];
+      minimumAmount: number | null;
+    },
+    options?: { productType?: string; amount?: number }
+  ): string | null {
+    // Check redemption limit
+    if (coupon.maxRedemptions && coupon.currentRedemptions >= coupon.maxRedemptions) {
+      return 'Coupon has reached maximum redemptions';
+    }
+    // Check product type restriction
+    if (options?.productType && coupon.validProductTypes.length > 0) {
+      if (!coupon.validProductTypes.includes(options.productType)) {
+        return `Coupon not valid for ${options.productType}`;
+      }
+    }
+    // Check minimum amount
+    if (options?.amount && coupon.minimumAmount) {
+      if (options.amount < Number(coupon.minimumAmount)) {
+        return `Minimum order amount of ${coupon.minimumAmount} required`;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Validate a coupon code
    */
   async validateCoupon(
@@ -241,92 +282,39 @@ export class CouponService {
     });
 
     if (!coupon) {
-      return {
-        valid: false,
-        coupon: null,
-        reason: 'Coupon not found',
-      };
+      return { valid: false, coupon: null, reason: 'Coupon not found' };
     }
+
+    const mappedCoupon = this.mapCouponResponse(coupon);
 
     // Check if active
     if (!coupon.isActive) {
-      return {
-        valid: false,
-        coupon: this.mapCouponResponse(coupon),
-        reason: 'Coupon is not active',
-      };
+      return { valid: false, coupon: mappedCoupon, reason: 'Coupon is not active' };
     }
 
     // Check validity period
-    const now = new Date();
-    if (now < coupon.validFrom) {
-      return {
-        valid: false,
-        coupon: this.mapCouponResponse(coupon),
-        reason: 'Coupon is not yet valid',
-      };
-    }
-    if (coupon.validUntil && now > coupon.validUntil) {
-      return {
-        valid: false,
-        coupon: this.mapCouponResponse(coupon),
-        reason: 'Coupon has expired',
-      };
+    const periodError = this.checkValidityPeriod(coupon);
+    if (periodError) {
+      return { valid: false, coupon: mappedCoupon, reason: periodError };
     }
 
-    // Check redemption limit
-    if (coupon.maxRedemptions && coupon.currentRedemptions >= coupon.maxRedemptions) {
-      return {
-        valid: false,
-        coupon: this.mapCouponResponse(coupon),
-        reason: 'Coupon has reached maximum redemptions',
-      };
-    }
-
-    // Check product type restriction
-    if (options?.productType && coupon.validProductTypes.length > 0) {
-      if (!coupon.validProductTypes.includes(options.productType)) {
-        return {
-          valid: false,
-          coupon: this.mapCouponResponse(coupon),
-          reason: `Coupon not valid for ${options.productType}`,
-        };
-      }
-    }
-
-    // Check minimum amount
-    if (options?.amount && coupon.minimumAmount) {
-      if (options.amount < Number(coupon.minimumAmount)) {
-        return {
-          valid: false,
-          coupon: this.mapCouponResponse(coupon),
-          reason: `Minimum order amount of ${coupon.minimumAmount} required`,
-        };
-      }
+    // Check restrictions
+    const restrictionError = this.checkCouponRestrictions(coupon, options);
+    if (restrictionError) {
+      return { valid: false, coupon: mappedCoupon, reason: restrictionError };
     }
 
     // Check user hasn't already used this coupon (for per-user limits)
     if (options?.userId) {
       const userRedemption = await prisma.couponRedemption.findFirst({
-        where: {
-          couponId: coupon.id,
-          userId: options.userId,
-        },
+        where: { couponId: coupon.id, userId: options.userId },
       });
-
       if (userRedemption) {
-        return {
-          valid: false,
-          coupon: this.mapCouponResponse(coupon),
-          reason: 'You have already used this coupon',
-        };
+        return { valid: false, coupon: mappedCoupon, reason: 'You have already used this coupon' };
       }
     }
 
-    return {
-      valid: true,
-      coupon: this.mapCouponResponse(coupon),
-    };
+    return { valid: true, coupon: mappedCoupon };
   }
 
   // ===========================================================================

@@ -750,6 +750,67 @@ export class PaymentMethodService {
   }
 
   /**
+   * Build card details for response
+   */
+  private buildCardDetails(method: PaymentMethod): PaymentMethodResponse['card'] | undefined {
+    if (method.type !== 'CARD' || !method.cardLast4) return undefined;
+
+    const cardDetails: NonNullable<PaymentMethodResponse['card']> = {
+      brand: method.cardBrand ?? 'unknown',
+      last4: method.cardLast4,
+      expMonth: method.cardExpMonth ?? 0,
+      expYear: method.cardExpYear ?? 0,
+    };
+    if (method.cardFunding) cardDetails.funding = method.cardFunding;
+    const expiresIn = this.calculateExpiresIn(method.cardExpMonth, method.cardExpYear);
+    if (expiresIn) cardDetails.expiresIn = expiresIn;
+    return cardDetails;
+  }
+
+  /**
+   * Build bank details for response
+   */
+  private buildBankDetails(method: PaymentMethod): PaymentMethodResponse['bank'] | undefined {
+    if (method.type !== 'ACH_DEBIT' || !method.bankLast4) return undefined;
+
+    const bankDetails: NonNullable<PaymentMethodResponse['bank']> = {
+      name: method.bankName ?? 'Bank Account',
+      last4: method.bankLast4,
+    };
+    if (method.bankAccountType) bankDetails.accountType = method.bankAccountType;
+    if (method.bankRoutingLast4) bankDetails.routingLast4 = method.bankRoutingLast4;
+    return bankDetails;
+  }
+
+  /**
+   * Build SEPA details for response
+   */
+  private buildSepaDetails(method: PaymentMethod): PaymentMethodResponse['sepa'] | undefined {
+    if (method.type !== 'SEPA_DEBIT' || !method.bankLast4) return undefined;
+    return {
+      country: method.sepaCountry ?? '',
+      bankCode: method.sepaBankCode ?? '',
+      last4: method.bankLast4,
+    };
+  }
+
+  /**
+   * Build billing details for response
+   */
+  private buildBillingDetails(
+    method: PaymentMethod
+  ): PaymentMethodResponse['billingDetails'] | undefined {
+    if (!method.billingName && !method.billingEmail && !method.billingCountry) return undefined;
+
+    const billingDetails: NonNullable<PaymentMethodResponse['billingDetails']> = {};
+    if (method.billingName) billingDetails.name = method.billingName;
+    if (method.billingEmail) billingDetails.email = method.billingEmail;
+    if (method.billingCountry) billingDetails.country = method.billingCountry;
+    if (method.billingPostalCode) billingDetails.postalCode = method.billingPostalCode;
+    return billingDetails;
+  }
+
+  /**
    * Map payment method to response DTO
    */
   private mapToResponse(method: PaymentMethod): PaymentMethodResponse {
@@ -761,61 +822,17 @@ export class PaymentMethodService {
       createdAt: method.createdAt.toISOString(),
     };
 
-    if (method.type === 'CARD' && method.cardLast4) {
-      const cardDetails: PaymentMethodResponse['card'] = {
-        brand: method.cardBrand ?? 'unknown',
-        last4: method.cardLast4,
-        expMonth: method.cardExpMonth ?? 0,
-        expYear: method.cardExpYear ?? 0,
-      };
-      if (method.cardFunding) {
-        cardDetails.funding = method.cardFunding;
-      }
-      const expiresIn = this.calculateExpiresIn(method.cardExpMonth, method.cardExpYear);
-      if (expiresIn) {
-        cardDetails.expiresIn = expiresIn;
-      }
-      response.card = cardDetails;
-    }
+    const card = this.buildCardDetails(method);
+    if (card) response.card = card;
 
-    if (method.type === 'ACH_DEBIT' && method.bankLast4) {
-      const bankDetails: PaymentMethodResponse['bank'] = {
-        name: method.bankName ?? 'Bank Account',
-        last4: method.bankLast4,
-      };
-      if (method.bankAccountType) {
-        bankDetails.accountType = method.bankAccountType;
-      }
-      if (method.bankRoutingLast4) {
-        bankDetails.routingLast4 = method.bankRoutingLast4;
-      }
-      response.bank = bankDetails;
-    }
+    const bank = this.buildBankDetails(method);
+    if (bank) response.bank = bank;
 
-    if (method.type === 'SEPA_DEBIT' && method.bankLast4) {
-      response.sepa = {
-        country: method.sepaCountry ?? '',
-        bankCode: method.sepaBankCode ?? '',
-        last4: method.bankLast4,
-      };
-    }
+    const sepa = this.buildSepaDetails(method);
+    if (sepa) response.sepa = sepa;
 
-    if (method.billingName || method.billingEmail || method.billingCountry) {
-      const billingDetails: PaymentMethodResponse['billingDetails'] = {};
-      if (method.billingName) {
-        billingDetails.name = method.billingName;
-      }
-      if (method.billingEmail) {
-        billingDetails.email = method.billingEmail;
-      }
-      if (method.billingCountry) {
-        billingDetails.country = method.billingCountry;
-      }
-      if (method.billingPostalCode) {
-        billingDetails.postalCode = method.billingPostalCode;
-      }
-      response.billingDetails = billingDetails;
-    }
+    const billingDetails = this.buildBillingDetails(method);
+    if (billingDetails) response.billingDetails = billingDetails;
 
     return response;
   }

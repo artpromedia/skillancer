@@ -171,7 +171,8 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
+// Top-level await for module execution
+await main().catch((err) => {
   console.error('Fatal error:', err);
   // eslint-disable-next-line n/no-process-exit
   process.exit(1);

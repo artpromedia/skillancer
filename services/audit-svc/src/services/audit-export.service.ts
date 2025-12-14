@@ -312,7 +312,8 @@ function convertToCSV(logs: Array<Record<string, unknown>>, includeFields?: stri
     if (value === null || value === undefined) return '';
     if (value instanceof Date) return value.toISOString();
     if (typeof value === 'object') return JSON.stringify(value);
-    return String(value);
+    // Primitive values (string, number, boolean) are safe to stringify
+    return typeof value === 'string' ? value : JSON.stringify(value);
   };
 
   const header = fields.join(',');

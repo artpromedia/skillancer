@@ -973,11 +973,11 @@ export class StripeService {
     metadata?: Record<string, string>
   ): Promise<Stripe.TransferReversal> {
     try {
-      const params: Stripe.TransferReversalCreateParams = {};
-      if (amount !== undefined) params.amount = Math.round(amount * 100);
-      if (metadata) params.metadata = metadata;
-
-      return await this.stripe.transfers.createReversal(transferId, params);
+      // Build params inline to avoid deprecated TransferReversalCreateParams type
+      return await this.stripe.transfers.createReversal(transferId, {
+        ...(amount !== undefined && { amount: Math.round(amount * 100) }),
+        ...(metadata && { metadata }),
+      });
     } catch (error) {
       throw this.handleStripeError(error);
     }

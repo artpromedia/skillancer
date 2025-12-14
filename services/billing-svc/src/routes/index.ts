@@ -14,6 +14,7 @@ import { registerUsageRoutes } from './usage.routes.js';
 
 import type { FastifyInstance } from 'fastify';
 
+// Re-export all routes
 export {
   registerCouponRoutes,
   registerInvoiceRoutes,
