@@ -23,7 +23,7 @@ export interface UsageStats {
 }
 
 export class UsageService {
-  private usageRecords: Map<string, UsageRecord[]> = new Map();
+  private readonly usageRecords: Map<string, UsageRecord[]> = new Map();
 
   /**
    * Record usage for a subscription

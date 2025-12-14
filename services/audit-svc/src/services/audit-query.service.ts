@@ -99,18 +99,21 @@ async function generateUserActivitySummary(
   };
 
   const total = await auditLogRepository.countAuditLogs(filters);
-  const categoryBreakdown = await auditLogRepository.aggregateByCategory(filters);
-  const hourlyTrends = await auditLogRepository.aggregateHourlyTrends(filters);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const categoryBreakdown: Array<{ _id: string; count: number }> =
+    await auditLogRepository.aggregateByCategory(filters);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const hourlyTrends: Array<{ _id: number; count: number }> =
+    await auditLogRepository.aggregateHourlyTrends(filters);
 
   const eventsByCategory: Record<string, number> = {};
   for (const cat of categoryBreakdown) {
     eventsByCategory[cat._id] = cat.count;
   }
 
-  const mostActiveHours = hourlyTrends
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3)
-    .map((h) => h._id);
+  // Sort and extract top 3 most active hours
+  const sortedTrends = [...hourlyTrends].sort((a, b) => b.count - a.count);
+  const mostActiveHours: number[] = sortedTrends.slice(0, 3).map((h) => h._id);
 
   return {
     totalEvents: total,

@@ -163,9 +163,10 @@ function extractResourceType(url: string): string {
   const apiIndex = parts.findIndex((p) => p === 'api' || p === 'v1' || p === 'v2');
   const startIndex = apiIndex >= 0 ? apiIndex + 1 : 0;
 
+  const hexPattern = /^[0-9a-f-]{8,}$/i;
   for (let i = startIndex; i < parts.length; i++) {
     const part = parts[i];
-    if (part && !part.match(/^[0-9a-f-]{8,}$/i) && !part.startsWith('?')) {
+    if (part && !hexPattern.test(part) && !part.startsWith('?')) {
       return part;
     }
   }
@@ -175,12 +176,14 @@ function extractResourceType(url: string): string {
 
 function extractResourceId(url: string): string | undefined {
   const parts = url.split('/').filter(Boolean);
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const numericPattern = /^\d+$/;
 
   for (const part of parts) {
-    if (part.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+    if (uuidPattern.test(part)) {
       return part;
     }
-    if (part.match(/^[0-9]+$/) && part.length > 0) {
+    if (numericPattern.test(part) && part.length > 0) {
       return part;
     }
   }

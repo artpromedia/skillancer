@@ -46,7 +46,7 @@ server.get('/ready', async () => {
     await prisma.$queryRaw`SELECT 1`;
     await redis.ping();
     return { status: 'ready' };
-  } catch (error) {
+  } catch {
     throw new Error('Service not ready');
   }
 });

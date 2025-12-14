@@ -5,13 +5,7 @@
  */
 
 import { getStripeService } from './stripe.service.js';
-import {
-  getStripePriceId,
-  isUpgrade as _isPlanUpgrade,
-  isDowngrade as _isPlanDowngrade,
-  type ProductType,
-  type BillingIntervalType,
-} from '../config/plans.js';
+import { getStripePriceId, type ProductType, type BillingIntervalType } from '../config/plans.js';
 import { BillingError } from '../errors/index.js';
 import { getSubscriptionRepository } from '../repositories/index.js';
 
@@ -75,12 +69,10 @@ export interface SeatChangePreview extends ProrationPreview {
 
 export class ProrationService {
   private _stripeService: ReturnType<typeof getStripeService> | null = null;
-  private subscriptionRepository = getSubscriptionRepository();
+  private readonly subscriptionRepository = getSubscriptionRepository();
 
   private get stripeService() {
-    if (!this._stripeService) {
-      this._stripeService = getStripeService();
-    }
+    this._stripeService ??= getStripeService();
     return this._stripeService;
   }
 
@@ -414,9 +406,7 @@ export class ProrationService {
 let serviceInstance: ProrationService | null = null;
 
 export function getProrationService(): ProrationService {
-  if (!serviceInstance) {
-    serviceInstance = new ProrationService();
-  }
+  serviceInstance ??= new ProrationService();
   return serviceInstance;
 }
 

@@ -3,9 +3,9 @@
  * Retention, archival, and maintenance operations
  */
 
-import { Readable } from 'stream';
-import { pipeline } from 'stream/promises';
-import { createGzip } from 'zlib';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { createGzip } from 'node:zlib';
 
 import { type S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 

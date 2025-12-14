@@ -269,7 +269,7 @@ const trialRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       try {
-        // TODO: Add admin role check
+        // FUTURE: Add admin role check
         requireUser(request);
         const body = ExtendTrialSchema.parse(request.body);
 

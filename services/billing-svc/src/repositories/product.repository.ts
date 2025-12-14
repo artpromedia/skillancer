@@ -221,16 +221,12 @@ let productRepositoryInstance: ProductRepository | null = null;
 let priceRepositoryInstance: PriceRepository | null = null;
 
 export function getProductRepository(): ProductRepository {
-  if (!productRepositoryInstance) {
-    productRepositoryInstance = new ProductRepository();
-  }
+  productRepositoryInstance ??= new ProductRepository();
   return productRepositoryInstance;
 }
 
 export function getPriceRepository(): PriceRepository {
-  if (!priceRepositoryInstance) {
-    priceRepositoryInstance = new PriceRepository();
-  }
+  priceRepositoryInstance ??= new PriceRepository();
   return priceRepositoryInstance;
 }
 

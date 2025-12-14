@@ -118,10 +118,10 @@ export interface AuditClientOptions {
 }
 
 export class AuditClient {
-  private queue: Queue;
-  private redis: Redis;
-  private serviceId: string;
-  private defaultActorType: ActorType;
+  private readonly queue: Queue;
+  private readonly redis: Redis;
+  private readonly serviceId: string;
+  private readonly defaultActorType: ActorType;
 
   constructor(options: AuditClientOptions) {
     this.serviceId = options.serviceId;

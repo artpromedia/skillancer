@@ -349,8 +349,9 @@ export class PayoutAccountNotActiveError extends PayoutAccountError {
 
 export class PayoutAccountRestrictedError extends PayoutAccountError {
   constructor(userId: string, reason?: string) {
+    const reasonSuffix = reason ? `: ${reason}` : '';
     super(
-      `Payout account is restricted for user ${userId}${reason ? `: ${reason}` : ''}`,
+      `Payout account is restricted for user ${userId}${reasonSuffix}`,
       'PAYOUT_ACCOUNT_RESTRICTED',
       403
     );

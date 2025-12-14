@@ -44,7 +44,7 @@ export function applyRedaction(
   log: AuditLogEntry,
   rules: RedactionRule[] = DEFAULT_REDACTION_RULES
 ): AuditLogEntry {
-  const redacted = JSON.parse(JSON.stringify(log)) as AuditLogEntry;
+  const redacted = structuredClone(log);
 
   const redactObject = (obj: Record<string, unknown>, path: string[] = []): void => {
     for (const [key, value] of Object.entries(obj)) {
@@ -167,12 +167,12 @@ export function maskPII(value: string, type: 'email' | 'phone' | 'name' | 'parti
       if (!local || !domain) return '[INVALID_EMAIL]';
       const maskedLocal =
         local.length > 2
-          ? local[0] + '*'.repeat(local.length - 2) + local[local.length - 1]
+          ? local[0] + '*'.repeat(local.length - 2) + local.at(-1)
           : '*'.repeat(local.length);
       return `${maskedLocal}@${domain}`;
     }
     case 'phone': {
-      const digits = value.replace(/\D/g, '');
+      const digits = value.replaceAll(/\D/g, '');
       if (digits.length < 4) return '*'.repeat(digits.length);
       return '*'.repeat(digits.length - 4) + digits.slice(-4);
     }

@@ -186,12 +186,10 @@ export interface PlanChangeResult {
 
 export class SubscriptionService {
   private _stripeService: ReturnType<typeof getStripeService> | null = null;
-  private config = getConfig();
+  private readonly config = getConfig();
 
   private get stripeService() {
-    if (!this._stripeService) {
-      this._stripeService = getStripeService();
-    }
+    this._stripeService ??= getStripeService();
     return this._stripeService;
   }
 
@@ -1052,9 +1050,7 @@ export class SubscriptionService {
 let subscriptionServiceInstance: SubscriptionService | null = null;
 
 export function getSubscriptionService(): SubscriptionService {
-  if (!subscriptionServiceInstance) {
-    subscriptionServiceInstance = new SubscriptionService();
-  }
+  subscriptionServiceInstance ??= new SubscriptionService();
   return subscriptionServiceInstance;
 }
 

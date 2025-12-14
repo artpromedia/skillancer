@@ -1153,9 +1153,7 @@ export class StripeService {
 let stripeServiceInstance: StripeService | null = null;
 
 export function getStripeService(): StripeService {
-  if (!stripeServiceInstance) {
-    stripeServiceInstance = new StripeService();
-  }
+  stripeServiceInstance ??= new StripeService();
   return stripeServiceInstance;
 }
 

@@ -372,11 +372,14 @@ export class ProductService {
 
     // Handle enterprise (custom) plans
     const isCustom = 'custom' in planConfig && planConfig.custom === true;
-    const unitAmount = isCustom
-      ? 0
-      : interval === 'ANNUAL'
-        ? (planConfig as { annualPrice: number }).annualPrice
-        : (planConfig as { monthlyPrice: number }).monthlyPrice;
+    let unitAmount = 0;
+    if (!isCustom) {
+      if (interval === 'ANNUAL') {
+        unitAmount = (planConfig as { annualPrice: number }).annualPrice;
+      } else {
+        unitAmount = (planConfig as { monthlyPrice: number }).monthlyPrice;
+      }
+    }
 
     const trialDays = isCustom ? null : ((planConfig as { trialDays?: number }).trialDays ?? 14);
     const features = planConfig.features.tools;
@@ -424,9 +427,7 @@ export class ProductService {
 let serviceInstance: ProductService | null = null;
 
 export function getProductService(): ProductService {
-  if (!serviceInstance) {
-    serviceInstance = new ProductService();
-  }
+  serviceInstance ??= new ProductService();
   return serviceInstance;
 }
 

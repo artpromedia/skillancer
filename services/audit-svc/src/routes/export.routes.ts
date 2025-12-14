@@ -120,8 +120,8 @@ export function registerExportRoutes(app: FastifyInstance): void {
       }
 
       const result = await listExports(userId, {
-        page: page ? parseInt(page, 10) : undefined,
-        pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+        page: page ? Number.parseInt(page, 10) : undefined,
+        pageSize: pageSize ? Number.parseInt(pageSize, 10) : undefined,
       });
 
       return reply.send(result);

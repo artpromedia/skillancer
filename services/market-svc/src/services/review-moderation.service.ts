@@ -17,9 +17,19 @@ import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 
 // Common profanity patterns (simplified - in production use a proper library)
+// Breaking into separate patterns to reduce regex complexity
 const PROFANITY_PATTERNS = [
-  /\b(f+u+c+k+|sh+i+t+|a+s+s+h+o+l+e+|b+i+t+c+h+|d+a+m+n+)\b/gi,
-  /\b(bastard|crap|dick|piss|slut|whore)\b/gi,
+  /\bf+u+c+k+\b/gi,
+  /\bsh+i+t+\b/gi,
+  /\ba+s+s+h+o+l+e+\b/gi,
+  /\bb+i+t+c+h+\b/gi,
+  /\bd+a+m+n+\b/gi,
+  /\bbastard\b/gi,
+  /\bcrap\b/gi,
+  /\bdick\b/gi,
+  /\bpiss\b/gi,
+  /\bslut\b/gi,
+  /\bwhore\b/gi,
 ];
 
 // Spam indicators
@@ -79,21 +89,23 @@ export class ReviewModerationService {
     let hasProfanity = false;
     let hasSpam = false;
 
-    // Check for profanity
+    // Check for profanity using RegExp.exec for global patterns
     for (const pattern of PROFANITY_PATTERNS) {
-      const matches = content.match(pattern);
-      if (matches) {
+      const regex = new RegExp(pattern.source, pattern.flags);
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(content)) !== null) {
         hasProfanity = true;
-        flaggedContent.push(...matches);
+        flaggedContent.push(match[0]);
       }
     }
 
-    // Check for spam
+    // Check for spam using RegExp.exec for global patterns
     for (const pattern of SPAM_INDICATORS) {
-      const matches = content.match(pattern);
-      if (matches) {
+      const regex = new RegExp(pattern.source, pattern.flags);
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(content)) !== null) {
         hasSpam = true;
-        flaggedContent.push(...matches);
+        flaggedContent.push(match[0]);
       }
     }
 

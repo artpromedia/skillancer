@@ -71,8 +71,8 @@ export function registerAuditRoutes(app: FastifyInstance): void {
       const query = request.query;
 
       const filters: AuditSearchFilters = {
-        page: query.page ? parseInt(query.page, 10) : undefined,
-        pageSize: query.pageSize ? parseInt(query.pageSize, 10) : undefined,
+        page: query.page ? Number.parseInt(query.page, 10) : undefined,
+        pageSize: query.pageSize ? Number.parseInt(query.pageSize, 10) : undefined,
         startDate: query.startDate ? new Date(query.startDate) : undefined,
         endDate: query.endDate ? new Date(query.endDate) : undefined,
         eventType: query.eventType,
@@ -160,7 +160,7 @@ export function registerAuditRoutes(app: FastifyInstance): void {
       const timeline = await getUserActivityTimeline(userId, {
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
-        limit: limit ? parseInt(limit, 10) : undefined,
+        limit: limit ? Number.parseInt(limit, 10) : undefined,
       });
 
       return reply.send(timeline);
@@ -188,7 +188,7 @@ export function registerAuditRoutes(app: FastifyInstance): void {
       const trail = await getResourceAuditTrail(resourceType, resourceId, {
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
-        limit: limit ? parseInt(limit, 10) : undefined,
+        limit: limit ? Number.parseInt(limit, 10) : undefined,
       });
 
       return reply.send(trail);

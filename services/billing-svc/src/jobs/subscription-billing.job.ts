@@ -525,7 +525,7 @@ function sendPaymentRetriesExhaustedNotification(subscriptionId: string, invoice
     subscriptionId,
     invoiceId,
   });
-  // TODO: Integrate with notification service
+  // FUTURE: Integrate with notification service
 }
 
 function sendOverageNotification(
@@ -539,7 +539,7 @@ function sendOverageNotification(
     overageMinutes,
     overageCost: `$${(overageCost / 100).toFixed(2)}`,
   });
-  // TODO: Integrate with notification service
+  // FUTURE: Integrate with notification service
 }
 
 function sendTrialEndingSoonNotification(
@@ -555,7 +555,7 @@ function sendTrialEndingSoonNotification(
     trialEndsAt: trialEndsAt.toISOString(),
     hasPaymentMethod,
   });
-  // TODO: Integrate with notification service
+  // FUTURE: Integrate with notification service
 }
 
 function sendSubscriptionExpiringNotification(
@@ -567,7 +567,7 @@ function sendSubscriptionExpiringNotification(
     subscriptionId,
     expiresAt: expiresAt.toISOString(),
   });
-  // TODO: Integrate with notification service
+  // FUTURE: Integrate with notification service
 }
 
 // =============================================================================

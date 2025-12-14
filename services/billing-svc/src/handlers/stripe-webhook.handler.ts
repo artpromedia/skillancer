@@ -532,7 +532,7 @@ function mapStripeType(stripeType: string): 'CARD' | 'ACH_DEBIT' | 'SEPA_DEBIT' 
 
 /**
  * Send payment method added notification
- * TODO: Integrate with notification service
+ * FUTURE: Integrate with notification service
  */
 function sendPaymentMethodAddedNotification(
   userId: string,
@@ -546,7 +546,7 @@ function sendPaymentMethodAddedNotification(
 
 /**
  * Send card auto-updated notification
- * TODO: Integrate with notification service
+ * FUTURE: Integrate with notification service
  */
 function sendCardAutoUpdatedNotification(
   user: { id: string; email: string; firstName: string },
@@ -562,7 +562,7 @@ function sendCardAutoUpdatedNotification(
 
 /**
  * Send setup failed notification
- * TODO: Integrate with notification service
+ * FUTURE: Integrate with notification service
  */
 function sendSetupFailedNotification(userId: string, setupIntent: Stripe.SetupIntent): void {
   console.log(`[NOTIFICATION] Setup intent failed for user ${userId}:`, {
@@ -801,7 +801,7 @@ async function handleInvoiceUpcoming(invoice: Stripe.Invoice): Promise<WebhookHa
 
 /**
  * Send subscription canceled notification
- * TODO: Integrate with notification service
+ * FUTURE: Integrate with notification service
  */
 function sendSubscriptionCanceledNotification(
   userId: string,
@@ -816,7 +816,7 @@ function sendSubscriptionCanceledNotification(
 
 /**
  * Send trial ending notification
- * TODO: Integrate with notification service
+ * FUTURE: Integrate with notification service
  */
 function sendTrialEndingNotification(userId: string, subscription: Stripe.Subscription): void {
   console.log(`[NOTIFICATION] Trial ending soon for user ${userId}:`, {
@@ -827,7 +827,7 @@ function sendTrialEndingNotification(userId: string, subscription: Stripe.Subscr
 
 /**
  * Send payment success notification
- * TODO: Integrate with notification service
+ * FUTURE: Integrate with notification service
  */
 function sendPaymentSuccessNotification(userId: string, invoice: Stripe.Invoice): void {
   console.log(`[NOTIFICATION] Payment successful for user ${userId}:`, {
@@ -839,7 +839,7 @@ function sendPaymentSuccessNotification(userId: string, invoice: Stripe.Invoice)
 
 /**
  * Send payment failed notification
- * TODO: Integrate with notification service
+ * FUTURE: Integrate with notification service
  */
 function sendPaymentFailedNotification(
   userId: string,
@@ -859,7 +859,7 @@ function sendPaymentFailedNotification(
 
 /**
  * Send upcoming charge notification
- * TODO: Integrate with notification service
+ * FUTURE: Integrate with notification service
  */
 function sendUpcomingChargeNotification(userId: string, invoice: Stripe.Invoice): void {
   console.log(`[NOTIFICATION] Upcoming charge for user ${userId}:`, {

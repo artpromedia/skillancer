@@ -6,9 +6,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-redundant-type-constituents */
 // Prisma client types are not available until `prisma generate` is run
 
-import { Readable } from 'stream';
-import { pipeline } from 'stream/promises';
-import { createGzip } from 'zlib';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { createGzip } from 'node:zlib';
 
 import { type S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
@@ -311,12 +311,13 @@ function convertToCSV(logs: Array<Record<string, unknown>>, includeFields?: stri
     }
     if (value === null || value === undefined) return '';
     if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'object') return JSON.stringify(value);
     return String(value);
   };
 
   const header = fields.join(',');
   const rows = logs.map((log) =>
-    fields.map((f) => `"${getValue(log, f).replace(/"/g, '""')}"`).join(',')
+    fields.map((f) => `"${getValue(log, f).replaceAll('"', '""')}"`).join(',')
   );
 
   return [header, ...rows].join('\n');

@@ -41,7 +41,7 @@ interface Config {
 
 function getConfig(): Config {
   return {
-    port: parseInt(process.env.PORT ?? '3010', 10),
+    port: Number.parseInt(process.env.PORT ?? '3010', 10),
     host: process.env.HOST ?? '0.0.0.0',
     mongoUri: process.env.MONGO_URI ?? 'mongodb://localhost:27017',
     mongoDbName: process.env.MONGO_DB_NAME ?? 'skillancer_audit',

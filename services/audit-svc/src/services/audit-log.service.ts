@@ -3,7 +3,7 @@
  * Core audit logging service
  */
 
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -119,8 +119,7 @@ function determineComplianceTags(params: AuditLogParams): ComplianceTag[] {
     params.changes?.before?.email ||
     params.changes?.after?.email
   ) {
-    tags.push(ComplianceTag.GDPR);
-    tags.push(ComplianceTag.PII);
+    tags.push(ComplianceTag.GDPR, ComplianceTag.PII);
   }
 
   return tags;

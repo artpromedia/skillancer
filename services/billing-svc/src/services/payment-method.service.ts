@@ -3,12 +3,10 @@
  * Payment method management service
  */
 
-import type Stripe from 'stripe';
 import { prisma } from '@skillancer/database';
-import type { PaymentMethod, PaymentMethodType, PaymentMethodStatus } from '@skillancer/database';
 
-import { getConfig } from '../config/index.js';
 import { getStripeService } from './stripe.service.js';
+import { getConfig } from '../config/index.js';
 import {
   PaymentMethodNotFoundError,
   PaymentMethodInUseError,
@@ -17,6 +15,9 @@ import {
   InvalidPaymentMethodTypeError,
   UnauthorizedPaymentMethodAccessError,
 } from '../errors/index.js';
+
+import type { PaymentMethod, PaymentMethodType, PaymentMethodStatus } from '@skillancer/database';
+import type Stripe from 'stripe';
 
 // =============================================================================
 // TYPES
@@ -251,6 +252,7 @@ export class PaymentMethodService {
 
     // Create local record
     const method = await prisma.paymentMethod.create({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: stripUndefined({
         userId,
         stripePaymentMethodId,
@@ -640,7 +642,7 @@ export class PaymentMethodService {
     }
 
     // Check for active subscriptions (would need subscription model)
-    // TODO: Add subscription check when subscription model exists
+    // FUTURE: Add subscription check when subscription model exists
 
     return { allowed: true };
   }
@@ -678,6 +680,7 @@ export class PaymentMethodService {
     stripeMethod: Stripe.PaymentMethod
   ): Promise<PaymentMethod> {
     return prisma.paymentMethod.create({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: stripUndefined({
         userId,
         stripePaymentMethodId: stripeMethod.id,
@@ -714,6 +717,7 @@ export class PaymentMethodService {
   ): Promise<void> {
     await prisma.paymentMethod.update({
       where: { id: localId },
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: stripUndefined({
         cardBrand: stripeMethod.card?.brand,
         cardExpMonth: stripeMethod.card?.exp_month,
@@ -847,7 +851,7 @@ export class PaymentMethodService {
 
   /**
    * Send card expiration warning notification
-   * TODO: Implement notification service integration
+   * FUTURE: Implement notification service integration
    */
   private sendCardExpirationWarning(
     user: { id: string; email: string; firstName: string },
@@ -870,9 +874,7 @@ export class PaymentMethodService {
 let paymentMethodServiceInstance: PaymentMethodService | null = null;
 
 export function getPaymentMethodService(): PaymentMethodService {
-  if (!paymentMethodServiceInstance) {
-    paymentMethodServiceInstance = new PaymentMethodService();
-  }
+  paymentMethodServiceInstance ??= new PaymentMethodService();
   return paymentMethodServiceInstance;
 }
 

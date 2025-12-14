@@ -121,9 +121,6 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
     '/validate',
     {
       schema: {
-        description: 'Validate a coupon code',
-        tags: ['coupons'],
-        security: [{ bearerAuth: [] }],
         body: zodToJsonSchema(ValidateCouponSchema),
         response: {
           200: {
@@ -142,12 +139,10 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
         const user = requireUser(request);
         const body = ValidateCouponSchema.parse(request.body);
 
-        const validation = await couponService.validateCoupon(
-          body.code,
-          user.id,
-          body.productType,
-          body.subscriptionId
-        );
+        const validation = await couponService.validateCoupon(body.code, {
+          userId: user.id,
+          ...(body.productType && { productType: body.productType }),
+        });
 
         return await reply.send(validation);
       } catch (error) {
@@ -177,9 +172,6 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
     '/redeem',
     {
       schema: {
-        description: 'Redeem a coupon for a subscription',
-        tags: ['coupons'],
-        security: [{ bearerAuth: [] }],
         body: zodToJsonSchema(RedeemCouponSchema),
         response: {
           200: {
@@ -232,9 +224,6 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
     '/redemptions',
     {
       schema: {
-        description: "Get user's coupon redemption history",
-        tags: ['coupons'],
-        security: [{ bearerAuth: [] }],
         querystring: zodToJsonSchema(PaginationSchema),
         response: {
           200: {
@@ -280,9 +269,6 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       schema: {
-        description: 'List all coupons (admin only)',
-        tags: ['coupons'],
-        security: [{ bearerAuth: [] }],
         querystring: {
           type: 'object',
           properties: {
@@ -308,11 +294,11 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
         const pagination = PaginationSchema.parse(request.query);
         const activeFilter = (request.query as { active?: boolean }).active;
 
-        const result = await couponService.listCoupons(
-          pagination.limit,
-          pagination.offset,
-          activeFilter
-        );
+        const result = await couponService.listCoupons({
+          ...(activeFilter !== undefined && { activeOnly: activeFilter }),
+          page: Math.floor(pagination.offset / pagination.limit) + 1,
+          limit: pagination.limit,
+        });
 
         return await reply.send(result);
       } catch (error) {
@@ -334,9 +320,6 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       schema: {
-        description: 'Create a new coupon (admin only)',
-        tags: ['coupons'],
-        security: [{ bearerAuth: [] }],
         body: zodToJsonSchema(CreateCouponSchema),
         response: {
           201: { type: 'object' },
@@ -354,17 +337,15 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
           code: body.code,
           name: body.name,
           discountType: body.discountType,
-          discountValue: body.discountValue,
+          ...(body.discountType === 'PERCENT' && { percentOff: body.discountValue }),
+          ...(body.discountType === 'AMOUNT' && { amountOff: body.discountValue }),
           currency: body.currency,
-          maxRedemptions: body.maxRedemptions,
-          maxRedemptionsPerUser: body.maxRedemptionsPerUser,
-          expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
-          minPurchaseAmount: body.minPurchaseAmount,
-          applicableProducts: body.applicableProducts,
+          ...(body.maxRedemptions !== undefined && { maxRedemptions: body.maxRedemptions }),
+          ...(body.expiresAt && { validUntil: new Date(body.expiresAt) }),
+          ...(body.minPurchaseAmount !== undefined && { minimumAmount: body.minPurchaseAmount }),
+          ...(body.applicableProducts && { validProductTypes: body.applicableProducts }),
           duration: body.duration,
-          durationInMonths: body.durationInMonths,
-          firstTimeOnly: body.firstTimeOnly,
-          metadata: body.metadata,
+          ...(body.durationInMonths !== undefined && { durationMonths: body.durationInMonths }),
         });
 
         return await reply.code(201).send(coupon);
@@ -397,9 +378,6 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
     '/:couponId',
     {
       schema: {
-        description: 'Get coupon details (admin only)',
-        tags: ['coupons'],
-        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           properties: {
@@ -449,9 +427,6 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
     '/:couponId',
     {
       schema: {
-        description: 'Deactivate a coupon (admin only)',
-        tags: ['coupons'],
-        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           properties: {
@@ -497,9 +472,6 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
     '/:couponId/promotion-codes',
     {
       schema: {
-        description: 'List promotion codes for a coupon (admin only)',
-        tags: ['coupons'],
-        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           properties: {
@@ -547,9 +519,6 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
     '/:couponId/promotion-codes',
     {
       schema: {
-        description: 'Create a promotion code for a coupon (admin only)',
-        tags: ['coupons'],
-        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           properties: {
@@ -571,10 +540,25 @@ const couponRoutes: FastifyPluginAsync = async (fastify) => {
         const bodySchema = CreatePromotionCodeSchema.omit({ couponId: true });
         const body = bodySchema.parse(request.body);
 
+        const restrictionsObj = body.restrictions
+          ? {
+              ...(body.restrictions.firstTimeOnly !== undefined && {
+                firstTimeOnly: body.restrictions.firstTimeOnly,
+              }),
+              ...(body.restrictions.minimumAmount !== undefined && {
+                minimumAmount: body.restrictions.minimumAmount,
+              }),
+              ...(body.restrictions.minimumCurrency !== undefined && {
+                minimumCurrency: body.restrictions.minimumCurrency,
+              }),
+            }
+          : undefined;
+
         const promotionCode = await couponService.createPromotionCode(params.couponId, body.code, {
-          maxRedemptions: body.maxRedemptions,
-          expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
-          restrictions: body.restrictions,
+          ...(body.maxRedemptions !== undefined && { maxRedemptions: body.maxRedemptions }),
+          ...(body.expiresAt && { expiresAt: new Date(body.expiresAt) }),
+          ...(restrictionsObj &&
+            Object.keys(restrictionsObj).length > 0 && { restrictions: restrictionsObj }),
         });
 
         return await reply.code(201).send(promotionCode);

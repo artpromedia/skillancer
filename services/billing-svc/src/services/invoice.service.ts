@@ -73,13 +73,11 @@ export interface PayInvoiceResult {
 
 export class InvoiceService {
   private _stripeService: ReturnType<typeof getStripeService> | null = null;
-  private invoiceRepository = getInvoiceRepository();
-  private subscriptionRepository = getSubscriptionRepository();
+  private readonly invoiceRepository = getInvoiceRepository();
+  private readonly subscriptionRepository = getSubscriptionRepository();
 
   private get stripeService() {
-    if (!this._stripeService) {
-      this._stripeService = getStripeService();
-    }
+    this._stripeService ??= getStripeService();
     return this._stripeService;
   }
 
@@ -172,7 +170,7 @@ export class InvoiceService {
 
     // Verify invoice belongs to user - need to look up subscription
     const subscription = await this.subscriptionRepository.findById(invoice.subscriptionId);
-    if (!subscription || subscription.userId !== userId) {
+    if (!subscription?.userId || subscription.userId !== userId) {
       throw new BillingError('Unauthorized', 'UNAUTHORIZED', 403);
     }
 
@@ -191,7 +189,7 @@ export class InvoiceService {
 
     // Verify invoice belongs to user - need to look up subscription
     const subscription = await this.subscriptionRepository.findById(invoice.subscriptionId);
-    if (!subscription || subscription.userId !== userId) {
+    if (!subscription?.userId || subscription.userId !== userId) {
       throw new BillingError('Unauthorized', 'UNAUTHORIZED', 403);
     }
 
@@ -234,7 +232,7 @@ export class InvoiceService {
 
     // Verify invoice belongs to user - need to look up subscription
     const subscription = await this.subscriptionRepository.findById(invoice.subscriptionId);
-    if (!subscription || subscription.userId !== userId) {
+    if (!subscription?.userId || subscription.userId !== userId) {
       throw new BillingError('Unauthorized', 'UNAUTHORIZED', 403);
     }
 
@@ -273,7 +271,7 @@ export class InvoiceService {
 
     // If payment requires confirmation, return client secret
     const paymentIntent = stripeInvoice.payment_intent as Stripe.PaymentIntent | null;
-    if (paymentIntent && paymentIntent.status === 'requires_action') {
+    if (paymentIntent?.status === 'requires_action') {
       result.paymentIntent = {
         clientSecret: paymentIntent.client_secret!,
         status: paymentIntent.status,
@@ -401,7 +399,7 @@ export class InvoiceService {
         nextPaymentAttempt: null,
         createdAt: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch {
       // No upcoming invoice (e.g., subscription canceled)
       return null;
     }
@@ -516,7 +514,7 @@ export class InvoiceService {
       description: line.description ?? '',
       quantity: line.quantity ?? 1,
       unitAmount: line.unit_amount_excluding_tax
-        ? parseInt(line.unit_amount_excluding_tax)
+        ? Number.parseInt(line.unit_amount_excluding_tax)
         : line.amount,
       amount: line.amount,
     }));
@@ -530,9 +528,7 @@ export class InvoiceService {
 let serviceInstance: InvoiceService | null = null;
 
 export function getInvoiceService(): InvoiceService {
-  if (!serviceInstance) {
-    serviceInstance = new InvoiceService();
-  }
+  serviceInstance ??= new InvoiceService();
   return serviceInstance;
 }
 

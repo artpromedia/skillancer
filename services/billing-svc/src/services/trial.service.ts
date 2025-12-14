@@ -76,16 +76,12 @@ export class TrialService {
   private _subscriptionService: ReturnType<typeof getSubscriptionService> | null = null;
 
   private get stripeService() {
-    if (!this._stripeService) {
-      this._stripeService = getStripeService();
-    }
+    this._stripeService ??= getStripeService();
     return this._stripeService;
   }
 
   private get subscriptionService() {
-    if (!this._subscriptionService) {
-      this._subscriptionService = getSubscriptionService();
-    }
+    this._subscriptionService ??= getSubscriptionService();
     return this._subscriptionService;
   }
 
@@ -328,7 +324,7 @@ export class TrialService {
       data: {
         trialEndsAt: newTrialEnd,
         metadata: {
-          ...((subscription.metadata as Record<string, unknown>) ?? {}),
+          ...(subscription.metadata as Record<string, unknown> | null),
           trialExtended: true,
           trialExtensionDays: additionalDays,
           trialExtensionReason: reason,
@@ -374,7 +370,7 @@ export class TrialService {
         status: 'ACTIVE',
         trialEndsAt: new Date(),
         metadata: {
-          ...((subscription.metadata as Record<string, unknown>) ?? {}),
+          ...(subscription.metadata as Record<string, unknown> | null),
           trialConvertedAt: new Date().toISOString(),
           trialConvertedEarly: true,
         },
@@ -592,9 +588,7 @@ export class TrialService {
 let trialServiceInstance: TrialService | null = null;
 
 export function getTrialService(): TrialService {
-  if (!trialServiceInstance) {
-    trialServiceInstance = new TrialService();
-  }
+  trialServiceInstance ??= new TrialService();
   return trialServiceInstance;
 }
 

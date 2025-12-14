@@ -81,10 +81,10 @@ const DEFAULT_DUNNING_SCHEDULE: DunningSchedule = {
 // =============================================================================
 
 export class DunningService {
-  private subscriptionRepository: SubscriptionRepository;
-  private stripe: Stripe;
-  private config: Config;
-  private schedule: DunningSchedule;
+  private readonly subscriptionRepository: SubscriptionRepository;
+  private readonly stripe: Stripe;
+  private readonly config: Config;
+  private readonly schedule: DunningSchedule;
   private initialized: boolean = false;
 
   constructor(
@@ -245,9 +245,7 @@ export class DunningService {
 let dunningServiceInstance: DunningService | null = null;
 
 export function getDunningService(): DunningService {
-  if (!dunningServiceInstance) {
-    dunningServiceInstance = new DunningService();
-  }
+  dunningServiceInstance ??= new DunningService();
   return dunningServiceInstance;
 }
 

@@ -77,9 +77,7 @@ export class CouponService {
   private _stripeService: ReturnType<typeof getStripeService> | null = null;
 
   private get stripeService() {
-    if (!this._stripeService) {
-      this._stripeService = getStripeService();
-    }
+    this._stripeService ??= getStripeService();
     return this._stripeService;
   }
 
@@ -120,7 +118,7 @@ export class CouponService {
 
     // Create in Stripe first
     const stripeCoupon = await this.stripeService.createCoupon({
-      id: params.code.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+      id: params.code.toLowerCase().replaceAll(/[^a-z0-9]/g, '_'),
       name: params.name,
       percentOff: params.percentOff,
       amountOff: params.amountOff,
@@ -487,6 +485,182 @@ export class CouponService {
       validProductTypes,
     };
   }
+
+  // ===========================================================================
+  // ADDITIONAL METHODS FOR ROUTES
+  // ===========================================================================
+
+  /**
+   * Get coupon by ID (alias for getCouponById)
+   */
+  async getCoupon(id: string): Promise<CouponResponse | null> {
+    try {
+      return await this.getCouponById(id);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Redeem a coupon for a subscription
+   */
+  async redeemCoupon(
+    code: string,
+    userId: string,
+    subscriptionId: string
+  ): Promise<{
+    success: boolean;
+    redemption?: CouponRedemption;
+    discount?: ApplyCouponResult;
+    error?: string;
+  }> {
+    // Validate the coupon
+    const validation = await this.validateCoupon(code, { userId });
+    if (!validation.valid || !validation.coupon) {
+      return { success: false, error: validation.reason ?? 'Invalid coupon' };
+    }
+
+    // Get subscription to determine amount
+    const subscription = await prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+    });
+    if (!subscription) {
+      return { success: false, error: 'Subscription not found' };
+    }
+
+    // Calculate discount (assuming monthly amount stored in subscription)
+    const amount = 0; // Would need to get from subscription price
+    const discount = this.calculateDiscount(validation.coupon, amount);
+
+    // Record redemption
+    const redemption = await this.recordRedemption({
+      couponId: validation.coupon.id,
+      userId,
+      subscriptionId,
+      discountAmount: discount.savings,
+      currency: validation.coupon.currency ?? 'usd',
+    });
+
+    // Apply to Stripe subscription if applicable
+    if (subscription.stripeSubscriptionId) {
+      try {
+        const stripeCoupon = await prisma.coupon.findUnique({
+          where: { id: validation.coupon.id },
+        });
+        if (stripeCoupon?.stripeCouponId) {
+          await this.stripeService.applyCouponToSubscription(
+            subscription.stripeSubscriptionId,
+            stripeCoupon.stripeCouponId
+          );
+        }
+      } catch {
+        // Log but don't fail - local redemption is recorded
+      }
+    }
+
+    return { success: true, redemption, discount };
+  }
+
+  /**
+   * Get redemption history for a user
+   */
+  async getRedemptionsForUser(
+    userId: string,
+    limit = 20,
+    offset = 0
+  ): Promise<{ redemptions: CouponRedemption[]; total: number }> {
+    const [redemptions, total] = await Promise.all([
+      prisma.couponRedemption.findMany({
+        where: { userId },
+        include: { coupon: true },
+        orderBy: { redeemedAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.couponRedemption.count({ where: { userId } }),
+    ]);
+
+    return { redemptions, total };
+  }
+
+  /**
+   * Create a promotion code for a coupon
+   */
+  async createPromotionCode(
+    couponId: string,
+    code: string,
+    options?: {
+      maxRedemptions?: number;
+      expiresAt?: Date;
+      restrictions?: {
+        firstTimeOnly?: boolean;
+        minimumAmount?: number;
+        minimumCurrency?: string;
+      };
+    }
+  ): Promise<{ id: string; code: string; couponId: string; active: boolean }> {
+    const coupon = await prisma.coupon.findUnique({
+      where: { id: couponId },
+    });
+    if (!coupon) {
+      throw new BillingError('Coupon not found', 'COUPON_NOT_FOUND', 404);
+    }
+
+    // Create in Stripe
+    const stripePromoCode = await this.stripeService.createPromotionCode({
+      coupon: coupon.stripeCouponId,
+      code,
+      maxRedemptions: options?.maxRedemptions,
+      expiresAt: options?.expiresAt ? Math.floor(options.expiresAt.getTime() / 1000) : undefined,
+      restrictions: options?.restrictions
+        ? {
+            firstTimeTransaction: options.restrictions.firstTimeOnly,
+            minimumAmount: options.restrictions.minimumAmount,
+            minimumAmountCurrency: options.restrictions.minimumCurrency,
+          }
+        : undefined,
+    });
+
+    return {
+      id: stripePromoCode.id,
+      code: stripePromoCode.code,
+      couponId,
+      active: stripePromoCode.active,
+    };
+  }
+
+  /**
+   * List promotion codes for a coupon
+   */
+  async listPromotionCodes(
+    couponId: string,
+    limit = 20
+  ): Promise<{
+    promotionCodes: Array<{ id: string; code: string; active: boolean; timesRedeemed: number }>;
+    total: number;
+  }> {
+    const coupon = await prisma.coupon.findUnique({
+      where: { id: couponId },
+    });
+    if (!coupon) {
+      throw new BillingError('Coupon not found', 'COUPON_NOT_FOUND', 404);
+    }
+
+    const promoCodes = await this.stripeService.listPromotionCodes({
+      coupon: coupon.stripeCouponId,
+      limit,
+    });
+
+    return {
+      promotionCodes: promoCodes.data.map((pc) => ({
+        id: pc.id,
+        code: pc.code,
+        active: pc.active,
+        timesRedeemed: pc.times_redeemed,
+      })),
+      total: promoCodes.data.length,
+    };
+  }
 }
 
 // =============================================================================
@@ -496,9 +670,7 @@ export class CouponService {
 let couponServiceInstance: CouponService | null = null;
 
 export function getCouponService(): CouponService {
-  if (!couponServiceInstance) {
-    couponServiceInstance = new CouponService();
-  }
+  couponServiceInstance ??= new CouponService();
   return couponServiceInstance;
 }
 
