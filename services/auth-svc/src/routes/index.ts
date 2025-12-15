@@ -8,6 +8,7 @@ export * from './oauth.js';
 export * from './health.js';
 export * from './mfa.js';
 export * from './profile.js';
+export * from './hipaa.js';
 
 // Named exports for route plugins
 export { portfolioRoutes } from './portfolio.js';

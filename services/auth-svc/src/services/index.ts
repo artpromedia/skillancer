@@ -47,3 +47,6 @@ export * from './work-history.service.js';
 export * from './education.service.js';
 export * from './certification.service.js';
 export * from './profile-completion.service.js';
+export * from './hipaa-compliance.service.js';
+export * from './phi-protection.service.js';
+export * from './breach-management.service.js';

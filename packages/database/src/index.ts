@@ -111,6 +111,23 @@ export type {
   TransactionStatus,
   Payout,
   PayoutStatus,
+  // HIPAA Compliance types
+  HipaaCompliance,
+  HipaaComplianceLevel,
+  BaaStatus,
+  PhiAccessLog,
+  PhiAccessType,
+  PhiCategory,
+  HipaaTraining,
+  HipaaTrainingType,
+  TrainingStatus,
+  BreachIncident,
+  BreachIncidentType,
+  BreachSeverity,
+  BreachStatus,
+  BreachTimeline,
+  PhiToken,
+  PhiFieldType,
 } from '@prisma/client';
 
 // Prisma namespace is already exported via client.ts
@@ -123,4 +140,15 @@ export {
   ComplianceEventType,
   ComplianceSeverity,
   ThresholdContextType,
+  // HIPAA enums
+  HipaaComplianceLevel as HipaaComplianceLevelEnum,
+  BaaStatus as BaaStatusEnum,
+  PhiAccessType as PhiAccessTypeEnum,
+  PhiCategory as PhiCategoryEnum,
+  HipaaTrainingType as HipaaTrainingTypeEnum,
+  TrainingStatus as TrainingStatusEnum,
+  BreachIncidentType as BreachIncidentTypeEnum,
+  BreachSeverity as BreachSeverityEnum,
+  BreachStatus as BreachStatusEnum,
+  PhiFieldType as PhiFieldTypeEnum,
 } from '@prisma/client';

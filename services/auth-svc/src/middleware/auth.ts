@@ -23,6 +23,7 @@ export interface AuthenticatedUser {
   roles: string[];
   sessionId: string;
   verificationLevel: string;
+  tenantId?: string; // Added for HIPAA multi-tenant support
 }
 
 // Extend FastifyRequest to include user property

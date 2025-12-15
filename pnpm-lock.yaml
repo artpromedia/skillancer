@@ -828,6 +828,12 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.705.0
         version: 3.948.0
+      '@fastify/swagger':
+        specifier: ^9.0.0
+        version: 9.6.1
+      '@fastify/swagger-ui':
+        specifier: ^5.0.0
+        version: 5.2.3
       '@prisma/client':
         specifier: ^6.2.1
         version: 6.19.1(typescript@5.9.3)
@@ -883,6 +889,9 @@ importers:
 
   services/auth-svc:
     dependencies:
+      '@aws-sdk/client-kms':
+        specifier: ^3.948.0
+        version: 3.948.0
       '@aws-sdk/client-s3':
         specifier: ^3.948.0
         version: 3.948.0
@@ -1725,6 +1734,56 @@ packages:
       '@smithy/util-retry': 4.2.5
       '@smithy/util-utf8': 4.2.0
       '@smithy/util-waiter': 4.2.5
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - aws-crt
+    dev: false
+
+  /@aws-sdk/client-kms@3.948.0:
+    resolution:
+      {
+        integrity: sha512-CzhA3dD51mnUxnQ4whB4lgI7c60bau4W42U74VhUQbWSBdKNfPuPB6Ls0dBvsp/MW5khaAHuBt933UqPKGjPXQ==,
+      }
+    engines: { node: '>=18.0.0' }
+    dependencies:
+      '@aws-crypto/sha256-browser': 5.2.0
+      '@aws-crypto/sha256-js': 5.2.0
+      '@aws-sdk/core': 3.947.0
+      '@aws-sdk/credential-provider-node': 3.948.0
+      '@aws-sdk/middleware-host-header': 3.936.0
+      '@aws-sdk/middleware-logger': 3.936.0
+      '@aws-sdk/middleware-recursion-detection': 3.948.0
+      '@aws-sdk/middleware-user-agent': 3.947.0
+      '@aws-sdk/region-config-resolver': 3.936.0
+      '@aws-sdk/types': 3.936.0
+      '@aws-sdk/util-endpoints': 3.936.0
+      '@aws-sdk/util-user-agent-browser': 3.936.0
+      '@aws-sdk/util-user-agent-node': 3.947.0
+      '@smithy/config-resolver': 4.4.3
+      '@smithy/core': 3.18.7
+      '@smithy/fetch-http-handler': 5.3.6
+      '@smithy/hash-node': 4.2.5
+      '@smithy/invalid-dependency': 4.2.5
+      '@smithy/middleware-content-length': 4.2.5
+      '@smithy/middleware-endpoint': 4.3.14
+      '@smithy/middleware-retry': 4.4.14
+      '@smithy/middleware-serde': 4.2.6
+      '@smithy/middleware-stack': 4.2.5
+      '@smithy/node-config-provider': 4.3.5
+      '@smithy/node-http-handler': 4.4.5
+      '@smithy/protocol-http': 5.3.5
+      '@smithy/smithy-client': 4.9.10
+      '@smithy/types': 4.9.0
+      '@smithy/url-parser': 4.2.5
+      '@smithy/util-base64': 4.3.0
+      '@smithy/util-body-length-browser': 4.2.0
+      '@smithy/util-body-length-node': 4.2.1
+      '@smithy/util-defaults-mode-browser': 4.3.13
+      '@smithy/util-defaults-mode-node': 4.2.16
+      '@smithy/util-endpoints': 3.2.5
+      '@smithy/util-middleware': 4.2.5
+      '@smithy/util-retry': 4.2.5
+      '@smithy/util-utf8': 4.2.0
       tslib: 2.8.1
     transitivePeerDependencies:
       - aws-crt
@@ -7042,6 +7101,13 @@ packages:
     engines: { node: '>=14' }
     dev: false
 
+  /@fastify/accept-negotiator@2.0.1:
+    resolution:
+      {
+        integrity: sha512-/c/TW2bO/v9JeEgoD/g1G5GxGeCF1Hafdf79WPmUlgYiBXummY0oX3VVq4yFkKKVBKDNlaDUYoab7g38RpPqCQ==,
+      }
+    dev: false
+
   /@fastify/ajv-compiler@3.6.0:
     resolution:
       {
@@ -7230,6 +7296,19 @@ packages:
       mime: 3.0.0
     dev: false
 
+  /@fastify/send@4.1.0:
+    resolution:
+      {
+        integrity: sha512-TMYeQLCBSy2TOFmV95hQWkiTYgC/SEx7vMdV+wnZVX4tt8VBLKzmH8vV9OzJehV0+XBfg+WxPMt5wp+JBUKsVw==,
+      }
+    dependencies:
+      '@lukeed/ms': 2.0.2
+      escape-html: 1.0.3
+      fast-decode-uri-component: 1.0.1
+      http-errors: 2.0.1
+      mime: 3.0.0
+    dev: false
+
   /@fastify/sensible@5.6.0:
     resolution:
       {
@@ -7259,6 +7338,20 @@ packages:
       glob: 10.5.0
     dev: false
 
+  /@fastify/static@8.3.0:
+    resolution:
+      {
+        integrity: sha512-yKxviR5PH1OKNnisIzZKmgZSus0r2OZb8qCSbqmw34aolT4g3UlzYfeBRym+HJ1J471CR8e2ldNub4PubD1coA==,
+      }
+    dependencies:
+      '@fastify/accept-negotiator': 2.0.1
+      '@fastify/send': 4.1.0
+      content-disposition: 0.5.4
+      fastify-plugin: 5.1.0
+      fastq: 1.19.1
+      glob: 11.1.0
+    dev: false
+
   /@fastify/swagger-ui@3.1.0:
     resolution:
       {
@@ -7285,6 +7378,19 @@ packages:
       yaml: 2.8.2
     dev: false
 
+  /@fastify/swagger-ui@5.2.3:
+    resolution:
+      {
+        integrity: sha512-e7ivEJi9EpFcxTONqICx4llbpB2jmlI+LI1NQ/mR7QGQnyDOqZybPK572zJtcdHZW4YyYTBHcP3a03f1pOh0SA==,
+      }
+    dependencies:
+      '@fastify/static': 8.3.0
+      fastify-plugin: 5.1.0
+      openapi-types: 12.1.3
+      rfdc: 1.4.1
+      yaml: 2.8.2
+    dev: false
+
   /@fastify/swagger@8.15.0:
     resolution:
       {
@@ -7293,6 +7399,21 @@ packages:
     dependencies:
       fastify-plugin: 4.5.1
       json-schema-resolver: 2.0.0
+      openapi-types: 12.1.3
+      rfdc: 1.4.1
+      yaml: 2.8.2
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@fastify/swagger@9.6.1:
+    resolution:
+      {
+        integrity: sha512-fKlpJqFMWoi4H3EdUkDaMteEYRCfQMEkK0HJJ0eaf4aRlKd8cbq0pVkOfXDXmtvMTXYcnx3E+l023eFDBsA1HA==,
+      }
+    dependencies:
+      fastify-plugin: 5.1.0
+      json-schema-resolver: 3.0.0
       openapi-types: 12.1.3
       rfdc: 1.4.1
       yaml: 2.8.2
@@ -7926,7 +8047,6 @@ packages:
         integrity: sha512-yzMTt9lEb8Gv7zRioUilSglI0c0smZ9k5D65677DLWLtWJaXIS3CqcGyUFByYKlnUj6TkjLVs54fBl6+TiGQDQ==,
       }
     engines: { node: 20 || >=22 }
-    dev: true
 
   /@isaacs/brace-expansion@5.0.0:
     resolution:
@@ -7936,7 +8056,6 @@ packages:
     engines: { node: 20 || >=22 }
     dependencies:
       '@isaacs/balanced-match': 4.0.1
-    dev: true
 
   /@isaacs/cliui@8.0.2:
     resolution:
@@ -22132,6 +22251,22 @@ packages:
       package-json-from-dist: 1.0.1
       path-scurry: 1.11.1
 
+  /glob@11.1.0:
+    resolution:
+      {
+        integrity: sha512-vuNwKSaKiqm7g0THUBu2x7ckSs3XJLXE+2ssL7/MfTGPLLcrJQ/4Uq1CjPTtO5cCIiRxqvN6Twy1qOwhL0Xjcw==,
+      }
+    engines: { node: 20 || >=22 }
+    hasBin: true
+    dependencies:
+      foreground-child: 3.3.1
+      jackspeak: 4.1.1
+      minimatch: 10.1.1
+      minipass: 7.1.2
+      package-json-from-dist: 1.0.1
+      path-scurry: 2.0.1
+    dev: false
+
   /glob@13.0.0:
     resolution:
       {
@@ -24081,6 +24216,16 @@ packages:
     optionalDependencies:
       '@pkgjs/parseargs': 0.11.0
 
+  /jackspeak@4.1.1:
+    resolution:
+      {
+        integrity: sha512-zptv57P3GpL+O0I7VdMJNBZCu+BPHVQUk55Ft8/QCJjTVxrnJHuVuX/0Bl2A6/+2oyR/ZMEuFKwmzqqZ/U5nPQ==,
+      }
+    engines: { node: 20 || >=22 }
+    dependencies:
+      '@isaacs/cliui': 8.0.2
+    dev: false
+
   /jake@10.9.4:
     resolution:
       {
@@ -24331,6 +24476,20 @@ packages:
       debug: 4.4.3
       rfdc: 1.4.1
       uri-js: 4.4.1
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /json-schema-resolver@3.0.0:
+    resolution:
+      {
+        integrity: sha512-HqMnbz0tz2DaEJ3ntsqtx3ezzZyDE7G56A/pPY/NGmrPu76UzsWquOpHFRAf5beTNXoH2LU5cQePVvRli1nchA==,
+      }
+    engines: { node: '>=20' }
+    dependencies:
+      debug: 4.4.3
+      fast-uri: 3.1.0
+      rfdc: 1.4.1
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -24981,7 +25140,6 @@ packages:
         integrity: sha512-B5Y16Jr9LB9dHVkh6ZevG+vAbOsNOYCX+sXvFWFu7B3Iz5mijW3zdbMyhsh8ANd2mSWBYdJgnqi+mL7/LrOPYg==,
       }
     engines: { node: 20 || >=22 }
-    dev: true
 
   /lru-cache@5.1.1:
     resolution:
@@ -26218,7 +26376,6 @@ packages:
     engines: { node: 20 || >=22 }
     dependencies:
       '@isaacs/brace-expansion': 5.0.0
-    dev: true
 
   /minimatch@3.1.2:
     resolution:
@@ -27563,7 +27720,6 @@ packages:
     dependencies:
       lru-cache: 11.2.4
       minipass: 7.1.2
-    dev: true
 
   /path-to-regexp@0.1.12:
     resolution:

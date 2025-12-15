@@ -73,6 +73,8 @@ model User {
   UserBadge             UserBadge[]
   payoutAccount         PayoutAccount?
   paymentTransactions   PaymentTransaction[]
+  phiAccessLogs         PhiAccessLog[]
+  hipaaTrainings        HipaaTraining[]
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -316,11 +318,13 @@ model Tenant {
   deletedAt DateTime? @map("deleted_at")
 
   // Relations
-  members       TenantMember[]
-  jobs          Job[]
-  sessions      Session[]
-  invoices      Invoice[]
-  subscriptions Subscription[]
+  members         TenantMember[]
+  jobs            Job[]
+  sessions        Session[]
+  invoices        Invoice[]
+  subscriptions   Subscription[]
+  hipaaCompliance HipaaCompliance?
+  breachIncidents BreachIncident[]
 
   @@index([slug])
   @@index([plan])
@@ -2403,3 +2407,290 @@ enum DisputeRole {
   SYSTEM
 }
 
+// ============================================================================
+// HIPAA COMPLIANCE
+// ============================================================================
+
+model HipaaCompliance {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @unique @map("tenant_id") @db.Uuid
+
+  // Compliance status
+  hipaaEnabled    Boolean              @default(false) @map("hipaa_enabled")
+  complianceLevel HipaaComplianceLevel @default(NONE) @map("compliance_level")
+
+  // BAA (Business Associate Agreement)
+  baaStatus      BaaStatus @default(NOT_REQUESTED) @map("baa_status")
+  baaSignedAt    DateTime? @map("baa_signed_at")
+  baaExpiresAt   DateTime? @map("baa_expires_at")
+  baaDocumentUrl String?   @map("baa_document_url")
+
+  // Security controls
+  encryptionEnabled Boolean @default(true) @map("encryption_enabled")
+  encryptionKeyId   String? @map("encryption_key_id")
+
+  // Access controls
+  mfaRequired    Boolean  @default(true) @map("mfa_required")
+  sessionTimeout Int      @default(15) @map("session_timeout") // Minutes
+  ipWhitelist    String[] @map("ip_whitelist")
+
+  // Audit settings
+  enhancedAuditEnabled Boolean @default(true) @map("enhanced_audit_enabled")
+  auditRetentionYears  Int     @default(6) @map("audit_retention_years")
+
+  // Training
+  trainingRequired Boolean @default(true) @map("training_required")
+
+  // Assessment
+  lastAssessmentAt  DateTime? @map("last_assessment_at")
+  nextAssessmentDue DateTime? @map("next_assessment_due")
+  assessmentScore   Int?      @map("assessment_score")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  phiAccessLogs PhiAccessLog[]
+
+  @@map("hipaa_compliance")
+}
+
+model PhiAccessLog {
+  id                String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  hipaaComplianceId String @map("hipaa_compliance_id") @db.Uuid
+
+  // Access details
+  userId     String        @map("user_id") @db.Uuid
+  accessType PhiAccessType @map("access_type")
+
+  // PHI details (no actual PHI stored)
+  phiCategory PhiCategory @map("phi_category")
+  recordCount Int         @map("record_count")
+  purpose     String      // Business justification
+
+  // Context
+  resourceType String  @map("resource_type")
+  resourceId   String? @map("resource_id")
+
+  // Location
+  ipAddress String? @map("ip_address")
+  location  String?
+
+  // SkillPod context
+  skillpodSessionId String? @map("skillpod_session_id") @db.Uuid
+
+  timestamp DateTime @default(now())
+
+  hipaaCompliance HipaaCompliance @relation(fields: [hipaaComplianceId], references: [id])
+  user            User            @relation(fields: [userId], references: [id])
+
+  @@index([hipaaComplianceId])
+  @@index([userId])
+  @@index([timestamp])
+  @@map("phi_access_logs")
+}
+
+model HipaaTraining {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Training details
+  trainingType    HipaaTrainingType @map("training_type")
+  trainingVersion String            @map("training_version")
+
+  // Completion
+  status      TrainingStatus @default(NOT_STARTED)
+  startedAt   DateTime?      @map("started_at")
+  completedAt DateTime?      @map("completed_at")
+
+  // Assessment
+  quizScore    Int?    @map("quiz_score")
+  passingScore Int     @default(80) @map("passing_score")
+  passed       Boolean @default(false)
+
+  // Certificate
+  certificateUrl String?   @map("certificate_url")
+  expiresAt      DateTime? @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, tenantId, trainingType])
+  @@index([userId])
+  @@index([tenantId])
+  @@map("hipaa_training")
+}
+
+model BreachIncident {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Incident details
+  incidentType BreachIncidentType @map("incident_type")
+  severity     BreachSeverity
+  description  String             @db.Text
+
+  // Discovery
+  discoveredAt DateTime @map("discovered_at")
+  discoveredBy String   @map("discovered_by") @db.Uuid
+
+  // Scope
+  affectedRecords Int?          @map("affected_records")
+  affectedUsers   Int?          @map("affected_users")
+  phiInvolved     Boolean       @default(false) @map("phi_involved")
+  phiCategories   PhiCategory[] @map("phi_categories")
+
+  // Response
+  status      BreachStatus @default(INVESTIGATING)
+  containedAt DateTime?    @map("contained_at")
+  resolvedAt  DateTime?    @map("resolved_at")
+
+  // Notifications
+  hhsNotified        Boolean   @default(false) @map("hhs_notified")
+  hhsNotifiedAt      DateTime? @map("hhs_notified_at")
+  affectedNotified   Boolean   @default(false) @map("affected_notified")
+  affectedNotifiedAt DateTime? @map("affected_notified_at")
+
+  // Investigation
+  rootCause          String? @map("root_cause") @db.Text
+  remediation        String? @db.Text
+  preventiveMeasures String? @map("preventive_measures") @db.Text
+
+  // Documentation
+  reportUrl String? @map("report_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id])
+  timeline BreachTimeline[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("breach_incidents")
+}
+
+model BreachTimeline {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  breachIncidentId String @map("breach_incident_id") @db.Uuid
+
+  action      String
+  description String?  @db.Text
+  performedBy String   @map("performed_by") @db.Uuid
+  timestamp   DateTime @default(now())
+
+  breachIncident BreachIncident @relation(fields: [breachIncidentId], references: [id])
+
+  @@index([breachIncidentId])
+  @@map("breach_timeline")
+}
+
+model PhiToken {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  token          String       @unique
+  valueHash      String       @map("value_hash")
+  encryptedValue Json         @map("encrypted_value")
+  type           PhiFieldType
+  resourceType   String?      @map("resource_type")
+  resourceId     String?      @map("resource_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime? @map("expires_at")
+
+  @@index([tenantId])
+  @@index([valueHash])
+  @@map("phi_tokens")
+}
+
+enum HipaaComplianceLevel {
+  NONE
+  BASIC // Awareness training completed
+  STANDARD // BAA signed, controls implemented
+  ENHANCED // Full compliance, audited
+}
+
+enum BaaStatus {
+  NOT_REQUESTED
+  REQUESTED
+  UNDER_REVIEW
+  SIGNED
+  EXPIRED
+  TERMINATED
+}
+
+enum PhiAccessType {
+  VIEW
+  CREATE
+  UPDATE
+  DELETE
+  EXPORT
+  SHARE
+}
+
+enum PhiCategory {
+  DEMOGRAPHIC // Name, address, DOB
+  MEDICAL_RECORD // Diagnoses, treatments
+  BILLING // Insurance, payment info
+  GENETIC // Genetic test results
+  MENTAL_HEALTH // Mental health records
+  SUBSTANCE_ABUSE // Substance abuse records
+  HIV_AIDS // HIV/AIDS information
+  OTHER
+}
+
+enum HipaaTrainingType {
+  AWARENESS // Basic HIPAA awareness
+  SECURITY // Security rule training
+  PRIVACY // Privacy rule training
+  BREACH // Breach notification
+  ANNUAL_REFRESH // Annual refresher
+}
+
+enum TrainingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  EXPIRED
+}
+
+enum BreachIncidentType {
+  UNAUTHORIZED_ACCESS
+  DATA_THEFT
+  LOST_DEVICE
+  HACKING
+  IMPROPER_DISPOSAL
+  UNAUTHORIZED_DISCLOSURE
+  OTHER
+}
+
+enum BreachSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BreachStatus {
+  INVESTIGATING
+  CONTAINED
+  NOTIFYING
+  RESOLVED
+  CLOSED
+}
+
+enum PhiFieldType {
+  SSN
+  DOB
+  PHONE
+  EMAIL
+  NAME
+  ADDRESS
+  MEDICAL_RECORD
+  INSURANCE_ID
+  OTHER
+}

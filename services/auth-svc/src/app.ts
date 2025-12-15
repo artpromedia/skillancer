@@ -24,6 +24,7 @@ import { clientProfileRoutes } from './routes/client-profile.js';
 import { educationRoutes } from './routes/education.js';
 import { freelancerProfileRoutes } from './routes/freelancer-profile.js';
 import { healthRoutes } from './routes/health.js';
+import { hipaaRoutes } from './routes/hipaa.js';
 import { mfaRoutes } from './routes/mfa.js';
 import { oauthRoutes } from './routes/oauth.js';
 import { portfolioRoutes } from './routes/portfolio.js';
@@ -226,6 +227,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Trust score routes (/trust-score prefix)
   await app.register(createTrustScoreRoutes(redis), { prefix: '/trust-score' });
+
+  // HIPAA compliance routes (/hipaa prefix)
+  await app.register(hipaaRoutes, { prefix: '/hipaa' });
 
   return app;
 }
