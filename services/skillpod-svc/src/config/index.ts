@@ -126,3 +126,39 @@ export function getConfig(): SkillPodConfig {
 export function resetConfig(): void {
   configInstance = null;
 }
+
+// Convenience accessors
+export const config = {
+  get service() {
+    return getConfig().service;
+  },
+  get database() {
+    return getConfig().database;
+  },
+  get redis() {
+    return getConfig().redis;
+  },
+  get vdi() {
+    return getConfig().vdi;
+  },
+  get kasm() {
+    const cfg = getConfig().vdi;
+    return {
+      apiUrl: cfg.kasmApiUrl,
+      apiKey: cfg.kasmApiKey,
+      apiSecret: cfg.kasmApiSecret,
+    };
+  },
+  get security() {
+    return getConfig().security;
+  },
+  get containment() {
+    return getConfig().containment;
+  },
+  get logging() {
+    return getConfig().logging;
+  },
+  get audit() {
+    return getConfig().audit;
+  },
+};

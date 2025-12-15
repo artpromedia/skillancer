@@ -6,3 +6,5 @@
 export { securityPolicyRoutes } from './security-policy.routes.js';
 export { containmentRoutes } from './containment.routes.js';
 export { violationRoutes } from './violations.routes.js';
+export { transferOverrideRoutes } from './transfer-override.routes.js';
+export { policyExceptionRoutes } from './policy-exception.routes.js';

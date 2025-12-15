@@ -1,0 +1,1415 @@
+openapi: 3.1.0
+info:
+  title: SkillPod Data Containerization API
+  description: |
+    API for managing VDI data containment, security policies, and transfer controls
+    in Skillancer SkillPod secure virtual desktop environments.
+
+    ## Overview
+    This API provides endpoints for:
+    - Security policy management (CRUD operations)
+    - Data transfer evaluation and blocking
+    - Policy exception management
+    - Transfer override workflows
+    - Screenshot detection and prevention
+    - Violation tracking and reporting
+
+    ## Authentication
+    All endpoints require Bearer token authentication via the `Authorization` header.
+    Some endpoints also require `x-tenant-id` and `x-user-id` headers for multi-tenancy.
+
+    ## Data Containment Controls
+    - **Clipboard**: Block/allow copy-paste between pod and local machine
+    - **File Transfer**: Control uploads and downloads with type/size restrictions
+    - **USB Devices**: Block storage devices while allowing peripherals
+    - **Printing**: PDF-only, watermarked, or completely blocked
+    - **Screen Capture**: Detection and blocking of screenshot attempts
+    - **Network**: Domain whitelisting and blacklisting
+
+  version: 1.0.0
+  contact:
+    name: Skillancer Engineering
+    email: engineering@skillancer.com
+  license:
+    name: Proprietary
+    url: https://skillancer.com/terms
+
+servers:
+  - url: https://api.skillancer.com/skillpod/v1
+    description: Production
+  - url: https://api.staging.skillancer.com/skillpod/v1
+    description: Staging
+  - url: http://localhost:4004/api/v1
+    description: Development
+
+tags:
+  - name: Security Policies
+    description: Security policy management
+  - name: Containment
+    description: Data transfer containment checks
+  - name: Violations
+    description: Security violation management
+  - name: Override Requests
+    description: Transfer override request workflow
+  - name: Policy Exceptions
+    description: Policy exception management
+  - name: Screenshots
+    description: Screenshot detection
+
+paths:
+  # ===========================================================================
+  # SECURITY POLICIES
+  # ===========================================================================
+  /policies:
+    get:
+      tags: [Security Policies]
+      summary: List security policies
+      operationId: listPolicies
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: List of security policies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SecurityPolicy'
+
+    post:
+      tags: [Security Policies]
+      summary: Create security policy
+      operationId: createPolicy
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePolicyRequest'
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policy:
+                    $ref: '#/components/schemas/SecurityPolicy'
+
+  /policies/{policyId}:
+    get:
+      tags: [Security Policies]
+      summary: Get security policy
+      operationId: getPolicy
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+      responses:
+        '200':
+          description: Security policy details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policy:
+                    $ref: '#/components/schemas/SecurityPolicy'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Security Policies]
+      summary: Update security policy
+      operationId: updatePolicy
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePolicyRequest'
+      responses:
+        '200':
+          description: Policy updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policy:
+                    $ref: '#/components/schemas/SecurityPolicy'
+
+    delete:
+      tags: [Security Policies]
+      summary: Delete security policy
+      operationId: deletePolicy
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+      responses:
+        '200':
+          description: Policy deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  # ===========================================================================
+  # CONTAINMENT CHECKS
+  # ===========================================================================
+  /containment/clipboard/check:
+    post:
+      tags: [Containment]
+      summary: Check clipboard access
+      operationId: checkClipboardAccess
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClipboardCheckRequest'
+      responses:
+        '200':
+          description: Clipboard check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainmentCheckResponse'
+
+  /containment/file-transfer/check:
+    post:
+      tags: [Containment]
+      summary: Check file transfer
+      operationId: checkFileTransfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileTransferCheckRequest'
+      responses:
+        '200':
+          description: File transfer check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainmentCheckResponse'
+
+  /containment/network/check:
+    post:
+      tags: [Containment]
+      summary: Check network access
+      operationId: checkNetworkAccess
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NetworkCheckRequest'
+      responses:
+        '200':
+          description: Network check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainmentCheckResponse'
+
+  /containment/peripheral/check:
+    post:
+      tags: [Containment]
+      summary: Check peripheral access
+      operationId: checkPeripheralAccess
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeripheralCheckRequest'
+      responses:
+        '200':
+          description: Peripheral check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainmentCheckResponse'
+
+  /containment/print/check/{sessionId}:
+    post:
+      tags: [Containment]
+      summary: Check print access
+      operationId: checkPrintAccess
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Print check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainmentCheckResponse'
+
+  /containment/screen-capture/check/{sessionId}:
+    post:
+      tags: [Containment]
+      summary: Check screen capture permission
+      operationId: checkScreenCapture
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Screen capture check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainmentCheckResponse'
+
+  # ===========================================================================
+  # VIOLATIONS
+  # ===========================================================================
+  /violations:
+    get:
+      tags: [Violations]
+      summary: List security violations
+      operationId: listViolations
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: sessionId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: severity
+          in: query
+          schema:
+            $ref: '#/components/schemas/ViolationSeverity'
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of violations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  violations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SecurityViolation'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /violations/{violationId}:
+    get:
+      tags: [Violations]
+      summary: Get violation details
+      operationId: getViolation
+      parameters:
+        - name: violationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Violation details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  violation:
+                    $ref: '#/components/schemas/SecurityViolation'
+
+  /violations/{violationId}/review:
+    post:
+      tags: [Violations]
+      summary: Mark violation as reviewed
+      operationId: reviewViolation
+      parameters:
+        - name: violationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Violation reviewed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  # ===========================================================================
+  # OVERRIDE REQUESTS
+  # ===========================================================================
+  /override-requests:
+    get:
+      tags: [Override Requests]
+      summary: List override requests
+      operationId: listOverrideRequests
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/OverrideRequestStatus'
+        - name: requestedBy
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of override requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OverrideRequest'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Override Requests]
+      summary: Create override request
+      operationId: createOverrideRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOverrideRequestBody'
+      responses:
+        '201':
+          description: Override request created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [PENDING]
+                  expiresAt:
+                    type: string
+                    format: date-time
+                  message:
+                    type: string
+
+  /override-requests/{requestId}:
+    get:
+      tags: [Override Requests]
+      summary: Get override request
+      operationId: getOverrideRequest
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Override request details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  request:
+                    $ref: '#/components/schemas/OverrideRequest'
+
+  /override-requests/{requestId}/approve:
+    post:
+      tags: [Override Requests]
+      summary: Approve override request
+      operationId: approveOverrideRequest
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approvalNotes:
+                  type: string
+                  maxLength: 500
+      responses:
+        '200':
+          description: Request approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /override-requests/{requestId}/reject:
+    post:
+      tags: [Override Requests]
+      summary: Reject override request
+      operationId: rejectOverrideRequest
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rejectionReason]
+              properties:
+                rejectionReason:
+                  type: string
+                  minLength: 10
+                  maxLength: 500
+      responses:
+        '200':
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /override-requests/pending-count:
+    get:
+      tags: [Override Requests]
+      summary: Get pending request count
+      operationId: getPendingCount
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Pending count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pendingCount:
+                    type: integer
+
+  # ===========================================================================
+  # POLICY EXCEPTIONS
+  # ===========================================================================
+  /policies/{policyId}/exceptions:
+    get:
+      tags: [Policy Exceptions]
+      summary: List policy exceptions
+      operationId: listExceptions
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+        - name: scope
+          in: query
+          schema:
+            $ref: '#/components/schemas/ExceptionScope'
+        - name: exceptionType
+          in: query
+          schema:
+            $ref: '#/components/schemas/ExceptionType'
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of exceptions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exceptions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PolicyException'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Policy Exceptions]
+      summary: Create policy exception
+      operationId: createException
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExceptionRequest'
+      responses:
+        '201':
+          description: Exception created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exception:
+                    $ref: '#/components/schemas/PolicyException'
+                  message:
+                    type: string
+
+  /policies/{policyId}/exceptions/{exceptionId}:
+    get:
+      tags: [Policy Exceptions]
+      summary: Get exception details
+      operationId: getException
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+        - $ref: '#/components/parameters/ExceptionId'
+      responses:
+        '200':
+          description: Exception details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exception:
+                    $ref: '#/components/schemas/PolicyException'
+
+    patch:
+      tags: [Policy Exceptions]
+      summary: Update exception
+      operationId: updateException
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+        - $ref: '#/components/parameters/ExceptionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExceptionRequest'
+      responses:
+        '200':
+          description: Exception updated
+
+    delete:
+      tags: [Policy Exceptions]
+      summary: Delete exception
+      operationId: deleteException
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+        - $ref: '#/components/parameters/ExceptionId'
+      responses:
+        '200':
+          description: Exception deleted
+
+  /policies/{policyId}/exceptions/{exceptionId}/activate:
+    post:
+      tags: [Policy Exceptions]
+      summary: Activate exception
+      operationId: activateException
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+        - $ref: '#/components/parameters/ExceptionId'
+      responses:
+        '200':
+          description: Exception activated
+
+  /policies/{policyId}/exceptions/{exceptionId}/deactivate:
+    post:
+      tags: [Policy Exceptions]
+      summary: Deactivate exception
+      operationId: deactivateException
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+        - $ref: '#/components/parameters/ExceptionId'
+      responses:
+        '200':
+          description: Exception deactivated
+
+  /policies/{policyId}/exceptions/check:
+    post:
+      tags: [Policy Exceptions]
+      summary: Check if exception applies
+      operationId: checkExceptionApplies
+      parameters:
+        - $ref: '#/components/parameters/PolicyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExceptionCheckRequest'
+      responses:
+        '200':
+          description: Check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applies:
+                    type: boolean
+                  exceptions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PolicyException'
+
+  # ===========================================================================
+  # SCREENSHOTS
+  # ===========================================================================
+  /screenshot-attempts:
+    post:
+      tags: [Screenshots]
+      summary: Report screenshot attempt
+      operationId: reportScreenshotAttempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScreenshotAttemptRequest'
+      responses:
+        '200':
+          description: Attempt recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScreenshotAttemptResponse'
+
+  /screenshot-stats:
+    get:
+      tags: [Screenshots]
+      summary: Get screenshot statistics
+      operationId: getScreenshotStats
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Screenshot statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScreenshotStats'
+
+components:
+  # ===========================================================================
+  # PARAMETERS
+  # ===========================================================================
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Tenant identifier
+
+    PolicyId:
+      name: policyId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Security policy ID
+
+    ExceptionId:
+      name: exceptionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Policy exception ID
+
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  # ===========================================================================
+  # RESPONSES
+  # ===========================================================================
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+  # ===========================================================================
+  # SCHEMAS
+  # ===========================================================================
+  schemas:
+    SecurityPolicy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        isDefault:
+          type: boolean
+        clipboardPolicy:
+          $ref: '#/components/schemas/ClipboardPolicy'
+        fileDownloadPolicy:
+          $ref: '#/components/schemas/FileTransferPolicy'
+        fileUploadPolicy:
+          $ref: '#/components/schemas/FileTransferPolicy'
+        printingPolicy:
+          $ref: '#/components/schemas/PrintingPolicy'
+        usbPolicy:
+          $ref: '#/components/schemas/UsbPolicy'
+        networkPolicy:
+          $ref: '#/components/schemas/NetworkPolicy'
+        screenCaptureBlocking:
+          type: boolean
+        watermarkEnabled:
+          type: boolean
+        idleTimeout:
+          type: integer
+          description: Minutes
+        maxSessionDuration:
+          type: integer
+          nullable: true
+          description: Minutes
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreatePolicyRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+        isDefault:
+          type: boolean
+          default: false
+        clipboardPolicy:
+          $ref: '#/components/schemas/ClipboardPolicy'
+        fileDownloadPolicy:
+          $ref: '#/components/schemas/FileTransferPolicy'
+        fileUploadPolicy:
+          $ref: '#/components/schemas/FileTransferPolicy'
+        allowedFileTypes:
+          type: array
+          items:
+            type: string
+        blockedFileTypes:
+          type: array
+          items:
+            type: string
+        maxFileSize:
+          type: integer
+        printingPolicy:
+          $ref: '#/components/schemas/PrintingPolicy'
+        usbPolicy:
+          $ref: '#/components/schemas/UsbPolicy'
+        networkPolicy:
+          $ref: '#/components/schemas/NetworkPolicy'
+        allowedDomains:
+          type: array
+          items:
+            type: string
+        blockedDomains:
+          type: array
+          items:
+            type: string
+        screenCaptureBlocking:
+          type: boolean
+          default: true
+        watermarkEnabled:
+          type: boolean
+          default: true
+        idleTimeout:
+          type: integer
+          default: 15
+        maxSessionDuration:
+          type: integer
+          nullable: true
+
+    UpdatePolicyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        clipboardPolicy:
+          $ref: '#/components/schemas/ClipboardPolicy'
+        fileDownloadPolicy:
+          $ref: '#/components/schemas/FileTransferPolicy'
+        fileUploadPolicy:
+          $ref: '#/components/schemas/FileTransferPolicy'
+        isActive:
+          type: boolean
+
+    ClipboardCheckRequest:
+      type: object
+      required: [sessionId, direction, contentType, contentLength]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        contentType:
+          type: string
+        contentLength:
+          type: integer
+        contentHash:
+          type: string
+
+    FileTransferCheckRequest:
+      type: object
+      required: [sessionId, direction, fileName, fileType, fileSize]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [UPLOAD, DOWNLOAD]
+        fileName:
+          type: string
+        fileType:
+          type: string
+        fileSize:
+          type: integer
+        fileHash:
+          type: string
+
+    NetworkCheckRequest:
+      type: object
+      required: [sessionId, targetUrl]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        targetUrl:
+          type: string
+          format: uri
+        protocol:
+          type: string
+          default: https
+
+    PeripheralCheckRequest:
+      type: object
+      required: [sessionId, deviceType]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        deviceType:
+          type: string
+          enum: [usb, webcam, microphone, printer]
+        deviceId:
+          type: string
+        deviceClass:
+          type: string
+
+    ContainmentCheckResponse:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+        reason:
+          type: string
+        logged:
+          type: boolean
+        requiresApproval:
+          type: boolean
+
+    SecurityViolation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        violationType:
+          $ref: '#/components/schemas/ViolationType'
+        severity:
+          $ref: '#/components/schemas/ViolationSeverity'
+        description:
+          type: string
+        action:
+          $ref: '#/components/schemas/ViolationAction'
+        reviewed:
+          type: boolean
+        reviewedBy:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    OverrideRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        requestedBy:
+          type: string
+          format: uuid
+        transferType:
+          $ref: '#/components/schemas/TransferType'
+        direction:
+          $ref: '#/components/schemas/TransferDirection'
+        fileName:
+          type: string
+          nullable: true
+        contentSize:
+          type: integer
+          nullable: true
+        reason:
+          type: string
+        status:
+          $ref: '#/components/schemas/OverrideRequestStatus'
+        approvedBy:
+          type: string
+          format: uuid
+          nullable: true
+        approvalNotes:
+          type: string
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateOverrideRequestBody:
+      type: object
+      required: [transferType, direction, reason]
+      properties:
+        attemptId:
+          type: string
+          format: uuid
+        transferType:
+          $ref: '#/components/schemas/TransferType'
+        direction:
+          $ref: '#/components/schemas/TransferDirection'
+        fileName:
+          type: string
+        contentSize:
+          type: integer
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+
+    PolicyException:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        scope:
+          $ref: '#/components/schemas/ExceptionScope'
+        scopeValue:
+          type: string
+          nullable: true
+        exceptionType:
+          $ref: '#/components/schemas/ExceptionType'
+        allowedTransferTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferType'
+        allowedDirections:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferDirection'
+        maxFileSize:
+          type: integer
+          nullable: true
+        allowedFileTypes:
+          type: array
+          items:
+            type: string
+        validFrom:
+          type: string
+          format: date-time
+          nullable: true
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+        requiresApproval:
+          type: boolean
+        isActive:
+          type: boolean
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateExceptionRequest:
+      type: object
+      required: [name, scope, exceptionType, reason]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+        scope:
+          $ref: '#/components/schemas/ExceptionScope'
+        scopeValue:
+          type: string
+        exceptionType:
+          $ref: '#/components/schemas/ExceptionType'
+        allowedTransferTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferType'
+        allowedDirections:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferDirection'
+        maxFileSize:
+          type: integer
+        allowedFileTypes:
+          type: array
+          items:
+            type: string
+        validFrom:
+          type: string
+          format: date-time
+        validUntil:
+          type: string
+          format: date-time
+        requiresApproval:
+          type: boolean
+          default: false
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+
+    UpdateExceptionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        scope:
+          $ref: '#/components/schemas/ExceptionScope'
+        scopeValue:
+          type: string
+        exceptionType:
+          $ref: '#/components/schemas/ExceptionType'
+
+    ExceptionCheckRequest:
+      type: object
+      required: [transferType, direction]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        fileType:
+          type: string
+        domain:
+          type: string
+        application:
+          type: string
+        ipAddress:
+          type: string
+        transferType:
+          type: string
+        direction:
+          $ref: '#/components/schemas/TransferDirection'
+
+    ScreenshotAttemptRequest:
+      type: object
+      required: [podId, sessionId, userId, captureType, detectionMethod]
+      properties:
+        podId:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        captureType:
+          $ref: '#/components/schemas/CaptureType'
+        detectionMethod:
+          type: string
+        processInfo:
+          type: object
+          properties:
+            name:
+              type: string
+            pid:
+              type: integer
+        activeApplication:
+          type: string
+        activeWindow:
+          type: string
+
+    ScreenshotAttemptResponse:
+      type: object
+      properties:
+        blocked:
+          type: boolean
+        attemptId:
+          type: string
+          format: uuid
+        notificationSent:
+          type: boolean
+        securityAlertSent:
+          type: boolean
+
+    ScreenshotStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        blocked:
+          type: integer
+        byType:
+          type: object
+          additionalProperties:
+            type: integer
+        topUsers:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: string
+              count:
+                type: integer
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+
+    # Enums
+    ClipboardPolicy:
+      type: string
+      enum: [BLOCKED, READ_ONLY, WRITE_ONLY, BIDIRECTIONAL, APPROVAL_REQUIRED]
+
+    FileTransferPolicy:
+      type: string
+      enum: [BLOCKED, ALLOWED, APPROVAL_REQUIRED, LOGGED_ONLY]
+
+    PrintingPolicy:
+      type: string
+      enum: [BLOCKED, LOCAL_ONLY, PDF_ONLY, ALLOWED, APPROVAL_REQUIRED]
+
+    UsbPolicy:
+      type: string
+      enum: [BLOCKED, STORAGE_BLOCKED, WHITELIST_ONLY, ALLOWED]
+
+    NetworkPolicy:
+      type: string
+      enum: [BLOCKED, RESTRICTED, MONITORED, UNRESTRICTED]
+
+    ViolationType:
+      type: string
+      enum:
+        - CLIPBOARD_COPY_ATTEMPT
+        - CLIPBOARD_PASTE_BLOCKED
+        - FILE_DOWNLOAD_BLOCKED
+        - FILE_UPLOAD_BLOCKED
+        - SCREEN_CAPTURE_ATTEMPT
+        - USB_DEVICE_BLOCKED
+        - NETWORK_ACCESS_BLOCKED
+        - PRINT_BLOCKED
+        - SESSION_TIMEOUT
+        - IDLE_TIMEOUT
+        - UNAUTHORIZED_PERIPHERAL
+        - POLICY_BYPASS_ATTEMPT
+        - SUSPICIOUS_ACTIVITY
+
+    ViolationSeverity:
+      type: string
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+
+    ViolationAction:
+      type: string
+      enum: [LOGGED, WARNED, BLOCKED, SESSION_TERMINATED, USER_SUSPENDED, INCIDENT_CREATED]
+
+    TransferType:
+      type: string
+      enum:
+        - CLIPBOARD_TEXT
+        - CLIPBOARD_IMAGE
+        - CLIPBOARD_FILE
+        - FILE_DOWNLOAD
+        - FILE_UPLOAD
+        - USB_TRANSFER
+        - PRINT
+        - SCREEN_SHARE
+
+    TransferDirection:
+      type: string
+      enum: [INBOUND, OUTBOUND, INTERNAL]
+
+    OverrideRequestStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED, EXPIRED, CANCELLED]
+
+    ExceptionScope:
+      type: string
+      enum: [USER, GROUP, FILE_TYPE, DOMAIN, APPLICATION, TIME_WINDOW, IP_ADDRESS]
+
+    ExceptionType:
+      type: string
+      enum: [CLIPBOARD, FILE_TRANSFER, USB, PRINT, SCREEN_CAPTURE, NETWORK]
+
+    CaptureType:
+      type: string
+      enum:
+        - SCREENSHOT
+        - SCREEN_RECORDING
+        - REMOTE_DESKTOP
+        - PRINT_SCREEN_KEY
+        - SNIPPING_TOOL
+        - THIRD_PARTY_APP
+        - BROWSER_EXTENSION
+        - OS_NATIVE

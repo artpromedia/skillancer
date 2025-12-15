@@ -75,6 +75,8 @@ model User {
   paymentTransactions   PaymentTransaction[]
   phiAccessLogs         PhiAccessLog[]
   hipaaTrainings        HipaaTraining[]
+  dataTransferAttempts  DataTransferAttempt[]
+  screenCaptureAttempts ScreenCaptureAttempt[]
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -327,10 +329,13 @@ model Tenant {
   breachIncidents BreachIncident[]
   
   // Data containment relations
-  podSecurityPolicies  PodSecurityPolicy[]
-  securityViolations   SecurityViolation[]
-  fileTransferRequests FileTransferRequest[]
-  containmentAuditLogs ContainmentAuditLog[]
+  podSecurityPolicies      PodSecurityPolicy[]
+  securityViolations       SecurityViolation[]
+  fileTransferRequests     FileTransferRequest[]
+  containmentAuditLogs     ContainmentAuditLog[]
+  dataTransferAttempts     DataTransferAttempt[]
+  screenCaptureAttempts    ScreenCaptureAttempt[]
+  transferOverrideRequests TransferOverrideRequest[]
 
   @@index([slug])
   @@index([plan])
@@ -750,9 +755,11 @@ model Session {
   securityPolicyId String? @map("security_policy_id") @db.Uuid
   
   // Data containment relations
-  securityViolations SecurityViolation[]
-  fileTransferRequests FileTransferRequest[]
-  containmentAuditLogs ContainmentAuditLog[]
+  securityViolations    SecurityViolation[]
+  fileTransferRequests  FileTransferRequest[]
+  containmentAuditLogs  ContainmentAuditLog[]
+  dataTransferAttempts  DataTransferAttempt[]
+  screenCaptureAttempts ScreenCaptureAttempt[]
 
   @@index([userId])
   @@index([tenantId])
@@ -849,6 +856,8 @@ model PodSecurityPolicy {
   // Relations
   tenant              Tenant    @relation(fields: [tenantId], references: [id])
   sessions            Session[]
+  exceptions          PolicyException[]
+  dataTransferAttempts DataTransferAttempt[]
   
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -1091,6 +1100,257 @@ enum ContainmentEventCategory {
   SESSION
   SECURITY
   CONFIGURATION
+}
+
+// ============================================================================
+// DATA TRANSFER ATTEMPTS (Extended Logging)
+// ============================================================================
+
+model DataTransferAttempt {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sessionId     String   @map("session_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  
+  // Transfer details
+  transferType  TransferType @map("transfer_type")
+  direction     TransferAttemptDirection
+  
+  // Content info (no actual content stored for security)
+  contentType   String?  @map("content_type") @db.VarChar(100)
+  contentSize   Int?     @map("content_size") // Bytes
+  contentHash   String?  @map("content_hash") @db.VarChar(128) // SHA-256 hash
+  fileName      String?  @map("file_name") @db.VarChar(500)
+  
+  // Outcome
+  action        TransferAction
+  reason        String?  @db.Text
+  
+  // Policy reference
+  policyId      String?  @map("policy_id") @db.Uuid
+  policyRule    String?  @map("policy_rule") @db.VarChar(200)
+  
+  // Admin override workflow
+  overrideApproved   Boolean  @default(false) @map("override_approved")
+  overrideBy         String?  @map("override_by") @db.Uuid
+  overrideReason     String?  @map("override_reason") @db.Text
+  overrideRequestId  String?  @map("override_request_id") @db.Uuid
+  
+  // Context
+  sourceApplication String?  @map("source_application") @db.VarChar(200)
+  targetApplication String?  @map("target_application") @db.VarChar(200)
+  ipAddress        String?  @map("ip_address") @db.VarChar(45)
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  session       Session  @relation(fields: [sessionId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  policy        PodSecurityPolicy? @relation(fields: [policyId], references: [id])
+  overrideRequest TransferOverrideRequest? @relation(fields: [overrideRequestId], references: [id])
+  
+  @@index([sessionId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([policyId])
+  @@index([createdAt])
+  @@index([transferType, action])
+  @@map("data_transfer_attempts")
+}
+
+model ScreenCaptureAttempt {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sessionId     String   @map("session_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  
+  // Capture details
+  captureType      CaptureType @map("capture_type")
+  detectionMethod  String   @map("detection_method") @db.VarChar(100)
+  
+  // Action taken
+  blocked          Boolean
+  notificationSent Boolean  @default(false) @map("notification_sent")
+  
+  // Context
+  activeApplication String?  @map("active_application") @db.VarChar(200)
+  activeWindow      String?  @map("active_window") @db.VarChar(500)
+  
+  // Forensics
+  processName      String?  @map("process_name") @db.VarChar(200)
+  processId        Int?     @map("process_id")
+  
+  createdAt        DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  session          Session  @relation(fields: [sessionId], references: [id])
+  user             User     @relation(fields: [userId], references: [id])
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  
+  @@index([sessionId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@index([captureType])
+  @@map("screen_capture_attempts")
+}
+
+model PolicyException {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  policyId      String   @map("policy_id") @db.Uuid
+  
+  // Exception identification
+  name          String   @db.VarChar(100)
+  description   String?  @db.Text
+  
+  // Exception scope
+  scope         ExceptionScope
+  scopeValue    String?  @map("scope_value") @db.VarChar(500) // userId, fileType, domain, etc.
+  
+  // Exception type
+  exceptionType ExceptionType @map("exception_type")
+  
+  // Allowed actions
+  allowedTransferTypes TransferType[] @map("allowed_transfer_types")
+  allowedDirections TransferAttemptDirection[] @map("allowed_directions")
+  
+  // Constraints
+  maxFileSize       Int?     @map("max_file_size") // Bytes
+  allowedFileTypes  String[] @map("allowed_file_types")
+  allowedDomains    String[] @map("allowed_domains")
+  
+  // Time constraints
+  validFrom         DateTime? @map("valid_from")
+  validUntil        DateTime? @map("valid_until")
+  
+  // Approval workflow
+  requiresApproval  Boolean  @default(false) @map("requires_approval")
+  approvalWorkflow  String?  @map("approval_workflow") @db.VarChar(100)
+  
+  // Status
+  isActive          Boolean  @default(true) @map("is_active")
+  
+  // Audit
+  reason            String   @db.Text
+  createdBy         String   @map("created_by") @db.Uuid
+  approvedBy        String?  @map("approved_by") @db.Uuid
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  policy            PodSecurityPolicy @relation(fields: [policyId], references: [id])
+  
+  @@index([policyId])
+  @@index([scope])
+  @@index([exceptionType])
+  @@index([isActive])
+  @@map("policy_exceptions")
+}
+
+model TransferOverrideRequest {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  
+  // Request details
+  attemptId     String?  @map("attempt_id") @db.Uuid // Original blocked attempt
+  requestedBy   String   @map("requested_by") @db.Uuid
+  reason        String   @db.Text
+  
+  // Transfer details (copy from original attempt for context)
+  transferType  TransferType @map("transfer_type")
+  direction     TransferAttemptDirection
+  fileName      String?  @map("file_name") @db.VarChar(500)
+  contentSize   Int?     @map("content_size")
+  
+  // Workflow
+  status        OverrideRequestStatus @default(PENDING)
+  
+  // Approval
+  approvedBy    String?  @map("approved_by") @db.Uuid
+  approvalNotes String?  @map("approval_notes") @db.Text
+  processedAt   DateTime? @map("processed_at")
+  
+  // Expiration
+  expiresAt     DateTime @map("expires_at")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  attempts      DataTransferAttempt[]
+  
+  @@index([tenantId])
+  @@index([requestedBy])
+  @@index([status])
+  @@index([createdAt])
+  @@map("transfer_override_requests")
+}
+
+// Additional Transfer Enums
+enum TransferType {
+  CLIPBOARD_TEXT
+  CLIPBOARD_IMAGE
+  CLIPBOARD_FILE
+  FILE_DOWNLOAD
+  FILE_UPLOAD
+  USB_TRANSFER
+  PRINT
+  SCREEN_SHARE
+}
+
+enum TransferAttemptDirection {
+  INBOUND    // Into the pod
+  OUTBOUND   // Out of the pod
+  INTERNAL   // Within the pod
+}
+
+enum TransferAction {
+  ALLOWED
+  BLOCKED
+  LOGGED              // Allowed but logged
+  QUARANTINED         // Held for review
+  OVERRIDE_APPROVED   // Blocked but admin approved
+}
+
+enum CaptureType {
+  SCREENSHOT
+  SCREEN_RECORDING
+  REMOTE_DESKTOP
+  PRINT_SCREEN_KEY
+  SNIPPING_TOOL
+  THIRD_PARTY_APP
+  BROWSER_EXTENSION
+  OS_NATIVE
+}
+
+enum ExceptionScope {
+  USER
+  GROUP
+  FILE_TYPE
+  DOMAIN
+  APPLICATION
+  TIME_WINDOW
+  IP_ADDRESS
+}
+
+enum ExceptionType {
+  CLIPBOARD
+  FILE_TRANSFER
+  USB
+  PRINT
+  SCREEN_CAPTURE
+  NETWORK
+}
+
+enum OverrideRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
 }
 
 // ============================================================================

@@ -6,20 +6,26 @@
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
-import Fastify, {
-  type FastifyInstance,
-  type FastifyServerOptions,
-} from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
 
 import { getConfig } from './config/index.js';
 import { createContainmentMiddleware, createWatermarkMiddleware } from './middleware/index.js';
-import { containmentRoutes, securityPolicyRoutes, violationRoutes } from './routes/index.js';
+import {
+  containmentRoutes,
+  securityPolicyRoutes,
+  violationRoutes,
+  transferOverrideRoutes,
+  policyExceptionRoutes,
+} from './routes/index.js';
 import {
   createSecurityPolicyService,
   createViolationDetectionService,
   createDataContainmentService,
+  createKasmWorkspacesService,
+  createWebSocketEnforcementService,
+  createScreenshotDetectionService,
 } from './services/index.js';
 
 // =============================================================================
@@ -88,6 +94,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     policyService,
     violationService
   );
+  const kasmService = createKasmWorkspacesService();
+  const wsService = createWebSocketEnforcementService(redis);
+  const screenshotService = createScreenshotDetectionService(prisma, redis, kasmService, wsService);
 
   // ===========================================================================
   // MIDDLEWARE
@@ -154,6 +163,56 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
       // Violation management routes
       violationRoutes(api, violationService);
+
+      // Transfer override request routes
+      transferOverrideRoutes(api, prisma, wsService);
+
+      // Policy exception routes
+      policyExceptionRoutes(api, prisma);
+
+      // Screenshot detection endpoint
+      api.post('/screenshot-attempts', async (request) => {
+        const body = request.body as {
+          podId: string;
+          sessionId: string;
+          userId: string;
+          captureType: string;
+          detectionMethod: string;
+          processInfo?: { name: string; pid: number };
+          activeApplication?: string;
+          activeWindow?: string;
+        };
+
+        const result = await screenshotService.detectCaptureAttempt({
+          podId: body.podId,
+          sessionId: body.sessionId,
+          userId: body.userId,
+          captureType:
+            body.captureType as import('./services/screenshot-detection.service.js').CaptureType,
+          detectionMethod: body.detectionMethod,
+          processInfo: body.processInfo,
+          activeApplication: body.activeApplication,
+          activeWindow: body.activeWindow,
+        });
+
+        return result;
+      });
+
+      // Screenshot stats endpoint
+      api.get('/screenshot-stats', async (request) => {
+        const query = request.query as {
+          tenantId: string;
+          startDate?: string;
+          endDate?: string;
+        };
+
+        const startDate = query.startDate
+          ? new Date(query.startDate)
+          : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const endDate = query.endDate ? new Date(query.endDate) : new Date();
+
+        return screenshotService.getAttemptStats(query.tenantId, startDate, endDate);
+      });
     },
     { prefix: '/api/v1' }
   );
