@@ -4,6 +4,7 @@
  */
 
 import { registerAdminReviewRoutes } from './admin-reviews.routes.js';
+import { registerEnhancedReviewRoutes } from './enhanced-reviews.routes.js';
 import { registerReviewRoutes } from './reviews.routes.js';
 
 import type { PrismaClient } from '@skillancer/database';
@@ -29,6 +30,14 @@ export async function registerRoutes(
     { prefix: '/reviews' }
   );
 
+  // Register enhanced review routes (with fraud detection)
+  await fastify.register(
+    (instance) => {
+      registerEnhancedReviewRoutes(instance, deps);
+    },
+    { prefix: '/v2/reviews' }
+  );
+
   // Register admin review routes
   await fastify.register(
     (instance) => {
@@ -38,4 +47,4 @@ export async function registerRoutes(
   );
 }
 
-export { registerReviewRoutes, registerAdminReviewRoutes };
+export { registerReviewRoutes, registerAdminReviewRoutes, registerEnhancedReviewRoutes };

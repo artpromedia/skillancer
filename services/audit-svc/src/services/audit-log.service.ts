@@ -7,33 +7,56 @@ import { createHash } from 'node:crypto';
 
 import { v4 as uuidv4 } from 'uuid';
 
-import * as auditLogRepository from '../repositories/audit-log.repository.js';
 import {
-  type AuditLogParams,
-  type AuditLogEntry,
-  AuditCategory,
-  RetentionPolicy,
-  ComplianceTag,
-} from '../types/index.js';
+  SENSITIVE_FIELDS,
+  getCategoryForEvent,
+  getComplianceTags,
+  getRetentionPolicy,
+  requiresImmediateAlert,
+} from '../config/audit-events.config.js';
+import * as auditLogRepository from '../repositories/audit-log.repository.js';
 
+import type { AuditEventType } from '../config/audit-events.config.js';
+import type { AuditLogParams, AuditLogEntry } from '../types/index.js';
 import type { Queue } from 'bullmq';
-
-const SENSITIVE_FIELDS = [
-  'password',
-  'token',
-  'secret',
-  'apiKey',
-  'creditCard',
-  'ssn',
-  'socialSecurity',
-];
 
 let auditQueue: Queue | null = null;
 let serviceId = 'audit-svc';
 
+// Callback for immediate alerts (security events, etc.)
+type AlertCallback = (log: AuditLogEntry) => void | Promise<void>;
+let alertCallback: AlertCallback | null = null;
+
 export function initializeAuditLogService(queue: Queue, svcId: string): void {
   auditQueue = queue;
   serviceId = svcId;
+}
+
+/**
+ * Register a callback for immediate security alerts
+ */
+export function registerAlertCallback(callback: AlertCallback): void {
+  alertCallback = callback;
+}
+
+/**
+ * Create an audit log entry synchronously (for critical real-time events)
+ * Use this for security events that need immediate persistence
+ */
+export async function createAuditLogSync(params: AuditLogParams): Promise<AuditLogEntry> {
+  const log = await createAuditLog(params);
+
+  // Trigger immediate alert if needed
+  const eventType = params.eventType as AuditEventType;
+  if (requiresImmediateAlert(eventType) && alertCallback) {
+    try {
+      await Promise.resolve(alertCallback(log));
+    } catch (error) {
+      console.error('[AUDIT] Alert callback failed:', error);
+    }
+  }
+
+  return log;
 }
 
 export async function createAuditLog(params: AuditLogParams): Promise<AuditLogEntry> {
@@ -43,11 +66,13 @@ export async function createAuditLog(params: AuditLogParams): Promise<AuditLogEn
   const timestamp = new Date();
   const id = uuidv4();
 
+  const eventType = params.eventType as AuditEventType;
+
   const logEntry: AuditLogEntry = {
     id,
     timestamp,
     eventType: params.eventType,
-    eventCategory: params.eventCategory || determineCategory(params.eventType),
+    eventCategory: params.eventCategory ?? getCategoryForEvent(params.eventType),
     actor: params.actor,
     resource: params.resource,
     action: params.action,
@@ -55,8 +80,8 @@ export async function createAuditLog(params: AuditLogParams): Promise<AuditLogEn
     request: params.request,
     outcome: params.outcome,
     metadata: params.metadata,
-    complianceTags: params.complianceTags || determineComplianceTags(params),
-    retentionPolicy: params.retentionPolicy || determineRetentionPolicy(params),
+    complianceTags: params.complianceTags ?? getComplianceTags(eventType),
+    retentionPolicy: params.retentionPolicy ?? getRetentionPolicy(eventType),
     integrityHash: '',
     previousHash,
     serviceId,
@@ -82,63 +107,6 @@ export async function queueAuditLog(params: AuditLogParams): Promise<string> {
     removeOnFail: { count: 5000 },
   });
   return jobId;
-}
-
-function determineCategory(eventType: string): AuditCategory {
-  if (eventType.includes('LOGIN') || eventType.includes('LOGOUT') || eventType.includes('AUTH')) {
-    return AuditCategory.AUTHENTICATION;
-  }
-  if (eventType.includes('PERMISSION') || eventType.includes('ROLE')) {
-    return AuditCategory.AUTHORIZATION;
-  }
-  if (eventType.includes('USER')) {
-    return AuditCategory.USER_MANAGEMENT;
-  }
-  if (eventType.includes('PAYMENT') || eventType.includes('INVOICE')) {
-    return AuditCategory.PAYMENT;
-  }
-  if (eventType.includes('CONTRACT')) {
-    return AuditCategory.CONTRACT;
-  }
-  if (eventType.includes('POD') || eventType.includes('SKILLPOD')) {
-    return AuditCategory.SKILLPOD;
-  }
-  return AuditCategory.SYSTEM;
-}
-
-function determineComplianceTags(params: AuditLogParams): ComplianceTag[] {
-  const tags: ComplianceTag[] = [];
-
-  if (params.eventType.includes('PAYMENT') || params.eventType.includes('INVOICE')) {
-    tags.push(ComplianceTag.SOC2);
-  }
-
-  if (
-    params.eventType.includes('USER') ||
-    params.eventType.includes('LOGIN') ||
-    params.changes?.before?.email ||
-    params.changes?.after?.email
-  ) {
-    tags.push(ComplianceTag.GDPR, ComplianceTag.PII);
-  }
-
-  return tags;
-}
-
-function determineRetentionPolicy(params: AuditLogParams): RetentionPolicy {
-  if (params.complianceTags?.includes(ComplianceTag.HIPAA)) {
-    return RetentionPolicy.EXTENDED;
-  }
-
-  if (
-    params.eventType.includes('PAYMENT') ||
-    params.eventType.includes('CONTRACT') ||
-    params.eventType.includes('COMPLIANCE')
-  ) {
-    return RetentionPolicy.EXTENDED;
-  }
-
-  return RetentionPolicy.STANDARD;
 }
 
 function redactSensitiveData(changes: AuditLogParams['changes']): AuditLogParams['changes'] {

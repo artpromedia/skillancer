@@ -256,31 +256,6 @@ export const CARD_COUNTRIES = [
 // ACH is US only
 export const ACH_COUNTRIES = ['US'] as const;
 
-// SEPA countries
-export const SEPA_COUNTRIES = [
-  'AT',
-  'BE',
-  'CY',
-  'DE',
-  'EE',
-  'ES',
-  'FI',
-  'FR',
-  'GR',
-  'IE',
-  'IT',
-  'LT',
-  'LU',
-  'LV',
-  'MC',
-  'MT',
-  'NL',
-  'PT',
-  'SI',
-  'SK',
-  'SM',
-] as const;
-
 // BACS is UK only
 export const BACS_COUNTRIES = ['GB'] as const;
 
@@ -334,3 +309,9 @@ export function decimalToNumber(decimal: unknown): number | undefined {
 export function toDecimal(value: number): number {
   return value;
 }
+
+// =============================================================================
+// RE-EXPORT PAYOUT TYPES
+// =============================================================================
+
+export * from './payout.types.js';

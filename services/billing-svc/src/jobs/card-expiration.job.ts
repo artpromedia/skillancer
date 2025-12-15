@@ -3,12 +3,13 @@
  * BullMQ job for checking card expirations
  */
 
-import { Job, Queue, Worker } from 'bullmq';
-import type { RedisOptions } from 'ioredis';
+import { type Job, Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { getConfig } from '../config/index.js';
 import { getPaymentMethodService } from '../services/payment-method.service.js';
+
+import type { RedisOptions } from 'ioredis';
 
 // =============================================================================
 // TYPES

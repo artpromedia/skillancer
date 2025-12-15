@@ -103,7 +103,17 @@ export async function handleStripeWebhook(event: Stripe.Event): Promise<WebhookH
 
     case 'transfer.failed':
       return handleTransferFailed(event.data.object as Stripe.Transfer);
+
+    case 'transfer.reversed':
+      return handleTransferReversed(event.data.object as Stripe.Transfer);
     /* eslint-enable @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/no-unsafe-member-access */
+
+    // Escrow-related Payment Intent Events
+    case 'payment_intent.amount_capturable_updated':
+      return handlePaymentIntentAmountCapturableUpdated(event.data.object);
+
+    case 'payment_intent.requires_action':
+      return handlePaymentIntentRequiresAction(event.data.object);
 
     // Subscription Events
     case 'customer.subscription.created':
@@ -880,7 +890,14 @@ async function handlePaymentIntentSucceeded(
   paymentIntent: Stripe.PaymentIntent
 ): Promise<WebhookHandlerResult> {
   try {
-    // Update transaction if we have one
+    // Check if this is an escrow payment intent
+    const escrowContractId = paymentIntent.metadata?.escrowContractId;
+
+    if (escrowContractId) {
+      return await handleEscrowPaymentSucceeded(paymentIntent, escrowContractId);
+    }
+
+    // Update transaction if we have one (non-escrow)
     const transaction = await prisma.paymentTransaction.findUnique({
       where: { stripePaymentIntentId: paymentIntent.id },
     });
@@ -911,6 +928,79 @@ async function handlePaymentIntentSucceeded(
   } catch (error) {
     console.error(`[Stripe Webhook] Error processing payment intent succeeded:`, error);
     return { handled: false, message: 'Failed to process payment intent succeeded' };
+  }
+}
+
+/**
+ * Handle escrow payment succeeded (funds captured)
+ */
+async function handleEscrowPaymentSucceeded(
+  paymentIntent: Stripe.PaymentIntent,
+  contractId: string
+): Promise<WebhookHandlerResult> {
+  try {
+    const milestoneId = paymentIntent.metadata?.escrowMilestoneId;
+
+    // Find the escrow transaction
+    const escrowTransaction = await prisma.escrowTransaction.findFirst({
+      where: { stripePaymentIntentId: paymentIntent.id },
+      include: { escrowBalance: true },
+    });
+
+    if (escrowTransaction) {
+      // Update transaction status to completed
+      await prisma.escrowTransaction.update({
+        where: { id: escrowTransaction.id },
+        data: {
+          status: 'COMPLETED',
+          stripeChargeId:
+            typeof paymentIntent.latest_charge === 'string'
+              ? paymentIntent.latest_charge
+              : paymentIntent.latest_charge?.id,
+        },
+      });
+
+      // Update escrow balance - move from pending to available
+      await prisma.escrowBalance.update({
+        where: { id: escrowTransaction.escrowBalanceId },
+        data: {
+          pendingAmount: { decrement: paymentIntent.amount },
+          totalAmount: { increment: paymentIntent.amount },
+          availableAmount: { increment: paymentIntent.amount },
+        },
+      });
+
+      // If milestone-based, update milestone status
+      if (milestoneId) {
+        await prisma.milestone.update({
+          where: { id: milestoneId },
+          data: { status: 'FUNDED' },
+        });
+      }
+
+      // Send notifications
+      sendEscrowFundedNotification(
+        escrowTransaction.clientId,
+        escrowTransaction.freelancerId,
+        contractId,
+        paymentIntent.amount,
+        paymentIntent.currency.toUpperCase()
+      );
+
+      console.log(
+        `[Stripe Webhook] Escrow payment ${paymentIntent.id} succeeded for contract ${contractId}`
+      );
+    } else {
+      // Transaction not found - might be direct capture without authorization
+      console.log(
+        `[Stripe Webhook] Escrow payment ${paymentIntent.id} succeeded (no prior transaction)`
+      );
+    }
+
+    return { handled: true, message: 'Escrow payment succeeded' };
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error processing escrow payment succeeded:`, error);
+    return { handled: false, message: 'Failed to process escrow payment succeeded' };
   }
 }
 
@@ -1057,6 +1147,7 @@ async function handleConnectAccountUpdated(account: Stripe.Account): Promise<Web
  */
 async function handleTransferCreated(transfer: Stripe.Transfer): Promise<WebhookHandlerResult> {
   try {
+    // Check if this is a payout transfer
     const payout = await prisma.payout.findUnique({
       where: { stripeTransferId: transfer.id },
     });
@@ -1070,9 +1161,64 @@ async function handleTransferCreated(transfer: Stripe.Transfer): Promise<Webhook
         },
       });
 
-      console.log(`[Stripe Webhook] Transfer ${transfer.id} created`);
+      console.log(`[Stripe Webhook] Transfer ${transfer.id} created for payout`);
+      return { handled: true, message: 'Payout transfer created processed' };
     }
 
+    // Check if this is an escrow transfer (release to freelancer)
+    const escrowContractId = transfer.metadata?.escrowContractId;
+
+    if (escrowContractId) {
+      // Find or update escrow transaction
+      let escrowTransaction = await prisma.escrowTransaction.findFirst({
+        where: { stripeTransferId: transfer.id },
+      });
+
+      if (escrowTransaction) {
+        // Update existing transaction
+        await prisma.escrowTransaction.update({
+          where: { id: escrowTransaction.id },
+          data: { status: 'COMPLETED' },
+        });
+      } else {
+        // Find pending release transaction for this contract
+        escrowTransaction = await prisma.escrowTransaction.findFirst({
+          where: {
+            contractId: escrowContractId,
+            type: 'RELEASE',
+            status: 'PENDING',
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (escrowTransaction) {
+          await prisma.escrowTransaction.update({
+            where: { id: escrowTransaction.id },
+            data: {
+              stripeTransferId: transfer.id,
+              status: 'COMPLETED',
+            },
+          });
+        }
+      }
+
+      if (escrowTransaction) {
+        // Send notification about escrow release
+        sendEscrowReleasedNotification(
+          escrowTransaction.freelancerId,
+          escrowContractId,
+          transfer.amount,
+          transfer.currency.toUpperCase()
+        );
+
+        console.log(
+          `[Stripe Webhook] Escrow transfer ${transfer.id} created for contract ${escrowContractId}`
+        );
+        return { handled: true, message: 'Escrow transfer created processed' };
+      }
+    }
+
+    console.log(`[Stripe Webhook] Transfer ${transfer.id} created (no matching record)`);
     return { handled: true, message: 'Transfer created processed' };
   } catch (error) {
     console.error(`[Stripe Webhook] Error processing transfer created:`, error);
@@ -1103,9 +1249,333 @@ async function handleTransferFailed(transfer: Stripe.Transfer): Promise<WebhookH
       console.log(`[Stripe Webhook] Transfer ${transfer.id} failed`);
     }
 
+    // Check if this is an escrow transfer
+    const escrowTransaction = await prisma.escrowTransaction.findFirst({
+      where: { stripeTransferId: transfer.id },
+      include: { milestone: true },
+    });
+
+    if (escrowTransaction) {
+      await prisma.escrowTransaction.update({
+        where: { id: escrowTransaction.id },
+        data: { status: 'FAILED' },
+      });
+
+      // Send notification about failed escrow release
+      sendEscrowTransferFailedNotification(
+        escrowTransaction.freelancerId,
+        escrowTransaction.contractId,
+        escrowTransaction.amount
+      );
+
+      console.log(
+        `[Stripe Webhook] Escrow transfer ${transfer.id} failed for contract ${escrowTransaction.contractId}`
+      );
+    }
+
     return { handled: true, message: 'Transfer failed processed' };
   } catch (error) {
     console.error(`[Stripe Webhook] Error processing transfer failed:`, error);
     return { handled: false, message: 'Failed to process transfer failed' };
   }
+}
+
+// =============================================================================
+// ESCROW WEBHOOK HANDLERS
+// =============================================================================
+
+/**
+ * Handle transfer reversed (for escrow refunds)
+ */
+async function handleTransferReversed(transfer: Stripe.Transfer): Promise<WebhookHandlerResult> {
+  try {
+    // Check if this is an escrow transfer reversal
+    const escrowTransaction = await prisma.escrowTransaction.findFirst({
+      where: { stripeTransferId: transfer.id },
+      include: { escrowBalance: true },
+    });
+
+    if (escrowTransaction) {
+      // Update the original transaction
+      await prisma.escrowTransaction.update({
+        where: { id: escrowTransaction.id },
+        data: { status: 'REFUNDED' },
+      });
+
+      // Create a reversal record
+      await prisma.escrowTransaction.create({
+        data: {
+          escrowBalanceId: escrowTransaction.escrowBalanceId,
+          contractId: escrowTransaction.contractId,
+          milestoneId: escrowTransaction.milestoneId,
+          clientId: escrowTransaction.clientId,
+          freelancerId: escrowTransaction.freelancerId,
+          type: 'REVERSAL',
+          status: 'COMPLETED',
+          amount: -escrowTransaction.amount,
+          platformFee: 0,
+          stripeFee: 0,
+          netAmount: -escrowTransaction.amount,
+          currency: escrowTransaction.currency,
+          description: `Reversal of transfer ${transfer.id}`,
+        },
+      });
+
+      // Update escrow balance
+      if (escrowTransaction.escrowBalance) {
+        await prisma.escrowBalance.update({
+          where: { id: escrowTransaction.escrowBalanceId },
+          data: {
+            releasedAmount: {
+              decrement: escrowTransaction.amount,
+            },
+            totalAmount: {
+              increment: escrowTransaction.amount,
+            },
+            availableAmount: {
+              increment: escrowTransaction.amount,
+            },
+          },
+        });
+      }
+
+      console.log(`[Stripe Webhook] Transfer ${transfer.id} reversed for escrow`);
+      return { handled: true, message: 'Escrow transfer reversal processed' };
+    }
+
+    console.log(`[Stripe Webhook] Transfer ${transfer.id} reversed (not escrow-related)`);
+    return { handled: true, message: 'Transfer reversal processed' };
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error processing transfer reversed:`, error);
+    return { handled: false, message: 'Failed to process transfer reversed' };
+  }
+}
+
+/**
+ * Handle payment intent amount capturable updated
+ * This is triggered when funds are authorized and ready to be captured (escrow hold)
+ */
+async function handlePaymentIntentAmountCapturableUpdated(
+  paymentIntent: Stripe.PaymentIntent
+): Promise<WebhookHandlerResult> {
+  try {
+    // Check if this is an escrow payment intent
+    const escrowContractId = paymentIntent.metadata?.escrowContractId;
+    const escrowMilestoneId = paymentIntent.metadata?.escrowMilestoneId;
+
+    if (!escrowContractId) {
+      // Not an escrow payment
+      return { handled: true, message: 'Not an escrow payment intent' };
+    }
+
+    // Find or create escrow transaction
+    let escrowTransaction = await prisma.escrowTransaction.findFirst({
+      where: { stripePaymentIntentId: paymentIntent.id },
+    });
+
+    if (escrowTransaction) {
+      // Update existing transaction
+      await prisma.escrowTransaction.update({
+        where: { id: escrowTransaction.id },
+        data: {
+          status: 'AUTHORIZED',
+          amount: paymentIntent.amount_capturable,
+        },
+      });
+    } else {
+      // Get escrow balance for contract
+      const escrowBalance = await prisma.escrowBalance.findUnique({
+        where: { contractId: escrowContractId },
+      });
+
+      if (!escrowBalance) {
+        console.error(`[Stripe Webhook] No escrow balance found for contract ${escrowContractId}`);
+        return { handled: false, message: 'Escrow balance not found' };
+      }
+
+      // Create transaction for the authorized amount
+      escrowTransaction = await prisma.escrowTransaction.create({
+        data: {
+          escrowBalanceId: escrowBalance.id,
+          contractId: escrowContractId,
+          milestoneId: escrowMilestoneId,
+          clientId: escrowBalance.clientId,
+          freelancerId: escrowBalance.freelancerId,
+          type: 'DEPOSIT',
+          status: 'AUTHORIZED',
+          amount: paymentIntent.amount_capturable,
+          platformFee: 0, // Will be calculated on capture
+          stripeFee: 0, // Will be calculated on capture
+          netAmount: paymentIntent.amount_capturable,
+          currency: paymentIntent.currency.toUpperCase(),
+          stripePaymentIntentId: paymentIntent.id,
+          description: escrowMilestoneId
+            ? `Escrow deposit for milestone`
+            : `Escrow deposit for contract ${escrowContractId}`,
+        },
+      });
+
+      // Update escrow balance with authorized amount
+      await prisma.escrowBalance.update({
+        where: { id: escrowBalance.id },
+        data: {
+          pendingAmount: {
+            increment: paymentIntent.amount_capturable,
+          },
+        },
+      });
+
+      console.log(
+        `[Stripe Webhook] Escrow payment ${paymentIntent.id} authorized for ${paymentIntent.amount_capturable}`
+      );
+    }
+
+    // Send notification to client about successful escrow hold
+    sendEscrowAuthorizedNotification(
+      escrowTransaction.clientId,
+      escrowContractId,
+      paymentIntent.amount_capturable,
+      paymentIntent.currency.toUpperCase()
+    );
+
+    return { handled: true, message: 'Escrow payment authorized' };
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error processing escrow amount capturable:`, error);
+    return { handled: false, message: 'Failed to process escrow authorization' };
+  }
+}
+
+/**
+ * Handle payment intent requires action
+ * This can happen when 3DS authentication is required for escrow funding
+ */
+async function handlePaymentIntentRequiresAction(
+  paymentIntent: Stripe.PaymentIntent
+): Promise<WebhookHandlerResult> {
+  try {
+    const escrowContractId = paymentIntent.metadata?.escrowContractId;
+
+    if (!escrowContractId) {
+      // Not an escrow payment
+      return { handled: true, message: 'Not an escrow payment intent' };
+    }
+
+    // Update transaction status if exists
+    const escrowTransaction = await prisma.escrowTransaction.findFirst({
+      where: { stripePaymentIntentId: paymentIntent.id },
+    });
+
+    if (escrowTransaction) {
+      await prisma.escrowTransaction.update({
+        where: { id: escrowTransaction.id },
+        data: { status: 'PENDING' },
+      });
+    }
+
+    // Send notification to client about required action
+    const escrowBalance = await prisma.escrowBalance.findUnique({
+      where: { contractId: escrowContractId },
+    });
+
+    if (escrowBalance) {
+      sendEscrowActionRequiredNotification(
+        escrowBalance.clientId,
+        escrowContractId,
+        paymentIntent.id
+      );
+    }
+
+    console.log(`[Stripe Webhook] Escrow payment ${paymentIntent.id} requires action`);
+    return { handled: true, message: 'Escrow payment requires action notification sent' };
+  } catch (error) {
+    console.error(`[Stripe Webhook] Error processing escrow requires action:`, error);
+    return { handled: false, message: 'Failed to process escrow requires action' };
+  }
+}
+
+// =============================================================================
+// ESCROW NOTIFICATIONS
+// =============================================================================
+
+/**
+ * Send notification about escrow transfer failure
+ * FUTURE: Integrate with notification service
+ */
+function sendEscrowTransferFailedNotification(
+  freelancerId: string,
+  contractId: string,
+  amount: number
+): void {
+  console.log(`[NOTIFICATION] Escrow transfer failed for freelancer ${freelancerId}:`, {
+    contractId,
+    amount,
+  });
+}
+
+/**
+ * Send notification about escrow authorization
+ * FUTURE: Integrate with notification service
+ */
+function sendEscrowAuthorizedNotification(
+  clientId: string,
+  contractId: string,
+  amount: number,
+  currency: string
+): void {
+  console.log(`[NOTIFICATION] Escrow funds authorized for client ${clientId}:`, {
+    contractId,
+    amount,
+    currency,
+  });
+}
+
+/**
+ * Send notification about escrow action required (3DS)
+ * FUTURE: Integrate with notification service
+ */
+function sendEscrowActionRequiredNotification(
+  clientId: string,
+  contractId: string,
+  paymentIntentId: string
+): void {
+  console.log(`[NOTIFICATION] Escrow payment action required for client ${clientId}:`, {
+    contractId,
+    paymentIntentId,
+  });
+}
+
+/**
+ * Send notification about escrow funds captured
+ * FUTURE: Integrate with notification service
+ */
+function sendEscrowFundedNotification(
+  clientId: string,
+  freelancerId: string,
+  contractId: string,
+  amount: number,
+  currency: string
+): void {
+  console.log(`[NOTIFICATION] Escrow funded for contract ${contractId}:`, {
+    clientId,
+    freelancerId,
+    amount,
+    currency,
+  });
+}
+
+/**
+ * Send notification about escrow release
+ * FUTURE: Integrate with notification service
+ */
+function sendEscrowReleasedNotification(
+  freelancerId: string,
+  contractId: string,
+  amount: number,
+  currency: string
+): void {
+  console.log(`[NOTIFICATION] Escrow released to freelancer ${freelancerId}:`, {
+    contractId,
+    amount,
+    currency,
+  });
 }

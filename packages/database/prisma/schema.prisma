@@ -5,7 +5,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
 }
 
 datasource db {
@@ -525,10 +525,22 @@ model Contract {
   currency    String     @default("USD") @db.VarChar(3)
   totalAmount Decimal?   @map("total_amount") @db.Decimal(12, 2)
 
+  // Escrow fees
+  platformFeePercent   Decimal @default(10) @map("platform_fee_percent") @db.Decimal(5, 2)
+  secureModeFeePercent Decimal? @map("secure_mode_fee_percent") @db.Decimal(5, 2)
+
+  // SkillPod integration
+  secureMode  Boolean @default(false) @map("secure_mode")
+  skillpodId  String? @map("skillpod_id") @db.Uuid
+
   // Timeline
   startDate  DateTime? @map("start_date")
   endDate    DateTime? @map("end_date")
   deadlineAt DateTime? @map("deadline_at")
+
+  // Contract terms and attachments
+  terms       Json?    @default("{}")
+  attachments String[] @default([])
 
   // Timestamps
   createdAt   DateTime  @default(now()) @map("created_at")
@@ -538,15 +550,19 @@ model Contract {
   cancelledAt DateTime? @map("cancelled_at")
 
   // Relations
-  job               Job                @relation(fields: [jobId], references: [id])
-  bid               Bid?               @relation(fields: [bidId], references: [id])
-  client            User               @relation("ClientContracts", fields: [clientId], references: [id])
-  freelancer        User               @relation("FreelancerContracts", fields: [freelancerId], references: [id])
-  milestones        Milestone[]
-  payments          Payment[]
-  reviews           Review[]
-  reviewInvitations ReviewInvitation[]
-  messages          Message[]          @relation("ContractMessages")
+  job                 Job                  @relation(fields: [jobId], references: [id])
+  bid                 Bid?                 @relation(fields: [bidId], references: [id])
+  client              User                 @relation("ClientContracts", fields: [clientId], references: [id])
+  freelancer          User                 @relation("FreelancerContracts", fields: [freelancerId], references: [id])
+  milestones          Milestone[]
+  payments            Payment[]
+  reviews             Review[]
+  reviewInvitations   ReviewInvitation[]
+  messages            Message[]            @relation("ContractMessages")
+  escrowTransactions  EscrowTransaction[]
+  escrowBalance       EscrowBalance?
+  timeLogs            TimeLog[]
+  disputes            Dispute[]
 
   @@index([clientId])
   @@index([freelancerId])
@@ -557,6 +573,7 @@ model Contract {
 
 enum ContractStatus {
   PENDING
+  PENDING_FUNDING  // Waiting for client to fund escrow
   ACTIVE
   PAUSED
   COMPLETED
@@ -573,16 +590,31 @@ model Milestone {
   status      MilestoneStatus @default(PENDING)
   sortOrder   Int             @default(0) @map("sort_order")
 
+  // Deliverables
+  deliverables    String?  @db.Text
+  deliverableUrls String[] @default([]) @map("deliverable_urls")
+
+  // Escrow tracking
+  escrowFunded     Boolean   @default(false) @map("escrow_funded")
+  escrowFundedAt   DateTime? @map("escrow_funded_at")
+  escrowReleasedAt DateTime? @map("escrow_released_at")
+
+  // Revision tracking
+  revisionCount Int @default(0) @map("revision_count")
+  maxRevisions  Int @default(2) @map("max_revisions")
+
   // Timestamps
   dueDate     DateTime? @map("due_date")
   startedAt   DateTime? @map("started_at")
+  submittedAt DateTime? @map("submitted_at")
   completedAt DateTime? @map("completed_at")
   approvedAt  DateTime? @map("approved_at")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  contract Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  payments Payment[]
+  contract           Contract            @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  payments           Payment[]
+  escrowTransactions EscrowTransaction[]
 
   @@index([contractId])
   @@index([status])
@@ -595,7 +627,9 @@ enum MilestoneStatus {
   SUBMITTED
   REVISION_REQUESTED
   APPROVED
+  RELEASED   // Funds released
   PAID
+  DISPUTED
   CANCELLED
 }
 
@@ -2117,5 +2151,255 @@ model AuditBaseline {
   @@index([actorId])
   @@index([eventType])
   @@map("audit_baselines")
+}
+
+// ============================================================================
+// ESCROW SYSTEM
+// ============================================================================
+
+model EscrowTransaction {
+  id          String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId  String @map("contract_id") @db.Uuid
+  milestoneId String? @map("milestone_id") @db.Uuid
+
+  // Transaction type
+  type   EscrowTransactionType
+  status EscrowTransactionStatus @default(PENDING)
+
+  // Amounts
+  grossAmount   Decimal @map("gross_amount") @db.Decimal(12, 2)
+  platformFee   Decimal @map("platform_fee") @db.Decimal(12, 2)
+  processingFee Decimal @map("processing_fee") @db.Decimal(12, 2)
+  netAmount     Decimal @map("net_amount") @db.Decimal(12, 2)
+  currency      String  @default("USD") @db.VarChar(3)
+
+  // Stripe references
+  stripePaymentIntentId String? @map("stripe_payment_intent_id") @db.VarChar(100)
+  stripeTransferId      String? @map("stripe_transfer_id") @db.VarChar(100)
+  stripeChargeId        String? @map("stripe_charge_id") @db.VarChar(100)
+  stripeRefundId        String? @map("stripe_refund_id") @db.VarChar(100)
+
+  // User references
+  fromUserId String  @map("from_user_id") @db.Uuid
+  toUserId   String? @map("to_user_id") @db.Uuid
+
+  // Metadata
+  description    String? @db.VarChar(500)
+  metadata       Json?
+  failureCode    String? @map("failure_code") @db.VarChar(50)
+  failureMessage String? @map("failure_message") @db.Text
+
+  // Timestamps
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  contract  Contract   @relation(fields: [contractId], references: [id])
+  milestone Milestone? @relation(fields: [milestoneId], references: [id])
+
+  @@index([contractId])
+  @@index([milestoneId])
+  @@index([status])
+  @@index([type])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@map("escrow_transactions")
+}
+
+model EscrowBalance {
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId String @unique @map("contract_id") @db.Uuid
+
+  // Balance tracking
+  totalFunded    Decimal @default(0) @map("total_funded") @db.Decimal(12, 2)
+  totalReleased  Decimal @default(0) @map("total_released") @db.Decimal(12, 2)
+  totalRefunded  Decimal @default(0) @map("total_refunded") @db.Decimal(12, 2)
+  currentBalance Decimal @default(0) @map("current_balance") @db.Decimal(12, 2)
+  frozenAmount   Decimal @default(0) @map("frozen_amount") @db.Decimal(12, 2)
+  currency       String  @default("USD") @db.VarChar(3)
+
+  // Status
+  status EscrowBalanceStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  contract Contract @relation(fields: [contractId], references: [id])
+
+  @@map("escrow_balances")
+}
+
+model TimeLog {
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId String @map("contract_id") @db.Uuid
+
+  // Time entry
+  description String?  @db.VarChar(500)
+  startTime   DateTime @map("start_time")
+  endTime     DateTime? @map("end_time")
+  duration    Int?     // Minutes
+
+  // Billing
+  hourlyRate Decimal  @map("hourly_rate") @db.Decimal(10, 2)
+  amount     Decimal? @db.Decimal(10, 2)
+
+  // Status
+  status TimeLogStatus @default(PENDING)
+
+  // Approval
+  approvedAt DateTime? @map("approved_at")
+  approvedBy String?   @map("approved_by") @db.Uuid
+  rejectedAt DateTime? @map("rejected_at")
+  rejectionReason String? @map("rejection_reason") @db.VarChar(500)
+
+  // SkillPod tracking
+  skillpodSessionId String?  @map("skillpod_session_id") @db.Uuid
+  isVerified        Boolean  @default(false) @map("is_verified")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  contract Contract @relation(fields: [contractId], references: [id])
+
+  @@index([contractId])
+  @@index([status])
+  @@index([startTime])
+  @@map("time_logs")
+}
+
+model Dispute {
+  id          String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId  String  @map("contract_id") @db.Uuid
+  milestoneId String? @map("milestone_id") @db.Uuid
+
+  // Dispute details
+  raisedBy     String        @map("raised_by") @db.Uuid
+  reason       DisputeReason
+  description  String        @db.Text
+  evidenceUrls String[]      @default([]) @map("evidence_urls")
+
+  // Amounts in dispute
+  disputedAmount Decimal @map("disputed_amount") @db.Decimal(12, 2)
+  currency       String  @default("USD") @db.VarChar(3)
+
+  // Status
+  status DisputeStatus @default(OPEN)
+
+  // Resolution
+  resolvedBy             String?            @map("resolved_by") @db.Uuid
+  resolution             DisputeResolution?
+  resolutionNotes        String?            @map("resolution_notes") @db.Text
+  clientRefundAmount     Decimal?           @map("client_refund_amount") @db.Decimal(12, 2)
+  freelancerPayoutAmount Decimal?           @map("freelancer_payout_amount") @db.Decimal(12, 2)
+
+  // Timeline
+  respondBy   DateTime? @map("respond_by")
+  respondedAt DateTime? @map("responded_at")
+  escalatedAt DateTime? @map("escalated_at")
+  resolvedAt  DateTime? @map("resolved_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  contract Contract         @relation(fields: [contractId], references: [id])
+  messages DisputeMessage[]
+
+  @@index([contractId])
+  @@index([milestoneId])
+  @@index([status])
+  @@index([raisedBy])
+  @@map("disputes")
+}
+
+model DisputeMessage {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  disputeId String @map("dispute_id") @db.Uuid
+
+  senderId   String      @map("sender_id") @db.Uuid
+  senderRole DisputeRole @map("sender_role")
+
+  message        String   @db.Text
+  attachmentUrls String[] @default([]) @map("attachment_urls")
+
+  // Proposed resolution (optional)
+  proposedResolution     DisputeResolution? @map("proposed_resolution")
+  proposedClientAmount   Decimal?           @map("proposed_client_amount") @db.Decimal(12, 2)
+  proposedFreelancerAmount Decimal?         @map("proposed_freelancer_amount") @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  dispute Dispute @relation(fields: [disputeId], references: [id])
+
+  @@index([disputeId])
+  @@index([senderId])
+  @@map("dispute_messages")
+}
+
+enum EscrowTransactionType {
+  FUND            // Client funds escrow
+  RELEASE         // Release to freelancer
+  REFUND          // Refund to client
+  PARTIAL_RELEASE // Partial release (dispute resolution)
+  PARTIAL_REFUND  // Partial refund (dispute resolution)
+  FEE_DEDUCTION   // Platform fee deduction
+}
+
+enum EscrowTransactionStatus {
+  PENDING
+  PROCESSING
+  REQUIRES_CAPTURE
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum EscrowBalanceStatus {
+  ACTIVE
+  FROZEN   // Dispute in progress
+  CLOSED
+}
+
+enum TimeLogStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  BILLED
+  DISPUTED
+}
+
+enum DisputeReason {
+  QUALITY_ISSUES
+  MISSED_DEADLINE
+  SCOPE_DISAGREEMENT
+  COMMUNICATION_ISSUES
+  NON_DELIVERY
+  PAYMENT_ISSUE
+  WORK_NOT_AS_DESCRIBED
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  RESPONDED
+  UNDER_REVIEW
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+
+enum DisputeResolution {
+  FULL_REFUND
+  PARTIAL_REFUND
+  FULL_RELEASE
+  PARTIAL_RELEASE
+  SPLIT
+  CANCELLED
+}
+
+enum DisputeRole {
+  CLIENT
+  FREELANCER
+  MEDIATOR
+  SYSTEM
 }
 

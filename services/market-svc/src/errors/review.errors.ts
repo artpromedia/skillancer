@@ -30,6 +30,11 @@ export const ReviewErrorCode = {
   INVITATION_NOT_FOUND: 'INVITATION_NOT_FOUND',
   INVITATION_EXPIRED: 'INVITATION_EXPIRED',
   UNAUTHORIZED: 'UNAUTHORIZED',
+  // Fraud detection and hiding
+  REVIEW_BLOCKED: 'REVIEW_BLOCKED',
+  REVIEW_ALREADY_HIDDEN: 'REVIEW_ALREADY_HIDDEN',
+  REVIEW_NOT_HIDDEN: 'REVIEW_NOT_HIDDEN',
+  HIDE_LIMIT_REACHED: 'HIDE_LIMIT_REACHED',
 } as const;
 
 export type ReviewErrorCodeType = (typeof ReviewErrorCode)[keyof typeof ReviewErrorCode];
@@ -75,6 +80,10 @@ function getErrorMessage(code: ReviewErrorCodeType): string {
     INVITATION_NOT_FOUND: 'Review invitation not found',
     INVITATION_EXPIRED: 'Review invitation has expired',
     UNAUTHORIZED: 'You are not authorized to perform this action',
+    REVIEW_BLOCKED: 'Review could not be submitted due to suspicious activity',
+    REVIEW_ALREADY_HIDDEN: 'Review is already hidden',
+    REVIEW_NOT_HIDDEN: 'Review is not hidden',
+    HIDE_LIMIT_REACHED: 'You have reached the maximum number of hidden reviews',
   };
   return messages[code];
 }
@@ -89,10 +98,14 @@ function getStatusCode(code: ReviewErrorCodeType): number {
     UNAUTHORIZED: 403,
     CANNOT_VOTE_OWN_REVIEW: 403,
     CANNOT_REPORT_OWN_REVIEW: 403,
+    REVIEW_BLOCKED: 403,
+    HIDE_LIMIT_REACHED: 403,
     REVIEW_ALREADY_SUBMITTED: 409,
     RESPONSE_ALREADY_EXISTS: 409,
     ALREADY_RESPONDED: 409,
     REPORT_ALREADY_EXISTS: 409,
+    REVIEW_ALREADY_HIDDEN: 409,
+    REVIEW_NOT_HIDDEN: 409,
     CONTRACT_NOT_COMPLETED: 422,
     REVIEW_WINDOW_EXPIRED: 422,
     INVITATION_EXPIRED: 422,

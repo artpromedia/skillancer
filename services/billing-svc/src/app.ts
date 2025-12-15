@@ -3,18 +3,22 @@
  * Billing service main application
  */
 
-import Fastify from 'fastify';
-import type { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import Fastify from 'fastify';
 
 import { config } from './config/index.js';
-import { initializeStripeService } from './services/stripe.service.js';
-import { initializePaymentMethodService } from './services/payment-method.service.js';
-import { initializeSubscriptionService } from './services/subscription.service.js';
+import {
+  StripeError,
+  PaymentMethodNotFoundError,
+  PaymentMethodInUseError,
+  InvalidPaymentMethodError,
+  SetupIntentError,
+  CustomerNotFoundError,
+} from './errors/index.js';
 import {
   initializeCardExpirationJob,
   scheduleCardExpirationJob,
@@ -26,16 +30,13 @@ import {
   closeBillingJobs,
 } from './jobs/subscription-billing.job.js';
 import { paymentMethodRoutes } from './routes/payment-methods.js';
-import { webhookRoutes } from './routes/webhooks.js';
 import subscriptionRoutes from './routes/subscriptions.route.js';
-import {
-  StripeError,
-  PaymentMethodNotFoundError,
-  PaymentMethodInUseError,
-  InvalidPaymentMethodError,
-  SetupIntentError,
-  CustomerNotFoundError,
-} from './errors/index.js';
+import { webhookRoutes } from './routes/webhooks.js';
+import { initializePaymentMethodService } from './services/payment-method.service.js';
+import { initializeStripeService } from './services/stripe.service.js';
+import { initializeSubscriptionService } from './services/subscription.service.js';
+
+import type { FastifyInstance } from 'fastify';
 
 // =============================================================================
 // APP FACTORY

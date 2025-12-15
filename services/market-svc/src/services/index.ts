@@ -17,3 +17,30 @@ export type {
   InvitationWithDetails,
   PendingInvitation,
 } from './review-invitation.service.js';
+
+// Enhanced Review System
+export { EnhancedReviewService } from './enhanced-review.service.js';
+export type {
+  SubmitReviewParams,
+  RespondToReviewParams,
+  VoteHelpfulParams,
+  ReportReviewParams,
+  GetUserReviewsOptions,
+  ReviewSubmissionResult,
+} from './enhanced-review.service.js';
+
+export { FraudDetectionService } from './fraud-detection.service.js';
+export type {
+  FraudCheckParams,
+  FraudCheckResult,
+  FraudCheck,
+  FraudCheckType,
+} from './fraud-detection.service.js';
+
+export { ReputationService } from './reputation.service.js';
+export type {
+  ReputationStats,
+  ReputationSummary,
+  RatingValue,
+  TrendDirection,
+} from './reputation.service.js';

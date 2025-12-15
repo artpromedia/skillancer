@@ -6,6 +6,7 @@
 import { StripeError } from '../errors/index.js';
 import { handleStripeWebhook } from '../handlers/stripe-webhook.handler.js';
 import { getStripeService } from '../services/stripe.service.js';
+import { payoutWebhookRoutes } from '../webhooks/payout.webhook.js';
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
@@ -100,6 +101,9 @@ export async function webhookRoutes(fastify: FastifyInstance): Promise<void> {
       reply: FastifyReply
     ) => Promise<void>,
   });
+
+  // Register payout-specific webhooks
+  await fastify.register(payoutWebhookRoutes, { prefix: '' });
 }
 
 export default webhookRoutes;
