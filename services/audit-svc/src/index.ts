@@ -19,12 +19,19 @@ import {
   startAuditEventConsumer,
   stopAuditEventConsumer,
 } from './consumers/audit-event.consumer.js';
+import { registerAuditPlugin } from './middleware/audit.middleware.js';
+import { registerOpenApi } from './openapi.js';
 import { initializeAuditLogRepository } from './repositories/audit-log.repository.js';
 import { registerRoutes } from './routes/index.js';
 import { initializeAnalyticsService } from './services/audit-analytics.service.js';
 import { initializeExportService } from './services/audit-export.service.js';
 import { initializeAuditLogService } from './services/audit-log.service.js';
 import { initializeMaintenanceService } from './services/audit-maintenance.service.js';
+
+// Re-export public API
+export * from './decorators/index.js';
+export * from './middleware/index.js';
+export * from './types/index.js';
 
 const SERVICE_ID = 'audit-svc';
 const QUEUE_NAME = 'audit-events';
@@ -98,6 +105,12 @@ async function buildApp(config: Config): Promise<{
     queueName: QUEUE_NAME,
     concurrency: 10,
   });
+
+  // Register audit middleware plugin
+  registerAuditPlugin(app);
+
+  // Register OpenAPI documentation (available at /docs)
+  await registerOpenApi(app);
 
   app.decorate('authenticate', async (_request: unknown, _reply: unknown) => {
     // Authentication decorator - to be implemented with JWT validation

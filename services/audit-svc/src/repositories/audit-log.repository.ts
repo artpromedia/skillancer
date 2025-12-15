@@ -228,6 +228,114 @@ export async function compactLogs(beforeDate: Date): Promise<number> {
   return result.modifiedCount;
 }
 
+export async function countUniqueActors(filters: AuditSearchFilters): Promise<number> {
+  const col = getCollection();
+  const match = buildQuery(filters);
+
+  const result = await col
+    .aggregate<{
+      count: number;
+    }>([{ $match: match }, { $group: { _id: '$actor.id' } }, { $count: 'count' }])
+    .toArray();
+
+  return result[0]?.count ?? 0;
+}
+
+export async function countUniqueResources(filters: AuditSearchFilters): Promise<number> {
+  const col = getCollection();
+  const match = buildQuery(filters);
+
+  const result = await col
+    .aggregate<{
+      count: number;
+    }>([
+      { $match: match },
+      { $group: { _id: { type: '$resource.type', id: '$resource.id' } } },
+      { $count: 'count' },
+    ])
+    .toArray();
+
+  return result[0]?.count ?? 0;
+}
+
+export async function aggregateTopActors(
+  filters: AuditSearchFilters,
+  limit: number
+): Promise<Array<{ id: string; count: number }>> {
+  const col = getCollection();
+  const match = buildQuery(filters);
+
+  const result = await col
+    .aggregate<{
+      _id: string;
+      count: number;
+    }>([
+      { $match: match },
+      { $group: { _id: '$actor.id', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: limit },
+    ])
+    .toArray();
+
+  return result.map((r) => ({ id: r._id, count: r.count }));
+}
+
+export async function aggregateResourceCounts(
+  filters: AuditSearchFilters
+): Promise<Array<{ _id: string; count: number }>> {
+  const col = getCollection();
+  const match = buildQuery(filters);
+
+  return col
+    .aggregate<{
+      _id: string;
+      count: number;
+    }>([
+      { $match: match },
+      { $group: { _id: '$resource.type', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ])
+    .toArray();
+}
+
+export async function anonymizeActorData(actorId: string): Promise<number> {
+  const col = getCollection();
+
+  const result = await col.updateMany(
+    { 'actor.id': actorId },
+    {
+      $set: {
+        'actor.id': 'ANONYMIZED',
+        'actor.email': undefined,
+        'actor.name': undefined,
+        'actor.ipAddress': undefined,
+        'request.ipAddress': undefined,
+        'request.userAgent': undefined,
+      },
+    }
+  );
+
+  return result.modifiedCount;
+}
+
+export async function getOldestLogByPolicy(policy: RetentionPolicy): Promise<Date | null> {
+  const col = getCollection();
+  const result = await col.findOne(
+    { retentionPolicy: policy },
+    { sort: { timestamp: 1 }, projection: { timestamp: 1 } }
+  );
+  return result?.timestamp ?? null;
+}
+
+export async function getNewestLogByPolicy(policy: RetentionPolicy): Promise<Date | null> {
+  const col = getCollection();
+  const result = await col.findOne(
+    { retentionPolicy: policy },
+    { sort: { timestamp: -1 }, projection: { timestamp: 1 } }
+  );
+  return result?.timestamp ?? null;
+}
+
 function buildQuery(filters: AuditSearchFilters): Filter<AuditLogEntry> {
   const query: Filter<AuditLogEntry> = {};
 
