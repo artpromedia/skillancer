@@ -325,6 +325,12 @@ model Tenant {
   subscriptions   Subscription[]
   hipaaCompliance HipaaCompliance?
   breachIncidents BreachIncident[]
+  
+  // Data containment relations
+  podSecurityPolicies  PodSecurityPolicy[]
+  securityViolations   SecurityViolation[]
+  fileTransferRequests FileTransferRequest[]
+  containmentAuditLogs ContainmentAuditLog[]
 
   @@index([slug])
   @@index([plan])
@@ -728,6 +734,8 @@ model Session {
   // Usage
   startedAt    DateTime? @map("started_at")
   endedAt      DateTime? @map("ended_at")
+  terminatedAt DateTime? @map("terminated_at")
+  terminationReason String? @map("termination_reason") @db.Text
   durationMins Int       @default(0) @map("duration_mins")
   costCredits  Decimal   @default(0) @map("cost_credits") @db.Decimal(10, 2)
 
@@ -738,11 +746,19 @@ model Session {
   // Relations
   user   User    @relation(fields: [userId], references: [id])
   tenant Tenant? @relation(fields: [tenantId], references: [id])
+  securityPolicy PodSecurityPolicy? @relation(fields: [securityPolicyId], references: [id])
+  securityPolicyId String? @map("security_policy_id") @db.Uuid
+  
+  // Data containment relations
+  securityViolations SecurityViolation[]
+  fileTransferRequests FileTransferRequest[]
+  containmentAuditLogs ContainmentAuditLog[]
 
   @@index([userId])
   @@index([tenantId])
   @@index([status])
   @@index([startedAt])
+  @@index([securityPolicyId])
   @@map("sessions")
 }
 
@@ -762,6 +778,319 @@ enum SessionType {
   TESTING
   PRODUCTION
   TRAINING
+}
+
+// ============================================================================
+// DATA CONTAINMENT & SECURITY POLICIES
+// ============================================================================
+
+model PodSecurityPolicy {
+  id          String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId    String  @map("tenant_id") @db.Uuid
+  
+  // Policy identification
+  name        String  @db.VarChar(100)
+  description String? @db.Text
+  isDefault   Boolean @default(false) @map("is_default")
+  
+  // Clipboard controls
+  clipboardPolicy     ClipboardPolicy @default(BLOCKED) @map("clipboard_policy")
+  clipboardInbound    Boolean @default(false) @map("clipboard_inbound")  // Local -> Pod
+  clipboardOutbound   Boolean @default(false) @map("clipboard_outbound") // Pod -> Local
+  clipboardMaxSize    Int?    @map("clipboard_max_size") // Bytes
+  clipboardAllowedTypes String[] @map("clipboard_allowed_types") // ['text/plain']
+  
+  // File transfer controls
+  fileDownloadPolicy  FileTransferPolicy @default(BLOCKED) @map("file_download_policy")
+  fileUploadPolicy    FileTransferPolicy @default(ALLOWED) @map("file_upload_policy")
+  allowedFileTypes    String[] @map("allowed_file_types") // ['.pdf', '.docx']
+  blockedFileTypes    String[] @map("blocked_file_types") // ['.exe', '.zip']
+  maxFileSize         Int?     @map("max_file_size") // Bytes
+  
+  // Printing controls
+  printingPolicy      PrintingPolicy @default(BLOCKED) @map("printing_policy")
+  allowLocalPrinting  Boolean @default(false) @map("allow_local_printing")
+  allowPdfExport      Boolean @default(false) @map("allow_pdf_export")
+  
+  // Peripheral controls
+  usbPolicy           UsbPolicy @default(BLOCKED) @map("usb_policy")
+  allowedUsbDevices   String[] @map("allowed_usb_devices") // Device class IDs
+  webcamPolicy        PeripheralPolicy @default(ALLOWED) @map("webcam_policy")
+  microphonePolicy    PeripheralPolicy @default(ALLOWED) @map("microphone_policy")
+  
+  // Screen capture controls
+  screenCaptureBlocking Boolean @default(true) @map("screen_capture_blocking")
+  watermarkEnabled    Boolean @default(true) @map("watermark_enabled")
+  watermarkConfig     Json?   @map("watermark_config")
+  
+  // Network controls
+  networkPolicy       NetworkPolicy @default(RESTRICTED) @map("network_policy")
+  allowedDomains      String[] @map("allowed_domains")
+  blockedDomains      String[] @map("blocked_domains")
+  allowInternet       Boolean @default(false) @map("allow_internet")
+  
+  // Session controls
+  idleTimeout         Int     @default(15) @map("idle_timeout") // Minutes
+  maxSessionDuration  Int?    @map("max_session_duration") // Minutes
+  requireMfa          Boolean @default(true) @map("require_mfa")
+  
+  // Audit settings
+  recordSession       Boolean @default(true) @map("record_session")
+  logKeystrokes       Boolean @default(false) @map("log_keystrokes")
+  logClipboard        Boolean @default(true) @map("log_clipboard")
+  logFileAccess       Boolean @default(true) @map("log_file_access")
+  
+  // Status
+  isActive            Boolean @default(true) @map("is_active")
+  
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  tenant              Tenant    @relation(fields: [tenantId], references: [id])
+  sessions            Session[]
+  
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([isDefault])
+  @@map("pod_security_policies")
+}
+
+model SecurityViolation {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sessionId     String   @map("session_id") @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  
+  // Violation details
+  violationType ViolationType @map("violation_type")
+  severity      ViolationSeverity @default(MEDIUM)
+  description   String   @db.Text
+  details       Json     @default("{}")
+  
+  // Context
+  sourceIp      String?  @map("source_ip") @db.VarChar(45)
+  userAgent     String?  @map("user_agent") @db.Text
+  
+  // Response taken
+  action        ViolationAction @default(LOGGED)
+  actionDetails Json?    @map("action_details")
+  
+  // Review status
+  reviewed      Boolean  @default(false)
+  reviewedBy    String?  @map("reviewed_by") @db.Uuid
+  reviewedAt    DateTime? @map("reviewed_at")
+  reviewNotes   String?  @map("review_notes") @db.Text
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  session       Session  @relation(fields: [sessionId], references: [id])
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  
+  @@index([sessionId])
+  @@index([tenantId])
+  @@index([violationType])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("security_violations")
+}
+
+model FileTransferRequest {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sessionId     String   @map("session_id") @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  requestedBy   String   @map("requested_by") @db.Uuid
+  
+  // File details
+  fileName      String   @map("file_name") @db.VarChar(255)
+  fileType      String   @map("file_type") @db.VarChar(100)
+  fileSize      Int      @map("file_size") // Bytes
+  fileHash      String?  @map("file_hash") @db.VarChar(128)
+  direction     TransferDirection
+  
+  // Request details
+  purpose       String   @db.Text
+  expiresAt     DateTime @map("expires_at")
+  
+  // Approval workflow
+  status        TransferRequestStatus @default(PENDING)
+  approvedBy    String?  @map("approved_by") @db.Uuid
+  approvedAt    DateTime? @map("approved_at")
+  rejectedBy    String?  @map("rejected_by") @db.Uuid
+  rejectedAt    DateTime? @map("rejected_at")
+  rejectionReason String? @map("rejection_reason") @db.Text
+  
+  // Transfer tracking
+  transferStartedAt  DateTime? @map("transfer_started_at")
+  transferCompletedAt DateTime? @map("transfer_completed_at")
+  downloadCount  Int     @default(0) @map("download_count")
+  maxDownloads   Int     @default(1) @map("max_downloads")
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  session       Session  @relation(fields: [sessionId], references: [id])
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  
+  @@index([sessionId])
+  @@index([tenantId])
+  @@index([requestedBy])
+  @@index([status])
+  @@index([createdAt])
+  @@map("file_transfer_requests")
+}
+
+model ContainmentAuditLog {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sessionId     String   @map("session_id") @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  
+  // Event details
+  eventType     ContainmentEventType @map("event_type")
+  eventCategory ContainmentEventCategory @map("event_category")
+  description   String   @db.Text
+  details       Json     @default("{}")
+  
+  // Context
+  sourceIp      String?  @map("source_ip") @db.VarChar(45)
+  targetResource String? @map("target_resource") @db.VarChar(500)
+  
+  // Outcome
+  allowed       Boolean
+  blockedReason String?  @map("blocked_reason") @db.Text
+  policyId      String?  @map("policy_id") @db.Uuid
+  
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  session       Session  @relation(fields: [sessionId], references: [id])
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  
+  @@index([sessionId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([eventType])
+  @@index([eventCategory])
+  @@index([createdAt])
+  @@map("containment_audit_logs")
+}
+
+// Data Containment Enums
+enum ClipboardPolicy {
+  BLOCKED
+  READ_ONLY      // Can paste into pod, not copy out
+  WRITE_ONLY     // Can copy out of pod, not paste in
+  BIDIRECTIONAL  // Full clipboard access
+  APPROVAL_REQUIRED
+}
+
+enum FileTransferPolicy {
+  BLOCKED
+  ALLOWED
+  APPROVAL_REQUIRED
+  LOGGED_ONLY    // Allowed but heavily logged
+}
+
+enum PrintingPolicy {
+  BLOCKED
+  LOCAL_ONLY     // Print to local printer
+  PDF_ONLY       // Export as PDF only
+  ALLOWED
+  APPROVAL_REQUIRED
+}
+
+enum UsbPolicy {
+  BLOCKED
+  STORAGE_BLOCKED // Block storage devices, allow others
+  WHITELIST_ONLY
+  ALLOWED
+}
+
+enum PeripheralPolicy {
+  BLOCKED
+  ALLOWED
+  SESSION_PROMPT  // Ask user each session
+}
+
+enum NetworkPolicy {
+  BLOCKED        // No network access
+  RESTRICTED     // Whitelist only
+  MONITORED      // Full access but logged
+  UNRESTRICTED
+}
+
+enum ViolationType {
+  CLIPBOARD_COPY_ATTEMPT
+  CLIPBOARD_PASTE_BLOCKED
+  FILE_DOWNLOAD_BLOCKED
+  FILE_UPLOAD_BLOCKED
+  SCREEN_CAPTURE_ATTEMPT
+  USB_DEVICE_BLOCKED
+  NETWORK_ACCESS_BLOCKED
+  PRINT_BLOCKED
+  SESSION_TIMEOUT
+  IDLE_TIMEOUT
+  UNAUTHORIZED_PERIPHERAL
+  POLICY_BYPASS_ATTEMPT
+  SUSPICIOUS_ACTIVITY
+}
+
+enum ViolationSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ViolationAction {
+  LOGGED
+  WARNED
+  BLOCKED
+  SESSION_TERMINATED
+  USER_SUSPENDED
+  INCIDENT_CREATED
+}
+
+enum TransferDirection {
+  UPLOAD   // Local to Pod
+  DOWNLOAD // Pod to Local
+}
+
+enum TransferRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  COMPLETED
+  CANCELLED
+}
+
+enum ContainmentEventType {
+  CLIPBOARD_COPY
+  CLIPBOARD_PASTE
+  FILE_DOWNLOAD
+  FILE_UPLOAD
+  PRINT_REQUEST
+  USB_CONNECT
+  USB_DISCONNECT
+  NETWORK_REQUEST
+  SCREEN_CAPTURE
+  PERIPHERAL_ACCESS
+  SESSION_START
+  SESSION_END
+  POLICY_CHANGE
+  WATERMARK_DISPLAYED
+}
+
+enum ContainmentEventCategory {
+  DATA_TRANSFER
+  DEVICE_ACCESS
+  NETWORK
+  SESSION
+  SECURITY
+  CONFIGURATION
 }
 
 // ============================================================================
