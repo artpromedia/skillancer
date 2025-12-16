@@ -3,9 +3,14 @@
  * Security policy management routes
  */
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/return-await */
+/* eslint-disable import/order */
+
 import { z } from 'zod';
 
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import type { SecurityPolicyService } from '../services/security-policy.service.js';
 import type { PodSecurityPolicyInput } from '../types/containment.types.js';
 

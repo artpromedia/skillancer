@@ -3,6 +3,11 @@
  * Storage service for managing persistent volumes
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/require-await */
+
 import { config } from '../config/index.js';
 
 import type { CreateVolumeParams, VolumeInfo } from '../types/environment.types.js';

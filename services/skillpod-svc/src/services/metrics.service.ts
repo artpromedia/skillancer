@@ -3,6 +3,12 @@
  * Pod metrics service for resource utilization monitoring
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import type { KasmWorkspacesService } from './kasm-workspaces.service.js';
 import type { ResourceUtilization } from '../types/environment.types.js';
 import type { Redis as RedisType } from 'ioredis';

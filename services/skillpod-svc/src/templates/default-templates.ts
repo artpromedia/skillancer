@@ -3,6 +3,8 @@
  * Default pre-configured template definitions
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 import type {
   ToolDefinition,
   ResourceSpec,

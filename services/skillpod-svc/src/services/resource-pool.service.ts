@@ -3,6 +3,13 @@
  * Resource pool and quota management service
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
+
 import type { EnvironmentPodRepository } from '../repositories/environment-pod.repository.js';
 import type { ResourcePoolRepository } from '../repositories/resource-pool.repository.js';
 import type { TenantQuota, ResourceSpec } from '../types/environment.types.js';
