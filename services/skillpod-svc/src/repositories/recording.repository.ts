@@ -16,6 +16,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { PrismaClient } from '@prisma/client';
+import type { Decimal, JsonValue } from '@prisma/client/runtime/library';
 
 // =============================================================================
 // TYPES
@@ -100,10 +101,10 @@ export interface RecordingMarker {
   timestamp: number;
   label: string | null;
   description: string | null;
-  metadata: Record<string, unknown> | null;
+  metadata: JsonValue;
   isAutoDetected: boolean;
   detectionSource: string | null;
-  confidence: number | null;
+  confidence: Decimal | null;
   createdBy: string | null;
   createdAt: Date;
 }
@@ -114,8 +115,8 @@ export interface RecordingOcrFrame {
   timestamp: number;
   frameNumber: number;
   extractedText: string;
-  textConfidence: number;
-  textRegions: TextRegion[] | null;
+  textConfidence: Decimal;
+  textRegions: JsonValue;
   elasticsearchId: string | null;
   indexedAt: Date | null;
   createdAt: Date;
@@ -183,6 +184,7 @@ export interface UpdateRecordingInput {
   thumbnailUrl?: string;
   ocrStatus?: OcrStatus;
   ocrCompletedAt?: Date;
+  retentionPolicy?: string;
   expiresAt?: Date;
   deletedAt?: Date;
   viewCount?: number;

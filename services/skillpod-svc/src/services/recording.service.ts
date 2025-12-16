@@ -320,28 +320,28 @@ async function deleteFromS3(bucket: string, key: string): Promise<void> {
 }
 
 async function mergeChunks(
-  _chunks: RecordingChunk[],
+  chunks: RecordingChunk[],
   _bucket: string,
-  _outputKey: string
+  outputKey: string
 ): Promise<{ duration: number; size: number }> {
   // In production, use FFmpeg to merge video chunks
   // This could be done via Lambda, ECS task, or MediaConvert
 
-  console.log(`[Recording] Merging ${_chunks.length} chunks into ${_outputKey}`);
+  console.log(`[Recording] Merging ${chunks.length} chunks into ${outputKey}`);
 
   // Simulate async operation
   await Promise.resolve();
 
   // Calculate totals from chunks
-  const duration = _chunks.reduce((sum, c) => sum + c.durationSeconds, 0);
-  const size = _chunks.reduce((sum, c) => sum + c.fileSizeBytes, 0);
+  const duration = chunks.reduce((sum, c) => sum + c.durationSeconds, 0);
+  const size = chunks.reduce((sum, c) => sum + c.fileSizeBytes, 0);
 
   return { duration, size };
 }
 
 async function extractTextFromFrame(
   _frameData: Buffer,
-  _timestamp: number
+  timestamp: number
 ): Promise<{ text: string; confidence: number; regions: unknown[] }> {
   // In production, use Tesseract.js or AWS Textract
   // const worker = await createWorker();
@@ -350,7 +350,7 @@ async function extractTextFromFrame(
   // const { data } = await worker.recognize(frameData);
   // await worker.terminate();
 
-  console.log(`[Recording] OCR processing frame at ${_timestamp}s`);
+  console.log(`[Recording] OCR processing frame at ${timestamp}s`);
 
   // Simulate async operation
   await Promise.resolve();
