@@ -3,10 +3,19 @@
  * Security violations API routes
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import { z } from 'zod';
 
 import type { FastifyInstance } from 'fastify';
-import type { ViolationDetectionService } from '../services/violation-detection.service.js';
+import type {
+  ViolationDetectionService,
+  CreateViolationInput,
+} from '../services/violation-detection.service.js';
 import type { ViolationSeverity, ViolationType } from '../types/containment.types.js';
 
 // =============================================================================

@@ -368,3 +368,4 @@ export const SEPA_COUNTRIES = [
 export const INSTANT_PAYOUT_FEE_PERCENT = 1.0; // 1% for instant payouts
 export const EXPRESS_PAYOUT_SURCHARGE = 2.0; // $2 extra for express
 export const CONVERSION_MARKUP_PERCENT = 2.0; // 2% on currency conversion
+export const PLATFORM_FX_MARKUP_PERCENT = 2.0; // 2% platform FX markup

@@ -747,16 +747,16 @@ export class GlobalPayoutService {
   private calculateFees(amount: number, currency: string, method: string): PayoutFeeBreakdown {
     // Get region-based fees
     const region = this.getRegionForCurrency(currency);
-    const regionFees = PAYOUT_FEES_BY_REGION[region] ?? PAYOUT_FEES_BY_REGION.GLOBAL;
+    const regionFee = PAYOUT_FEES_BY_REGION[region] ?? PAYOUT_FEES_BY_REGION.DEFAULT ?? 3.0;
 
-    const percentageFee = amount * (regionFees.percentFee / 100);
-    const fixedFee = regionFees.fixedFee;
+    // Fixed fee based on region, no percentage fee for payouts
+    const fixedFee = regionFee;
     const processingFee = amount * 0.005; // 0.5% processing
 
-    const totalFee = percentageFee + fixedFee + processingFee;
+    const totalFee = fixedFee + processingFee;
 
     return {
-      payoutFee: percentageFee + fixedFee,
+      payoutFee: fixedFee,
       processingFee,
       conversionFee: 0,
       instantFee: 0,

@@ -3,10 +3,21 @@
  * Data containment API routes
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import { z } from 'zod';
 
 import type { FastifyInstance } from 'fastify';
-import type { DataContainmentService } from '../services/data-containment.service.js';
+import type {
+  DataContainmentService,
+  ClipboardActionRequest,
+  FileTransferActionRequest,
+  PeripheralAccessRequest,
+} from '../services/data-containment.service.js';
 import type { TransferDirection } from '../types/containment.types.js';
 
 // =============================================================================

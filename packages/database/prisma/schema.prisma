@@ -2264,6 +2264,11 @@ enum NotificationType {
   MESSAGE_RECEIVED
   REVIEW_RECEIVED
   SYSTEM
+  // Security/Kill Switch notifications
+  ACCESS_REVOKED
+  ACCESS_REINSTATED
+  KILL_SWITCH_EXECUTED
+  SECURITY_ALERT
 }
 
 enum NotificationChannel {
@@ -3282,4 +3287,173 @@ enum PhiFieldType {
   MEDICAL_RECORD
   INSURANCE_ID
   OTHER
+}
+
+// ============================================================================
+// KILL SWITCH SYSTEM
+// ============================================================================
+
+model KillSwitchEvent {
+  id String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Scope
+  scope     KillSwitchScope
+  tenantId  String?         @map("tenant_id") @db.Uuid
+  userId    String?         @map("user_id") @db.Uuid
+  podId     String?         @map("pod_id") @db.Uuid
+  sessionId String?         @map("session_id") @db.Uuid
+
+  // Trigger info
+  triggeredBy    String           @map("triggered_by") @db.Uuid
+  triggerReason  KillSwitchReason @map("trigger_reason")
+  triggerDetails String?          @map("trigger_details") @db.Text
+
+  // Execution status
+  status KillSwitchStatus @default(PENDING)
+
+  // Timing
+  initiatedAt     DateTime  @default(now()) @map("initiated_at")
+  completedAt     DateTime? @map("completed_at")
+  executionTimeMs Int?      @map("execution_time_ms")
+
+  // Results
+  sessionsTerminated  Int     @default(0) @map("sessions_terminated")
+  tokensRevoked       Int     @default(0) @map("tokens_revoked")
+  cachePurged         Boolean @default(false) @map("cache_purged")
+  recordingsPreserved Boolean @default(false) @map("recordings_preserved")
+
+  // Error tracking
+  errors Json?
+
+  // Metadata
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  actions     KillSwitchAction[]
+  revocations AccessRevocation[]
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+  @@index([initiatedAt])
+  @@map("kill_switch_events")
+}
+
+model KillSwitchAction {
+  id                String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  killSwitchEventId String @map("kill_switch_event_id") @db.Uuid
+
+  // Action details
+  actionType KillSwitchActionType @map("action_type")
+  target     String // Session ID, Pod ID, etc.
+  targetType String               @map("target_type")
+
+  // Status
+  status KillSwitchActionStatus @default(PENDING)
+
+  // Timing
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  // Error handling
+  errorMessage String? @map("error_message")
+  retryCount   Int     @default(0) @map("retry_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  killSwitchEvent KillSwitchEvent @relation(fields: [killSwitchEventId], references: [id])
+
+  @@index([killSwitchEventId])
+  @@map("kill_switch_actions")
+}
+
+model AccessRevocation {
+  id String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Target
+  tenantId String? @map("tenant_id") @db.Uuid
+  userId   String  @map("user_id") @db.Uuid
+
+  // Revocation details
+  revokedBy String @map("revoked_by") @db.Uuid
+  reason    String
+
+  // Scope
+  scope RevocationScope
+
+  // Status
+  isActive  Boolean   @default(true) @map("is_active")
+  expiresAt DateTime? @map("expires_at")
+
+  // Reinstatement
+  reinstatedBy    String?   @map("reinstated_by") @db.Uuid
+  reinstatedAt    DateTime? @map("reinstated_at")
+  reinstateReason String?   @map("reinstate_reason")
+
+  // Related kill switch
+  killSwitchEventId String? @map("kill_switch_event_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  killSwitchEvent KillSwitchEvent? @relation(fields: [killSwitchEventId], references: [id])
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([isActive])
+  @@map("access_revocations")
+}
+
+enum KillSwitchScope {
+  TENANT // All users in a tenant
+  USER // Specific user across all pods
+  POD // Specific pod
+  SESSION // Specific session
+}
+
+enum KillSwitchReason {
+  CONTRACT_TERMINATION
+  SECURITY_INCIDENT
+  POLICY_VIOLATION
+  DATA_BREACH_SUSPECTED
+  UNAUTHORIZED_ACCESS
+  MANUAL_TERMINATION
+  SCHEDULED_END
+  COMPLIANCE_REQUIREMENT
+}
+
+enum KillSwitchStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  PARTIAL_FAILURE
+  FAILED
+}
+
+enum KillSwitchActionType {
+  TERMINATE_SESSION
+  TERMINATE_POD
+  REVOKE_TOKENS
+  PURGE_CACHE
+  PRESERVE_RECORDINGS
+  NOTIFY_USER
+  NOTIFY_ADMIN
+  BLOCK_RECONNECTION
+}
+
+enum KillSwitchActionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum RevocationScope {
+  SKILLPOD_ONLY
+  ALL_PRODUCTS
+  TENANT_WIDE
 }

@@ -3,6 +3,9 @@
  * VDI management and orchestration service with data containment
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
 
@@ -23,10 +26,10 @@ async function main(): Promise<void> {
         : ['warn', 'error'],
   });
 
-  // Initialize Redis client
-  const redis = new Redis(config.redis.url, {
+  // Initialize Redis client with proper typing
+  const redis = new (Redis as any)(config.redis.url, {
     maxRetriesPerRequest: 3,
-    retryStrategy: (times) => {
+    retryStrategy: (times: number) => {
       if (times > 10) {
         return null; // Stop retrying
       }
@@ -35,7 +38,7 @@ async function main(): Promise<void> {
   });
 
   // Handle Redis errors
-  redis.on('error', (err) => {
+  redis.on('error', (err: Error) => {
     console.error('Redis connection error:', err);
   });
 
@@ -115,4 +118,3 @@ export { getConfig } from './config/index.js';
 export * from './services/index.js';
 export * from './middleware/index.js';
 export * from './types/index.js';
-

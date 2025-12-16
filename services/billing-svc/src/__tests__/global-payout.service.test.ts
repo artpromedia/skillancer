@@ -14,8 +14,14 @@ vi.mock('stripe', () => {
   return {
     default: vi.fn().mockImplementation(() => ({
       transfers: {
-        create: vi.fn(),
-        createReversal: vi.fn(),
+        create: vi.fn().mockResolvedValue({
+          id: 'tr_test123',
+          amount: 10000,
+          currency: 'usd',
+        }),
+        createReversal: vi.fn().mockResolvedValue({
+          id: 'trr_test123',
+        }),
       },
     })),
   };

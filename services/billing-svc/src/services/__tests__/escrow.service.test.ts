@@ -7,12 +7,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock dependencies before imports
 vi.mock('@skillancer/logger', () => ({
-  logger: {
+  createLogger: vi.fn(() => ({
     info: vi.fn(),
     error: vi.fn(),
     warn: vi.fn(),
     debug: vi.fn(),
-  },
+  })),
 }));
 
 vi.mock('@skillancer/database', () => ({

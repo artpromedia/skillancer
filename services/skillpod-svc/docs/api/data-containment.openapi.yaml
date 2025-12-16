@@ -1,0 +1,896 @@
+openapi: 3.0.3
+info:
+  title: SkillPod Data Containment API
+  description: |
+    API for managing SkillPod VDI (Virtual Desktop Infrastructure) security, 
+    including pod lifecycle management, session monitoring, data loss prevention (DLP), 
+    and real-time policy enforcement.
+
+    ## Security Features
+    - Clipboard copy/paste blocking/logging
+    - File download/upload controls
+    - Screen capture prevention with watermarking
+    - USB device access policies
+    - Print policy enforcement
+    - Real-time DLP scanning
+
+    ## Authentication
+    All endpoints require a valid JWT token with appropriate tenant and user claims.
+  version: 1.0.0
+  contact:
+    name: Skillancer Platform Team
+    email: platform@skillancer.com
+  license:
+    name: Proprietary
+    url: https://skillancer.com/terms
+
+servers:
+  - url: /api/v1/skillpod
+    description: SkillPod Service API
+
+tags:
+  - name: Pods
+    description: Pod lifecycle management and configuration
+  - name: Sessions
+    description: Session monitoring and transfer logging
+  - name: Security Policies
+    description: Security policy CRUD operations
+  - name: Violations
+    description: Security violation tracking
+  - name: Transfers
+    description: Data transfer attempt logging
+  - name: WebSocket
+    description: Real-time policy enforcement
+
+paths:
+  /pods:
+    post:
+      tags:
+        - Pods
+      summary: Create a new pod
+      description: |
+        Creates a new SkillPod VDI pod with the specified configuration.
+        A Kasm workspace is provisioned automatically.
+      operationId: createPod
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePodRequest'
+      responses:
+        '201':
+          description: Pod created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    get:
+      tags:
+        - Pods
+      summary: List all pods
+      description: Returns a paginated list of pods for the current tenant
+      operationId: listPods
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          description: Filter by pod status
+          schema:
+            type: string
+            enum: [PROVISIONING, RUNNING, PAUSED, STOPPING, TERMINATED, FAILED]
+        - name: userId
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of pods
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /pods/{podId}:
+    get:
+      tags:
+        - Pods
+      summary: Get pod details
+      description: Returns detailed information about a specific pod including Kasm status
+      operationId: getPod
+      parameters:
+        - $ref: '#/components/parameters/PodId'
+      responses:
+        '200':
+          description: Pod details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pods/{podId}/policy:
+    put:
+      tags:
+        - Pods
+      summary: Apply security policy to pod
+      description: Applies a security policy to the pod and updates Kasm workspace settings
+      operationId: applyPodPolicy
+      parameters:
+        - $ref: '#/components/parameters/PodId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - policyId
+              properties:
+                policyId:
+                  type: string
+                  format: uuid
+                  description: The security policy ID to apply
+      responses:
+        '200':
+          description: Policy applied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyApplyResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /pods/{podId}/action:
+    post:
+      tags:
+        - Pods
+      summary: Perform action on pod
+      description: Performs lifecycle actions on the pod (pause, resume, terminate, restart)
+      operationId: podAction
+      parameters:
+        - $ref: '#/components/parameters/PodId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum: [pause, resume, terminate, restart]
+                reason:
+                  type: string
+                  description: Reason for the action (required for terminate)
+      responses:
+        '200':
+          description: Action performed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /pods/{podId}/metrics:
+    get:
+      tags:
+        - Pods
+      summary: Get pod metrics
+      description: Returns resource usage metrics for the pod
+      operationId: getPodMetrics
+      parameters:
+        - $ref: '#/components/parameters/PodId'
+      responses:
+        '200':
+          description: Pod metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodMetricsResponse'
+
+  /pods/{podId}/watermark:
+    get:
+      tags:
+        - Pods
+      summary: Get watermark configuration
+      description: Returns the watermark configuration for the pod
+      operationId: getPodWatermark
+      parameters:
+        - $ref: '#/components/parameters/PodId'
+      responses:
+        '200':
+          description: Watermark configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatermarkResponse'
+
+  /sessions/{sessionId}:
+    get:
+      tags:
+        - Sessions
+      summary: Get session details
+      description: Returns detailed information about a session including security stats
+      operationId: getSession
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sessions/{sessionId}/transfers:
+    get:
+      tags:
+        - Sessions
+        - Transfers
+      summary: Get transfer attempts
+      description: Returns a paginated list of data transfer attempts for the session
+      operationId: getSessionTransfers
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: action
+          in: query
+          description: Filter by transfer action
+          schema:
+            type: string
+            enum: [ALLOWED, BLOCKED, PENDING, QUARANTINED]
+        - name: type
+          in: query
+          description: Filter by transfer type
+          schema:
+            type: string
+            enum: [CLIPBOARD, FILE, PRINT, USB, NETWORK]
+        - name: direction
+          in: query
+          description: Filter by transfer direction
+          schema:
+            type: string
+            enum: [INBOUND, OUTBOUND]
+      responses:
+        '200':
+          description: List of transfer attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferListResponse'
+
+  /sessions/{sessionId}/transfers/evaluate:
+    post:
+      tags:
+        - Sessions
+        - Transfers
+      summary: Evaluate a transfer request
+      description: |
+        Evaluates a transfer request against policy and DLP rules.
+        Used for real-time transfer approval before the transfer occurs.
+      operationId: evaluateTransfer
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferEvaluationRequest'
+      responses:
+        '200':
+          description: Transfer evaluation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferEvaluationResponse'
+
+  /sessions/{sessionId}/screen-captures:
+    get:
+      tags:
+        - Sessions
+      summary: Get screen capture attempts
+      description: Returns a list of screen capture attempts for the session
+      operationId: getScreenCaptures
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: List of screen capture attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScreenCaptureListResponse'
+    post:
+      tags:
+        - Sessions
+      summary: Report screen capture attempt
+      description: Reports a detected screen capture attempt
+      operationId: reportScreenCapture
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScreenCaptureReport'
+      responses:
+        '201':
+          description: Screen capture logged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScreenCaptureReportResponse'
+
+  /sessions/{sessionId}/security-summary:
+    get:
+      tags:
+        - Sessions
+      summary: Get security summary
+      description: Returns aggregated security statistics for the session
+      operationId: getSecuritySummary
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Security summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecuritySummaryResponse'
+
+  /sessions/{sessionId}/audit-log:
+    get:
+      tags:
+        - Sessions
+      summary: Get session audit log
+      description: Returns the containment audit log for the session
+      operationId: getAuditLog
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: category
+          in: query
+          description: Filter by event category
+          schema:
+            type: string
+            enum: [DATA_TRANSFER, POLICY_CHANGE, USER_ACTIVITY, NETWORK, PERIPHERAL]
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogResponse'
+
+components:
+  parameters:
+    PodId:
+      name: podId
+      in: path
+      required: true
+      description: The pod ID
+      schema:
+        type: string
+        format: uuid
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      description: The session ID
+      schema:
+        type: string
+        format: uuid
+    PageParam:
+      name: page
+      in: query
+      description: Page number (1-indexed)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    CreatePodRequest:
+      type: object
+      required:
+        - imageId
+      properties:
+        imageId:
+          type: string
+          description: The Kasm image ID to use for the workspace
+        policyId:
+          type: string
+          format: uuid
+          description: Security policy to apply (uses default if not specified)
+        name:
+          type: string
+          description: Optional name for the pod
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata for the pod
+
+    PodResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PROVISIONING, RUNNING, PAUSED, STOPPING, TERMINATED, FAILED]
+        kasmId:
+          type: string
+        connectionUrl:
+          type: string
+          format: uri
+        policyId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    PodListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PodResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PodDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/PodResponse'
+        - type: object
+          properties:
+            kasmStatus:
+              type: object
+              properties:
+                status:
+                  type: string
+                uptime:
+                  type: integer
+                container_id:
+                  type: string
+            policy:
+              $ref: '#/components/schemas/PolicySummary'
+
+    PolicyApplyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        policyId:
+          type: string
+          format: uuid
+        appliedAt:
+          type: string
+          format: date-time
+
+    ActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        action:
+          type: string
+        newStatus:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    PodMetricsResponse:
+      type: object
+      properties:
+        cpu:
+          type: number
+          description: CPU usage percentage
+        memory:
+          type: number
+          description: Memory usage percentage
+        networkRx:
+          type: integer
+          description: Network received bytes
+        networkTx:
+          type: integer
+          description: Network transmitted bytes
+        clipboardEvents:
+          type: integer
+        fileTransferEvents:
+          type: integer
+        uptime:
+          type: integer
+          description: Uptime in seconds
+
+    WatermarkResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        text:
+          type: string
+        opacity:
+          type: number
+        position:
+          type: string
+          enum: [center, corner, tiled]
+        includedInfo:
+          type: array
+          items:
+            type: string
+            enum: [userId, sessionId, timestamp, ipAddress]
+
+    SessionDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+        policy:
+          $ref: '#/components/schemas/PolicySummary'
+        stats:
+          type: object
+          properties:
+            transferAttempts:
+              type: integer
+            violations:
+              type: integer
+            screenCaptures:
+              type: integer
+
+    TransferListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferAttempt'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    TransferAttempt:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sessionId:
+          type: string
+          format: uuid
+        transferType:
+          type: string
+          enum: [CLIPBOARD, FILE, PRINT, USB, NETWORK, OTHER]
+        direction:
+          type: string
+          enum: [INBOUND, OUTBOUND]
+        action:
+          type: string
+          enum: [ALLOWED, BLOCKED, PENDING, QUARANTINED]
+        reason:
+          type: string
+          nullable: true
+        fileName:
+          type: string
+          nullable: true
+        fileSize:
+          type: integer
+          nullable: true
+        mimeType:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    TransferEvaluationRequest:
+      type: object
+      required:
+        - transferType
+        - direction
+      properties:
+        transferType:
+          type: string
+          enum: [CLIPBOARD, FILE, PRINT, USB, NETWORK]
+        direction:
+          type: string
+          enum: [INBOUND, OUTBOUND]
+        content:
+          type: string
+          description: Content to scan for DLP (for clipboard/small files)
+        fileName:
+          type: string
+        fileSize:
+          type: integer
+        mimeType:
+          type: string
+
+    TransferEvaluationResponse:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+        riskScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        sensitiveDataDetected:
+          type: boolean
+        sensitiveDataTypes:
+          type: array
+          items:
+            type: string
+        requiresApproval:
+          type: boolean
+
+    ScreenCaptureListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScreenCaptureAttempt'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ScreenCaptureAttempt:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        captureType:
+          type: string
+          enum: [SCREENSHOT, SCREEN_RECORDING, WINDOW_CAPTURE, REMOTE_ACCESS]
+        detectionMethod:
+          type: string
+        blocked:
+          type: boolean
+        activeApplication:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    ScreenCaptureReport:
+      type: object
+      required:
+        - captureType
+        - detectionMethod
+      properties:
+        captureType:
+          type: string
+          enum: [SCREENSHOT, SCREEN_RECORDING, WINDOW_CAPTURE, REMOTE_ACCESS]
+        detectionMethod:
+          type: string
+        processInfo:
+          type: object
+          properties:
+            name:
+              type: string
+            pid:
+              type: integer
+        activeApplication:
+          type: string
+        activeWindow:
+          type: string
+
+    ScreenCaptureReportResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        blocked:
+          type: boolean
+        logged:
+          type: boolean
+
+    SecuritySummaryResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        totalTransferAttempts:
+          type: integer
+        blockedTransfers:
+          type: integer
+        allowedTransfers:
+          type: integer
+        totalViolations:
+          type: integer
+        violationsBySeverity:
+          type: object
+          properties:
+            CRITICAL:
+              type: integer
+            HIGH:
+              type: integer
+            MEDIUM:
+              type: integer
+            LOW:
+              type: integer
+        screenCaptureAttempts:
+          type: integer
+        dlpAlerts:
+          type: integer
+        riskLevel:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+
+    AuditLogResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        eventCategory:
+          type: string
+        description:
+          type: string
+        allowed:
+          type: boolean
+        details:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+
+    PolicySummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        clipboardPolicy:
+          type: string
+        fileDownloadAllowed:
+          type: boolean
+        fileUploadAllowed:
+          type: boolean
+        screenCaptureBlocked:
+          type: boolean
+        printingPolicy:
+          type: string
+        usbPolicy:
+          type: string
+        dlpEnabled:
+          type: boolean
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []

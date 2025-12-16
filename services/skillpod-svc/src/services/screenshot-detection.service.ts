@@ -3,6 +3,12 @@
  * Screen capture detection and prevention service
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import type { KasmWorkspacesService } from './kasm-workspaces.service.js';
 import type { WebSocketEnforcementService } from './websocket-enforcement.service.js';
 import type { PrismaClient } from '@prisma/client';

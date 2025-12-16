@@ -40,3 +40,28 @@ export type {
   DetectionConfig,
   CaptureType,
 } from './screenshot-detection.service.js';
+
+export { createCdnService } from './cdn.service.js';
+export type { CdnService, InvalidationRequest, InvalidationResult } from './cdn.service.js';
+
+export { createKillSwitchService } from './kill-switch.service.js';
+export type {
+  KillSwitchService,
+  KillSwitchParams,
+  KillSwitchResult,
+  KillSwitchTargets,
+  KillSwitchScope,
+  KillSwitchReason,
+  KillSwitchStatus,
+  AccessBlockStatus,
+  ReinstateAccessParams,
+} from './kill-switch.service.js';
+
+export { createDLPService } from './dlp.service.js';
+export type {
+  DLPService,
+  TransferEvaluationParams,
+  TransferEvaluationResult,
+  SensitiveDataMatch,
+  DLPScanResult,
+} from './dlp.service.js';

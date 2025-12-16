@@ -3,8 +3,18 @@
  * Data containment enforcement middleware for VDI sessions
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { DataContainmentService } from '../services/data-containment.service.js';
+import type {
+  DataContainmentService,
+  FileTransferActionRequest,
+  PeripheralAccessRequest,
+} from '../services/data-containment.service.js';
 import type { SessionSecurityContext } from '../types/containment.types.js';
 
 // =============================================================================
@@ -64,18 +74,16 @@ export function createContainmentMiddleware(
   /**
    * Main containment check hook
    */
-  async function containmentHook(
-    request: FastifyRequest,
-    reply: FastifyReply
-  ): Promise<void> {
+  async function containmentHook(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     // Skip excluded routes
-    if (excludeRoutes.some(route => request.url.startsWith(route))) {
+    if (excludeRoutes.some((route) => request.url.startsWith(route))) {
       return;
     }
 
     // Get session ID from header or query
-    const sessionId = request.headers[sessionIdHeader] as string ||
-                     (request.query as Record<string, unknown>)?.sessionId as string;
+    const sessionId =
+      (request.headers[sessionIdHeader] as string) ||
+      ((request.query as Record<string, unknown>)?.sessionId as string);
 
     if (!sessionId) {
       // No session context, skip containment checks
@@ -107,10 +115,7 @@ export function createContainmentMiddleware(
   /**
    * Pre-handler for checking idle timeout
    */
-  async function idleTimeoutCheck(
-    request: FastifyRequest,
-    reply: FastifyReply
-  ): Promise<void> {
+  async function idleTimeoutCheck(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const context = request.sessionContext;
     if (!context) return;
 
@@ -140,10 +145,7 @@ export function createContainmentMiddleware(
   /**
    * Pre-handler for checking max session duration
    */
-  async function sessionDurationCheck(
-    request: FastifyRequest,
-    reply: FastifyReply
-  ): Promise<void> {
+  async function sessionDurationCheck(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const context = request.sessionContext;
     if (!context || !context.policy.maxSessionDuration) return;
 
@@ -179,9 +181,7 @@ export function createContainmentMiddleware(
 /**
  * Create middleware for specific containment checks on routes
  */
-export function createRouteContainmentMiddleware(
-  containmentService: DataContainmentService
-) {
+export function createRouteContainmentMiddleware(containmentService: DataContainmentService) {
   /**
    * Require clipboard access for a route
    */
@@ -197,8 +197,8 @@ export function createRouteContainmentMiddleware(
       const result = await containmentService.checkClipboardAccess({
         sessionId: context.sessionId,
         direction,
-        contentType: body.contentType as string || 'text/plain',
-        contentLength: body.contentLength as number || 0,
+        contentType: (body.contentType as string) || 'text/plain',
+        contentLength: (body.contentLength as number) || 0,
       });
 
       if (!result.allowed) {
@@ -226,9 +226,9 @@ export function createRouteContainmentMiddleware(
       const result = await containmentService.checkFileTransfer({
         sessionId: context.sessionId,
         direction,
-        fileName: body.fileName as string || '',
-        fileType: body.fileType as string || '',
-        fileSize: body.fileSize as number || 0,
+        fileName: (body.fileName as string) || '',
+        fileType: (body.fileType as string) || '',
+        fileSize: (body.fileSize as number) || 0,
         fileHash: body.fileHash as string | undefined,
       });
 
@@ -257,8 +257,8 @@ export function createRouteContainmentMiddleware(
       const body = request.body as Record<string, unknown>;
       const result = await containmentService.checkNetworkAccess({
         sessionId: context.sessionId,
-        targetUrl: body.targetUrl as string || '',
-        protocol: body.protocol as string || 'https',
+        targetUrl: (body.targetUrl as string) || '',
+        protocol: (body.protocol as string) || 'https',
       });
 
       if (!result.allowed) {
@@ -273,9 +273,7 @@ export function createRouteContainmentMiddleware(
   /**
    * Require peripheral access for a route
    */
-  function requirePeripheralAccess(
-    deviceType: 'usb' | 'webcam' | 'microphone' | 'printer'
-  ) {
+  function requirePeripheralAccess(deviceType: 'usb' | 'webcam' | 'microphone' | 'printer') {
     return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
       const context = request.sessionContext;
       if (!context) {
@@ -339,9 +337,7 @@ export function createRouteContainmentMiddleware(
 /**
  * Create middleware for injecting watermark into responses
  */
-export function createWatermarkMiddleware(
-  containmentService: DataContainmentService
-) {
+export function createWatermarkMiddleware(containmentService: DataContainmentService) {
   return async (
     request: FastifyRequest,
     reply: FastifyReply,
@@ -351,19 +347,14 @@ export function createWatermarkMiddleware(
     if (!context) return payload;
 
     // Generate watermark config
-    const watermark = await containmentService.generateWatermarkConfig(
-      context.sessionId
-    );
+    const watermark = await containmentService.generateWatermarkConfig(context.sessionId);
 
     if (!watermark.enabled) return payload;
 
     // Add watermark headers for client-side rendering
     reply.header('X-Watermark-Enabled', 'true');
     reply.header('X-Watermark-Text', encodeURIComponent(watermark.text));
-    reply.header(
-      'X-Watermark-Config',
-      encodeURIComponent(JSON.stringify(watermark.config))
-    );
+    reply.header('X-Watermark-Config', encodeURIComponent(JSON.stringify(watermark.config)));
 
     return payload;
   };

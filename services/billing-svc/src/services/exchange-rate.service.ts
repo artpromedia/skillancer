@@ -198,12 +198,12 @@ export class ExchangeRateService {
    */
   getSupportedCurrencies(): SupportedCurrenciesResponse {
     return {
-      currencies: SUPPORTED_PAYOUT_CURRENCIES.map((code) => ({
-        code,
-        name: this.getCurrencyName(code),
-        symbol: this.getCurrencySymbol(code),
-        minimumPayout: this.getMinimumPayout(code),
-        instantPayoutAvailable: this.isInstantPayoutAvailable(code),
+      currencies: SUPPORTED_PAYOUT_CURRENCIES.map((currency) => ({
+        code: currency.code,
+        name: currency.name,
+        symbol: currency.symbol,
+        minimumPayout: this.getMinimumPayout(currency.code),
+        instantPayoutAvailable: this.isInstantPayoutAvailable(currency.code),
       })),
       baseCurrency: 'USD',
       lastUpdated: new Date(),
@@ -218,10 +218,10 @@ export class ExchangeRateService {
 
     for (const currency of SUPPORTED_PAYOUT_CURRENCIES) {
       try {
-        const rateInfo = await this.getRate(baseCurrency, currency);
-        rates[currency] = rateInfo.rate;
+        const rateInfo = await this.getRate(baseCurrency, currency.code);
+        rates[currency.code] = rateInfo.rate;
       } catch (err) {
-        this.logger.warn(`Failed to get rate for ${baseCurrency} -> ${currency}`, { err });
+        this.logger.warn(`Failed to get rate for ${baseCurrency} -> ${currency.code}`, { err });
       }
     }
 
@@ -235,12 +235,12 @@ export class ExchangeRateService {
     this.logger.info('Refreshing exchange rates');
 
     for (const currency of SUPPORTED_PAYOUT_CURRENCIES) {
-      if (currency === 'USD') continue;
+      if (currency.code === 'USD') continue;
 
       try {
-        await this.fetchAndCacheRate('USD', currency);
+        await this.fetchAndCacheRate('USD', currency.code);
       } catch (err) {
-        this.logger.error(`Failed to refresh rate for USD -> ${currency}`, { err });
+        this.logger.error(`Failed to refresh rate for USD -> ${currency.code}`, { err });
       }
     }
   }

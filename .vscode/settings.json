@@ -42,5 +42,7 @@
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "prisma.pinToPrisma6": true
+  "prisma.pinToPrisma6": true,
+  "sonarlint.pathToNodeExecutable": "C:\\Users\\ofema\\AppData\\Roaming\\fnm\\node-versions\\v20.19.4\\installation\\node.exe",
+  "vitest.workspaceConfig": "${workspaceFolder}/vitest.workspace.ts"
 }

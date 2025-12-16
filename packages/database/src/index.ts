@@ -128,6 +128,11 @@ export type {
   BreachTimeline,
   PhiToken,
   PhiFieldType,
+  // Kill Switch types
+  KillSwitchEvent,
+  KillSwitchAction,
+  AccessRevocation,
+  RevocationScope,
 } from '@prisma/client';
 
 // Prisma namespace is already exported via client.ts

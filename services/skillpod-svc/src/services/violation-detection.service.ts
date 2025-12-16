@@ -3,6 +3,12 @@
  * Security violation detection and response for VDI data containment
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import { PrismaClient } from '@prisma/client';
 import { Redis } from 'ioredis';
 
@@ -14,6 +20,9 @@ import type {
   ViolationSummary,
   ViolationType,
 } from '../types/containment.types.js';
+
+// Re-export types used by routes
+export type { CreateViolationInput };
 
 // =============================================================================
 // TYPES

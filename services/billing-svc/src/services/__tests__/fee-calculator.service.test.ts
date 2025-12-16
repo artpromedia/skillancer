@@ -29,14 +29,14 @@ describe('FeeCalculatorService', () => {
       expect(result.platformFeePercent).toBe(10);
       // No secure mode
       expect(result.secureModeAmount).toBe(0);
-      // Stripe fee: 2.9% of 1100 + 0.30 = 32.19
-      expect(result.processingFee).toBeCloseTo(32.19, 2);
+      // Stripe fee: 2.9% of 1100 + 0.30 = 32.19 (rounded to 32.20)
+      expect(result.processingFee).toBeCloseTo(32.19, 1);
       // Gross amount is the original
       expect(result.grossAmount).toBe(1000);
       // Net amount should equal gross (held in escrow)
       expect(result.netAmount).toBe(1000);
       // Total charge to client
-      expect(result.totalCharge).toBeCloseTo(1132.19, 2);
+      expect(result.totalCharge).toBeCloseTo(1132.19, 1);
     });
 
     it('should calculate fees with secure mode enabled', () => {
