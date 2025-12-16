@@ -28,6 +28,7 @@ import {
   violationRoutes,
   transferOverrideRoutes,
   policyExceptionRoutes,
+  killSwitchRoutes,
 } from './routes/index.js';
 import {
   createSecurityPolicyService,
@@ -36,6 +37,8 @@ import {
   createKasmWorkspacesService,
   createWebSocketEnforcementService,
   createScreenshotDetectionService,
+  createKillSwitchService,
+  createCdnService,
 } from './services/index.js';
 
 import type { ScreenCaptureEvent } from './services/screenshot-detection.service.js';
@@ -112,6 +115,14 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   const kasmService = createKasmWorkspacesService();
   const wsService = createWebSocketEnforcementService(redis);
   const screenshotService = createScreenshotDetectionService(prisma, redis, kasmService, wsService);
+  const cdnService = createCdnService(redis);
+  const killSwitchService = createKillSwitchService(
+    prisma,
+    redis,
+    kasmService,
+    wsService,
+    cdnService
+  );
 
   // ===========================================================================
   // MIDDLEWARE
@@ -184,6 +195,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
       // Policy exception routes
       policyExceptionRoutes(api, prisma);
+
+      // Kill switch routes
+      api.register(killSwitchRoutes(killSwitchService));
 
       // Screenshot detection endpoint
       api.post('/screenshot-attempts', async (request) => {
