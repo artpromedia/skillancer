@@ -17,3 +17,4 @@ export {
   getConnectedSessions,
 } from './websocket.routes.js';
 export { recordingRoutes } from './recording.routes.js';
+export { watermarkRoutes } from './watermark.routes.js';

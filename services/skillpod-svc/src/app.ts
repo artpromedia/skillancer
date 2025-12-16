@@ -22,6 +22,7 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastif
 
 import { getConfig } from './config/index.js';
 import { createContainmentMiddleware, createWatermarkMiddleware } from './middleware/index.js';
+import { createWatermarkRepository } from './repositories/watermark.repository.js';
 import {
   containmentRoutes,
   securityPolicyRoutes,
@@ -30,6 +31,7 @@ import {
   policyExceptionRoutes,
   killSwitchRoutes,
   recordingRoutes,
+  watermarkRoutes,
 } from './routes/index.js';
 import {
   createSecurityPolicyService,
@@ -221,6 +223,10 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
       // Session recording routes
       api.register(recordingRoutes(recordingService));
+
+      // Watermark routes
+      const watermarkRepository = createWatermarkRepository(prisma);
+      api.register(watermarkRoutes(watermarkRepository));
 
       // Screenshot detection endpoint
       api.post('/screenshot-attempts', async (request) => {

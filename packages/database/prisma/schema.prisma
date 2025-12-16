@@ -344,6 +344,9 @@ model Tenant {
   // Session recording
   recordings               SessionRecording[]
   retentionPolicies        RecordingRetentionPolicy[]
+  
+  // Watermarking
+  watermarkConfigurations  WatermarkConfiguration[]
 
   @@index([slug])
   @@index([plan])
@@ -771,6 +774,9 @@ model Session {
   
   // Session recording
   recordings            SessionRecording[]
+  
+  // Watermarking
+  watermarkInstances    WatermarkInstance[]
 
   @@index([userId])
   @@index([tenantId])
@@ -3728,4 +3734,179 @@ enum RecordingAccessType {
   SHARE
   EXPORT
   DELETE
+}
+
+// ============================================================================
+// DYNAMIC WATERMARKING SYSTEM
+// ============================================================================
+
+model WatermarkConfiguration {
+  id                   String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId             String   @map("tenant_id") @db.Uuid
+  
+  // Configuration name
+  name                 String   @db.VarChar(100)
+  description          String?  @db.Text
+  isDefault            Boolean  @default(false) @map("is_default")
+  
+  // Visible watermark settings
+  visibleEnabled       Boolean  @default(true) @map("visible_enabled")
+  visibleConfig        Json     @map("visible_config")
+  // {
+  //   pattern: 'TILED' | 'CORNER' | 'CENTER' | 'BORDER',
+  //   content: ['USER_EMAIL', 'SESSION_ID', 'TIMESTAMP', 'CUSTOM_TEXT'],
+  //   customText?: string,
+  //   opacity: 0.15,
+  //   fontSize: 14,
+  //   fontFamily: 'Arial',
+  //   fontColor: '#000000',
+  //   backgroundColor?: string,
+  //   rotation: -30,
+  //   spacing: 200,
+  //   margin: 20,
+  //   includeCompanyLogo: boolean,
+  //   logoUrl?: string
+  // }
+  
+  // Invisible watermark settings
+  invisibleEnabled     Boolean  @default(true) @map("invisible_enabled")
+  invisibleConfig      Json     @map("invisible_config")
+  // {
+  //   method: 'LSB' | 'DCT' | 'DWT',
+  //   strength: 'LOW' | 'MEDIUM' | 'HIGH',
+  //   redundancy: 3,
+  //   encodeFields: ['USER_ID', 'SESSION_ID', 'TENANT_ID', 'TIMESTAMP']
+  // }
+  
+  // Application settings
+  applyToScreenShare   Boolean  @default(true) @map("apply_to_screen_share")
+  applyToRecordings    Boolean  @default(true) @map("apply_to_recordings")
+  applyToExports       Boolean  @default(true) @map("apply_to_exports")
+  
+  // Exclusions
+  excludedApplications String[] @map("excluded_applications")
+  excludedUrls         String[] @map("excluded_urls")
+  
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  tenant               Tenant   @relation(fields: [tenantId], references: [id])
+  instances            WatermarkInstance[]
+  
+  @@map("watermark_configurations")
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([isDefault])
+}
+
+model WatermarkInstance {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  configurationId   String   @map("configuration_id") @db.Uuid
+  sessionId         String   @map("session_id") @db.Uuid
+  
+  // Watermark payload
+  payload           Json     // The actual data encoded in watermark
+  // {
+  //   userId: string,
+  //   userEmail: string,
+  //   sessionId: string,
+  //   tenantId: string,
+  //   podId: string,
+  //   timestamp: string,
+  //   sequenceNumber: number,
+  //   ipAddress?: string
+  // }
+  
+  // Encoding details
+  visibleHash       String?  @map("visible_hash") @db.VarChar(64) // SHA-256 hash
+  invisibleKey      String   @map("invisible_key") @db.VarChar(64) // Encryption key
+  
+  // Timestamps
+  generatedAt       DateTime @map("generated_at")
+  expiresAt         DateTime? @map("expires_at")
+  
+  // Status
+  isActive          Boolean  @default(true) @map("is_active")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  configuration     WatermarkConfiguration @relation(fields: [configurationId], references: [id])
+  session           Session @relation(fields: [sessionId], references: [id])
+  detections        WatermarkDetection[]
+  
+  @@map("watermark_instances")
+  @@index([sessionId])
+  @@index([configurationId])
+  @@index([invisibleKey])
+  @@index([isActive])
+}
+
+model WatermarkDetection {
+  id                   String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  
+  // Detection source
+  sourceType           DetectionSourceType @map("source_type")
+  sourceUrl            String?  @map("source_url") @db.VarChar(2000)
+  sourceDescription    String?  @map("source_description") @db.Text
+  
+  // Detected watermark
+  watermarkInstanceId  String?  @map("watermark_instance_id") @db.Uuid
+  detectedPayload      Json?    @map("detected_payload")
+  
+  // Detection confidence
+  confidence           Decimal  @db.Decimal(5, 4) // 0.0000 to 1.0000
+  detectionMethod      String   @map("detection_method") @db.VarChar(50)
+  
+  // Extracted information
+  extractedUserId      String?  @map("extracted_user_id") @db.Uuid
+  extractedSessionId   String?  @map("extracted_session_id") @db.Uuid
+  extractedTimestamp   DateTime? @map("extracted_timestamp")
+  
+  // Image analysis
+  imageHash            String?  @map("image_hash") @db.VarChar(64)
+  imageDimensions      String?  @map("image_dimensions") @db.VarChar(20)
+  manipulationDetected Boolean  @default(false) @map("manipulation_detected")
+  manipulationTypes    String[] @map("manipulation_types")
+  
+  // Investigation
+  investigationStatus  InvestigationStatus @default(PENDING) @map("investigation_status")
+  investigatedBy       String?  @map("investigated_by") @db.Uuid
+  investigationNotes   String?  @map("investigation_notes") @db.Text
+  
+  // Reporting
+  reportedBy           String?  @map("reported_by") @db.Uuid
+  reportedAt           DateTime? @map("reported_at")
+  
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  watermarkInstance    WatermarkInstance? @relation(fields: [watermarkInstanceId], references: [id])
+  
+  @@map("watermark_detections")
+  @@index([watermarkInstanceId])
+  @@index([extractedUserId])
+  @@index([extractedSessionId])
+  @@index([investigationStatus])
+  @@index([createdAt])
+  @@index([sourceType])
+}
+
+enum DetectionSourceType {
+  UPLOADED_IMAGE
+  WEB_CRAWL
+  MANUAL_REPORT
+  AUTOMATED_SCAN
+  THIRD_PARTY
+}
+
+enum InvestigationStatus {
+  PENDING
+  IN_PROGRESS
+  CONFIRMED_LEAK
+  FALSE_POSITIVE
+  INCONCLUSIVE
+  RESOLVED
 }

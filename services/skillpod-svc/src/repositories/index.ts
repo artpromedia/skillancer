@@ -24,3 +24,19 @@ export {
   type RecordingListFilter,
   type RecordingListOptions,
 } from './recording.repository.js';
+
+export {
+  createWatermarkRepository,
+  type WatermarkRepository,
+  type VisibleWatermarkConfig,
+  type InvisibleWatermarkConfig,
+  type WatermarkPattern,
+  type WatermarkContentType,
+  type WatermarkMethod,
+  type WatermarkStrength,
+  type DetectionSourceType,
+  type InvestigationStatus,
+  type CreateConfigurationInput,
+  type CreateInstanceInput,
+  type CreateDetectionInput,
+} from './watermark.repository.js';

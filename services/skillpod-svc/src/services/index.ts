@@ -86,3 +86,23 @@ export type {
   CreateRetentionPolicyParams,
   RecordingStats,
 } from './recording.service.js';
+
+// Watermark services
+export {
+  createVisibleWatermarkService,
+  createInvisibleWatermarkService,
+  createWatermarkDetectorService,
+  createWatermarkApplierService,
+  createKasmWatermarkService,
+} from './watermark/index.js';
+export type {
+  VisibleWatermarkService,
+  InvisibleWatermarkService,
+  WatermarkDetectorService,
+  WatermarkApplierService,
+  KasmWatermarkService,
+  SessionContext,
+  WatermarkOverlayResult,
+  DetectionResult as WatermarkDetectionResult,
+  KasmInjectionPayload,
+} from './watermark/index.js';
