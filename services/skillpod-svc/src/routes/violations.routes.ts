@@ -11,12 +11,9 @@
 
 import { z } from 'zod';
 
+import type { ViolationDetectionService } from '../services/violation-detection.service.js';
+import type { ViolationType } from '../types/containment.types.js';
 import type { FastifyInstance } from 'fastify';
-import type {
-  ViolationDetectionService,
-  CreateViolationInput,
-} from '../services/violation-detection.service.js';
-import type { ViolationSeverity, ViolationType } from '../types/containment.types.js';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -65,11 +62,11 @@ const ListViolationsQuerySchema = z.object({
   limit: z
     .string()
     .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 50)),
+    .transform((v) => (v ? Number.parseInt(v, 10) : 50)),
   offset: z
     .string()
     .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 0)),
+    .transform((v) => (v ? Number.parseInt(v, 10) : 0)),
 });
 
 const ReviewViolationSchema = z.object({
@@ -119,7 +116,7 @@ export function violationRoutes(
       const violation = await violationService.recordViolation({
         ...request.body,
         violationType: request.body.violationType as ViolationType,
-        severity: request.body.severity as ViolationSeverity | undefined,
+        severity: request.body.severity,
       });
       return reply.status(201).send({ violation });
     }
@@ -179,8 +176,8 @@ export function violationRoutes(
       const result = await violationService.listViolations({
         sessionId,
         tenantId,
-        violationType: violationType as ViolationType | undefined,
-        severity: severity as ViolationSeverity | undefined,
+        violationType,
+        severity,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         reviewed,
@@ -238,7 +235,7 @@ export function violationRoutes(
           days: z
             .string()
             .optional()
-            .transform((v) => (v ? parseInt(v, 10) : 7)),
+            .transform((v) => (v ? Number.parseInt(v, 10) : 7)),
         }),
       },
     },

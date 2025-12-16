@@ -8,14 +8,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-floating-promises */
 
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type {
-  DataContainmentService,
-  FileTransferActionRequest,
-  PeripheralAccessRequest,
-} from '../services/data-containment.service.js';
+import type { DataContainmentService } from '../services/data-containment.service.js';
 import type { SessionSecurityContext } from '../types/containment.types.js';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 // =============================================================================
 // TYPES
@@ -51,6 +48,19 @@ interface ContainmentMiddlewareOptions {
     request: FastifyRequest,
     violation: { type: string; reason: string }
   ) => Promise<void>;
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Pre-handler for checking max session duration
+ */
+async function checkSessionDuration(_request: FastifyRequest, _reply: FastifyReply): Promise<void> {
+  // Get session start time from Redis or database
+  // This would need to be implemented based on session storage
+  // For now, we skip this check
 }
 
 // =============================================================================
@@ -143,18 +153,6 @@ export function createContainmentMiddleware(
   }
 
   /**
-   * Pre-handler for checking max session duration
-   */
-  async function sessionDurationCheck(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const context = request.sessionContext;
-    if (!context || !context.policy.maxSessionDuration) return;
-
-    // Get session start time from Redis or database
-    // This would need to be implemented based on session storage
-    // For now, we skip this check
-  }
-
-  /**
    * Register middleware on Fastify instance
    */
   function register(app: FastifyInstance): void {
@@ -163,14 +161,14 @@ export function createContainmentMiddleware(
 
     // Add hooks for timeout checks
     app.addHook('preHandler', idleTimeoutCheck);
-    app.addHook('preHandler', sessionDurationCheck);
+    app.addHook('preHandler', checkSessionDuration);
   }
 
   return {
     register,
     containmentHook,
     idleTimeoutCheck,
-    sessionDurationCheck,
+    sessionDurationCheck: checkSessionDuration,
   };
 }
 

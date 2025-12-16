@@ -11,14 +11,9 @@
 
 import { z } from 'zod';
 
-import type { FastifyInstance } from 'fastify';
-import type {
-  DataContainmentService,
-  ClipboardActionRequest,
-  FileTransferActionRequest,
-  PeripheralAccessRequest,
-} from '../services/data-containment.service.js';
+import type { DataContainmentService } from '../services/data-containment.service.js';
 import type { TransferDirection } from '../types/containment.types.js';
+import type { FastifyInstance } from 'fastify';
 
 // =============================================================================
 // VALIDATION SCHEMAS

@@ -5,6 +5,10 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable n/no-process-exit */
 
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
@@ -100,11 +104,12 @@ async function main(): Promise<void> {
     }
   };
 
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', async () => shutdown('SIGTERM'));
+  process.on('SIGINT', async () => shutdown('SIGINT'));
 }
 
-main().catch((err) => {
+// Use top-level await
+await main().catch((err) => {
   console.error('Failed to start server:', err);
   process.exit(1);
 });

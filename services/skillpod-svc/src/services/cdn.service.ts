@@ -50,86 +50,97 @@ export interface CdnService {
 // SERVICE IMPLEMENTATION
 // =============================================================================
 
+/**
+ * Create CloudFront invalidation
+ */
+async function doCreateInvalidation(
+  request: InvalidationRequest,
+  distributionId: string
+): Promise<InvalidationResult> {
+  const callerReference =
+    request.callerReference || `inv-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  // In production, use AWS SDK CloudFront client
+  // For now, simulate the API call
+  if (!distributionId) {
+    console.warn('[CDN] No distribution ID configured, skipping invalidation');
+    return {
+      id: `mock-${callerReference}`,
+      status: 'Completed',
+      createTime: new Date(),
+      paths: request.paths,
+    };
+  }
+
+  try {
+    // AWS CloudFront createInvalidation API call
+    // const cloudfront = new CloudFrontClient({ region: _region });
+    // const command = new CreateInvalidationCommand({
+    //   DistributionId: distributionId,
+    //   InvalidationBatch: {
+    //     CallerReference: callerReference,
+    //     Paths: {
+    //       Quantity: request.paths.length,
+    //       Items: request.paths,
+    //     },
+    //   },
+    // });
+    // const response = await cloudfront.send(command);
+
+    console.log(
+      `[CDN] Invalidation created for ${request.paths.length} paths:`,
+      request.paths.slice(0, 5)
+    );
+
+    // Simulate async operation for API compatibility
+    await Promise.resolve();
+
+    return {
+      id: `inv-${callerReference}`,
+      status: 'InProgress',
+      createTime: new Date(),
+      paths: request.paths,
+    };
+  } catch (error) {
+    console.error('[CDN] Failed to create invalidation:', error);
+    throw new Error(`CDN invalidation failed: ${(error as Error).message}`);
+  }
+}
+
+/**
+ * Get invalidation status
+ */
+async function doGetInvalidationStatus(invalidationId: string): Promise<InvalidationResult> {
+  // In production, use AWS SDK to get invalidation status
+  // const cloudfront = new CloudFrontClient({ region: _region });
+  // const command = new GetInvalidationCommand({
+  //   DistributionId: distributionId,
+  //   Id: invalidationId,
+  // });
+
+  // Simulate async operation for API compatibility
+  await Promise.resolve();
+
+  return {
+    id: invalidationId,
+    status: 'Completed',
+    createTime: new Date(),
+    paths: [],
+  };
+}
+
 export function createCdnService(): CdnService {
   // Use environment variables directly for AWS config
   const distributionId = process.env.CLOUDFRONT_DISTRIBUTION_ID || '';
-  const _region = process.env.AWS_REGION || 'us-east-1';
 
-  /**
-   * Create CloudFront invalidation
-   */
-  async function createInvalidation(request: InvalidationRequest): Promise<InvalidationResult> {
-    const callerReference =
-      request.callerReference || `inv-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const createInvalidation = async (request: InvalidationRequest): Promise<InvalidationResult> =>
+    doCreateInvalidation(request, distributionId);
 
-    // In production, use AWS SDK CloudFront client
-    // For now, simulate the API call
-    if (!distributionId) {
-      console.warn('[CDN] No distribution ID configured, skipping invalidation');
-      return Promise.resolve({
-        id: `mock-${callerReference}`,
-        status: 'Completed',
-        createTime: new Date(),
-        paths: request.paths,
-      });
-    }
+  const getInvalidationStatus = async (invalidationId: string): Promise<InvalidationResult> =>
+    doGetInvalidationStatus(invalidationId);
 
-    try {
-      // AWS CloudFront createInvalidation API call
-      // const cloudfront = new CloudFrontClient({ region: _region });
-      // const command = new CreateInvalidationCommand({
-      //   DistributionId: distributionId,
-      //   InvalidationBatch: {
-      //     CallerReference: callerReference,
-      //     Paths: {
-      //       Quantity: request.paths.length,
-      //       Items: request.paths,
-      //     },
-      //   },
-      // });
-      // const response = await cloudfront.send(command);
-
-      console.log(
-        `[CDN] Invalidation created for ${request.paths.length} paths:`,
-        request.paths.slice(0, 5)
-      );
-
-      return await Promise.resolve({
-        id: `inv-${callerReference}`,
-        status: 'InProgress',
-        createTime: new Date(),
-        paths: request.paths,
-      });
-    } catch (error) {
-      console.error('[CDN] Failed to create invalidation:', error);
-      throw new Error(`CDN invalidation failed: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Get invalidation status
-   */
-  async function getInvalidationStatus(invalidationId: string): Promise<InvalidationResult> {
-    // In production, use AWS SDK to get invalidation status
-    // const cloudfront = new CloudFrontClient({ region: _region });
-    // const command = new GetInvalidationCommand({
-    //   DistributionId: distributionId,
-    //   Id: invalidationId,
-    // });
-
-    return Promise.resolve({
-      id: invalidationId,
-      status: 'Completed',
-      createTime: new Date(),
-      paths: [],
-    });
-  }
-
-  /**
-   * Invalidate all cache for a tenant
-   */
-  async function invalidateTenantCache(tenantId: string): Promise<InvalidationResult> {
-    return createInvalidation({
+  const invalidateTenantCache = async (tenantId: string): Promise<InvalidationResult> =>
+    createInvalidation({
       paths: [
         `/pods/${tenantId}/*`,
         `/sessions/${tenantId}/*`,
@@ -137,26 +148,18 @@ export function createCdnService(): CdnService {
         `/api/v1/skillpod/${tenantId}/*`,
       ],
     });
-  }
 
-  /**
-   * Invalidate session-specific cache
-   */
-  async function invalidateSessionCache(sessionId: string): Promise<InvalidationResult> {
-    return createInvalidation({
+  const invalidateSessionCache = async (sessionId: string): Promise<InvalidationResult> =>
+    createInvalidation({
       paths: [
         `/sessions/*/${sessionId}`,
         `/session-data/${sessionId}/*`,
         `/api/v1/skillpod/sessions/${sessionId}/*`,
       ],
     });
-  }
 
-  /**
-   * Invalidate pod-specific cache
-   */
-  async function invalidatePodCache(podId: string): Promise<InvalidationResult> {
-    return createInvalidation({
+  const invalidatePodCache = async (podId: string): Promise<InvalidationResult> =>
+    createInvalidation({
       paths: [
         `/pods/*/${podId}`,
         `/pod-assets/${podId}/*`,
@@ -164,7 +167,6 @@ export function createCdnService(): CdnService {
         `/api/v1/skillpod/pods/${podId}/*`,
       ],
     });
-  }
 
   return {
     createInvalidation,

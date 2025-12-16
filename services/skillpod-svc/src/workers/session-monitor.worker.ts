@@ -18,7 +18,7 @@ import type {
   CaptureType,
   ScreenCaptureEvent,
 } from '../services/screenshot-detection.service.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient, SessionStatus } from '@prisma/client';
 import type { Redis } from 'ioredis';
 
 // =============================================================================
@@ -143,8 +143,10 @@ export function createSessionMonitorWorker(
           return handleRecordSessionActivity(data);
         case 'generate_session_report':
           return handleGenerateSessionReport(data);
-        default:
-          throw new Error(`Unknown job type: ${type}`);
+        default: {
+          const _exhaustiveCheck: never = type;
+          throw new Error(`Unknown job type: ${String(_exhaustiveCheck)}`);
+        }
       }
     },
     {
@@ -195,13 +197,9 @@ export function createSessionMonitorWorker(
       // Update session status if changed
       const session = await prisma.session.findUnique({ where: { id: sessionId } });
       if (session && session.status !== sessionStatus) {
-        const updateData: { status: string; endedAt?: Date | null } = {
-          status: sessionStatus as
-            | 'RUNNING'
-            | 'PAUSED'
-            | 'PROVISIONING'
-            | 'STOPPING'
-            | 'TERMINATED',
+        const statusValue = sessionStatus as SessionStatus;
+        const updateData: { status: SessionStatus; endedAt?: Date | null } = {
+          status: statusValue,
         };
         if (sessionStatus === 'TERMINATED') updateData.endedAt = new Date();
         await prisma.session.update({
@@ -379,19 +377,14 @@ export function createSessionMonitorWorker(
       activityType === 'mouse';
 
     if (shouldLog && session.tenantId) {
+      // Map activity type to event type
+      const eventType = getEventTypeFromActivity(activityType);
       await prisma.containmentAuditLog.create({
         data: {
           sessionId,
           tenantId: session.tenantId,
           userId: session.userId,
-          eventType:
-            activityType === 'clipboard'
-              ? 'CLIPBOARD_COPY'
-              : activityType === 'file_access'
-                ? 'FILE_DOWNLOAD'
-                : activityType === 'network'
-                  ? 'NETWORK_REQUEST'
-                  : 'PERIPHERAL_ACCESS',
+          eventType,
           eventCategory: activityType === 'network' ? 'NETWORK' : 'DATA_TRANSFER',
           description: `Activity recorded: ${activityType}`,
           details: (details ?? {}) as object,
@@ -602,6 +595,25 @@ export function createSessionMonitorWorker(
   });
 
   return worker;
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function getEventTypeFromActivity(
+  activityType: RecordSessionActivityData['activityType']
+): 'CLIPBOARD_COPY' | 'FILE_DOWNLOAD' | 'NETWORK_REQUEST' | 'PERIPHERAL_ACCESS' {
+  switch (activityType) {
+    case 'clipboard':
+      return 'CLIPBOARD_COPY';
+    case 'file_access':
+      return 'FILE_DOWNLOAD';
+    case 'network':
+      return 'NETWORK_REQUEST';
+    default:
+      return 'PERIPHERAL_ACCESS';
+  }
 }
 
 // =============================================================================

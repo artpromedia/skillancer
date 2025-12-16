@@ -217,26 +217,6 @@ export function createTransferRepository(prisma: PrismaClient): TransferReposito
     return result.count;
   }
 
-  // Helper function
-  function buildWhereClause(filter: TransferAttemptFilter): Record<string, unknown> {
-    const where: Record<string, unknown> = {};
-
-    if (filter.sessionId) where.sessionId = filter.sessionId;
-    if (filter.userId) where.userId = filter.userId;
-    if (filter.tenantId) where.tenantId = filter.tenantId;
-    if (filter.transferType) where.transferType = filter.transferType;
-    if (filter.direction) where.direction = filter.direction;
-    if (filter.action) where.action = filter.action;
-
-    if (filter.startDate || filter.endDate) {
-      where.createdAt = {};
-      if (filter.startDate) (where.createdAt as Record<string, unknown>).gte = filter.startDate;
-      if (filter.endDate) (where.createdAt as Record<string, unknown>).lte = filter.endDate;
-    }
-
-    return where;
-  }
-
   return {
     create,
     findById,
@@ -245,4 +225,27 @@ export function createTransferRepository(prisma: PrismaClient): TransferReposito
     markAsOverridden,
     deleteBySession,
   };
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function buildWhereClause(filter: TransferAttemptFilter): Record<string, unknown> {
+  const where: Record<string, unknown> = {};
+
+  if (filter.sessionId) where.sessionId = filter.sessionId;
+  if (filter.userId) where.userId = filter.userId;
+  if (filter.tenantId) where.tenantId = filter.tenantId;
+  if (filter.transferType) where.transferType = filter.transferType;
+  if (filter.direction) where.direction = filter.direction;
+  if (filter.action) where.action = filter.action;
+
+  if (filter.startDate || filter.endDate) {
+    where.createdAt = {};
+    if (filter.startDate) (where.createdAt as Record<string, unknown>).gte = filter.startDate;
+    if (filter.endDate) (where.createdAt as Record<string, unknown>).lte = filter.endDate;
+  }
+
+  return where;
 }

@@ -6,6 +6,11 @@
  * markup management and caching for optimal performance.
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/require-await */
+
 import { createLogger } from '@skillancer/logger';
 
 import {
@@ -50,7 +55,7 @@ export class ExchangeRateService {
 
   // Mock rates for development - in production, fetch from API
   private readonly baseRates: Record<string, number> = {
-    USD: 1.0,
+    USD: 1,
     EUR: 0.92,
     GBP: 0.79,
     CAD: 1.36,
@@ -60,14 +65,14 @@ export class ExchangeRateService {
     MXN: 17.15,
     PHP: 56.25,
     PKR: 278.5,
-    NGN: 1550.0,
+    NGN: 1550,
     KES: 153.5,
     GHS: 12.35,
     ZAR: 18.85,
     EGP: 30.9,
     BDT: 109.75,
-    VND: 24350.0,
-    IDR: 15650.0,
+    VND: 24350,
+    IDR: 15650,
     THB: 35.5,
     MYR: 4.72,
     SGD: 1.34,
@@ -89,11 +94,11 @@ export class ExchangeRateService {
     SAR: 3.75,
     ILS: 3.65,
     TWD: 31.5,
-    KRW: 1325.0,
-    COP: 3950.0,
-    CLP: 925.0,
+    KRW: 1325,
+    COP: 3950,
+    CLP: 925,
     PEN: 3.72,
-    ARS: 865.0,
+    ARS: 865,
     UYU: 39.5,
   };
 
@@ -477,8 +482,6 @@ export class ExchangeRateService {
 let serviceInstance: ExchangeRateService | null = null;
 
 export function getExchangeRateService(config?: ExchangeRateServiceConfig): ExchangeRateService {
-  if (!serviceInstance) {
-    serviceInstance = new ExchangeRateService(config);
-  }
+  serviceInstance ??= new ExchangeRateService(config);
   return serviceInstance;
 }

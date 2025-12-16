@@ -24,6 +24,9 @@ export interface CreatePodInput {
   tenantId: string;
   policyId?: string;
   type?: 'DEVELOPMENT' | 'TESTING' | 'PRODUCTION' | 'TRAINING';
+  instanceType: string;
+  region: string;
+  image: string;
   config?: Record<string, unknown>;
 }
 
@@ -82,9 +85,12 @@ export function createPodRepository(prisma: PrismaClient): PodRepository {
       data: {
         userId: input.userId,
         tenantId: input.tenantId,
-        securityPolicyId: input.policyId,
+        securityPolicyId: input.policyId ?? null,
         type: input.type ?? 'DEVELOPMENT',
         status: 'PENDING',
+        instanceType: input.instanceType,
+        region: input.region,
+        image: input.image,
         config: (input.config ?? {}) as object,
         startedAt: new Date(),
       },

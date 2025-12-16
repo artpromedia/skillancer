@@ -3,7 +3,7 @@
  * Unit Tests for Global Payout Service
  */
 
-import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // =============================================================================
 // MOCKS
@@ -118,24 +118,9 @@ const mockBalance = {
 
 describe('GlobalPayoutService', () => {
   let service: GlobalPayoutService;
-  let mockStripeInstance: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Setup Stripe mock
-    mockStripeInstance = {
-      transfers: {
-        create: vi.fn().mockResolvedValue({
-          id: 'tr_test123',
-          amount: 10000,
-          currency: 'usd',
-        }),
-        createReversal: vi.fn().mockResolvedValue({
-          id: 'trr_test123',
-        }),
-      },
-    };
 
     // Reset repository mocks
     mockPayoutRepo.findAccountByUserId.mockResolvedValue(mockPayoutAccount);
@@ -563,7 +548,7 @@ describe('ExchangeRateService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockExchangeRateRepo.findCurrent.mockResolvedValue(null);
-    mockExchangeRateRepo.create.mockImplementation(async (data) => Promise.resolve(data));
+    mockExchangeRateRepo.create.mockImplementation(async (data) => data);
 
     service = new ExchangeRateService();
   });

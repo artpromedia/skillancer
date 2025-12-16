@@ -15,6 +15,24 @@ import { Prisma } from '@prisma/client';
 import type { PrismaClient, PodSecurityPolicy } from '@prisma/client';
 
 // =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Assigns a value to the target object only if the value is not undefined.
+ * This reduces cognitive complexity by avoiding many if statements.
+ */
+function assignIfDefined<T extends Record<string, unknown>, K extends string, V>(
+  target: T,
+  key: K,
+  value: V | undefined,
+  transform?: (v: V) => unknown
+): void {
+  if (value !== undefined) {
+    (target as Record<string, unknown>)[key] = transform ? transform(value) : value;
+  }
+}
+// =============================================================================
 // TYPES
 // =============================================================================
 
@@ -135,14 +153,14 @@ export function createPolicyRepository(prisma: PrismaClient): PolicyRepository {
       data: {
         tenantId: input.tenantId,
         name: input.name,
-        description: input.description,
+        description: input.description ?? null,
         isDefault: input.isDefault ?? false,
 
         // Clipboard controls
         clipboardPolicy: input.clipboardPolicy ?? 'BLOCKED',
         clipboardInbound: input.clipboardInbound ?? false,
         clipboardOutbound: input.clipboardOutbound ?? false,
-        clipboardMaxSize: input.clipboardMaxSize,
+        clipboardMaxSize: input.clipboardMaxSize ?? null,
         clipboardAllowedTypes: input.clipboardAllowedTypes ?? [],
 
         // File transfer controls
@@ -150,7 +168,7 @@ export function createPolicyRepository(prisma: PrismaClient): PolicyRepository {
         fileUploadPolicy: input.fileUploadPolicy ?? 'ALLOWED',
         allowedFileTypes: input.allowedFileTypes ?? [],
         blockedFileTypes: input.blockedFileTypes ?? ['.exe', '.bat', '.cmd', '.ps1', '.sh'],
-        maxFileSize: input.maxFileSize,
+        maxFileSize: input.maxFileSize ?? null,
 
         // Printing controls
         printingPolicy: input.printingPolicy ?? 'BLOCKED',
@@ -178,7 +196,7 @@ export function createPolicyRepository(prisma: PrismaClient): PolicyRepository {
 
         // Session controls
         idleTimeout: input.idleTimeout ?? 15,
-        maxSessionDuration: input.maxSessionDuration,
+        maxSessionDuration: input.maxSessionDuration ?? null,
         requireMfa: input.requireMfa ?? true,
 
         // Audit settings
@@ -241,52 +259,67 @@ export function createPolicyRepository(prisma: PrismaClient): PolicyRepository {
       }
     }
 
+    // Build data object with only defined properties to avoid undefined in Prisma
+    const data: Prisma.PodSecurityPolicyUpdateInput = {};
+
+    // Basic info
+    assignIfDefined(data, 'name', input.name);
+    assignIfDefined(data, 'description', input.description);
+    assignIfDefined(data, 'isDefault', input.isDefault);
+
+    // Clipboard controls
+    assignIfDefined(data, 'clipboardPolicy', input.clipboardPolicy);
+    assignIfDefined(data, 'clipboardInbound', input.clipboardInbound);
+    assignIfDefined(data, 'clipboardOutbound', input.clipboardOutbound);
+    assignIfDefined(data, 'clipboardMaxSize', input.clipboardMaxSize);
+    assignIfDefined(data, 'clipboardAllowedTypes', input.clipboardAllowedTypes);
+
+    // File transfer controls
+    assignIfDefined(data, 'fileDownloadPolicy', input.fileDownloadPolicy);
+    assignIfDefined(data, 'fileUploadPolicy', input.fileUploadPolicy);
+    assignIfDefined(data, 'allowedFileTypes', input.allowedFileTypes);
+    assignIfDefined(data, 'blockedFileTypes', input.blockedFileTypes);
+    assignIfDefined(data, 'maxFileSize', input.maxFileSize);
+
+    // Printing controls
+    assignIfDefined(data, 'printingPolicy', input.printingPolicy);
+    assignIfDefined(data, 'allowLocalPrinting', input.allowLocalPrinting);
+    assignIfDefined(data, 'allowPdfExport', input.allowPdfExport);
+
+    // USB controls
+    assignIfDefined(data, 'usbPolicy', input.usbPolicy);
+    assignIfDefined(data, 'allowedUsbDevices', input.allowedUsbDevices);
+
+    // Screen and watermark controls
+    assignIfDefined(data, 'screenCaptureBlocking', input.screenCaptureBlocking);
+    assignIfDefined(data, 'watermarkEnabled', input.watermarkEnabled);
+    assignIfDefined(
+      data,
+      'watermarkConfig',
+      input.watermarkConfig,
+      (v) => v as Prisma.InputJsonValue
+    );
+
+    // Network controls
+    assignIfDefined(data, 'networkPolicy', input.networkPolicy);
+    assignIfDefined(data, 'allowedDomains', input.allowedDomains);
+    assignIfDefined(data, 'blockedDomains', input.blockedDomains);
+    assignIfDefined(data, 'allowInternet', input.allowInternet);
+
+    // Session controls
+    assignIfDefined(data, 'idleTimeout', input.idleTimeout);
+    assignIfDefined(data, 'maxSessionDuration', input.maxSessionDuration);
+    assignIfDefined(data, 'requireMfa', input.requireMfa);
+
+    // Audit controls
+    assignIfDefined(data, 'recordSession', input.recordSession);
+    assignIfDefined(data, 'logKeystrokes', input.logKeystrokes);
+    assignIfDefined(data, 'logClipboard', input.logClipboard);
+    assignIfDefined(data, 'logFileAccess', input.logFileAccess);
+
     return prisma.podSecurityPolicy.update({
       where: { id },
-      data: {
-        name: input.name,
-        description: input.description,
-        isDefault: input.isDefault,
-
-        clipboardPolicy: input.clipboardPolicy,
-        clipboardInbound: input.clipboardInbound,
-        clipboardOutbound: input.clipboardOutbound,
-        clipboardMaxSize: input.clipboardMaxSize,
-        clipboardAllowedTypes: input.clipboardAllowedTypes,
-
-        fileDownloadPolicy: input.fileDownloadPolicy,
-        fileUploadPolicy: input.fileUploadPolicy,
-        allowedFileTypes: input.allowedFileTypes,
-        blockedFileTypes: input.blockedFileTypes,
-        maxFileSize: input.maxFileSize,
-
-        printingPolicy: input.printingPolicy,
-        allowLocalPrinting: input.allowLocalPrinting,
-        allowPdfExport: input.allowPdfExport,
-
-        usbPolicy: input.usbPolicy,
-        allowedUsbDevices: input.allowedUsbDevices,
-
-        screenCaptureBlocking: input.screenCaptureBlocking,
-        watermarkEnabled: input.watermarkEnabled,
-        watermarkConfig: input.watermarkConfig
-          ? (input.watermarkConfig as Prisma.InputJsonValue)
-          : undefined,
-
-        networkPolicy: input.networkPolicy,
-        allowedDomains: input.allowedDomains,
-        blockedDomains: input.blockedDomains,
-        allowInternet: input.allowInternet,
-
-        idleTimeout: input.idleTimeout,
-        maxSessionDuration: input.maxSessionDuration,
-        requireMfa: input.requireMfa,
-
-        recordSession: input.recordSession,
-        logKeystrokes: input.logKeystrokes,
-        logClipboard: input.logClipboard,
-        logFileAccess: input.logFileAccess,
-      },
+      data,
     });
   }
 

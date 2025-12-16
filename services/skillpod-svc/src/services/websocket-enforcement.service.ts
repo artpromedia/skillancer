@@ -10,7 +10,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-require-imports */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 
 import type { ClipboardPolicy, NetworkPolicy, UsbPolicy } from '../types/containment.types.js';
 import type { Redis } from 'ioredis';

@@ -9,20 +9,18 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 
-import { PrismaClient } from '@prisma/client';
-import { Redis } from 'ioredis';
-
 import type {
-  CreateViolationInput,
   SecurityViolation,
   ViolationAction,
   ViolationSeverity,
   ViolationSummary,
   ViolationType,
 } from '../types/containment.types.js';
+import type { PrismaClient } from '@prisma/client';
+import type { Redis } from 'ioredis';
 
 // Re-export types used by routes
-export type { CreateViolationInput };
+export type { CreateViolationInput } from '../types/containment.types.js';
 
 // =============================================================================
 // TYPES
@@ -252,7 +250,7 @@ export function createViolationDetectionService(
     // Try Redis first for performance
     const cached = await redis.get(`violations:session:${sessionId}:count`);
     if (cached !== null) {
-      return parseInt(cached, 10);
+      return Number.parseInt(cached, 10);
     }
 
     // Fall back to database
@@ -324,40 +322,6 @@ export function createViolationDetectionService(
 
       default:
         return 'LOGGED';
-    }
-  }
-
-  /**
-   * Determine severity based on violation type and context
-   */
-  function determineSeverity(
-    violationType: ViolationType,
-    _details?: Record<string, unknown>
-  ): ViolationSeverity {
-    switch (violationType) {
-      case 'POLICY_BYPASS_ATTEMPT':
-      case 'SUSPICIOUS_ACTIVITY':
-        return 'CRITICAL';
-
-      case 'SCREEN_CAPTURE_ATTEMPT':
-      case 'FILE_DOWNLOAD_BLOCKED':
-        return 'HIGH';
-
-      case 'CLIPBOARD_COPY_ATTEMPT':
-      case 'USB_DEVICE_BLOCKED':
-      case 'NETWORK_ACCESS_BLOCKED':
-        return 'MEDIUM';
-
-      case 'CLIPBOARD_PASTE_BLOCKED':
-      case 'PRINT_BLOCKED':
-      case 'SESSION_TIMEOUT':
-      case 'IDLE_TIMEOUT':
-      case 'UNAUTHORIZED_PERIPHERAL':
-      case 'FILE_UPLOAD_BLOCKED':
-        return 'LOW';
-
-      default:
-        return 'MEDIUM';
     }
   }
 
@@ -444,7 +408,7 @@ export function createViolationDetectionService(
         await redis.publish('session:terminate', JSON.stringify({ sessionId, violationId }));
         break;
 
-      case 'USER_SUSPENDED':
+      case 'USER_SUSPENDED': {
         // Get session to find user
         const session = await prisma.session.findUnique({
           where: { id: sessionId },
@@ -461,6 +425,7 @@ export function createViolationDetectionService(
           );
         }
         break;
+      }
 
       case 'INCIDENT_CREATED':
         // Publish incident creation event
@@ -503,7 +468,7 @@ export function createViolationDetectionService(
       })
     );
 
-    // TODO: Implement webhook, email, and Slack alerts based on alertConfig
+    // Future enhancement: Implement webhook, email, and Slack alerts based on alertConfig
   }
 
   return {
@@ -562,4 +527,38 @@ function mapViolationFromDb(violation: {
     reviewNotes: violation.reviewNotes ?? undefined,
     createdAt: violation.createdAt,
   };
+}
+
+/**
+ * Determine severity based on violation type and context
+ */
+function determineSeverity(
+  violationType: ViolationType,
+  _details?: Record<string, unknown>
+): ViolationSeverity {
+  switch (violationType) {
+    case 'POLICY_BYPASS_ATTEMPT':
+    case 'SUSPICIOUS_ACTIVITY':
+      return 'CRITICAL';
+
+    case 'SCREEN_CAPTURE_ATTEMPT':
+    case 'FILE_DOWNLOAD_BLOCKED':
+      return 'HIGH';
+
+    case 'CLIPBOARD_COPY_ATTEMPT':
+    case 'USB_DEVICE_BLOCKED':
+    case 'NETWORK_ACCESS_BLOCKED':
+      return 'MEDIUM';
+
+    case 'CLIPBOARD_PASTE_BLOCKED':
+    case 'PRINT_BLOCKED':
+    case 'SESSION_TIMEOUT':
+    case 'IDLE_TIMEOUT':
+    case 'UNAUTHORIZED_PERIPHERAL':
+    case 'FILE_UPLOAD_BLOCKED':
+      return 'LOW';
+
+    default:
+      return 'MEDIUM';
+  }
 }

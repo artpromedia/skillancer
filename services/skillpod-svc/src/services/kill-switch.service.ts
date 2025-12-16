@@ -155,6 +155,25 @@ const USER_MESSAGES: Record<KillSwitchReason, string> = {
 };
 
 // =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function extractSessionInfo(session: {
+  id: string;
+  userId: string;
+  tenantId: string | null;
+  config: unknown;
+}): SessionInfo {
+  const config = (session.config as Record<string, unknown>) || {};
+  return {
+    id: session.id,
+    userId: session.userId,
+    tenantId: session.tenantId,
+    kasmId: (config['kasmId'] as string) || null,
+  };
+}
+
+// =============================================================================
 // SERVICE IMPLEMENTATION
 // =============================================================================
 
@@ -222,12 +241,14 @@ export function createKillSwitchService(
           type: 'UNKNOWN',
         }));
 
-      const status: KillSwitchStatus =
-        errorResults.length === 0
-          ? 'COMPLETED'
-          : errorResults.length < results.length
-            ? 'PARTIAL_FAILURE'
-            : 'FAILED';
+      let status: KillSwitchStatus;
+      if (errorResults.length === 0) {
+        status = 'COMPLETED';
+      } else if (errorResults.length < results.length) {
+        status = 'PARTIAL_FAILURE';
+      } else {
+        status = 'FAILED';
+      }
 
       // Update event with results
       await db.killSwitchEvent.update({
@@ -288,114 +309,102 @@ export function createKillSwitchService(
   }
 
   // ==========================================================================
+  // TARGET DETERMINATION HELPERS
+  // ==========================================================================
+
+  async function getTenantTargets(tenantId: string): Promise<KillSwitchTargets> {
+    const sessions: SessionInfo[] = [];
+    const userIds: string[] = [];
+
+    const tenantSessions = await db.session.findMany({
+      where: { tenantId, status: 'RUNNING' },
+    });
+
+    for (const session of tenantSessions) {
+      sessions.push(extractSessionInfo(session));
+      if (!userIds.includes(session.userId)) {
+        userIds.push(session.userId);
+      }
+    }
+
+    return { sessions, userIds, tenantId };
+  }
+
+  async function getUserTargets(userId: string): Promise<KillSwitchTargets> {
+    const sessions: SessionInfo[] = [];
+
+    const userSessions = await db.session.findMany({
+      where: { userId, status: 'RUNNING' },
+    });
+
+    for (const session of userSessions) {
+      sessions.push(extractSessionInfo(session));
+    }
+
+    return { sessions, userIds: [userId], tenantId: null };
+  }
+
+  async function getPodTargets(podId: string): Promise<KillSwitchTargets> {
+    const sessions: SessionInfo[] = [];
+    const userIds: string[] = [];
+
+    const allRunningSessions = await db.session.findMany({
+      where: { status: 'RUNNING' },
+    });
+
+    for (const session of allRunningSessions) {
+      const config = (session.config as Record<string, unknown>) || {};
+      if (config['podId'] === podId) {
+        sessions.push(extractSessionInfo(session));
+        if (!userIds.includes(session.userId)) {
+          userIds.push(session.userId);
+        }
+      }
+    }
+
+    return { sessions, userIds, tenantId: null };
+  }
+
+  async function getSessionTargets(sessionId: string): Promise<KillSwitchTargets> {
+    const session = await db.session.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      return { sessions: [], userIds: [], tenantId: null };
+    }
+
+    return {
+      sessions: [extractSessionInfo(session)],
+      userIds: [session.userId],
+      tenantId: session.tenantId,
+    };
+  }
+
+  // ==========================================================================
   // TARGET DETERMINATION
   // ==========================================================================
 
   async function determineTargets(params: KillSwitchParams): Promise<KillSwitchTargets> {
-    const sessions: SessionInfo[] = [];
-    const userIds: string[] = [];
-
     switch (params.scope) {
-      case 'TENANT': {
-        if (!params.tenantId) break;
-        // All running sessions for tenant
-        const tenantSessions = await db.session.findMany({
-          where: {
-            tenantId: params.tenantId,
-            status: 'RUNNING',
-          },
-        });
-
-        for (const session of tenantSessions) {
-          const config = (session.config as Record<string, unknown>) || {};
-          sessions.push({
-            id: session.id,
-            userId: session.userId,
-            tenantId: session.tenantId,
-            kasmId: (config['kasmId'] as string) || null,
-          });
-
-          if (!userIds.includes(session.userId)) {
-            userIds.push(session.userId);
-          }
-        }
+      case 'TENANT':
+        if (params.tenantId) return getTenantTargets(params.tenantId);
         break;
-      }
 
-      case 'USER': {
-        if (!params.userId) break;
-        // All running sessions for user
-        const userSessions = await db.session.findMany({
-          where: {
-            userId: params.userId,
-            status: 'RUNNING',
-          },
-        });
-
-        for (const session of userSessions) {
-          const config = (session.config as Record<string, unknown>) || {};
-          sessions.push({
-            id: session.id,
-            userId: session.userId,
-            tenantId: session.tenantId,
-            kasmId: (config['kasmId'] as string) || null,
-          });
-        }
-
-        userIds.push(params.userId);
+      case 'USER':
+        if (params.userId) return getUserTargets(params.userId);
         break;
-      }
 
-      case 'POD': {
-        if (!params.podId) break;
-        // POD scope - look for sessions with matching podId in config
-        const allRunningSessions = await db.session.findMany({
-          where: {
-            status: 'RUNNING',
-          },
-        });
-
-        for (const session of allRunningSessions) {
-          const config = (session.config as Record<string, unknown>) || {};
-          if (config['podId'] === params.podId) {
-            sessions.push({
-              id: session.id,
-              userId: session.userId,
-              tenantId: session.tenantId,
-              kasmId: (config['kasmId'] as string) || null,
-            });
-
-            if (!userIds.includes(session.userId)) {
-              userIds.push(session.userId);
-            }
-          }
-        }
+      case 'POD':
+        if (params.podId) return getPodTargets(params.podId);
         break;
-      }
 
-      case 'SESSION': {
-        if (!params.sessionId) break;
-        // Specific session only
-        const session = await db.session.findUnique({
-          where: { id: params.sessionId },
-        });
-
-        if (session) {
-          const config = (session.config as Record<string, unknown>) || {};
-          sessions.push({
-            id: session.id,
-            userId: session.userId,
-            tenantId: session.tenantId,
-            kasmId: (config['kasmId'] as string) || null,
-          });
-
-          userIds.push(session.userId);
-        }
+      case 'SESSION':
+        if (params.sessionId) return getSessionTargets(params.sessionId);
         break;
-      }
     }
 
-    return { sessions, userIds, tenantId: params.tenantId ?? null };
+    return { sessions: [], userIds: [], tenantId: params.tenantId ?? null };
   }
 
   // ==========================================================================
@@ -555,13 +564,11 @@ export function createKillSwitchService(
       const cachePatterns: string[] = [];
 
       for (const session of targets.sessions) {
-        cachePatterns.push(`session:${session.id}:*`);
-        cachePatterns.push(`pod_data:${session.id}:*`);
+        cachePatterns.push(`session:${session.id}:*`, `pod_data:${session.id}:*`);
       }
 
       for (const userId of targets.userIds) {
-        cachePatterns.push(`user_session:${userId}:*`);
-        cachePatterns.push(`user_pods:${userId}:*`);
+        cachePatterns.push(`user_session:${userId}:*`, `user_pods:${userId}:*`);
       }
 
       await Promise.all(cachePatterns.map(async (pattern) => deleteRedisPattern(pattern)));

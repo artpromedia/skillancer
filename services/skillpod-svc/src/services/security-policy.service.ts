@@ -9,13 +9,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 
-import { PrismaClient } from '@prisma/client';
-
 import type {
   PodSecurityPolicy,
   PodSecurityPolicyInput,
   WatermarkConfig,
 } from '../types/containment.types.js';
+import type { PrismaClient } from '@prisma/client';
 
 // =============================================================================
 // SERVICE INTERFACE
@@ -38,6 +37,95 @@ export interface SecurityPolicyService {
 }
 
 // =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Validate policy configuration
+ */
+function doValidatePolicy(input: PodSecurityPolicyInput): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Name validation
+  if (!input.name || input.name.trim().length === 0) {
+    errors.push('Policy name is required');
+  } else if (input.name.length > 100) {
+    errors.push('Policy name must be 100 characters or less');
+  }
+
+  // Timeout validation
+  if (input.idleTimeout !== undefined) {
+    validateIdleTimeout(input.idleTimeout, errors);
+  }
+
+  if (input.maxSessionDuration !== undefined) {
+    validateMaxSessionDuration(input.maxSessionDuration, errors);
+  }
+
+  // File size validation
+  if (input.maxFileSize !== undefined) {
+    validateMaxFileSize(input.maxFileSize, errors);
+  }
+
+  // Clipboard size validation
+  if (input.clipboardMaxSize !== undefined) {
+    validateClipboardMaxSize(input.clipboardMaxSize, errors);
+  }
+
+  // Watermark config validation
+  if (input.watermarkConfig) {
+    validateWatermarkConfig(input.watermarkConfig, errors);
+  }
+
+  // Conflicting settings check
+  if (input.clipboardPolicy === 'BIDIRECTIONAL') {
+    if (input.clipboardInbound === false && input.clipboardOutbound === false) {
+      errors.push('Bidirectional clipboard requires at least one direction enabled');
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+function validateIdleTimeout(value: number, errors: string[]): void {
+  if (value < 1 || value > 480) {
+    errors.push('Idle timeout must be between 1 and 480 minutes');
+  }
+}
+
+function validateMaxSessionDuration(value: number, errors: string[]): void {
+  if (value < 15 || value > 1440) {
+    errors.push('Max session duration must be between 15 and 1440 minutes');
+  }
+}
+
+function validateMaxFileSize(value: number, errors: string[]): void {
+  // 10GB max
+  if (value < 0 || value > 10 * 1024 * 1024 * 1024) {
+    errors.push('Max file size must be between 0 and 10GB');
+  }
+}
+
+function validateClipboardMaxSize(value: number, errors: string[]): void {
+  // 100MB max
+  if (value < 0 || value > 100 * 1024 * 1024) {
+    errors.push('Clipboard max size must be between 0 and 100MB');
+  }
+}
+
+function validateWatermarkConfig(wm: WatermarkConfig, errors: string[]): void {
+  if (wm.opacity !== undefined && (wm.opacity < 0 || wm.opacity > 1)) {
+    errors.push('Watermark opacity must be between 0 and 1');
+  }
+  if (wm.fontSize !== undefined && (wm.fontSize < 8 || wm.fontSize > 72)) {
+    errors.push('Watermark font size must be between 8 and 72');
+  }
+}
+
+// =============================================================================
 // SERVICE IMPLEMENTATION
 // =============================================================================
 
@@ -50,7 +138,7 @@ export function createSecurityPolicyService(prisma: PrismaClient): SecurityPolic
     input: PodSecurityPolicyInput
   ): Promise<PodSecurityPolicy> {
     // Validate input
-    const validation = validatePolicy(input);
+    const validation = doValidatePolicy(input);
     if (!validation.valid) {
       throw new Error(`Invalid policy configuration: ${validation.errors.join(', ')}`);
     }
@@ -328,72 +416,6 @@ export function createSecurityPolicyService(prisma: PrismaClient): SecurityPolic
     return mapPolicyFromDb(cloned);
   }
 
-  /**
-   * Validate policy configuration
-   */
-  function validatePolicy(input: PodSecurityPolicyInput): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    // Name validation
-    if (!input.name || input.name.trim().length === 0) {
-      errors.push('Policy name is required');
-    } else if (input.name.length > 100) {
-      errors.push('Policy name must be 100 characters or less');
-    }
-
-    // Timeout validation
-    if (input.idleTimeout !== undefined) {
-      if (input.idleTimeout < 1 || input.idleTimeout > 480) {
-        errors.push('Idle timeout must be between 1 and 480 minutes');
-      }
-    }
-
-    if (input.maxSessionDuration !== undefined) {
-      if (input.maxSessionDuration < 15 || input.maxSessionDuration > 1440) {
-        errors.push('Max session duration must be between 15 and 1440 minutes');
-      }
-    }
-
-    // File size validation
-    if (input.maxFileSize !== undefined) {
-      if (input.maxFileSize < 0 || input.maxFileSize > 10 * 1024 * 1024 * 1024) {
-        // 10GB max
-        errors.push('Max file size must be between 0 and 10GB');
-      }
-    }
-
-    // Clipboard size validation
-    if (input.clipboardMaxSize !== undefined) {
-      if (input.clipboardMaxSize < 0 || input.clipboardMaxSize > 100 * 1024 * 1024) {
-        // 100MB max
-        errors.push('Clipboard max size must be between 0 and 100MB');
-      }
-    }
-
-    // Watermark config validation
-    if (input.watermarkConfig) {
-      const wm = input.watermarkConfig as WatermarkConfig;
-      if (wm.opacity !== undefined && (wm.opacity < 0 || wm.opacity > 1)) {
-        errors.push('Watermark opacity must be between 0 and 1');
-      }
-      if (wm.fontSize !== undefined && (wm.fontSize < 8 || wm.fontSize > 72)) {
-        errors.push('Watermark font size must be between 8 and 72');
-      }
-    }
-
-    // Conflicting settings check
-    if (input.clipboardPolicy === 'BIDIRECTIONAL') {
-      if (input.clipboardInbound === false && input.clipboardOutbound === false) {
-        errors.push('Bidirectional clipboard requires at least one direction enabled');
-      }
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-    };
-  }
-
   return {
     createPolicy,
     updatePolicy,
@@ -404,7 +426,7 @@ export function createSecurityPolicyService(prisma: PrismaClient): SecurityPolic
     listPolicies,
     setDefaultPolicy,
     clonePolicy,
-    validatePolicy,
+    validatePolicy: doValidatePolicy,
   };
 }
 

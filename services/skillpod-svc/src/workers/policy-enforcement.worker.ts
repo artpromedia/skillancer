@@ -13,7 +13,10 @@
 import { Worker, Queue, type Job } from 'bullmq';
 
 import type { DLPService } from '../services/dlp.service.js';
-import type { KasmWorkspacesService } from '../services/kasm-workspaces.service.js';
+import type {
+  KasmWorkspacesService,
+  KasmSecurityConfig,
+} from '../services/kasm-workspaces.service.js';
 import type { WebSocketEnforcementService } from '../services/websocket-enforcement.service.js';
 import type { PrismaClient } from '@prisma/client';
 import type { Redis } from 'ioredis';
@@ -154,8 +157,10 @@ export function createPolicyEnforcementWorker(
           return handleIdleSessionCheck(data as { tenantId: string });
         case 'cleanup_expired_requests':
           return handleCleanupExpiredRequests(data as { tenantId: string });
-        default:
-          throw new Error(`Unknown job type: ${type}`);
+        default: {
+          const _exhaustiveCheck: never = type;
+          throw new Error(`Unknown job type: ${String(_exhaustiveCheck)}`);
+        }
       }
     },
     {
@@ -185,7 +190,7 @@ export function createPolicyEnforcementWorker(
     }
 
     // Apply to Kasm workspace
-    const config: Record<string, unknown> = {
+    const config: KasmSecurityConfig = {
       allow_clipboard_down: policy.clipboardOutbound ?? false,
       allow_clipboard_up: policy.clipboardInbound ?? false,
       allow_clipboard_seamless: policy.clipboardPolicy === 'BIDIRECTIONAL',
@@ -196,8 +201,8 @@ export function createPolicyEnforcementWorker(
       idle_disconnect: policy.idleTimeout ?? 0,
       allow_printing: policy.printingPolicy !== 'BLOCKED',
       enable_watermark: policy.watermarkEnabled ?? false,
+      ...(policy.maxSessionDuration !== null && { session_time_limit: policy.maxSessionDuration }),
     };
-    if (policy.maxSessionDuration) config.session_time_limit = policy.maxSessionDuration;
     await kasmService.updateWorkspaceConfig(kasmId, config);
 
     // Update watermark if enabled
@@ -240,7 +245,7 @@ export function createPolicyEnforcementWorker(
 
     // Log the change
     const session = await prisma.session.findUnique({ where: { id: podId } });
-    if (session && session.tenantId) {
+    if (session?.tenantId) {
       await prisma.containmentAuditLog.create({
         data: {
           sessionId: podId,
@@ -455,7 +460,7 @@ export function createPolicyEnforcementWorker(
       where: { id: sessionId },
     });
 
-    if (!session || session.status !== 'RUNNING') {
+    if (session?.status !== 'RUNNING') {
       return;
     }
 
@@ -474,31 +479,33 @@ export function createPolicyEnforcementWorker(
     });
 
     // Log event
-    await prisma.containmentAuditLog.create({
-      data: {
-        sessionId,
-        tenantId: session.tenantId!,
-        userId: session.userId,
-        eventType: 'SESSION_END',
-        eventCategory: 'SESSION',
-        description: `Session terminated: ${reason}`,
-        details: { reason },
-        allowed: true,
-      },
-    });
+    if (session.tenantId) {
+      await prisma.containmentAuditLog.create({
+        data: {
+          sessionId,
+          tenantId: session.tenantId,
+          userId: session.userId,
+          eventType: 'SESSION_END',
+          eventCategory: 'SESSION',
+          description: `Session terminated: ${reason}`,
+          details: { reason },
+          allowed: true,
+        },
+      });
 
-    // Log violation
-    await prisma.securityViolation.create({
-      data: {
-        sessionId,
-        tenantId: session.tenantId!,
-        violationType: reason === 'idle' ? 'IDLE_TIMEOUT' : 'SESSION_TIMEOUT',
-        severity: 'LOW',
-        description: `Session terminated due to ${reason}`,
-        details: { reason },
-        action: 'SESSION_TERMINATED',
-      },
-    });
+      // Log violation
+      await prisma.securityViolation.create({
+        data: {
+          sessionId,
+          tenantId: session.tenantId,
+          violationType: reason === 'idle' ? 'IDLE_TIMEOUT' : 'SESSION_TIMEOUT',
+          severity: 'LOW',
+          description: `Session terminated due to ${reason}`,
+          details: { reason },
+          action: 'SESSION_TERMINATED',
+        },
+      });
+    }
 
     // Notify user
     await wsService.sendToSession(sessionId, {

@@ -9,30 +9,22 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 
-import { PrismaClient } from '@prisma/client';
-import { Redis } from 'ioredis';
-import * as path from 'path';
+import * as path from 'node:path';
 
 import type { SecurityPolicyService } from './security-policy.service.js';
 import type { ViolationDetectionService } from './violation-detection.service.js';
 import type {
-  ClipboardActionRequest,
-  ClipboardActionResponse,
   ContainmentEventCategory,
   ContainmentEventType,
   CreateAuditLogInput,
-  FileTransferActionRequest,
-  FileTransferActionResponse,
-  NetworkAccessRequest,
-  NetworkAccessResponse,
-  PeripheralAccessRequest,
-  PeripheralAccessResponse,
   PodSecurityPolicy,
-  SessionSecurityContext,
   TransferDirection,
   ViolationType,
 } from '../types/containment.types.js';
+import type { PrismaClient } from '@prisma/client';
+import type { Redis } from 'ioredis';
 
 // Re-export types used by other modules
 export type {
@@ -45,7 +37,7 @@ export type {
   PeripheralAccessRequest,
   PeripheralAccessResponse,
   SessionSecurityContext,
-};
+} from '../types/containment.types.js';
 
 // =============================================================================
 // SERVICE INTERFACE
@@ -86,6 +78,32 @@ export interface DataContainmentService {
     text: string;
     config: Record<string, unknown>;
   }>;
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Check clipboard size and type constraints
+ */
+function doCheckClipboardConstraints(
+  policy: PodSecurityPolicy,
+  contentLength: number,
+  contentType: string
+): { allowed: false; reason: string } | null {
+  if (policy.clipboardMaxSize && contentLength > policy.clipboardMaxSize) {
+    return {
+      allowed: false,
+      reason: `Content exceeds max size (${policy.clipboardMaxSize} bytes)`,
+    };
+  }
+  if (policy.clipboardAllowedTypes && policy.clipboardAllowedTypes.length > 0) {
+    if (!policy.clipboardAllowedTypes.includes(contentType)) {
+      return { allowed: false, reason: `Content type ${contentType} not allowed` };
+    }
+  }
+  return null;
 }
 
 // =============================================================================
@@ -167,29 +185,21 @@ export function createDataContainmentService(
   // ===========================================================================
 
   /**
-   * Check if clipboard access is allowed
+   * Check clipboard policy and return early response if blocked
    */
-  async function checkClipboardAccess(
+  async function checkClipboardPolicy(
+    context: SessionSecurityContext,
     request: ClipboardActionRequest
-  ): Promise<ClipboardActionResponse> {
-    const context = await getSessionContext(request.sessionId);
-    if (!context) {
-      return { allowed: false, reason: 'Session not found' };
-    }
-
+  ): Promise<ClipboardActionResponse | null> {
     const { policy } = context;
 
-    // Check clipboard policy
     switch (policy.clipboardPolicy) {
       case 'BLOCKED':
         await recordViolationAndLog(
           context,
           request.direction === 'outbound' ? 'CLIPBOARD_COPY_ATTEMPT' : 'CLIPBOARD_PASTE_BLOCKED',
           `Clipboard ${request.direction} blocked by policy`,
-          {
-            contentType: request.contentType,
-            contentLength: request.contentLength,
-          }
+          { contentType: request.contentType, contentLength: request.contentLength }
         );
         return { allowed: false, reason: 'Clipboard access is disabled' };
 
@@ -203,7 +213,7 @@ export function createDataContainmentService(
           );
           return { allowed: false, reason: 'Copy from session is disabled' };
         }
-        break;
+        return null;
 
       case 'WRITE_ONLY':
         if (request.direction === 'inbound') {
@@ -215,7 +225,7 @@ export function createDataContainmentService(
           );
           return { allowed: false, reason: 'Paste into session is disabled' };
         }
-        break;
+        return null;
 
       case 'APPROVAL_REQUIRED':
         return {
@@ -225,11 +235,20 @@ export function createDataContainmentService(
         };
 
       case 'BIDIRECTIONAL':
-        // Allowed, but check size and type
-        break;
+      default:
+        return null;
     }
+  }
 
-    // Check direction flags
+  /**
+   * Check clipboard direction flags
+   */
+  async function checkClipboardDirectionFlags(
+    context: SessionSecurityContext,
+    request: ClipboardActionRequest
+  ): Promise<ClipboardActionResponse | null> {
+    const { policy } = context;
+
     if (request.direction === 'inbound' && !policy.clipboardInbound) {
       return { allowed: false, reason: 'Paste into session is disabled' };
     }
@@ -242,21 +261,35 @@ export function createDataContainmentService(
       );
       return { allowed: false, reason: 'Copy from session is disabled' };
     }
+    return null;
+  }
 
-    // Check max size
-    if (policy.clipboardMaxSize && request.contentLength > policy.clipboardMaxSize) {
-      return {
-        allowed: false,
-        reason: `Content exceeds max size (${policy.clipboardMaxSize} bytes)`,
-      };
+  /**
+   * Check if clipboard access is allowed
+   */
+  async function checkClipboardAccess(
+    request: ClipboardActionRequest
+  ): Promise<ClipboardActionResponse> {
+    const context = await getSessionContext(request.sessionId);
+    if (!context) {
+      return { allowed: false, reason: 'Session not found' };
     }
 
-    // Check allowed types
-    if (policy.clipboardAllowedTypes && policy.clipboardAllowedTypes.length > 0) {
-      if (!policy.clipboardAllowedTypes.includes(request.contentType)) {
-        return { allowed: false, reason: `Content type ${request.contentType} not allowed` };
-      }
-    }
+    // Check policy
+    const policyResult = await checkClipboardPolicy(context, request);
+    if (policyResult) return policyResult;
+
+    // Check direction flags
+    const directionResult = await checkClipboardDirectionFlags(context, request);
+    if (directionResult) return directionResult;
+
+    // Check constraints
+    const constraintResult = doCheckClipboardConstraints(
+      context.policy,
+      request.contentLength,
+      request.contentType
+    );
+    if (constraintResult) return constraintResult;
 
     // Log the allowed action
     await logContainmentEvent({
@@ -280,37 +313,28 @@ export function createDataContainmentService(
   // ===========================================================================
 
   /**
-   * Check if file transfer is allowed
+   * Check file transfer policy
    */
-  async function checkFileTransfer(
-    request: FileTransferActionRequest
-  ): Promise<FileTransferActionResponse> {
-    const context = await getSessionContext(request.sessionId);
-    if (!context) {
-      return { allowed: false, reason: 'Session not found' };
-    }
+  async function checkFileTransferPolicy(
+    context: SessionSecurityContext,
+    request: FileTransferActionRequest,
+    isDownload: boolean
+  ): Promise<FileTransferActionResponse | null> {
+    const transferPolicy = isDownload
+      ? context.policy.fileDownloadPolicy
+      : context.policy.fileUploadPolicy;
 
-    const { policy } = context;
-    const isDownload = request.direction === 'DOWNLOAD';
-    const transferPolicy = isDownload ? policy.fileDownloadPolicy : policy.fileUploadPolicy;
-
-    // Check transfer policy
     switch (transferPolicy) {
       case 'BLOCKED':
         await recordViolationAndLog(
           context,
           isDownload ? 'FILE_DOWNLOAD_BLOCKED' : 'FILE_UPLOAD_BLOCKED',
           `File ${request.direction.toLowerCase()} blocked: ${request.fileName}`,
-          {
-            fileName: request.fileName,
-            fileType: request.fileType,
-            fileSize: request.fileSize,
-          }
+          { fileName: request.fileName, fileType: request.fileType, fileSize: request.fileSize }
         );
         return { allowed: false, reason: `File ${request.direction.toLowerCase()}s are disabled` };
 
-      case 'APPROVAL_REQUIRED':
-        // Create approval request
+      case 'APPROVAL_REQUIRED': {
         const result = await createFileTransferRequest({
           sessionId: request.sessionId,
           tenantId: context.tenantId,
@@ -326,25 +350,26 @@ export function createDataContainmentService(
           requestId: result.requestId,
           reason: 'File transfer requires approval',
         };
+      }
 
       case 'LOGGED_ONLY':
       case 'ALLOWED':
-        // Continue with validation
-        break;
+      default:
+        return null;
     }
+  }
 
-    // Check file size
-    if (policy.maxFileSize && request.fileSize > policy.maxFileSize) {
-      return {
-        allowed: false,
-        reason: `File exceeds max size (${formatBytes(policy.maxFileSize)})`,
-      };
-    }
-
-    // Check file type
+  /**
+   * Check file type constraints
+   */
+  async function checkFileTypeConstraints(
+    context: SessionSecurityContext,
+    request: FileTransferActionRequest,
+    isDownload: boolean
+  ): Promise<FileTransferActionResponse | null> {
+    const { policy } = context;
     const fileExt = path.extname(request.fileName).toLowerCase();
 
-    // Check blocked types first
     if (policy.blockedFileTypes && policy.blockedFileTypes.length > 0) {
       if (policy.blockedFileTypes.includes('*') || policy.blockedFileTypes.includes(fileExt)) {
         await recordViolationAndLog(
@@ -357,14 +382,46 @@ export function createDataContainmentService(
       }
     }
 
-    // Check allowed types if specified
     if (policy.allowedFileTypes && policy.allowedFileTypes.length > 0) {
       if (!policy.allowedFileTypes.includes(fileExt)) {
         return { allowed: false, reason: `File type ${fileExt} is not in allowed list` };
       }
     }
 
+    return null;
+  }
+
+  /**
+   * Check if file transfer is allowed
+   */
+  async function checkFileTransfer(
+    request: FileTransferActionRequest
+  ): Promise<FileTransferActionResponse> {
+    const context = await getSessionContext(request.sessionId);
+    if (!context) {
+      return { allowed: false, reason: 'Session not found' };
+    }
+
+    const isDownload = request.direction === 'DOWNLOAD';
+
+    // Check transfer policy
+    const policyResult = await checkFileTransferPolicy(context, request, isDownload);
+    if (policyResult) return policyResult;
+
+    // Check file size
+    if (context.policy.maxFileSize && request.fileSize > context.policy.maxFileSize) {
+      return {
+        allowed: false,
+        reason: `File exceeds max size (${formatBytes(context.policy.maxFileSize)})`,
+      };
+    }
+
+    // Check file type constraints
+    const typeResult = await checkFileTypeConstraints(context, request, isDownload);
+    if (typeResult) return typeResult;
+
     // Log the allowed transfer
+    const fileExt = path.extname(request.fileName).toLowerCase();
     await logContainmentEvent({
       sessionId: context.sessionId,
       tenantId: context.tenantId,
@@ -502,9 +559,10 @@ export function createDataContainmentService(
       case 'microphone':
         return checkCameraAccess(policy.microphonePolicy);
 
-      case 'printer':
+      case 'printer': {
         const printResult = await checkPrintAccess(request.sessionId);
         return printResult;
+      }
 
       default:
         return { allowed: false, reason: 'Unknown device type' };
@@ -557,25 +615,6 @@ export function createDataContainmentService(
 
       default:
         return { allowed: false, reason: 'Invalid USB policy' };
-    }
-  }
-
-  /**
-   * Check camera/microphone access
-   */
-  function checkCameraAccess(peripheralPolicy: string | undefined): PeripheralAccessResponse {
-    switch (peripheralPolicy) {
-      case 'BLOCKED':
-        return { allowed: false, reason: 'Device access is disabled' };
-
-      case 'SESSION_PROMPT':
-        return { allowed: false, requiresPrompt: true, reason: 'User confirmation required' };
-
-      case 'ALLOWED':
-        return { allowed: true };
-
-      default:
-        return { allowed: false, reason: 'Invalid peripheral policy' };
     }
   }
 
@@ -904,7 +943,7 @@ function formatBytes(bytes: number): string {
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 /**
@@ -978,5 +1017,24 @@ function mapViolationToCategory(violationType: ViolationType): ContainmentEventC
 
     default:
       return 'SECURITY';
+  }
+}
+
+/**
+ * Check camera/microphone access
+ */
+function checkCameraAccess(peripheralPolicy: string | undefined): PeripheralAccessResponse {
+  switch (peripheralPolicy) {
+    case 'BLOCKED':
+      return { allowed: false, reason: 'Device access is disabled' };
+
+    case 'SESSION_PROMPT':
+      return { allowed: false, requiresPrompt: true, reason: 'User confirmation required' };
+
+    case 'ALLOWED':
+      return { allowed: true };
+
+    default:
+      return { allowed: false, reason: 'Invalid peripheral policy' };
   }
 }

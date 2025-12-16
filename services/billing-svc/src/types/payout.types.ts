@@ -332,7 +332,7 @@ export const PAYOUT_FEES_BY_REGION: Record<string, number> = {
   GB: 0.2, // Faster Payments
   EU: 0.25, // SEPA
   AU: 0.25,
-  DEFAULT: 3.0, // International wire
+  DEFAULT: 3, // International wire
 };
 
 export const SEPA_COUNTRIES = [
@@ -365,7 +365,7 @@ export const SEPA_COUNTRIES = [
   'SE',
 ];
 
-export const INSTANT_PAYOUT_FEE_PERCENT = 1.0; // 1% for instant payouts
-export const EXPRESS_PAYOUT_SURCHARGE = 2.0; // $2 extra for express
-export const CONVERSION_MARKUP_PERCENT = 2.0; // 2% on currency conversion
-export const PLATFORM_FX_MARKUP_PERCENT = 2.0; // 2% platform FX markup
+export const INSTANT_PAYOUT_FEE_PERCENT = 1; // 1% for instant payouts
+export const EXPRESS_PAYOUT_SURCHARGE = 2; // $2 extra for express
+export const CONVERSION_MARKUP_PERCENT = 2; // 2% on currency conversion
+export const PLATFORM_FX_MARKUP_PERCENT = 2; // 2% platform FX markup

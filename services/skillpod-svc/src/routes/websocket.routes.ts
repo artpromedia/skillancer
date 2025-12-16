@@ -16,8 +16,10 @@ import type {
   CaptureType,
 } from '../services/screenshot-detection.service.js';
 import type { SecurityPolicyService } from '../services/security-policy.service.js';
+import type { PrismaClient } from '@prisma/client';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Redis } from 'ioredis';
+import type { WebSocket as WS } from 'ws';
 
 // =============================================================================
 // TYPES
@@ -28,6 +30,7 @@ interface WebSocketRoutesDeps {
   dlpService: DLPService;
   screenshotService: ScreenshotDetectionService;
   redis: Redis;
+  prisma: PrismaClient;
 }
 
 interface WSMessage {
@@ -73,7 +76,175 @@ interface HeartbeatData {
 }
 
 // Connected clients map
-const connectedClients = new Map<string, WebSocket>();
+const connectedClients = new Map<string, WS>();
+
+type TransferType = 'CLIPBOARD_TEXT' | 'FILE_DOWNLOAD' | 'FILE_UPLOAD' | 'PRINT' | 'USB_TRANSFER';
+type ViolationType =
+  | 'CLIPBOARD_COPY_ATTEMPT'
+  | 'CLIPBOARD_PASTE_BLOCKED'
+  | 'FILE_DOWNLOAD_BLOCKED'
+  | 'FILE_UPLOAD_BLOCKED'
+  | 'PRINT_BLOCKED'
+  | 'USB_DEVICE_BLOCKED';
+
+function getTransferType(action: string): TransferType {
+  if (action.includes('clipboard')) return 'CLIPBOARD_TEXT';
+  if (action === 'file_download') return 'FILE_DOWNLOAD';
+  if (action === 'file_upload') return 'FILE_UPLOAD';
+  if (action === 'print') return 'PRINT';
+  return 'USB_TRANSFER';
+}
+
+function getViolationType(action: string): ViolationType {
+  if (action === 'clipboard_copy') return 'CLIPBOARD_COPY_ATTEMPT';
+  if (action === 'clipboard_paste') return 'CLIPBOARD_PASTE_BLOCKED';
+  if (action === 'file_download') return 'FILE_DOWNLOAD_BLOCKED';
+  if (action === 'file_upload') return 'FILE_UPLOAD_BLOCKED';
+  if (action === 'print') return 'PRINT_BLOCKED';
+  return 'USB_DEVICE_BLOCKED';
+}
+
+// =============================================================================
+// POLICY CHECK HELPERS
+// =============================================================================
+
+interface PolicyCheckContext {
+  sessionId: string;
+  user: { id?: string; tenantId?: string } | null | undefined;
+  securityPolicy: {
+    id?: string;
+    clipboardPolicy?: string;
+    fileDownloadPolicy?: string;
+    fileUploadPolicy?: string;
+    printingPolicy?: string;
+    usbPolicy?: string;
+  } | null;
+}
+
+interface PolicyCheckResult {
+  allowed: boolean;
+  reason?: string | undefined;
+  dlpResult?: { allowed: boolean; reason?: string; sensitiveData?: unknown[] } | undefined;
+}
+
+async function checkClipboardAction(
+  action: 'clipboard_copy' | 'clipboard_paste',
+  content: string | undefined,
+  ctx: PolicyCheckContext,
+  dlpService: DLPService
+): Promise<PolicyCheckResult> {
+  const policy = ctx.securityPolicy?.clipboardPolicy;
+
+  if (policy === 'BLOCKED') {
+    return { allowed: false, reason: 'Clipboard operations are blocked by policy' };
+  }
+
+  if (
+    (policy === 'READ_ONLY' && action === 'clipboard_copy') ||
+    (policy === 'WRITE_ONLY' && action === 'clipboard_paste')
+  ) {
+    return { allowed: false, reason: 'This clipboard operation is blocked by policy' };
+  }
+
+  if (content && ctx.securityPolicy) {
+    const dlpResult = await dlpService.evaluateTransfer({
+      podId: ctx.sessionId,
+      sessionId: ctx.sessionId,
+      tenantId: ctx.user?.tenantId ?? '',
+      userId: ctx.user?.id ?? '',
+      transferType: 'CLIPBOARD_TEXT',
+      direction: action === 'clipboard_copy' ? 'DOWNLOAD' : 'UPLOAD',
+      content: Buffer.from(content, 'utf-8'),
+    });
+    return { allowed: dlpResult.allowed, reason: dlpResult.reason, dlpResult };
+  }
+
+  return { allowed: true };
+}
+
+async function checkFileDownloadAction(
+  fileName: string | undefined,
+  ctx: PolicyCheckContext,
+  dlpService: DLPService
+): Promise<PolicyCheckResult> {
+  if (ctx.securityPolicy?.fileDownloadPolicy === 'BLOCKED') {
+    return { allowed: false, reason: 'File downloads are blocked by policy' };
+  }
+
+  if (fileName && ctx.securityPolicy) {
+    const dlpResult = await dlpService.evaluateTransfer({
+      podId: ctx.sessionId,
+      sessionId: ctx.sessionId,
+      tenantId: ctx.user?.tenantId ?? '',
+      userId: ctx.user?.id ?? '',
+      transferType: 'FILE_DOWNLOAD',
+      direction: 'DOWNLOAD',
+      fileName,
+    });
+    return { allowed: dlpResult.allowed, reason: dlpResult.reason, dlpResult };
+  }
+
+  return { allowed: true };
+}
+
+async function checkFileUploadAction(
+  fileName: string | undefined,
+  ctx: PolicyCheckContext,
+  dlpService: DLPService
+): Promise<PolicyCheckResult> {
+  if (ctx.securityPolicy?.fileUploadPolicy === 'BLOCKED') {
+    return { allowed: false, reason: 'File uploads are blocked by policy' };
+  }
+
+  if (fileName && ctx.securityPolicy) {
+    const dlpResult = await dlpService.evaluateTransfer({
+      podId: ctx.sessionId,
+      sessionId: ctx.sessionId,
+      tenantId: ctx.user?.tenantId ?? '',
+      userId: ctx.user?.id ?? '',
+      transferType: 'FILE_UPLOAD',
+      direction: 'UPLOAD',
+      fileName,
+    });
+    return { allowed: dlpResult.allowed, reason: dlpResult.reason, dlpResult };
+  }
+
+  return { allowed: true };
+}
+
+function checkPrintAction(ctx: PolicyCheckContext): PolicyCheckResult {
+  const policy = ctx.securityPolicy?.printingPolicy;
+
+  if (policy === 'BLOCKED') {
+    return { allowed: false, reason: 'Printing is blocked by policy' };
+  }
+
+  if (policy === 'PDF_ONLY') {
+    return { allowed: true, reason: 'Only PDF export is allowed' };
+  }
+
+  return { allowed: true };
+}
+
+function checkUsbAction(
+  metadata: Record<string, unknown> | undefined,
+  ctx: PolicyCheckContext
+): PolicyCheckResult {
+  const policy = ctx.securityPolicy?.usbPolicy;
+
+  if (policy === 'BLOCKED') {
+    return { allowed: false, reason: 'USB device access is blocked by policy' };
+  }
+
+  if (policy === 'STORAGE_BLOCKED') {
+    const deviceType = (metadata?.deviceType as string) ?? '';
+    if (deviceType === 'storage') {
+      return { allowed: false, reason: 'USB storage devices are blocked' };
+    }
+  }
+
+  return { allowed: true };
+}
 
 // =============================================================================
 // ROUTE REGISTRATION
@@ -83,7 +254,13 @@ export async function registerWebSocketRoutes(
   app: FastifyInstance,
   deps: WebSocketRoutesDeps
 ): Promise<void> {
-  const { securityPolicyService, dlpService, screenshotService, redis } = deps;
+  const {
+    securityPolicyService: _securityPolicyService,
+    dlpService,
+    screenshotService,
+    redis,
+    prisma,
+  } = deps;
 
   // Subscribe to policy updates
   const subscriber = redis.duplicate();
@@ -98,7 +275,7 @@ export async function registerWebSocketRoutes(
         const sessionIds = (data.sessionIds as string[]) ?? [];
         for (const sessionId of sessionIds) {
           const client = connectedClients.get(sessionId);
-          if (client && client.readyState === 1) {
+          if (client?.readyState === 1) {
             client.send(
               JSON.stringify({
                 type: 'policy_update',
@@ -114,7 +291,7 @@ export async function registerWebSocketRoutes(
         // Send alert to specific session
         const sessionId = data.sessionId as string;
         const client = connectedClients.get(sessionId);
-        if (client && client.readyState === 1) {
+        if (client?.readyState === 1) {
           client.send(
             JSON.stringify({
               type: 'alert',
@@ -136,10 +313,22 @@ export async function registerWebSocketRoutes(
   // WebSocket endpoint for policy enforcement
   // ==========================================================================
 
-  app.get(
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  (
+    app as unknown as {
+      get: (
+        path: string,
+        opts: { websocket: true },
+        handler: (
+          socket: WS,
+          request: FastifyRequest<{ Params: { sessionId: string } }>
+        ) => Promise<void>
+      ) => void;
+    }
+  ).get(
     '/ws/policy-enforcement/:sessionId',
     { websocket: true },
-    async (socket: WebSocket, request: FastifyRequest<{ Params: { sessionId: string } }>) => {
+    async (socket: WS, request: FastifyRequest<{ Params: { sessionId: string } }>) => {
       const { sessionId } = request.params;
       const user = (request as { user?: { id: string; tenantId: string } }).user;
 
@@ -149,7 +338,7 @@ export async function registerWebSocketRoutes(
       }
 
       // Get session and verify access
-      const session = await app.prisma.session.findFirst({
+      const session = await prisma.session.findFirst({
         where: {
           id: sessionId,
           tenantId: user.tenantId,
@@ -166,7 +355,7 @@ export async function registerWebSocketRoutes(
       }
 
       // Register client
-      connectedClients.set(sessionId, socket);
+      connectedClients.set(sessionId, socket as unknown as WS);
 
       // Send initial policy
       socket.send(
@@ -179,8 +368,9 @@ export async function registerWebSocketRoutes(
                   id: session.securityPolicy.id,
                   name: session.securityPolicy.name,
                   clipboardPolicy: session.securityPolicy.clipboardPolicy,
-                  fileDownloadAllowed: session.securityPolicy.fileDownloadAllowed,
-                  screenCaptureBlocked: session.securityPolicy.screenCaptureBlocked,
+                  fileDownloadPolicy: session.securityPolicy.fileDownloadPolicy,
+                  fileUploadPolicy: session.securityPolicy.fileUploadPolicy,
+                  screenCaptureBlocking: session.securityPolicy.screenCaptureBlocking,
                   printingPolicy: session.securityPolicy.printingPolicy,
                   usbPolicy: session.securityPolicy.usbPolicy,
                 }
@@ -239,133 +429,62 @@ export async function registerWebSocketRoutes(
       // =======================================================================
 
       async function handlePolicyCheck(
-        ws: WebSocket,
+        ws: WS,
         requestId: string | undefined,
         data: PolicyCheckRequest
       ): Promise<void> {
         const { action, content, fileName, fileSize, mimeType, metadata } = data;
 
-        // Evaluate against policy
-        let allowed = true;
-        let reason: string | undefined;
-        let dlpResult: { allowed: boolean; reason?: string; sensitiveData?: unknown[] } | undefined;
+        // Build context for policy checks
+        const ctx: PolicyCheckContext = {
+          sessionId,
+          user,
+          securityPolicy: session?.securityPolicy ?? null,
+        };
+
+        // Evaluate against policy using helpers
+        let result: PolicyCheckResult;
 
         switch (action) {
           case 'clipboard_copy':
           case 'clipboard_paste':
-            if (session.securityPolicy?.clipboardPolicy === 'BLOCKED') {
-              allowed = false;
-              reason = 'Clipboard operations are blocked by policy';
-            } else if (
-              session.securityPolicy?.clipboardPolicy === 'TEXT_ONLY' &&
-              mimeType &&
-              !mimeType.startsWith('text/')
-            ) {
-              allowed = false;
-              reason = 'Only text clipboard content is allowed';
-            } else if (content && session.securityPolicy?.dlpEnabled) {
-              // Run DLP scan
-              dlpResult = await dlpService.evaluateTransfer({
-                sessionId,
-                tenantId: user!.tenantId,
-                userId: user!.id,
-                transferType: 'CLIPBOARD',
-                direction: action === 'clipboard_copy' ? 'OUTBOUND' : 'INBOUND',
-                content,
-              });
-              allowed = dlpResult.allowed;
-              reason = dlpResult.reason;
-            }
+            result = await checkClipboardAction(action, content, ctx, dlpService);
             break;
-
           case 'file_download':
-            if (!session.securityPolicy?.fileDownloadAllowed) {
-              allowed = false;
-              reason = 'File downloads are blocked by policy';
-            } else if (fileName && session.securityPolicy?.dlpEnabled) {
-              // Run DLP scan
-              dlpResult = await dlpService.evaluateTransfer({
-                sessionId,
-                tenantId: user!.tenantId,
-                userId: user!.id,
-                transferType: 'FILE',
-                direction: 'OUTBOUND',
-                fileName,
-                fileSize,
-                mimeType,
-                content: content ?? '',
-              });
-              allowed = dlpResult.allowed;
-              reason = dlpResult.reason;
-            }
+            result = await checkFileDownloadAction(fileName, ctx, dlpService);
             break;
-
           case 'file_upload':
-            if (!session.securityPolicy?.fileUploadAllowed) {
-              allowed = false;
-              reason = 'File uploads are blocked by policy';
-            } else if (fileName && session.securityPolicy?.dlpEnabled) {
-              // Run DLP scan
-              dlpResult = await dlpService.evaluateTransfer({
-                sessionId,
-                tenantId: user!.tenantId,
-                userId: user!.id,
-                transferType: 'FILE',
-                direction: 'INBOUND',
-                fileName,
-                fileSize,
-                mimeType,
-                content: content ?? '',
-              });
-              allowed = dlpResult.allowed;
-              reason = dlpResult.reason;
-            }
+            result = await checkFileUploadAction(fileName, ctx, dlpService);
             break;
-
           case 'print':
-            if (session.securityPolicy?.printingPolicy === 'BLOCKED') {
-              allowed = false;
-              reason = 'Printing is blocked by policy';
-            } else if (session.securityPolicy?.printingPolicy === 'VIRTUAL_ONLY') {
-              // Client must ensure print goes to virtual printer
-              reason = 'Only virtual printing is allowed';
-            }
+            result = checkPrintAction(ctx);
             break;
-
           case 'usb_access':
-            if (session.securityPolicy?.usbPolicy === 'BLOCKED') {
-              allowed = false;
-              reason = 'USB device access is blocked by policy';
-            } else if (session.securityPolicy?.usbPolicy === 'STORAGE_BLOCKED') {
-              const deviceType = (metadata?.deviceType as string) ?? '';
-              if (deviceType === 'storage') {
-                allowed = false;
-                reason = 'USB storage devices are blocked';
-              }
-            }
+            result = checkUsbAction(metadata, ctx);
             break;
+          default:
+            result = { allowed: true };
         }
 
+        const { allowed, reason, dlpResult } = result;
+
         // Log the attempt
-        await app.prisma.dataTransferAttempt.create({
+        const dbTransferType = getTransferType(action);
+        const dbDirection =
+          action.includes('download') || action.includes('copy') ? 'OUTBOUND' : 'INBOUND';
+        await prisma.dataTransferAttempt.create({
           data: {
             sessionId,
-            tenantId: user!.tenantId,
-            userId: user!.id,
-            transferType: action.includes('clipboard')
-              ? 'CLIPBOARD'
-              : action.includes('file')
-                ? 'FILE'
-                : 'OTHER',
-            direction:
-              action.includes('download') || action.includes('copy') ? 'OUTBOUND' : 'INBOUND',
+            tenantId: user?.tenantId ?? '',
+            userId: user?.id ?? '',
+            transferType: dbTransferType,
+            direction: dbDirection,
             fileName: fileName ?? null,
-            fileSize: fileSize ?? null,
-            mimeType: mimeType ?? null,
+            contentSize: fileSize ?? null,
+            contentType: mimeType ?? null,
             action: allowed ? 'ALLOWED' : 'BLOCKED',
             reason: reason ?? null,
-            policyId: session.securityPolicy?.id ?? null,
-            dlpScanResult: dlpResult ? { sensitiveData: dlpResult.sensitiveData } : null,
+            policyId: session?.securityPolicy?.id ?? null,
           },
         });
 
@@ -385,25 +504,20 @@ export async function registerWebSocketRoutes(
 
         // If blocked, also log a security violation
         if (!allowed) {
-          await app.prisma.securityViolation.create({
+          const violationType = getViolationType(action);
+          await prisma.securityViolation.create({
             data: {
               sessionId,
-              tenantId: user!.tenantId,
-              userId: user!.id,
-              violationType: action.includes('clipboard')
-                ? 'CLIPBOARD_VIOLATION'
-                : action.includes('file')
-                  ? 'FILE_TRANSFER_VIOLATION'
-                  : 'POLICY_VIOLATION',
+              tenantId: user?.tenantId ?? '',
+              violationType,
               severity:
                 dlpResult?.sensitiveData && dlpResult.sensitiveData.length > 0 ? 'HIGH' : 'MEDIUM',
               description: reason ?? 'Policy violation',
               action: 'BLOCKED',
               details: {
                 attemptedAction: action,
-                fileName,
-                fileSize,
-                sensitiveDataTypes: dlpResult?.sensitiveData?.map((s: { type?: string }) => s.type),
+                ...(fileName && { fileName }),
+                ...(fileSize && { fileSize }),
               },
             },
           });
@@ -415,25 +529,26 @@ export async function registerWebSocketRoutes(
       // =======================================================================
 
       async function handleScreenCaptureReport(
-        ws: WebSocket,
+        ws: WS,
         requestId: string | undefined,
         data: ScreenCaptureReport
       ): Promise<void> {
         const { captureType, detectionMethod, processInfo, activeApplication, activeWindow } = data;
 
         // Use screenshot detection service
-        await screenshotService.detectCaptureAttempt({
+        const screenCaptureEvent = {
           podId: sessionId,
           sessionId,
-          userId: user!.id,
+          userId: user?.id ?? '',
           captureType,
           detectionMethod,
-          processInfo,
-          activeApplication,
-          activeWindow,
-        });
+          ...(processInfo && { processInfo }),
+          ...(activeApplication && { activeApplication }),
+          ...(activeWindow && { activeWindow }),
+        };
+        await screenshotService.detectCaptureAttempt(screenCaptureEvent);
 
-        const blocked = session.securityPolicy?.screenCaptureBlocked ?? true;
+        const blocked = session?.securityPolicy?.screenCaptureBlocking ?? true;
 
         ws.send(
           JSON.stringify({
@@ -453,7 +568,7 @@ export async function registerWebSocketRoutes(
       // =======================================================================
 
       async function handleHeartbeat(
-        ws: WebSocket,
+        ws: WS,
         requestId: string | undefined,
         data: HeartbeatData
       ): Promise<void> {
@@ -491,14 +606,14 @@ export async function registerWebSocketRoutes(
         await redis.set(`session:activity:${sessionId}`, new Date().toISOString());
 
         // Log if needed
-        if (session.securityPolicy?.logKeystrokes && activityType === 'keyboard') {
-          await app.prisma.containmentAuditLog.create({
+        if (session?.securityPolicy?.logKeystrokes && activityType === 'keyboard') {
+          await prisma.containmentAuditLog.create({
             data: {
               sessionId,
-              tenantId: user!.tenantId,
-              userId: user!.id,
+              tenantId: user?.tenantId ?? '',
+              userId: user?.id ?? '',
               eventType: 'PERIPHERAL_ACCESS',
-              eventCategory: 'USER_ACTIVITY',
+              eventCategory: 'DEVICE_ACCESS',
               description: 'Keyboard activity',
               details: {},
               allowed: true,
@@ -512,7 +627,7 @@ export async function registerWebSocketRoutes(
       // Error helper
       // =======================================================================
 
-      function sendError(ws: WebSocket, requestId: string | undefined, message: string): void {
+      function sendError(ws: WS, requestId: string | undefined, message: string): void {
         ws.send(
           JSON.stringify({
             type: 'error',
@@ -535,7 +650,7 @@ export async function registerWebSocketRoutes(
       // Error handler
       // =======================================================================
 
-      socket.on('error', (error) => {
+      socket.on('error', (error: Error) => {
         console.error(`WebSocket error for session ${sessionId}:`, error);
         connectedClients.delete(sessionId);
       });
@@ -554,7 +669,7 @@ export function broadcastToSessions(
   const payload = JSON.stringify(message);
   for (const sessionId of sessionIds) {
     const client = connectedClients.get(sessionId);
-    if (client && client.readyState === 1) {
+    if (client?.readyState === 1) {
       client.send(payload);
     }
   }

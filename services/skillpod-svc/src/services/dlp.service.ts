@@ -10,7 +10,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/require-await */
 
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 import type { SecurityPolicyService } from './security-policy.service.js';
 import type { TransferDirection } from '../types/containment.types.js';
@@ -89,11 +89,31 @@ export interface DLPConfig {
 // =============================================================================
 
 const DEFAULT_SENSITIVE_PATTERNS: SensitiveDataPattern[] = [
-  // Credit Card Numbers (Visa, MasterCard, Amex, Discover)
+  // Credit Card Numbers - Visa
   {
-    name: 'Credit Card Number',
-    pattern:
-      /\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})\b/g,
+    name: 'Credit Card Number (Visa)',
+    pattern: /\b4\d{12}(?:\d{3})?\b/g,
+    severity: 'CRITICAL',
+    category: 'FINANCIAL',
+  },
+  // Credit Card Numbers - MasterCard
+  {
+    name: 'Credit Card Number (MasterCard)',
+    pattern: /\b5[1-5]\d{14}\b/g,
+    severity: 'CRITICAL',
+    category: 'FINANCIAL',
+  },
+  // Credit Card Numbers - Amex
+  {
+    name: 'Credit Card Number (Amex)',
+    pattern: /\b3[47]\d{13}\b/g,
+    severity: 'CRITICAL',
+    category: 'FINANCIAL',
+  },
+  // Credit Card Numbers - Discover
+  {
+    name: 'Credit Card Number (Discover)',
+    pattern: /\b6(?:011|5\d{2})\d{12}\b/g,
     severity: 'CRITICAL',
     category: 'FINANCIAL',
   },
@@ -174,11 +194,24 @@ const DEFAULT_SENSITIVE_PATTERNS: SensitiveDataPattern[] = [
     severity: 'HIGH',
     category: 'CREDENTIALS',
   },
-  // IP Addresses (internal ranges)
+  // IP Addresses (10.x.x.x range)
   {
-    name: 'Internal IP Address',
-    pattern:
-      /\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})\b/g,
+    name: 'Internal IP Address (10.x)',
+    pattern: /\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
+    severity: 'MEDIUM',
+    category: 'CONFIDENTIAL',
+  },
+  // IP Addresses (172.16-31.x.x range)
+  {
+    name: 'Internal IP Address (172.x)',
+    pattern: /\b172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}\b/g,
+    severity: 'MEDIUM',
+    category: 'CONFIDENTIAL',
+  },
+  // IP Addresses (192.168.x.x range)
+  {
+    name: 'Internal IP Address (192.168.x)',
+    pattern: /\b192\.168\.\d{1,3}\.\d{1,3}\b/g,
     severity: 'MEDIUM',
     category: 'CONFIDENTIAL',
   },
@@ -199,7 +232,7 @@ const DEFAULT_SENSITIVE_PATTERNS: SensitiveDataPattern[] = [
   // Passport Numbers (generic)
   {
     name: 'Passport Number',
-    pattern: /\b[A-Z]{1,2}[0-9]{6,9}\b/g,
+    pattern: /\b[A-Z]{1,2}\d{6,9}\b/g,
     severity: 'HIGH',
     category: 'PII',
   },
@@ -279,6 +312,358 @@ export interface DLPService {
   // Configuration
   getConfig(tenantId: string): Promise<DLPConfig>;
   updateConfig(tenantId: string, config: Partial<DLPConfig>): Promise<void>;
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function blockTransfer(code: string, reason: string): TransferResult {
+  return {
+    allowed: false,
+    action: 'BLOCKED',
+    reason: `${code}: ${reason}`,
+  };
+}
+
+function getFileExtension(fileName?: string): string {
+  if (!fileName) return '';
+  const parts = fileName.split('.');
+  return parts.length > 1 ? `.${parts.pop()?.toLowerCase()}` : '';
+}
+
+function formatBytes(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let i = 0;
+  let value = bytes;
+  while (value >= 1024 && i < units.length - 1) {
+    value /= 1024;
+    i++;
+  }
+  return `${value.toFixed(1)} ${units[i]}`;
+}
+
+// =============================================================================
+// CONTENT SCANNING HELPERS
+// =============================================================================
+
+async function scanForSensitiveData(content: Buffer | string): Promise<{
+  found: boolean;
+  patterns: Array<{ name: string; category: string; severity: string; count: number }>;
+}> {
+  const text = typeof content === 'string' ? content : content.toString('utf-8');
+  const foundPatterns: Array<{
+    name: string;
+    category: string;
+    severity: string;
+    count: number;
+  }> = [];
+
+  for (const pattern of DEFAULT_SENSITIVE_PATTERNS) {
+    // Reset regex lastIndex
+    pattern.pattern.lastIndex = 0;
+
+    const matches = text.match(pattern.pattern);
+    if (matches && matches.length > 0) {
+      // Filter out false positives for generic patterns
+      if (pattern.name === 'API Key (generic)') {
+        // Only flag if there are other indicators
+        const hasContext = /(?:api[_-]?key|secret|token|password)/i.test(text);
+        if (!hasContext) continue;
+      }
+
+      foundPatterns.push({
+        name: pattern.name,
+        category: pattern.category,
+        severity: pattern.severity,
+        count: matches.length,
+      });
+    }
+  }
+
+  return {
+    found: foundPatterns.length > 0,
+    patterns: foundPatterns,
+  };
+}
+
+async function scanForMalware(content: Buffer): Promise<MalwareScanResult> {
+  // In production, integrate with ClamAV, VirusTotal, or similar
+  // For now, implement basic signature detection
+
+  const signatures = [
+    {
+      name: 'EICAR Test',
+      pattern: Buffer.from(
+        'WDVPIVAlQEFQWzRcUFpYNTQoUF4pN0NDKTd9JEVJQ0FSLVNUQU5EQVJELUFOVElWSVJVUy1URVNU',
+        'base64'
+      ),
+    },
+    // Add more known malware signatures here
+  ];
+
+  for (const sig of signatures) {
+    if (content.includes(sig.pattern)) {
+      return {
+        clean: false,
+        threatName: sig.name,
+        threatType: 'signature_match',
+        scanEngine: 'internal',
+        scanTime: new Date(),
+      };
+    }
+  }
+
+  // Check for executable headers in non-executable file types
+  const exeHeaders = [
+    Buffer.from([0x4d, 0x5a]), // MZ (DOS/Windows executable)
+    Buffer.from([0x7f, 0x45, 0x4c, 0x46]), // ELF (Linux executable)
+  ];
+
+  for (const header of exeHeaders) {
+    if (content.subarray(0, header.length).equals(header)) {
+      return {
+        clean: false,
+        threatName: 'Executable Content',
+        threatType: 'suspicious_header',
+        scanEngine: 'internal',
+        scanTime: new Date(),
+      };
+    }
+  }
+
+  return {
+    clean: true,
+    scanEngine: 'internal',
+    scanTime: new Date(),
+  };
+}
+
+function hashContent(content: Buffer | string): string {
+  const buffer = typeof content === 'string' ? Buffer.from(content, 'utf-8') : content;
+  return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
+// =============================================================================
+// CLIPBOARD EVALUATION HELPERS
+// =============================================================================
+
+interface MappedPolicyForClipboard {
+  clipboardPolicy?: string;
+  clipboardMaxSize?: number | null;
+  clipboardAllowedTypes?: string[] | null;
+}
+
+function checkClipboardPolicyBlock(
+  policy: MappedPolicyForClipboard,
+  direction: TransferDirection
+): TransferResult | null {
+  switch (policy.clipboardPolicy) {
+    case 'BLOCKED':
+      return blockTransfer('CLIPBOARD_BLOCKED', 'Clipboard access is disabled');
+    case 'READ_ONLY':
+      if (direction === 'DOWNLOAD') {
+        return blockTransfer('CLIPBOARD_OUTBOUND_BLOCKED', 'Cannot copy from pod');
+      }
+      break;
+    case 'WRITE_ONLY':
+      if (direction === 'UPLOAD') {
+        return blockTransfer('CLIPBOARD_INBOUND_BLOCKED', 'Cannot paste into pod');
+      }
+      break;
+    case 'APPROVAL_REQUIRED':
+      return {
+        allowed: false,
+        action: 'QUARANTINED',
+        reason: 'Clipboard access requires approval',
+        requiresApproval: true,
+      };
+  }
+  return null;
+}
+
+function checkClipboardSizeAndType(
+  policy: MappedPolicyForClipboard,
+  contentSize?: number,
+  contentType?: string
+): TransferResult | null {
+  if (policy.clipboardMaxSize && contentSize) {
+    if (contentSize > policy.clipboardMaxSize) {
+      return blockTransfer(
+        'CLIPBOARD_SIZE_EXCEEDED',
+        `Content size ${contentSize} exceeds maximum ${policy.clipboardMaxSize}`
+      );
+    }
+  }
+  if (policy.clipboardAllowedTypes && policy.clipboardAllowedTypes.length > 0) {
+    if (contentType && !policy.clipboardAllowedTypes.includes(contentType)) {
+      return blockTransfer('CLIPBOARD_TYPE_BLOCKED', `Content type ${contentType} is not allowed`);
+    }
+  }
+  return null;
+}
+
+async function checkClipboardSensitiveData(
+  direction: TransferDirection,
+  content?: Buffer
+): Promise<TransferResult | null> {
+  if (direction === 'DOWNLOAD' && content) {
+    const scanResult = await scanForSensitiveData(content);
+    if (scanResult.found) {
+      const criticalPatterns = scanResult.patterns.filter((p) => p.severity === 'CRITICAL');
+      if (criticalPatterns.length > 0) {
+        return {
+          ...blockTransfer(
+            'SENSITIVE_DATA_BLOCKED',
+            `Sensitive data detected: ${criticalPatterns.map((p) => p.name).join(', ')}`
+          ),
+          sensitiveDataTypes: criticalPatterns.map((p) => p.category),
+        };
+      }
+    }
+  }
+  return null;
+}
+
+// =============================================================================
+// FILE TRANSFER EVALUATION HELPERS
+// =============================================================================
+
+interface MappedPolicyForFile {
+  fileDownloadPolicy?: string;
+  fileUploadPolicy?: string;
+  blockedFileTypes?: string[] | null;
+  allowedFileTypes?: string[] | null;
+  maxFileSize?: number | null;
+}
+
+function checkFileDownloadPolicyBlock(policy: MappedPolicyForFile): TransferResult | null {
+  switch (policy.fileDownloadPolicy) {
+    case 'BLOCKED':
+      return blockTransfer('FILE_DOWNLOAD_BLOCKED', 'File downloads are disabled');
+    case 'APPROVAL_REQUIRED':
+      return {
+        allowed: false,
+        action: 'QUARANTINED',
+        reason: 'File download requires approval',
+        requiresApproval: true,
+      };
+  }
+  return null;
+}
+
+function checkFileUploadPolicyBlock(policy: MappedPolicyForFile): TransferResult | null {
+  switch (policy.fileUploadPolicy) {
+    case 'BLOCKED':
+      return blockTransfer('FILE_UPLOAD_BLOCKED', 'File uploads are disabled');
+    case 'APPROVAL_REQUIRED':
+      return {
+        allowed: false,
+        action: 'QUARANTINED',
+        reason: 'File upload requires approval',
+        requiresApproval: true,
+      };
+  }
+  return null;
+}
+
+function checkFileTypeAllowed(
+  policy: MappedPolicyForFile,
+  extension: string,
+  isDownload: boolean
+): TransferResult | null {
+  const direction = isDownload ? 'download' : 'upload';
+  if (policy.blockedFileTypes && policy.blockedFileTypes.length > 0) {
+    if (
+      policy.blockedFileTypes.includes(extension) ||
+      (isDownload && policy.blockedFileTypes.includes('*'))
+    ) {
+      return blockTransfer(
+        'FILE_TYPE_BLOCKED',
+        `File type ${extension} is not allowed for ${direction}`
+      );
+    }
+  }
+  if (policy.allowedFileTypes && policy.allowedFileTypes.length > 0) {
+    if (!policy.allowedFileTypes.includes(extension)) {
+      return blockTransfer(
+        'FILE_TYPE_NOT_ALLOWED',
+        `File type ${extension} is not in the allowed list`
+      );
+    }
+  }
+  return null;
+}
+
+function checkFileSizeLimit(
+  policy: MappedPolicyForFile,
+  contentSize?: number
+): TransferResult | null {
+  if (policy.maxFileSize && contentSize) {
+    if (contentSize > policy.maxFileSize) {
+      return blockTransfer(
+        'FILE_SIZE_EXCEEDED',
+        `File size ${formatBytes(contentSize)} exceeds maximum ${formatBytes(policy.maxFileSize)}`
+      );
+    }
+  }
+  return null;
+}
+
+async function checkFileSensitiveData(
+  content: Buffer,
+  contentSize: number,
+  config: DLPConfig
+): Promise<TransferResult | null> {
+  if (config.enableSensitiveDataScanning && contentSize <= config.maxFileSizeForScanning) {
+    const scanResult = await scanForSensitiveData(content);
+    if (scanResult.found) {
+      const highSeverityPatterns = scanResult.patterns.filter(
+        (p) => p.severity === 'CRITICAL' || p.severity === 'HIGH'
+      );
+      if (highSeverityPatterns.length > 0) {
+        return {
+          ...blockTransfer(
+            'SENSITIVE_DATA_BLOCKED',
+            `File contains sensitive data: ${highSeverityPatterns.map((p) => p.name).join(', ')}`
+          ),
+          sensitiveDataTypes: highSeverityPatterns.map((p) => p.category),
+        };
+      }
+    }
+  }
+  return null;
+}
+
+async function checkFileMalware(
+  content: Buffer,
+  contentSize: number,
+  config: DLPConfig
+): Promise<TransferResult | null> {
+  if (config.enableMalwareScanning && contentSize <= config.maxFileSizeForScanning) {
+    const malwareResult = await scanForMalware(content);
+    if (!malwareResult.clean) {
+      return blockTransfer(
+        'MALWARE_DETECTED',
+        `Malware detected: ${malwareResult.threatName} (${malwareResult.threatType})`
+      );
+    }
+  }
+  return null;
+}
+
+function buildSuccessResult(
+  contentHash?: string,
+  action: TransferAction = 'LOGGED',
+  reason = 'Transfer permitted'
+): TransferResult {
+  const result: TransferResult = {
+    allowed: true,
+    action,
+    reason,
+  };
+  if (contentHash) result.contentHash = contentHash;
+  return result;
 }
 
 // =============================================================================
@@ -362,84 +747,25 @@ export function createDLPService(
     request: TransferRequest,
     policy: MappedPolicy
   ): Promise<TransferResult> {
-    switch (policy.clipboardPolicy) {
-      case 'BLOCKED':
-        return blockTransfer('CLIPBOARD_BLOCKED', 'Clipboard access is disabled');
+    // Check policy block
+    const policyBlock = checkClipboardPolicyBlock(policy, request.direction);
+    if (policyBlock) return policyBlock;
 
-      case 'READ_ONLY':
-        // Can paste into pod (UPLOAD/INBOUND), cannot copy out (DOWNLOAD/OUTBOUND)
-        if (request.direction === 'DOWNLOAD') {
-          return blockTransfer('CLIPBOARD_OUTBOUND_BLOCKED', 'Cannot copy from pod');
-        }
-        break;
-
-      case 'WRITE_ONLY':
-        // Can copy out of pod (DOWNLOAD/OUTBOUND), cannot paste in (UPLOAD/INBOUND)
-        if (request.direction === 'UPLOAD') {
-          return blockTransfer('CLIPBOARD_INBOUND_BLOCKED', 'Cannot paste into pod');
-        }
-        break;
-
-      case 'APPROVAL_REQUIRED':
-        return {
-          allowed: false,
-          action: 'QUARANTINED',
-          reason: 'Clipboard access requires approval',
-          requiresApproval: true,
-        };
-
-      case 'BIDIRECTIONAL':
-        // Continue with additional checks
-        break;
-    }
-
-    // Check size limits
-    if (policy.clipboardMaxSize && request.contentSize) {
-      if (request.contentSize > policy.clipboardMaxSize) {
-        return blockTransfer(
-          'CLIPBOARD_SIZE_EXCEEDED',
-          `Content size ${request.contentSize} exceeds maximum ${policy.clipboardMaxSize}`
-        );
-      }
-    }
-
-    // Check content type restrictions
-    if (policy.clipboardAllowedTypes && policy.clipboardAllowedTypes.length > 0) {
-      if (request.contentType && !policy.clipboardAllowedTypes.includes(request.contentType)) {
-        return blockTransfer(
-          'CLIPBOARD_TYPE_BLOCKED',
-          `Content type ${request.contentType} is not allowed`
-        );
-      }
-    }
+    // Check size and type
+    const sizeTypeBlock = checkClipboardSizeAndType(
+      policy,
+      request.contentSize,
+      request.contentType
+    );
+    if (sizeTypeBlock) return sizeTypeBlock;
 
     // Scan for sensitive data on outbound transfers
-    if (request.direction === 'DOWNLOAD' && request.content) {
-      const scanResult = await scanForSensitiveData(request.content);
-      if (scanResult.found) {
-        const criticalPatterns = scanResult.patterns.filter((p) => p.severity === 'CRITICAL');
-        if (criticalPatterns.length > 0) {
-          return {
-            ...blockTransfer(
-              'SENSITIVE_DATA_BLOCKED',
-              `Sensitive data detected: ${criticalPatterns.map((p) => p.name).join(', ')}`
-            ),
-            sensitiveDataTypes: criticalPatterns.map((p) => p.category),
-          };
-        }
-      }
-    }
+    const sensitiveBlock = await checkClipboardSensitiveData(request.direction, request.content);
+    if (sensitiveBlock) return sensitiveBlock;
 
     // Hash content for audit trail
     const contentHash = request.content ? hashContent(request.content) : undefined;
-
-    const result: TransferResult = {
-      allowed: true,
-      action: 'LOGGED',
-      reason: 'Clipboard access permitted',
-    };
-    if (contentHash) result.contentHash = contentHash;
-    return result;
+    return buildSuccessResult(contentHash, 'LOGGED', 'Clipboard access permitted');
   }
 
   // ===========================================================================
@@ -450,95 +776,35 @@ export function createDLPService(
     request: TransferRequest,
     policy: MappedPolicy
   ): Promise<TransferResult> {
-    switch (policy.fileDownloadPolicy) {
-      case 'BLOCKED':
-        return blockTransfer('FILE_DOWNLOAD_BLOCKED', 'File downloads are disabled');
-
-      case 'APPROVAL_REQUIRED':
-        return {
-          allowed: false,
-          action: 'QUARANTINED',
-          reason: 'File download requires approval',
-          requiresApproval: true,
-        };
-
-      case 'LOGGED_ONLY':
-      case 'ALLOWED':
-        // Continue with validation
-        break;
-    }
+    // Check policy block
+    const policyBlock = checkFileDownloadPolicyBlock(policy);
+    if (policyBlock) return policyBlock;
 
     // Check file type
     const extension = getFileExtension(request.fileName);
-
-    // Check blocked types first
-    if (policy.blockedFileTypes && policy.blockedFileTypes.length > 0) {
-      if (policy.blockedFileTypes.includes(extension) || policy.blockedFileTypes.includes('*')) {
-        return blockTransfer(
-          'FILE_TYPE_BLOCKED',
-          `File type ${extension} is not allowed for download`
-        );
-      }
-    }
-
-    // Check allowed types if specified
-    if (policy.allowedFileTypes && policy.allowedFileTypes.length > 0) {
-      if (!policy.allowedFileTypes.includes(extension)) {
-        return blockTransfer(
-          'FILE_TYPE_NOT_ALLOWED',
-          `File type ${extension} is not in the allowed list`
-        );
-      }
-    }
+    const typeBlock = checkFileTypeAllowed(policy, extension, true);
+    if (typeBlock) return typeBlock;
 
     // Check file size
-    if (policy.maxFileSize && request.contentSize) {
-      if (request.contentSize > policy.maxFileSize) {
-        return blockTransfer(
-          'FILE_SIZE_EXCEEDED',
-          `File size ${formatBytes(request.contentSize)} exceeds maximum ${formatBytes(policy.maxFileSize)}`
-        );
-      }
-    }
+    const sizeBlock = checkFileSizeLimit(policy, request.contentSize);
+    if (sizeBlock) return sizeBlock;
 
     // Scan for sensitive data
-    if (request.content) {
+    if (request.content && request.contentSize) {
       const config = await getConfig(request.tenantId);
-
-      if (
-        config.enableSensitiveDataScanning &&
-        request.contentSize &&
-        request.contentSize <= config.maxFileSizeForScanning
-      ) {
-        const scanResult = await scanForSensitiveData(request.content);
-        if (scanResult.found) {
-          const highSeverityPatterns = scanResult.patterns.filter(
-            (p) => p.severity === 'CRITICAL' || p.severity === 'HIGH'
-          );
-
-          if (highSeverityPatterns.length > 0) {
-            return {
-              ...blockTransfer(
-                'SENSITIVE_DATA_BLOCKED',
-                `File contains sensitive data: ${highSeverityPatterns.map((p) => p.name).join(', ')}`
-              ),
-              sensitiveDataTypes: highSeverityPatterns.map((p) => p.category),
-            };
-          }
-        }
-      }
+      const sensitiveBlock = await checkFileSensitiveData(
+        request.content,
+        request.contentSize,
+        config
+      );
+      if (sensitiveBlock) return sensitiveBlock;
     }
 
     // Hash content for audit trail
     const contentHash = request.content ? hashContent(request.content) : undefined;
-
-    const result: TransferResult = {
-      allowed: true,
-      action: policy.fileDownloadPolicy === 'LOGGED_ONLY' ? 'LOGGED' : 'ALLOWED',
-      reason: 'File download permitted',
-    };
-    if (contentHash) result.contentHash = contentHash;
-    return result;
+    const action: TransferAction =
+      policy.fileDownloadPolicy === 'LOGGED_ONLY' ? 'LOGGED' : 'ALLOWED';
+    return buildSuccessResult(contentHash, action, 'File download permitted');
   }
 
   // ===========================================================================
@@ -549,84 +815,30 @@ export function createDLPService(
     request: TransferRequest,
     policy: MappedPolicy
   ): Promise<TransferResult> {
-    switch (policy.fileUploadPolicy) {
-      case 'BLOCKED':
-        return blockTransfer('FILE_UPLOAD_BLOCKED', 'File uploads are disabled');
-
-      case 'APPROVAL_REQUIRED':
-        return {
-          allowed: false,
-          action: 'QUARANTINED',
-          reason: 'File upload requires approval',
-          requiresApproval: true,
-        };
-
-      case 'LOGGED_ONLY':
-      case 'ALLOWED':
-        // Continue with validation
-        break;
-    }
+    // Check policy block
+    const policyBlock = checkFileUploadPolicyBlock(policy);
+    if (policyBlock) return policyBlock;
 
     // Check file type
     const extension = getFileExtension(request.fileName);
-
-    if (policy.blockedFileTypes && policy.blockedFileTypes.length > 0) {
-      if (policy.blockedFileTypes.includes(extension)) {
-        return blockTransfer(
-          'FILE_TYPE_BLOCKED',
-          `File type ${extension} is not allowed for upload`
-        );
-      }
-    }
-
-    if (policy.allowedFileTypes && policy.allowedFileTypes.length > 0) {
-      if (!policy.allowedFileTypes.includes(extension)) {
-        return blockTransfer(
-          'FILE_TYPE_NOT_ALLOWED',
-          `File type ${extension} is not in the allowed list`
-        );
-      }
-    }
+    const typeBlock = checkFileTypeAllowed(policy, extension, false);
+    if (typeBlock) return typeBlock;
 
     // Check file size
-    if (policy.maxFileSize && request.contentSize) {
-      if (request.contentSize > policy.maxFileSize) {
-        return blockTransfer(
-          'FILE_SIZE_EXCEEDED',
-          `File size ${formatBytes(request.contentSize)} exceeds maximum ${formatBytes(policy.maxFileSize)}`
-        );
-      }
-    }
+    const sizeBlock = checkFileSizeLimit(policy, request.contentSize);
+    if (sizeBlock) return sizeBlock;
 
     // Scan for malware
-    if (request.content) {
+    if (request.content && request.contentSize) {
       const config = await getConfig(request.tenantId);
-
-      if (
-        config.enableMalwareScanning &&
-        request.contentSize &&
-        request.contentSize <= config.maxFileSizeForScanning
-      ) {
-        const malwareResult = await scanForMalware(request.content);
-        if (!malwareResult.clean) {
-          return blockTransfer(
-            'MALWARE_DETECTED',
-            `Malware detected: ${malwareResult.threatName} (${malwareResult.threatType})`
-          );
-        }
-      }
+      const malwareBlock = await checkFileMalware(request.content, request.contentSize, config);
+      if (malwareBlock) return malwareBlock;
     }
 
     // Hash content for audit trail
     const contentHash = request.content ? hashContent(request.content) : undefined;
-
-    const result: TransferResult = {
-      allowed: true,
-      action: policy.fileUploadPolicy === 'LOGGED_ONLY' ? 'LOGGED' : 'ALLOWED',
-      reason: 'File upload permitted',
-    };
-    if (contentHash) result.contentHash = contentHash;
-    return result;
+    const action: TransferAction = policy.fileUploadPolicy === 'LOGGED_ONLY' ? 'LOGGED' : 'ALLOWED';
+    return buildSuccessResult(contentHash, action, 'File upload permitted');
   }
 
   // ===========================================================================
@@ -719,111 +931,6 @@ export function createDLPService(
     };
     if (contentHash) result.contentHash = contentHash;
     return result;
-  }
-
-  // ===========================================================================
-  // CONTENT SCANNING
-  // ===========================================================================
-
-  async function scanForSensitiveData(content: Buffer | string): Promise<{
-    found: boolean;
-    patterns: Array<{ name: string; category: string; severity: string; count: number }>;
-  }> {
-    const text = typeof content === 'string' ? content : content.toString('utf-8');
-    const foundPatterns: Array<{
-      name: string;
-      category: string;
-      severity: string;
-      count: number;
-    }> = [];
-
-    for (const pattern of DEFAULT_SENSITIVE_PATTERNS) {
-      // Reset regex lastIndex
-      pattern.pattern.lastIndex = 0;
-
-      const matches = text.match(pattern.pattern);
-      if (matches && matches.length > 0) {
-        // Filter out false positives for generic patterns
-        if (pattern.name === 'API Key (generic)') {
-          // Only flag if there are other indicators
-          const hasContext = /(?:api[_-]?key|secret|token|password)/i.test(text);
-          if (!hasContext) continue;
-        }
-
-        foundPatterns.push({
-          name: pattern.name,
-          category: pattern.category,
-          severity: pattern.severity,
-          count: matches.length,
-        });
-      }
-    }
-
-    return {
-      found: foundPatterns.length > 0,
-      patterns: foundPatterns,
-    };
-  }
-
-  async function scanForMalware(content: Buffer): Promise<MalwareScanResult> {
-    // In production, integrate with ClamAV, VirusTotal, or similar
-    // For now, implement basic signature detection
-
-    const signatures = [
-      {
-        name: 'EICAR Test',
-        pattern: Buffer.from(
-          'WDVPIVAlQEFQWzRcUFpYNTQoUF4pN0NDKTd9JEVJQ0FSLVNUQU5EQVJELUFOVElWSVJVUy1URVNU',
-          'base64'
-        ),
-      },
-      // Add more known malware signatures here
-    ];
-
-    for (const sig of signatures) {
-      if (content.includes(sig.pattern)) {
-        return {
-          clean: false,
-          threatName: sig.name,
-          threatType: 'signature_match',
-          scanEngine: 'internal',
-          scanTime: new Date(),
-        };
-      }
-    }
-
-    // Check for executable headers in non-executable file types
-    const exeHeaders = [
-      Buffer.from([0x4d, 0x5a]), // MZ (DOS/Windows executable)
-      Buffer.from([0x7f, 0x45, 0x4c, 0x46]), // ELF (Linux executable)
-    ];
-
-    for (const header of exeHeaders) {
-      if (content.subarray(0, header.length).equals(header)) {
-        return {
-          clean: false,
-          threatName: 'Executable Content',
-          threatType: 'suspicious_header',
-          scanEngine: 'internal',
-          scanTime: new Date(),
-        };
-      }
-    }
-
-    return {
-      clean: true,
-      scanEngine: 'internal',
-      scanTime: new Date(),
-    };
-  }
-
-  // ===========================================================================
-  // CONTENT HASHING
-  // ===========================================================================
-
-  function hashContent(content: Buffer | string): string {
-    const buffer = typeof content === 'string' ? Buffer.from(content, 'utf-8') : content;
-    return crypto.createHash('sha256').update(buffer).digest('hex');
   }
 
   // ===========================================================================
@@ -954,34 +1061,6 @@ export function createDLPService(
     const existing = await getConfig(tenantId);
     const updated = { ...existing, ...updates };
     await redis.setex(`dlp:config:${tenantId}`, CONFIG_CACHE_TTL, JSON.stringify(updated));
-  }
-
-  // ===========================================================================
-  // HELPERS
-  // ===========================================================================
-
-  function blockTransfer(code: string, reason: string): TransferResult {
-    return {
-      allowed: false,
-      action: 'BLOCKED',
-      reason: `${code}: ${reason}`,
-    };
-  }
-
-  function getFileExtension(fileName?: string): string {
-    if (!fileName) return '';
-    const parts = fileName.split('.');
-    return parts.length > 1 ? `.${parts.pop()?.toLowerCase()}` : '';
-  }
-
-  function formatBytes(bytes: number): string {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let i = 0;
-    while (bytes >= 1024 && i < units.length - 1) {
-      bytes /= 1024;
-      i++;
-    }
-    return `${bytes.toFixed(1)} ${units[i]}`;
   }
 
   async function sendSecurityAlert(

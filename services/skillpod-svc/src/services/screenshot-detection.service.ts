@@ -8,6 +8,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import type { KasmWorkspacesService } from './kasm-workspaces.service.js';
 import type { WebSocketEnforcementService } from './websocket-enforcement.service.js';
@@ -278,32 +279,6 @@ export function createScreenshotDetectionService(
     };
   }
 
-  function identifyCaptureType(processName: string): CaptureType {
-    const lowerName = processName.toLowerCase();
-
-    for (const app of KNOWN_CAPTURE_APPS) {
-      if (lowerName.includes(app.name.toLowerCase())) {
-        return app.type;
-      }
-    }
-
-    // Check for common patterns
-    if (
-      lowerName.includes('screen') &&
-      (lowerName.includes('shot') || lowerName.includes('capture'))
-    ) {
-      return 'THIRD_PARTY_APP';
-    }
-    if (lowerName.includes('record')) {
-      return 'SCREEN_RECORDING';
-    }
-    if (lowerName.includes('remote') || lowerName.includes('rdp')) {
-      return 'REMOTE_DESKTOP';
-    }
-
-    return 'THIRD_PARTY_APP';
-  }
-
   async function terminateSessionForViolation(sessionId: string, reason: string): Promise<void> {
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
@@ -347,7 +322,7 @@ export function createScreenshotDetectionService(
 
   async function getAttemptCount(sessionId: string): Promise<number> {
     const count = await redis.get(`screenshot:attempts:${sessionId}`);
-    return count ? parseInt(count, 10) : 0;
+    return count ? Number.parseInt(count, 10) : 0;
   }
 
   async function getRecentAttempts(sessionId: string, minutes = 60): Promise<ScreenCaptureEvent[]> {
@@ -499,4 +474,34 @@ export function createScreenshotDetectionService(
     // Analytics
     getAttemptStats,
   };
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function identifyCaptureType(processName: string): CaptureType {
+  const lowerName = processName.toLowerCase();
+
+  for (const app of KNOWN_CAPTURE_APPS) {
+    if (lowerName.includes(app.name.toLowerCase())) {
+      return app.type;
+    }
+  }
+
+  // Check for common patterns
+  if (
+    lowerName.includes('screen') &&
+    (lowerName.includes('shot') || lowerName.includes('capture'))
+  ) {
+    return 'THIRD_PARTY_APP';
+  }
+  if (lowerName.includes('record')) {
+    return 'SCREEN_RECORDING';
+  }
+  if (lowerName.includes('remote') || lowerName.includes('rdp')) {
+    return 'REMOTE_DESKTOP';
+  }
+
+  return 'THIRD_PARTY_APP';
 }

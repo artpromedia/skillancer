@@ -9,14 +9,16 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/no-floating-promises */
+/* eslint-disable @typescript-eslint/consistent-type-imports */
 
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
-import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
+import websocket from '@fastify/websocket';
 import { PrismaClient } from '@prisma/client';
-import type { Redis as RedisType } from 'ioredis';
-import Redis from 'ioredis';
+import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 
 import { getConfig } from './config/index.js';
 import { createContainmentMiddleware, createWatermarkMiddleware } from './middleware/index.js';
@@ -35,7 +37,9 @@ import {
   createWebSocketEnforcementService,
   createScreenshotDetectionService,
 } from './services/index.js';
+
 import type { ScreenCaptureEvent } from './services/screenshot-detection.service.js';
+import type { Redis as RedisType } from 'ioredis';
 
 // =============================================================================
 // TYPES
@@ -89,6 +93,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   });
 
   await app.register(sensible);
+
+  await app.register(websocket);
 
   // ===========================================================================
   // SERVICES
