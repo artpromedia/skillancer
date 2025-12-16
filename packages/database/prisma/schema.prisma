@@ -85,6 +85,13 @@ model User {
   // Environment management
   pods                  Pod[]
   templateRatings       TemplateRating[]
+  
+  // Project invitations
+  invitationsSent       ProjectInvitation[]        @relation("InvitationsSent")
+  invitationsReceived   ProjectInvitation[]        @relation("InvitationsReceived")
+  
+  // Project questions
+  questionsAsked        ProjectQuestion[]          @relation("QuestionAsker")
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -432,12 +439,14 @@ model Job {
   deletedAt   DateTime? @map("deleted_at")
 
   // Relations
-  client    User       @relation("ClientJobs", fields: [clientId], references: [id])
-  tenant    Tenant?    @relation(fields: [tenantId], references: [id])
-  bids      Bid[]
-  contracts Contract[]
-  skills    JobSkill[]
-  messages  Message[]  @relation("JobMessages")
+  client      User               @relation("ClientJobs", fields: [clientId], references: [id])
+  tenant      Tenant?            @relation(fields: [tenantId], references: [id])
+  bids        Bid[]
+  contracts   Contract[]
+  skills      JobSkill[]
+  messages    Message[]          @relation("JobMessages")
+  invitations ProjectInvitation[]
+  questions   ProjectQuestion[]
 
   @@index([clientId])
   @@index([tenantId])
@@ -500,7 +509,7 @@ enum ExperienceLevel {
 }
 
 // ============================================================================
-// BIDS
+// BIDS & PROJECT BIDDING SYSTEM
 // ============================================================================
 
 model Bid {
@@ -508,6 +517,7 @@ model Bid {
   jobId        String    @map("job_id") @db.Uuid
   freelancerId String    @map("freelancer_id") @db.Uuid
   status       BidStatus @default(PENDING)
+  bidType      BidType   @default(STANDARD) @map("bid_type")
 
   // Proposal
   coverLetter  String     @map("cover_letter") @db.Text
@@ -516,29 +526,176 @@ model Bid {
   deliveryDays Int?       @map("delivery_days")
   attachments  Json       @default("[]")
 
+  // Milestones proposal
+  proposedMilestones Json? @map("proposed_milestones")
+  // [{ title: string, description: string, amount: number, deliveryDays: number }]
+
+  // Bid quality scoring (anti-spam)
+  qualityScore       Int?      @map("quality_score") // 0-100
+  qualityFactors     Json?     @map("quality_factors")
+  // { relevance: 85, completeness: 90, uniqueness: 70, profileStrength: 95 }
+  isSpam             Boolean   @default(false) @map("is_spam")
+  spamReason         String?   @map("spam_reason") @db.VarChar(500)
+
+  // Visibility & boosting
+  isBoosted          Boolean   @default(false) @map("is_boosted")
+  boostedAt          DateTime? @map("boosted_at")
+  boostExpiresAt     DateTime? @map("boost_expires_at")
+
+  // Client interaction tracking
+  viewedByClientAt   DateTime? @map("viewed_by_client_at")
+  shortlistedAt      DateTime? @map("shortlisted_at")
+  interviewRequestedAt DateTime? @map("interview_requested_at")
+  rejectedAt         DateTime? @map("rejected_at")
+  rejectionReason    String?   @map("rejection_reason") @db.Text
+
+  // Interview scheduling
+  interviewScheduledAt DateTime? @map("interview_scheduled_at")
+  interviewNotes     String?   @map("interview_notes") @db.Text
+
   // Timestamps
   submittedAt DateTime  @default(now()) @map("submitted_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   withdrawnAt DateTime? @map("withdrawn_at")
 
   // Relations
-  job        Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  freelancer User      @relation(fields: [freelancerId], references: [id])
+  job        Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  freelancer User         @relation(fields: [freelancerId], references: [id])
   contract   Contract?
+  messages   BidMessage[]
 
   @@unique([jobId, freelancerId])
   @@index([freelancerId])
   @@index([status])
   @@index([submittedAt])
+  @@index([qualityScore])
+  @@index([isSpam])
   @@map("bids")
+}
+
+model BidMessage {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  bidId     String   @map("bid_id") @db.Uuid
+  senderId  String   @map("sender_id") @db.Uuid
+  
+  // Message content
+  content   String   @db.Text
+  attachments Json   @default("[]")
+  
+  // Message type
+  messageType BidMessageType @default(MESSAGE) @map("message_type")
+  
+  // Read tracking
+  readAt    DateTime? @map("read_at")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  bid       Bid      @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  
+  @@map("bid_messages")
+  @@index([bidId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+model ProjectInvitation {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  jobId     String   @map("job_id") @db.Uuid
+  inviterId String   @map("inviter_id") @db.Uuid // Client who sent invitation
+  inviteeId String   @map("invitee_id") @db.Uuid // Freelancer being invited
+  
+  // Invitation details
+  message   String?  @db.Text
+  
+  // Status
+  status    InvitationStatus @default(PENDING)
+  
+  // Response
+  responseMessage String? @map("response_message") @db.Text
+  respondedAt DateTime?   @map("responded_at")
+  
+  // Timestamps
+  sentAt    DateTime @default(now()) @map("sent_at")
+  expiresAt DateTime @map("expires_at")
+  viewedAt  DateTime? @map("viewed_at")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  inviter   User     @relation("InvitationsSent", fields: [inviterId], references: [id])
+  invitee   User     @relation("InvitationsReceived", fields: [inviteeId], references: [id])
+  
+  @@map("project_invitations")
+  @@unique([jobId, inviteeId])
+  @@index([jobId])
+  @@index([inviterId])
+  @@index([inviteeId])
+  @@index([status])
+}
+
+model ProjectQuestion {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  jobId      String   @map("job_id") @db.Uuid
+  askerId    String   @map("asker_id") @db.Uuid
+  
+  // Question content
+  question   String   @db.Text
+  isPublic   Boolean  @default(true) @map("is_public")
+  isPinned   Boolean  @default(false) @map("is_pinned")
+  
+  // Answer (from client)
+  answer     String?  @db.Text
+  answeredAt DateTime? @map("answered_at")
+  answeredBy String?  @map("answered_by") @db.Uuid
+  
+  // Moderation
+  isHidden   Boolean  @default(false) @map("is_hidden")
+  hiddenReason String? @map("hidden_reason") @db.VarChar(500)
+  
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  asker      User     @relation("QuestionAsker", fields: [askerId], references: [id])
+  
+  @@map("project_questions")
+  @@index([jobId])
+  @@index([askerId])
+  @@index([isPublic])
 }
 
 enum BidStatus {
   PENDING
   SHORTLISTED
+  INTERVIEW_REQUESTED
+  INTERVIEW_SCHEDULED
   ACCEPTED
   REJECTED
   WITHDRAWN
+}
+
+enum BidType {
+  STANDARD        // Regular bid
+  INVITED         // Response to project invitation
+  FEATURED        // Paid featured placement
+}
+
+enum BidMessageType {
+  MESSAGE          // Regular message
+  INTERVIEW_REQUEST // Client requests interview
+  INTERVIEW_SCHEDULED // Interview scheduled
+  CLARIFICATION   // Clarification request
+  COUNTER_OFFER   // Counter offer from client
+  SYSTEM          // System message
+}
+
+enum InvitationStatus {
+  PENDING
+  VIEWED
+  ACCEPTED    // Freelancer submitted bid
+  DECLINED
+  EXPIRED
+  CANCELLED
 }
 
 // ============================================================================
@@ -4226,6 +4383,9 @@ model ResourcePool {
 model TenantResourceQuota {
   id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   tenantId     String   @unique @map("tenant_id") @db.Uuid
+
+  // Relation to Tenant
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // CPU quota
   maxCpu       Int      @map("max_cpu") // Total vCPUs allowed
