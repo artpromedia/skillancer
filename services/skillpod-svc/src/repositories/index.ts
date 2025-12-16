@@ -40,3 +40,46 @@ export {
   type CreateInstanceInput,
   type CreateDetectionInput,
 } from './watermark.repository.js';
+
+// Environment management repositories
+export {
+  createTemplateRepository,
+  type TemplateRepository,
+  type TemplateWithRelations,
+  type CreateTemplateInput,
+  type UpdateTemplateInput,
+  type TemplateListFilter,
+  type TemplateListOptions,
+  type UpsertRatingInput,
+} from './template.repository.js';
+
+export {
+  createImageRepository,
+  type ImageRepository,
+  type CreateBaseImageInput,
+  type UpdateBaseImageInput,
+  type BaseImageListFilter,
+  type BaseImageListOptions,
+} from './image.repository.js';
+
+export {
+  createEnvironmentPodRepository,
+  type EnvironmentPodRepository,
+  type PodWithRelations,
+  type CreatePodInput,
+  type UpdatePodInput,
+  type PodListFilter,
+  type PodListOptions,
+  type CreateResourceHistoryInput,
+  type CreatePodSessionInput,
+} from './environment-pod.repository.js';
+
+export {
+  createResourcePoolRepository,
+  type ResourcePoolRepository,
+  type CreateResourcePoolInput,
+  type UpdateResourcePoolInput,
+  type CreateQuotaInput,
+  type UpdateQuotaInput,
+  type ResourcePoolListFilter,
+} from './resource-pool.repository.js';

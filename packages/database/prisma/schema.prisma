@@ -81,6 +81,10 @@ model User {
   // Session recording
   recordings            SessionRecording[]
   recordingAccessLogs   RecordingAccessLog[]
+  
+  // Environment management
+  pods                  Pod[]
+  templateRatings       TemplateRating[]
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -347,6 +351,12 @@ model Tenant {
   
   // Watermarking
   watermarkConfigurations  WatermarkConfiguration[]
+  
+  // Environment management
+  podTemplates             PodTemplate[]
+  pods                     Pod[]
+  resourcePools            ResourcePool[]
+  resourceQuota            TenantResourceQuota?
 
   @@index([slug])
   @@index([plan])
@@ -875,6 +885,7 @@ model PodSecurityPolicy {
   sessions            Session[]
   exceptions          PolicyException[]
   dataTransferAttempts DataTransferAttempt[]
+  pods                Pod[]
   
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -3909,4 +3920,383 @@ enum InvestigationStatus {
   FALSE_POSITIVE
   INCONCLUSIVE
   RESOLVED
+}
+
+// ============================================================================
+// ENVIRONMENT MANAGEMENT - POD TEMPLATES & RESOURCE POOLS
+// ============================================================================
+
+model PodTemplate {
+  id                     String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId               String?          @map("tenant_id") @db.Uuid // null = global template
+
+  // Template identification
+  name                   String           @db.VarChar(200)
+  slug                   String           @db.VarChar(100)
+  description            String?          @db.Text
+  shortDescription       String?          @map("short_description") @db.VarChar(500)
+
+  // Categorization
+  category               TemplateCategory
+  tags                   String[]
+
+  // Base image
+  baseImageId            String           @map("base_image_id") @db.Uuid
+  kasmImageId            String?          @map("kasm_image_id") @db.VarChar(100) // Kasm registry ID
+  ecrImageUri            String?          @map("ecr_image_uri") @db.VarChar(500) // ECR URI
+
+  // Tools and software
+  installedTools         Json             @map("installed_tools")
+  // [{ name: 'VS Code', version: '1.85', category: 'IDE' }]
+
+  // Configuration
+  defaultConfig          Json             @default("{}") @map("default_config")
+  // { theme: 'dark', extensions: [], settings: {} }
+
+  // Resource defaults
+  defaultResources       Json             @map("default_resources")
+  // { cpu: 2, memory: 4096, storage: 50, gpu: false }
+
+  // Constraints
+  minResources           Json             @map("min_resources")
+  maxResources           Json             @map("max_resources")
+
+  // Startup configuration
+  startupScript          String?          @map("startup_script") @db.Text
+  environmentVars        Json?            @map("environment_vars")
+
+  // Display
+  iconUrl                String?          @map("icon_url") @db.VarChar(500)
+  screenshotUrls         String[]         @map("screenshot_urls")
+  documentationUrl       String?          @map("documentation_url") @db.VarChar(500)
+
+  // Availability
+  isPublic               Boolean          @default(false) @map("is_public")
+  isActive               Boolean          @default(true) @map("is_active")
+  isFeatured             Boolean          @default(false) @map("is_featured")
+
+  // Versioning
+  version                String           @default("1.0.0") @db.VarChar(20)
+  changelog              String?          @db.Text
+
+  // Usage tracking
+  usageCount             Int              @default(0) @map("usage_count")
+  avgRating              Decimal?         @map("avg_rating") @db.Decimal(3, 2)
+  ratingCount            Int              @default(0) @map("rating_count")
+
+  // Estimated launch time
+  estimatedLaunchSeconds Int              @default(120) @map("estimated_launch_seconds")
+
+  createdAt              DateTime         @default(now()) @map("created_at")
+  updatedAt              DateTime         @updatedAt @map("updated_at")
+
+  tenant                 Tenant?          @relation(fields: [tenantId], references: [id])
+  baseImage              BaseImage        @relation(fields: [baseImageId], references: [id])
+  pods                   Pod[]
+  ratings                TemplateRating[]
+
+  @@map("pod_templates")
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([category])
+  @@index([isPublic, isActive])
+  @@index([isFeatured])
+}
+
+model BaseImage {
+  id                String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Image identification
+  name              String       @db.VarChar(200)
+  osType            OsType       @map("os_type")
+  osVersion         String       @map("os_version") @db.VarChar(50)
+
+  // Registry information
+  registryType      RegistryType @map("registry_type")
+  registryUri       String       @map("registry_uri") @db.VarChar(500)
+  imageTag          String       @map("image_tag") @db.VarChar(100)
+  imageDigest       String?      @map("image_digest") @db.VarChar(100)
+
+  // Image details
+  sizeBytes         BigInt       @map("size_bytes")
+  architecture      String       @default("amd64") @db.VarChar(20)
+
+  // Kasm compatibility
+  kasmCompatible    Boolean      @default(true) @map("kasm_compatible")
+  kasmImageId       String?      @map("kasm_image_id") @db.VarChar(100)
+
+  // Pre-installed software
+  preInstalledTools Json         @map("pre_installed_tools")
+
+  // Status
+  isActive          Boolean      @default(true) @map("is_active")
+  lastPulledAt      DateTime?    @map("last_pulled_at")
+  lastVerifiedAt    DateTime?    @map("last_verified_at")
+
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  templates         PodTemplate[]
+
+  @@map("base_images")
+  @@index([osType])
+  @@index([isActive])
+}
+
+model Pod {
+  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  ownerId            String    @map("owner_id") @db.Uuid
+  templateId         String?   @map("template_id") @db.Uuid
+
+  // Pod identification
+  name               String    @db.VarChar(200)
+  description        String?   @db.Text
+
+  // Kasm workspace
+  kasmId             String?   @unique @map("kasm_id") @db.VarChar(100)
+  kasmStatus         String?   @map("kasm_status") @db.VarChar(50)
+
+  // Status
+  status             PodStatus @default(PENDING)
+
+  // Resources (current allocation)
+  currentResources   Json      @map("current_resources")
+  // { cpu: 2, memory: 4096, storage: 50, gpu: false }
+
+  // Resource limits
+  resourceLimits     Json      @map("resource_limits")
+
+  // Auto-scaling configuration
+  autoScalingEnabled Boolean   @default(false) @map("auto_scaling_enabled")
+  autoScalingConfig  Json?     @map("auto_scaling_config")
+
+  // Security
+  securityPolicyId   String?   @map("security_policy_id") @db.Uuid
+  watermarkConfigId  String?   @map("watermark_config_id") @db.Uuid
+
+  // Persistence
+  persistentStorage  Boolean   @default(true) @map("persistent_storage")
+  storageVolumeId    String?   @map("storage_volume_id") @db.VarChar(100)
+
+  // Connection
+  connectionUrl      String?   @map("connection_url") @db.VarChar(500)
+  connectionToken    String?   @map("connection_token") @db.VarChar(1000)
+
+  // Lifecycle
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  lastAccessedAt     DateTime? @map("last_accessed_at")
+  expiresAt          DateTime? @map("expires_at")
+  terminatedAt       DateTime? @map("terminated_at")
+
+  // Cost tracking
+  totalCostCents     Int       @default(0) @map("total_cost_cents")
+
+  tenant             Tenant    @relation(fields: [tenantId], references: [id])
+  owner              User      @relation(fields: [ownerId], references: [id])
+  template           PodTemplate? @relation(fields: [templateId], references: [id])
+  securityPolicy     PodSecurityPolicy? @relation(fields: [securityPolicyId], references: [id])
+  podSessions        PodSession[]
+  resourceHistory    PodResourceHistory[]
+
+  @@map("pods")
+  @@index([tenantId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([kasmId])
+}
+
+model PodSession {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  podId         String    @map("pod_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+
+  // Session details
+  startedAt     DateTime  @map("started_at")
+  endedAt       DateTime? @map("ended_at")
+  durationMins  Int       @default(0) @map("duration_mins")
+
+  // Connection info
+  ipAddress     String?   @map("ip_address") @db.VarChar(45)
+  userAgent     String?   @map("user_agent") @db.Text
+
+  // Cost
+  costCents     Int       @default(0) @map("cost_cents")
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  pod           Pod       @relation(fields: [podId], references: [id])
+
+  @@map("pod_sessions")
+  @@index([podId])
+  @@index([userId])
+  @@index([startedAt])
+}
+
+model PodResourceHistory {
+  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  podId           String            @map("pod_id") @db.Uuid
+
+  // Resource snapshot
+  resources       Json
+  // { cpu: 2, memory: 4096, storage: 50, gpu: false }
+
+  // Utilization at time of snapshot
+  utilization     Json?
+  // { cpuPercent: 75, memoryPercent: 60, storagePercent: 40 }
+
+  // Scaling event
+  scalingEvent    ScalingEventType? @map("scaling_event")
+  scalingReason   String?           @map("scaling_reason") @db.Text
+
+  // Cost
+  hourlyRateCents Int               @map("hourly_rate_cents")
+
+  recordedAt      DateTime          @default(now()) @map("recorded_at")
+
+  pod             Pod               @relation(fields: [podId], references: [id])
+
+  @@map("pod_resource_history")
+  @@index([podId])
+  @@index([recordedAt])
+}
+
+model TemplateRating {
+  id         String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  templateId String      @map("template_id") @db.Uuid
+  userId     String      @map("user_id") @db.Uuid
+
+  rating     Int         // 1-5
+  review     String?     @db.Text
+
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  template   PodTemplate @relation(fields: [templateId], references: [id])
+  user       User        @relation(fields: [userId], references: [id])
+
+  @@map("template_ratings")
+  @@unique([templateId, userId])
+  @@index([templateId])
+}
+
+model ResourcePool {
+  id                 String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId           String?  @map("tenant_id") @db.Uuid // null = shared pool
+
+  // Pool configuration
+  name               String   @db.VarChar(200)
+  description        String?  @db.Text
+
+  // Instance type
+  instanceType       String   @map("instance_type") @db.VarChar(50) // e.g., 'c5.xlarge'
+
+  // Capacity
+  minInstances       Int      @map("min_instances")
+  maxInstances       Int      @map("max_instances")
+  currentInstances   Int      @default(0) @map("current_instances")
+
+  // Warm pool (pre-provisioned instances)
+  warmPoolSize       Int      @default(0) @map("warm_pool_size")
+  warmInstances      Int      @default(0) @map("warm_instances")
+
+  // Auto-scaling
+  scaleUpThreshold   Int      @default(70) @map("scale_up_threshold") // CPU %
+  scaleDownThreshold Int      @default(30) @map("scale_down_threshold")
+  scaleUpCooldown    Int      @default(300) @map("scale_up_cooldown") // seconds
+  scaleDownCooldown  Int      @default(600) @map("scale_down_cooldown")
+
+  // Cost
+  hourlyRateCents    Int      @map("hourly_rate_cents")
+
+  // Status
+  isActive           Boolean  @default(true) @map("is_active")
+
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tenant             Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@map("resource_pools")
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+model TenantResourceQuota {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId     String   @unique @map("tenant_id") @db.Uuid
+
+  // CPU quota
+  maxCpu       Int      @map("max_cpu") // Total vCPUs allowed
+  usedCpu      Int      @default(0) @map("used_cpu")
+
+  // Memory quota
+  maxMemory    Int      @map("max_memory") // Total MB allowed
+  usedMemory   Int      @default(0) @map("used_memory")
+
+  // Storage quota
+  maxStorage   Int      @map("max_storage") // Total GB allowed
+  usedStorage  Int      @default(0) @map("used_storage")
+
+  // Pod count quota
+  maxPods      Int      @map("max_pods")
+  activePods   Int      @default(0) @map("active_pods")
+
+  // GPU quota
+  maxGpus      Int      @default(0) @map("max_gpus")
+  usedGpus     Int      @default(0) @map("used_gpus")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("tenant_resource_quotas")
+  @@index([tenantId])
+}
+
+enum TemplateCategory {
+  DEVELOPMENT
+  FINANCE
+  DESIGN
+  DATA_SCIENCE
+  GENERAL
+  SECURITY
+  DEVOPS
+  CUSTOM
+}
+
+enum OsType {
+  UBUNTU
+  DEBIAN
+  CENTOS
+  AMAZON_LINUX
+  WINDOWS_SERVER
+  WINDOWS_DESKTOP
+}
+
+enum RegistryType {
+  ECR
+  DOCKER_HUB
+  KASM
+  CUSTOM
+}
+
+enum PodStatus {
+  PENDING
+  PROVISIONING
+  STARTING
+  RUNNING
+  STOPPING
+  STOPPED
+  HIBERNATING
+  TERMINATED
+  ERROR
+}
+
+enum ScalingEventType {
+  SCALE_UP
+  SCALE_DOWN
+  MANUAL_CHANGE
+  AUTO_SCALE
+  INITIAL_PROVISION
 }

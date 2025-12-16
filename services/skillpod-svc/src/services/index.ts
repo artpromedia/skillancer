@@ -106,3 +106,41 @@ export type {
   DetectionResult as WatermarkDetectionResult,
   KasmInjectionPayload,
 } from './watermark/index.js';
+
+// Environment management services
+export { createECRService } from './ecr.service.js';
+export type { ECRService, ECRBuildResult, ECRListResult, ImageInfo } from './ecr.service.js';
+
+export { createMetricsService } from './metrics.service.js';
+export type { MetricsService, PodMetrics } from './metrics.service.js';
+
+export { createStorageService } from './storage.service.js';
+export type {
+  StorageService,
+  CreateVolumeParams,
+  VolumeInfo,
+  ResizeVolumeParams,
+  AttachVolumeParams,
+  DetachVolumeParams,
+} from './storage.service.js';
+
+export { createTemplateService, TemplateError } from './template.service.js';
+export type { TemplateService } from './template.service.js';
+
+export { createPodService, PodError } from './pod.service.js';
+export type { PodService, ListPodsParams } from './pod.service.js';
+
+export { createAutoScalingService } from './auto-scaling.service.js';
+export type { AutoScalingService, CooldownStatus, ScalingEvent } from './auto-scaling.service.js';
+
+export { createResourcePoolService } from './resource-pool.service.js';
+export type {
+  ResourcePoolService,
+  CreatePoolParams,
+  UpdatePoolParams,
+  PoolCapacity,
+  AvailableCapacity,
+  CapacityCheck,
+  ReservationToken,
+  QuotaTier,
+} from './resource-pool.service.js';

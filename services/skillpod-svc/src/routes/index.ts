@@ -18,3 +18,7 @@ export {
 } from './websocket.routes.js';
 export { recordingRoutes } from './recording.routes.js';
 export { watermarkRoutes } from './watermark.routes.js';
+
+// Environment management routes
+export { templateRoutes } from './template.routes.js';
+export { environmentPodRoutes } from './environment-pod.routes.js';
