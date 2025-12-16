@@ -16,3 +16,4 @@ export {
   broadcastToSessions,
   getConnectedSessions,
 } from './websocket.routes.js';
+export { recordingRoutes } from './recording.routes.js';

@@ -65,3 +65,24 @@ export type {
   SensitiveDataMatch,
   DLPScanResult,
 } from './dlp.service.js';
+
+export { createRecordingService } from './recording.service.js';
+export type {
+  RecordingService,
+  RecordingConfig,
+  StartRecordingParams,
+  StartRecordingResult,
+  StopRecordingParams,
+  StopRecordingResult,
+  ChunkUploadParams,
+  ChunkUploadResult,
+  ProcessRecordingResult,
+  OcrProcessingResult,
+  PlaybackUrlResult,
+  SearchRecordingsParams,
+  SearchResult,
+  AddMarkerParams,
+  LogAccessParams,
+  CreateRetentionPolicyParams,
+  RecordingStats,
+} from './recording.service.js';

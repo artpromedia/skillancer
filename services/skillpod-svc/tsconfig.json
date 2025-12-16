@@ -5,6 +5,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "types": ["node"],
+    "exactOptionalPropertyTypes": false,
     "paths": {
       "@/*": ["./src/*"],
       "@skillancer/types": ["../../packages/types/src"],

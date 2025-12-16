@@ -5,7 +5,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
 }
 
 datasource db {
@@ -77,6 +77,10 @@ model User {
   hipaaTrainings        HipaaTraining[]
   dataTransferAttempts  DataTransferAttempt[]
   screenCaptureAttempts ScreenCaptureAttempt[]
+  
+  // Session recording
+  recordings            SessionRecording[]
+  recordingAccessLogs   RecordingAccessLog[]
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -336,6 +340,10 @@ model Tenant {
   dataTransferAttempts     DataTransferAttempt[]
   screenCaptureAttempts    ScreenCaptureAttempt[]
   transferOverrideRequests TransferOverrideRequest[]
+  
+  // Session recording
+  recordings               SessionRecording[]
+  retentionPolicies        RecordingRetentionPolicy[]
 
   @@index([slug])
   @@index([plan])
@@ -760,6 +768,9 @@ model Session {
   containmentAuditLogs  ContainmentAuditLog[]
   dataTransferAttempts  DataTransferAttempt[]
   screenCaptureAttempts ScreenCaptureAttempt[]
+  
+  // Session recording
+  recordings            SessionRecording[]
 
   @@index([userId])
   @@index([tenantId])
@@ -3456,4 +3467,265 @@ enum RevocationScope {
   SKILLPOD_ONLY
   ALL_PRODUCTS
   TENANT_WIDE
+}
+
+// ============================================================================
+// SESSION RECORDING SYSTEM
+// ============================================================================
+
+model SessionRecording {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sessionId         String   @map("session_id") @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  
+  // Recording status
+  status            RecordingStatus @default(RECORDING)
+  
+  // Storage
+  storageLocation   String?  @map("storage_location") // S3 URI
+  storageBucket     String?  @map("storage_bucket")
+  storageKey        String?  @map("storage_key")
+  encryptionKeyId   String?  @map("encryption_key_id") // KMS key ID
+  
+  // Recording details
+  format            String   @default("webm")
+  codec             String   @default("vp9")
+  resolution        String?  // "1920x1080"
+  frameRate         Int?     @map("frame_rate") // fps
+  
+  // Duration and size
+  durationSeconds   Int?     @map("duration_seconds")
+  fileSizeBytes     BigInt?  @map("file_size_bytes")
+  
+  // Timeline markers
+  startedAt         DateTime @map("started_at")
+  endedAt           DateTime? @map("ended_at")
+  
+  // Processing
+  processingStatus  ProcessingStatus @default(PENDING) @map("processing_status")
+  processedAt       DateTime? @map("processed_at")
+  thumbnailUrl      String?  @map("thumbnail_url")
+  
+  // OCR/Search
+  ocrStatus         OcrStatus @default(PENDING) @map("ocr_status")
+  ocrCompletedAt    DateTime? @map("ocr_completed_at")
+  
+  // Retention
+  retentionPolicy   String?  @map("retention_policy")
+  expiresAt         DateTime? @map("expires_at")
+  deletedAt         DateTime? @map("deleted_at")
+  
+  // Access tracking
+  viewCount         Int      @default(0) @map("view_count")
+  lastViewedAt      DateTime? @map("last_viewed_at")
+  lastViewedBy      String?  @map("last_viewed_by") @db.Uuid
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  session           Session  @relation(fields: [sessionId], references: [id])
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  user              User     @relation(fields: [userId], references: [id])
+  chunks            RecordingChunk[]
+  markers           RecordingMarker[]
+  accessLogs        RecordingAccessLog[]
+  ocrFrames         RecordingOcrFrame[]
+  
+  @@map("session_recordings")
+  @@index([sessionId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model RecordingChunk {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  recordingId       String   @map("recording_id") @db.Uuid
+  
+  // Chunk details
+  chunkIndex        Int      @map("chunk_index")
+  startOffset       Int      @map("start_offset") // seconds from recording start
+  durationSeconds   Int      @map("duration_seconds")
+  
+  // Storage
+  storageKey        String   @map("storage_key")
+  fileSizeBytes     Int      @map("file_size_bytes")
+  
+  // Status
+  uploadedAt        DateTime @map("uploaded_at")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  recording         SessionRecording @relation(fields: [recordingId], references: [id])
+  
+  @@map("recording_chunks")
+  @@unique([recordingId, chunkIndex])
+  @@index([recordingId])
+}
+
+model RecordingMarker {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  recordingId       String   @map("recording_id") @db.Uuid
+  
+  // Marker details
+  markerType        MarkerType @map("marker_type")
+  timestamp         Int      // seconds from recording start
+  
+  // Metadata
+  label             String? 
+  description       String?
+  metadata          Json?
+  
+  // Auto-detected markers
+  isAutoDetected    Boolean  @default(false) @map("is_auto_detected")
+  detectionSource   String?  @map("detection_source")
+  confidence        Decimal? @db.Decimal(3, 2)
+  
+  // User-added markers
+  createdBy         String?  @map("created_by") @db.Uuid
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  recording         SessionRecording @relation(fields: [recordingId], references: [id])
+  
+  @@map("recording_markers")
+  @@index([recordingId])
+  @@index([markerType])
+  @@index([timestamp])
+}
+
+model RecordingOcrFrame {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  recordingId       String   @map("recording_id") @db.Uuid
+  
+  // Frame details
+  timestamp         Int      // seconds from recording start
+  frameNumber       Int      @map("frame_number")
+  
+  // OCR results
+  extractedText     String   @map("extracted_text") @db.Text
+  textConfidence    Decimal  @map("text_confidence") @db.Decimal(3, 2)
+  
+  // Regions of interest
+  textRegions       Json?    @map("text_regions") // [{x, y, width, height, text}]
+  
+  // Indexing
+  elasticsearchId   String?  @map("elasticsearch_id")
+  indexedAt         DateTime? @map("indexed_at")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  recording         SessionRecording @relation(fields: [recordingId], references: [id])
+  
+  @@map("recording_ocr_frames")
+  @@index([recordingId])
+  @@index([timestamp])
+}
+
+model RecordingAccessLog {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  recordingId       String   @map("recording_id") @db.Uuid
+  
+  // Access details
+  accessType        RecordingAccessType @map("access_type")
+  accessedBy        String   @map("accessed_by") @db.Uuid
+  
+  // Context
+  ipAddress         String?  @map("ip_address")
+  userAgent         String?  @map("user_agent")
+  
+  // Playback details
+  playbackStartTime Int?     @map("playback_start_time") // seconds
+  playbackEndTime   Int?     @map("playback_end_time")
+  playbackDuration  Int?     @map("playback_duration")
+  
+  // Purpose
+  accessReason      String?  @map("access_reason")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  recording         SessionRecording @relation(fields: [recordingId], references: [id])
+  accessedByUser    User     @relation(fields: [accessedBy], references: [id])
+  
+  @@map("recording_access_logs")
+  @@index([recordingId])
+  @@index([accessedBy])
+  @@index([createdAt])
+}
+
+model RecordingRetentionPolicy {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  
+  // Policy details
+  name              String
+  description       String?
+  isDefault         Boolean  @default(false) @map("is_default")
+  
+  // Retention settings
+  retentionDays     Int      @map("retention_days")
+  
+  // Compliance tags
+  complianceTags    String[] @map("compliance_tags") // ['SOC2', 'HIPAA']
+  
+  // Auto-delete
+  autoDeleteEnabled Boolean  @default(true) @map("auto_delete_enabled")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  
+  @@map("recording_retention_policies")
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+enum RecordingStatus {
+  RECORDING
+  STOPPED
+  PROCESSING
+  COMPLETED
+  FAILED
+  DELETED
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum OcrStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum MarkerType {
+  SESSION_START
+  SESSION_END
+  APPLICATION_OPEN
+  APPLICATION_CLOSE
+  FILE_ACCESS
+  CLIPBOARD_ACTIVITY
+  IDLE_START
+  IDLE_END
+  SECURITY_EVENT
+  USER_ADDED
+  ERROR
+}
+
+enum RecordingAccessType {
+  VIEW
+  DOWNLOAD
+  SHARE
+  EXPORT
+  DELETE
 }

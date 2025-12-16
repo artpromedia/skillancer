@@ -29,6 +29,7 @@ import {
   transferOverrideRoutes,
   policyExceptionRoutes,
   killSwitchRoutes,
+  recordingRoutes,
 } from './routes/index.js';
 import {
   createSecurityPolicyService,
@@ -39,6 +40,7 @@ import {
   createScreenshotDetectionService,
   createKillSwitchService,
   createCdnService,
+  createRecordingService,
 } from './services/index.js';
 
 import type { ScreenCaptureEvent } from './services/screenshot-detection.service.js';
@@ -123,6 +125,24 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     wsService,
     cdnService
   );
+  const recordingService = createRecordingService(prisma, redis, kasmService, {
+    s3Bucket:
+      config.service.environment === 'production'
+        ? 'skillpod-recordings-prod'
+        : 'skillpod-recordings-dev',
+    s3Region: 'us-east-1',
+    kmsKeyId: 'alias/skillpod-recordings',
+    cloudfrontDomain:
+      config.service.environment === 'production' ? 'd123.cloudfront.net' : undefined,
+    ocrEnabled: true,
+    ocrSampleIntervalSeconds: 30,
+    elasticsearchEnabled: config.service.environment === 'production',
+    elasticsearchUrl: 'http://localhost:9200',
+    elasticsearchIndex: 'skillpod-recordings',
+    defaultRetentionDays: 90,
+    maxChunkSizeBytes: 50 * 1024 * 1024, // 50MB
+    thumbnailGenerationEnabled: true,
+  });
 
   // ===========================================================================
   // MIDDLEWARE
@@ -198,6 +218,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
       // Kill switch routes
       api.register(killSwitchRoutes(killSwitchService));
+
+      // Session recording routes
+      api.register(recordingRoutes(recordingService));
 
       // Screenshot detection endpoint
       api.post('/screenshot-attempts', async (request) => {
