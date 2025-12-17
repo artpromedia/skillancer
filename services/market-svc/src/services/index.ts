@@ -44,3 +44,15 @@ export type {
   RatingValue,
   TrendDirection,
 } from './reputation.service.js';
+
+// Project Bidding System
+export { ProjectService } from './project.service.js';
+export { BidService } from './bid.service.js';
+export { InvitationService } from './invitation.service.js';
+export { QuestionService } from './question.service.js';
+export { BidQualityService } from './bid-quality.service.js';
+
+// Service Catalog System
+export { ServiceCatalogService } from './service-catalog.service.js';
+export { ServiceOrderService } from './service-order.service.js';
+export { ServiceReviewService } from './service-review.service.js';

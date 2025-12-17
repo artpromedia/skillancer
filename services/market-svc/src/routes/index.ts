@@ -6,6 +6,8 @@
 import { registerAdminReviewRoutes } from './admin-reviews.routes.js';
 import { registerEnhancedReviewRoutes } from './enhanced-reviews.routes.js';
 import { registerReviewRoutes } from './reviews.routes.js';
+import { registerServiceOrdersRoutes } from './service-orders.routes.js';
+import { registerServicesRoutes } from './services.routes.js';
 
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
@@ -45,6 +47,28 @@ export async function registerRoutes(
     },
     { prefix: '/admin/reviews' }
   );
+
+  // Register service catalog routes
+  await fastify.register(
+    (instance) => {
+      registerServicesRoutes(instance, deps);
+    },
+    { prefix: '/services' }
+  );
+
+  // Register service orders routes
+  await fastify.register(
+    (instance) => {
+      registerServiceOrdersRoutes(instance, deps);
+    },
+    { prefix: '/service-orders' }
+  );
 }
 
-export { registerReviewRoutes, registerAdminReviewRoutes, registerEnhancedReviewRoutes };
+export {
+  registerReviewRoutes,
+  registerAdminReviewRoutes,
+  registerEnhancedReviewRoutes,
+  registerServicesRoutes,
+  registerServiceOrdersRoutes,
+};
