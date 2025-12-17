@@ -98,6 +98,11 @@ model User {
   serviceOrdersAsSeller ServiceOrder[]             @relation("ServiceSeller")
   serviceReviewsGiven   ServiceReview[]            @relation("ServiceReviewer")
   serviceOrderMessages  ServiceOrderMessage[]      @relation("ServiceOrderMessageSender")
+  
+  // Compliance
+  freelancerCompliances             FreelancerCompliance[]
+  securityClearances                SecurityClearance[]
+  freelancerComplianceAttestations  FreelancerComplianceAttestation[]
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -370,6 +375,9 @@ model Tenant {
   pods                     Pod[]
   resourcePools            ResourcePool[]
   resourceQuota            TenantResourceQuota?
+  
+  // Compliance
+  tenantComplianceRequirements TenantComplianceRequirement[]
 
   @@index([slug])
   @@index([plan])
@@ -405,6 +413,293 @@ enum TenantRole {
   ADMIN
   MANAGER
   MEMBER
+}
+
+// ============================================================================
+// COMPLIANCE & CERTIFICATIONS
+// ============================================================================
+
+model FreelancerCompliance {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  
+  // Compliance type
+  complianceType    ComplianceType @map("compliance_type")
+  
+  // Certification details
+  certificationName String?   @map("certification_name") @db.VarChar(200)
+  certificationId   String?  @map("certification_id") @db.VarChar(100)
+  issuingOrganization String?  @map("issuing_organization") @db.VarChar(200)
+  
+  // Validity
+  issuedAt          DateTime?  @map("issued_at")
+  expiresAt         DateTime?  @map("expires_at")
+  
+  // Verification
+  verificationStatus ComplianceVerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt        DateTime? @map("verified_at")
+  verifiedBy        String?  @map("verified_by") @db.VarChar(100) // 'SYSTEM', 'MANUAL', provider name
+  verificationDetails Json?  @map("verification_details")
+  
+  // Documentation
+  documentUrl       String?  @map("document_url") @db.VarChar(500)
+  documentHash      String?  @map("document_hash") @db.VarChar(64) // SHA-256 hash for integrity
+  
+  // Self-attestation (for some compliance types)
+  selfAttested      Boolean  @default(false) @map("self_attested")
+  attestedAt        DateTime? @map("attested_at")
+  
+  // Training completion (for training-based compliance)
+  trainingCompleted Boolean  @default(false) @map("training_completed")
+  trainingCompletedAt DateTime? @map("training_completed_at")
+  trainingProvider  String?  @map("training_provider") @db.VarChar(200)
+  
+  // Status
+  isActive          Boolean  @default(true) @map("is_active")
+  
+  // Renewal tracking
+  renewalReminderSent Boolean @default(false) @map("renewal_reminder_sent")
+  renewalReminderSentAt DateTime? @map("renewal_reminder_sent_at")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationLogs  ComplianceVerificationLog[]
+  
+  @@map("freelancer_compliance")
+  @@unique([userId, complianceType])
+  @@index([userId])
+  @@index([complianceType])
+  @@index([verificationStatus])
+  @@index([expiresAt])
+}
+
+model SecurityClearance {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  
+  // Clearance details
+  clearanceLevel    ClearanceLevel @map("clearance_level")
+  grantedBy         String   @map("granted_by") @db.VarChar(200) // Agency/Organization
+  
+  // Investigation
+  investigationType String?   @map("investigation_type") @db.VarChar(50) // 'NACLC', 'SSBI', etc.
+  investigationDate DateTime?  @map("investigation_date")
+  
+  // Validity
+  grantedAt         DateTime @map("granted_at")
+  expiresAt         DateTime?  @map("expires_at")
+  lastReinvestigation DateTime? @map("last_reinvestigation")
+  
+  // Verification
+  verificationStatus ComplianceVerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt        DateTime? @map("verified_at")
+  verificationMethod String?  @map("verification_method") @db.VarChar(100)
+  
+  // Polygraph (if applicable)
+  polygraphCompleted Boolean @default(false) @map("polygraph_completed")
+  polygraphDate     DateTime? @map("polygraph_date")
+  
+  // Status
+  isActive          Boolean  @default(true) @map("is_active")
+  
+  // Notes (for internal use only)
+  internalNotes     String?  @map("internal_notes") @db.Text
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("security_clearances")
+  @@unique([userId, clearanceLevel])
+  @@index([userId])
+  @@index([clearanceLevel])
+  @@index([verificationStatus])
+}
+
+model ComplianceRequirement {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  
+  // Requirement definition
+  code              String   @unique @db.VarChar(50) // 'HIPAA', 'SOC2', 'PCI_DSS', etc.
+  name              String   @db.VarChar(200)
+  description       String   @db.Text
+  category          ComplianceCategory
+  
+  // Requirements
+  requiresCertification Boolean @default(false) @map("requires_certification")
+  requiresTraining  Boolean  @default(false) @map("requires_training")
+  requiresAttestation Boolean @default(false) @map("requires_attestation")
+  requiresBackgroundCheck Boolean @default(false) @map("requires_background_check")
+  
+  // Validity period
+  validityPeriodDays Int?     @map("validity_period_days")
+  
+  // Verification
+  verificationRequired Boolean @default(true) @map("verification_required")
+  verificationProviders String[] @map("verification_providers")
+  
+  // Training resources
+  trainingUrl       String?  @map("training_url") @db.VarChar(500)
+  trainingDurationHours Int?  @map("training_duration_hours")
+  
+  // Certification resources
+  certificationUrl  String?  @map("certification_url") @db.VarChar(500)
+  certificationCost Decimal? @map("certification_cost") @db.Decimal(10, 2)
+  
+  // Status
+  isActive          Boolean  @default(true) @map("is_active")
+  
+  // Metadata
+  regulatoryBody    String?  @map("regulatory_body") @db.VarChar(200)
+  jurisdiction      String[] @default([]) // ['US', 'EU', 'GLOBAL']
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  @@map("compliance_requirements")
+  @@index([category])
+  @@index([isActive])
+}
+
+model TenantComplianceRequirement {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  
+  // Custom requirement
+  code              String   @db.VarChar(50)
+  name              String   @db.VarChar(200)
+  description       String?   @db.Text
+  
+  // Requirements
+  requiresCertification Boolean @default(false) @map("requires_certification")
+  requiresTraining  Boolean  @default(false) @map("requires_training")
+  requiresAttestation Boolean @default(true) @map("requires_attestation")
+  
+  // Attestation questions
+  attestationQuestions Json?  @map("attestation_questions")
+  // [{ question: string, type: 'YES_NO' | 'TEXT', requiredAnswer?: string }]
+  
+  // Validity
+  validityPeriodDays Int?    @map("validity_period_days")
+  
+  // Status
+  isActive          Boolean  @default(true) @map("is_active")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@map("tenant_compliance_requirements")
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model FreelancerComplianceAttestation {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  requirementCode   String   @map("requirement_code") @db.VarChar(50)
+  
+  // For tenant-specific requirements
+  tenantRequirementId String?  @map("tenant_requirement_id") @db.Uuid
+  
+  // Attestation details
+  attestedAt        DateTime @map("attested_at")
+  answers           Json     @default("{}") // Answers to attestation questions
+  
+  // IP and signature
+  ipAddress         String   @map("ip_address") @db.VarChar(45)
+  userAgent         String?   @map("user_agent") @db.VarChar(500)
+  digitalSignature  String?  @map("digital_signature") @db.VarChar(500)
+  
+  // Validity
+  expiresAt         DateTime?  @map("expires_at")
+  isActive          Boolean  @default(true) @map("is_active")
+  
+  // Revocation
+  revokedAt         DateTime? @map("revoked_at")
+  revocationReason  String?  @map("revocation_reason") @db.Text
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("freelancer_compliance_attestations")
+  @@index([userId])
+  @@index([requirementCode])
+  @@index([isActive])
+}
+
+model ComplianceVerificationLog {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  complianceId      String   @map("compliance_id") @db.Uuid
+  
+  // Verification attempt
+  verificationMethod String  @map("verification_method") @db.VarChar(50)
+  verificationProvider String?  @map("verification_provider") @db.VarChar(100)
+  
+  // Result
+  status            ComplianceVerificationStatus
+  failureReason     String?  @map("failure_reason") @db.Text
+  
+  // Response data
+  responseData      Json?    @map("response_data")
+  
+  // Timing
+  attemptedAt       DateTime @map("attempted_at")
+  completedAt       DateTime? @map("completed_at")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  compliance        FreelancerCompliance @relation(fields: [complianceId], references: [id], onDelete: Cascade)
+  
+  @@map("compliance_verification_logs")
+  @@index([complianceId])
+  @@index([attemptedAt])
+}
+
+enum ComplianceType {
+  HIPAA
+  SOC2
+  PCI_DSS
+  GDPR
+  ISO_27001
+  FEDRAMP
+  NIST
+  CCPA
+  FERPA
+  GLBA
+  CUSTOM
+}
+
+enum ComplianceCategory {
+  HEALTHCARE
+  FINANCE
+  GOVERNMENT
+  PRIVACY
+  SECURITY
+  INDUSTRY_SPECIFIC
+  CUSTOM
+}
+
+enum ClearanceLevel {
+  PUBLIC_TRUST
+  CONFIDENTIAL
+  SECRET
+  TOP_SECRET
+  TOP_SECRET_SCI
+}
+
+enum ComplianceVerificationStatus {
+  PENDING
+  IN_PROGRESS
+  VERIFIED
+  FAILED
+  EXPIRED
+  REVOKED
 }
 
 // ============================================================================

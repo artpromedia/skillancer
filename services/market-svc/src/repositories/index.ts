@@ -14,3 +14,6 @@ export * from './review.repository.js';
 export * from './service.repository.js';
 export * from './service-order.repository.js';
 export * from './service-review.repository.js';
+
+// Compliance System
+export * from './compliance.repository.js';
