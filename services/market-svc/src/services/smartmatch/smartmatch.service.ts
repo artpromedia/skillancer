@@ -1,0 +1,782 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/**
+ * @module @skillancer/market-svc/services/smartmatch/smartmatch.service
+ * SmartMatch Service - Intelligent freelancer-to-project matching
+ */
+
+import {
+  buildComponentScore,
+  calculateOverallScore,
+  generateExplanations,
+  normalizeWeights,
+  sortMatches,
+  paginate,
+  generateSearchId,
+  type SortByOption,
+} from './score-utils.js';
+import {
+  scoreCompliance,
+  scoreSkills,
+  scoreExperience,
+  scoreTrust,
+  scoreRate,
+  scoreAvailability,
+  scoreSuccessHistory,
+  scoreResponsiveness,
+  type ComplianceProfile,
+} from './scoring-functions.js';
+import { SmartMatchError, SmartMatchErrorCode } from '../../errors/smartmatch.errors.js';
+import { SmartMatchRepository } from '../../repositories/smartmatch.repository.js';
+
+import type {
+  MatchScoreBreakdown,
+  MatchingCriteria,
+  SmartMatchConfig,
+  SmartMatchWeights,
+  FreelancerSuccessMetrics,
+  FreelancerWorkPattern,
+  RateIntelligence,
+  MatchedFreelancer,
+  FindMatchesResult,
+  FreelancerProfileSummary,
+  ComplianceStatus,
+  MatchingEventType,
+  MatchingOutcome,
+  RelatedSkillMatch,
+  VerificationLevel,
+  ClearanceLevel,
+} from '../../types/smartmatch.types.js';
+import type { PrismaClient } from '@skillancer/database';
+
+// =============================================================================
+// TYPE DEFINITIONS FOR PRISMA RESULTS
+// =============================================================================
+
+interface PrismaSkill {
+  skill: {
+    name: string;
+  };
+}
+
+interface PrismaProfile {
+  yearsExperience?: number | null;
+  hourlyRate?: unknown;
+  title?: string | null;
+}
+
+interface PrismaTrustScore {
+  score?: number | null;
+}
+
+interface PrismaRatingAggregation {
+  averageRating?: unknown;
+  totalReviews?: number | null;
+}
+
+interface PrismaContract {
+  status: string;
+  clientUserId?: string;
+}
+
+interface PrismaCompliance {
+  complianceType: string;
+  expiresAt?: Date | null;
+}
+
+interface PrismaClearance {
+  clearanceLevel: string;
+}
+
+interface FreelancerProfile {
+  id: string;
+  displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  avatarUrl?: string | null;
+  verificationLevel?: string | null;
+  skills: PrismaSkill[];
+  profile?: PrismaProfile | null;
+  trustScore?: PrismaTrustScore | null;
+  ratingAggregation?: PrismaRatingAggregation | null;
+  contractsAsFreelancer: PrismaContract[];
+  freelancerCompliances?: PrismaCompliance[];
+  securityClearances?: PrismaClearance[];
+}
+
+interface WorkPatternData {
+  id: string;
+  userId: string;
+  weeklyHoursAvailable: number | null;
+  preferredHoursPerWeek: number | null;
+  workingDays: string[] | null;
+  workingHoursStart: string | null;
+  workingHoursEnd: string | null;
+  timezone: string | null;
+  avgResponseTimeMinutes: number | null;
+  avgFirstBidTimeHours: number | null;
+  preferredProjectDuration: string[] | null;
+  preferredBudgetMin: unknown;
+  preferredBudgetMax: unknown;
+  preferredLocationType: string[] | null;
+  currentActiveProjects: number | null;
+  maxConcurrentProjects: number | null;
+  unavailablePeriods: unknown;
+  lastActiveAt: Date | null;
+  lastBidAt: Date | null;
+  lastProjectCompletedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface MarketRateData {
+  id: string;
+  skillCategory: string;
+  primarySkill: string | null;
+  experienceLevel: string | null;
+  region: string | null;
+  sampleSize: number;
+  avgHourlyRate: unknown;
+  medianHourlyRate: unknown;
+  minHourlyRate: unknown;
+  maxHourlyRate: unknown;
+  percentile25: unknown;
+  percentile75: unknown;
+  percentile90: unknown;
+  avgFixedProjectRate: unknown;
+  rateChangePct30d: unknown;
+  rateChangePct90d: unknown;
+  periodStart: Date;
+  periodEnd: Date;
+  createdAt: Date;
+}
+
+// =============================================================================
+// SERVICE IMPLEMENTATION
+// =============================================================================
+
+export class SmartMatchService {
+  private readonly repository: SmartMatchRepository;
+
+  constructor(private readonly prisma: PrismaClient) {
+    this.repository = new SmartMatchRepository(prisma);
+  }
+
+  // ===========================================================================
+  // SCORE CALCULATION
+  // ===========================================================================
+
+  /**
+   * Calculate match score for a single freelancer against criteria
+   */
+  async calculateMatchScore(
+    freelancerUserId: string,
+    criteria: MatchingCriteria,
+    config?: Partial<SmartMatchConfig>
+  ): Promise<MatchScoreBreakdown> {
+    // Get freelancer data
+    const [profile, workPattern, successMetrics] = await Promise.all([
+      this.repository.getFreelancerProfile(freelancerUserId),
+      this.repository.getWorkPattern(freelancerUserId),
+      this.getSuccessMetrics(freelancerUserId),
+    ]);
+
+    if (!profile) {
+      throw new SmartMatchError(SmartMatchErrorCode.FREELANCER_NOT_FOUND);
+    }
+
+    // Normalize weights
+    const weights = normalizeWeights(config?.weights ?? {});
+
+    // Build compliance profile
+    const complianceProfile = await this.buildComplianceProfile(freelancerUserId);
+
+    // Get related skills map
+    const relatedSkillsMap = await this.buildRelatedSkillsMap(
+      criteria.skills,
+      profile.skills.map((s) => s.skill.name)
+    );
+
+    // Get endorsement counts
+    const endorsementCounts = await this.repository.getEndorsementCounts(freelancerUserId);
+
+    // Get market rate
+    const marketRate = criteria.skills[0]
+      ? await this.repository.getMarketRate({
+          skillCategory: criteria.skills[0],
+          primarySkill: criteria.skills[0],
+        })
+      : null;
+
+    // Calculate each component score
+    const complianceScore = scoreCompliance(
+      complianceProfile,
+      criteria.requiredCompliance || [],
+      criteria.preferredCompliance || [],
+      criteria.requiredClearance
+    );
+
+    const skillsScore = scoreSkills(
+      profile.skills.map((s) => s.skill.name),
+      criteria.skills,
+      endorsementCounts,
+      relatedSkillsMap
+    );
+
+    const experienceScore = scoreExperience(
+      profile.profile?.yearsExperience ?? null,
+      profile.contractsAsFreelancer.length,
+      criteria.experienceLevel
+    );
+
+    const trustScoreValue = profile.trustScore?.score ?? 50;
+    const trustScoreResult = scoreTrust(
+      trustScoreValue,
+      profile.verificationLevel as VerificationLevel,
+      criteria.minTrustScore
+    );
+
+    const hourlyRate = profile.profile?.hourlyRate ? Number(profile.profile.hourlyRate) : null;
+    const rateScore = scoreRate(
+      hourlyRate,
+      criteria.budgetMin,
+      criteria.budgetMax,
+      marketRate ? this.convertMarketRate(marketRate) : null,
+      criteria.skills[0]
+    );
+
+    const availabilityScore = scoreAvailability(
+      workPattern ? this.convertWorkPattern(workPattern) : null,
+      criteria.startDate,
+      criteria.hoursPerWeek,
+      criteria.timezone,
+      criteria.durationType
+    );
+
+    const successHistoryScore = scoreSuccessHistory(successMetrics);
+
+    const responsivenessScore = scoreResponsiveness(
+      workPattern ? this.convertWorkPattern(workPattern) : null
+    );
+
+    // Build component scores with weights
+    const components: MatchScoreBreakdown['components'] = {
+      compliance: buildComponentScore(complianceScore, weights.compliance),
+      skills: buildComponentScore(skillsScore, weights.skills),
+      experience: buildComponentScore(experienceScore, weights.experience),
+      trust: buildComponentScore(trustScoreResult, weights.trust),
+      rate: buildComponentScore(rateScore, weights.rate),
+      availability: buildComponentScore(availabilityScore, weights.availability),
+      successHistory: buildComponentScore(successHistoryScore, weights.successHistory),
+      responsiveness: buildComponentScore(responsivenessScore, weights.responsiveness),
+    };
+
+    // Calculate overall score
+    const overall = calculateOverallScore(components);
+
+    // Generate explanations
+    const { explanations, warnings, boosts } = generateExplanations(components, criteria);
+
+    return {
+      overall,
+      components,
+      explanations,
+      warnings,
+      boosts,
+    };
+  }
+
+  // ===========================================================================
+  // FIND MATCHES
+  // ===========================================================================
+
+  /**
+   * Find best matching freelancers for given criteria
+   */
+  async findMatches(
+    clientUserId: string,
+    criteria: MatchingCriteria,
+    options: {
+      weights?: Partial<SmartMatchWeights>;
+      page?: number;
+      limit?: number;
+      sortBy?: SortByOption;
+    } = {}
+  ): Promise<FindMatchesResult> {
+    const { page = 1, limit = 20, sortBy = 'score' } = options;
+
+    // Get candidate freelancers
+    const { users } = await this.repository.getFreelancersForMatching({
+      skills: criteria.skills,
+      excludeUserIds: [...(criteria.excludeUserIds || []), clientUserId],
+      limit: 500, // Get more candidates for scoring
+    });
+
+    // Score each candidate
+    const scoredMatches: MatchedFreelancer[] = [];
+
+    for (const user of users) {
+      try {
+        const score = await this.calculateMatchScore(user.id, criteria, {
+          weights: options.weights,
+        });
+
+        // Skip if essential requirements not met (score = 0 in compliance)
+        if (score.components.compliance.score === 0 && criteria.requiredCompliance?.length) {
+          continue;
+        }
+
+        const complianceStatus = this.buildComplianceStatus(
+          user,
+          criteria.requiredCompliance || [],
+          criteria.preferredCompliance || []
+        );
+
+        const freelancerSummary = this.buildFreelancerSummary(user);
+
+        scoredMatches.push({
+          freelancer: freelancerSummary,
+          score,
+          complianceStatus,
+        });
+      } catch {
+        // Skip freelancers that fail scoring
+        continue;
+      }
+    }
+
+    // Sort matches
+    const sortedMatches = sortMatches(scoredMatches, sortBy);
+
+    // Paginate results
+    const paginatedResult = paginate(sortedMatches, { page, limit });
+
+    // Generate search ID for tracking
+    const searchId = generateSearchId();
+
+    // Record matching events for learning
+    await this.recordSearchEvents(clientUserId, criteria, paginatedResult.items, searchId);
+
+    return {
+      matches: paginatedResult.items,
+      total: paginatedResult.total,
+      searchId,
+    };
+  }
+
+  // ===========================================================================
+  // MATCHING EVENTS
+  // ===========================================================================
+
+  /**
+   * Record matching event
+   */
+  async recordMatchingEvent(
+    eventType: MatchingEventType,
+    clientUserId: string,
+    freelancerUserId: string,
+    data: {
+      projectId?: string;
+      serviceId?: string;
+      matchScore?: number;
+      matchRank?: number;
+      matchFactors?: Record<string, number>;
+      searchCriteria?: MatchingCriteria;
+    }
+  ): Promise<void> {
+    await this.repository.createMatchingEvent({
+      eventType,
+      clientUserId,
+      freelancerUserId,
+      ...data,
+    });
+  }
+
+  /**
+   * Update matching outcome
+   */
+  async updateMatchingOutcome(
+    eventId: string,
+    outcome: MatchingOutcome,
+    data?: {
+      wasHired?: boolean;
+      projectSuccessful?: boolean;
+      clientSatisfactionScore?: number;
+    }
+  ): Promise<void> {
+    await this.repository.updateMatchingEventOutcome(eventId, {
+      outcome,
+      ...data,
+    });
+  }
+
+  // ===========================================================================
+  // WORK PATTERN MANAGEMENT
+  // ===========================================================================
+
+  /**
+   * Get work pattern for a freelancer
+   */
+  async getWorkPattern(userId: string) {
+    return this.repository.getWorkPattern(userId);
+  }
+
+  /**
+   * Update work pattern for a freelancer
+   */
+  async updateWorkPattern(
+    userId: string,
+    data: {
+      weeklyHoursAvailable?: number;
+      preferredHoursPerWeek?: number;
+      workingDays?: string[];
+      workingHoursStart?: string;
+      workingHoursEnd?: string;
+      timezone?: string;
+      preferredProjectDuration?: string[];
+      preferredBudgetMin?: number;
+      preferredBudgetMax?: number;
+      preferredLocationType?: string[];
+      maxConcurrentProjects?: number;
+    }
+  ) {
+    return this.repository.upsertWorkPattern(userId, data);
+  }
+
+  /**
+   * Update last activity
+   */
+  async trackActivity(userId: string): Promise<void> {
+    await this.repository.updateLastActive(userId);
+  }
+
+  /**
+   * Update last bid
+   */
+  async trackBid(userId: string): Promise<void> {
+    await this.repository.updateLastBid(userId);
+  }
+
+  // ===========================================================================
+  // SKILL ENDORSEMENTS
+  // ===========================================================================
+
+  /**
+   * Endorse a freelancer's skill
+   */
+  async endorseSkill(
+    endorserUserId: string,
+    freelancerUserId: string,
+    skill: string,
+    data: {
+      endorsementType: 'WORKED_WITH' | 'VERIFIED_SKILL' | 'RECOMMENDATION';
+      projectId?: string;
+      comment?: string;
+    }
+  ) {
+    // Prevent self-endorsement
+    if (endorserUserId === freelancerUserId) {
+      throw new SmartMatchError(SmartMatchErrorCode.SELF_ENDORSEMENT_NOT_ALLOWED);
+    }
+
+    // Check if already endorsed
+    const exists = await this.repository.endorsementExists(freelancerUserId, skill, endorserUserId);
+    if (exists) {
+      throw new SmartMatchError(SmartMatchErrorCode.ENDORSEMENT_EXISTS);
+    }
+
+    return this.repository.createEndorsement(endorserUserId, {
+      userId: freelancerUserId,
+      skill,
+      endorsementType: data.endorsementType,
+      projectId: data.projectId,
+      comment: data.comment,
+    });
+  }
+
+  /**
+   * Get endorsements for a freelancer
+   */
+  async getEndorsements(userId: string, skill?: string) {
+    return this.repository.getSkillEndorsements(userId, skill);
+  }
+
+  // ===========================================================================
+  // SKILL RELATIONSHIPS
+  // ===========================================================================
+
+  /**
+   * Get related skills
+   */
+  async getRelatedSkills(skill: string) {
+    return this.repository.findRelatedSkills(skill);
+  }
+
+  /**
+   * Create skill relationship
+   */
+  async createSkillRelationship(data: {
+    skill1: string;
+    skill2: string;
+    relationshipType: 'PARENT_CHILD' | 'SIBLING' | 'COMPLEMENTARY' | 'PREREQUISITE';
+    strength: number;
+    bidirectional?: boolean;
+  }) {
+    return this.repository.createSkillRelationship(data);
+  }
+
+  // ===========================================================================
+  // RATE INTELLIGENCE
+  // ===========================================================================
+
+  /**
+   * Get market rate for a skill
+   */
+  async getMarketRate(
+    skillCategory: string,
+    primarySkill?: string,
+    experienceLevel?: 'ENTRY' | 'INTERMEDIATE' | 'EXPERT',
+    region?: string
+  ) {
+    return this.repository.getMarketRate({
+      skillCategory,
+      primarySkill,
+      experienceLevel,
+      region,
+    });
+  }
+
+  /**
+   * Get rate trends for a skill
+   */
+  async getRateTrends(skillCategory: string, periods?: number) {
+    return this.repository.getRateTrends(skillCategory, periods);
+  }
+
+  // ===========================================================================
+  // PRIVATE HELPER METHODS
+  // ===========================================================================
+
+  private async buildComplianceProfile(userId: string): Promise<ComplianceProfile> {
+    const profile = await this.repository.getFreelancerProfile(userId);
+
+    if (!profile) {
+      return {
+        complianceTypes: [],
+        clearanceLevels: [],
+        compliances: [],
+      };
+    }
+
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const compliances = (profile.freelancerCompliances || []).map((c) => ({
+      type: c.complianceType,
+      isExpiringSoon: c.expiresAt ? new Date(c.expiresAt) <= thirtyDaysFromNow : false,
+    }));
+
+    return {
+      complianceTypes: compliances.map((c) => c.type),
+      clearanceLevels: (profile.securityClearances || []).map(
+        (c) => c.clearanceLevel
+      ) as ClearanceLevel[],
+      compliances,
+    };
+  }
+
+  private async buildRelatedSkillsMap(
+    requiredSkills: string[],
+    freelancerSkills: string[]
+  ): Promise<Map<string, RelatedSkillMatch | null>> {
+    const map = new Map<string, RelatedSkillMatch | null>();
+    const normalizedFreelancerSkills = freelancerSkills.map((s) => s.toLowerCase());
+
+    for (const skill of requiredSkills) {
+      const normalizedSkill = skill.toLowerCase();
+
+      // If freelancer has exact skill, no need to find related
+      if (normalizedFreelancerSkills.includes(normalizedSkill)) {
+        map.set(normalizedSkill, null);
+        continue;
+      }
+
+      // Find related skills
+      const relatedSkills = await this.repository.findRelatedSkills(skill);
+
+      // Check if freelancer has any related skill
+      const matchingRelated = relatedSkills.find((rel) =>
+        normalizedFreelancerSkills.includes(rel.skill.toLowerCase())
+      );
+
+      map.set(normalizedSkill, matchingRelated || null);
+    }
+
+    return map;
+  }
+
+  private async getSuccessMetrics(userId: string): Promise<FreelancerSuccessMetrics> {
+    const profile = await this.repository.getFreelancerProfile(userId);
+
+    if (!profile) {
+      return {
+        totalProjects: 0,
+        completedProjects: 0,
+        cancelledProjects: 0,
+        avgRating: 0,
+        reviewCount: 0,
+        repeatClientRate: 0,
+        onTimeDeliveryRate: 0,
+      };
+    }
+
+    const contracts = profile.contractsAsFreelancer || [];
+    const completed = contracts.filter((c) => c.status === 'COMPLETED');
+    const cancelled = contracts.filter((c) => c.status === 'CANCELLED');
+
+    // Calculate repeat client rate
+    const clientIds = contracts.map((c) => c.clientUserId).filter(Boolean) as string[];
+    const uniqueClients = new Set(clientIds).size;
+    const repeatClients = clientIds.length > uniqueClients ? clientIds.length - uniqueClients : 0;
+
+    return {
+      totalProjects: contracts.length,
+      completedProjects: completed.length,
+      cancelledProjects: cancelled.length,
+      avgRating: profile.ratingAggregation?.averageRating
+        ? Number(profile.ratingAggregation.averageRating)
+        : 0,
+      reviewCount: profile.ratingAggregation?.totalReviews ?? 0,
+      repeatClientRate: contracts.length > 0 ? repeatClients / contracts.length : 0,
+      onTimeDeliveryRate: completed.length > 0 ? 0.9 : 0, // Placeholder
+    };
+  }
+
+  private convertWorkPattern(pattern: WorkPatternData): FreelancerWorkPattern {
+    return {
+      id: pattern.id,
+      userId: pattern.userId,
+      weeklyHoursAvailable: pattern.weeklyHoursAvailable,
+      preferredHoursPerWeek: pattern.preferredHoursPerWeek,
+      workingDays: pattern.workingDays || [],
+      workingHoursStart: pattern.workingHoursStart,
+      workingHoursEnd: pattern.workingHoursEnd,
+      timezone: pattern.timezone,
+      avgResponseTimeMinutes: pattern.avgResponseTimeMinutes,
+      avgFirstBidTimeHours: pattern.avgFirstBidTimeHours,
+      preferredProjectDuration: pattern.preferredProjectDuration || [],
+      preferredBudgetMin: pattern.preferredBudgetMin ? Number(pattern.preferredBudgetMin) : null,
+      preferredBudgetMax: pattern.preferredBudgetMax ? Number(pattern.preferredBudgetMax) : null,
+      preferredLocationType: pattern.preferredLocationType || [],
+      currentActiveProjects: pattern.currentActiveProjects ?? 0,
+      maxConcurrentProjects: pattern.maxConcurrentProjects ?? 3,
+      unavailablePeriods: pattern.unavailablePeriods,
+      lastActiveAt: pattern.lastActiveAt,
+      lastBidAt: pattern.lastBidAt,
+      lastProjectCompletedAt: pattern.lastProjectCompletedAt,
+      createdAt: pattern.createdAt,
+      updatedAt: pattern.updatedAt,
+    };
+  }
+
+  private convertMarketRate(rate: MarketRateData): RateIntelligence {
+    return {
+      id: rate.id,
+      skillCategory: rate.skillCategory,
+      primarySkill: rate.primarySkill,
+      experienceLevel: rate.experienceLevel,
+      region: rate.region,
+      sampleSize: rate.sampleSize,
+      avgHourlyRate: Number(rate.avgHourlyRate),
+      medianHourlyRate: Number(rate.medianHourlyRate),
+      minHourlyRate: Number(rate.minHourlyRate),
+      maxHourlyRate: Number(rate.maxHourlyRate),
+      percentile25: Number(rate.percentile25),
+      percentile75: Number(rate.percentile75),
+      percentile90: Number(rate.percentile90),
+      avgFixedProjectRate: rate.avgFixedProjectRate ? Number(rate.avgFixedProjectRate) : null,
+      rateChangePct30d: rate.rateChangePct30d ? Number(rate.rateChangePct30d) : null,
+      rateChangePct90d: rate.rateChangePct90d ? Number(rate.rateChangePct90d) : null,
+      periodStart: rate.periodStart,
+      periodEnd: rate.periodEnd,
+      createdAt: rate.createdAt,
+    };
+  }
+
+  private buildComplianceStatus(
+    user: FreelancerProfile,
+    requiredCompliance: string[],
+    _preferredCompliance: string[]
+  ): ComplianceStatus {
+    const userComplianceTypes = (user.freelancerCompliances || []).map((c) => c.complianceType);
+
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const metRequirements = requiredCompliance.filter((r) => userComplianceTypes.includes(r));
+    const missingRequirements = requiredCompliance.filter((r) => !userComplianceTypes.includes(r));
+
+    const expiringRequirements = (user.freelancerCompliances || [])
+      .filter((c) => c.expiresAt && new Date(c.expiresAt) <= thirtyDaysFromNow)
+      .map((c) => c.complianceType);
+
+    return {
+      allRequirementsMet: missingRequirements.length === 0,
+      metRequirements,
+      missingRequirements,
+      expiringRequirements,
+    };
+  }
+
+  private buildFreelancerSummary(user: FreelancerProfile): FreelancerProfileSummary {
+    return {
+      userId: user.id,
+      name: user.displayName || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+      avatarUrl: user.avatarUrl ?? null,
+      headline: user.profile?.title ?? null,
+      skills: (user.skills || []).map((s) => s.skill.name),
+      hourlyRate: user.profile?.hourlyRate ? Number(user.profile.hourlyRate) : null,
+      avgRating: user.ratingAggregation?.averageRating
+        ? Number(user.ratingAggregation.averageRating)
+        : null,
+      reviewCount: user.ratingAggregation?.totalReviews ?? 0,
+      totalProjects: (user.contractsAsFreelancer || []).length,
+      verificationLevel: (user.verificationLevel as VerificationLevel) ?? 'NONE',
+    };
+  }
+
+  private async recordSearchEvents(
+    clientUserId: string,
+    criteria: MatchingCriteria,
+    matches: MatchedFreelancer[],
+    _searchId: string
+  ): Promise<void> {
+    // Record first 10 results for learning
+    const recordPromises = matches.slice(0, 10).map(async (match, index) =>
+      this.repository.createMatchingEvent({
+        eventType: 'SEARCH_RESULT',
+        clientUserId,
+        freelancerUserId: match.freelancer.userId,
+        projectId: criteria.projectId,
+        matchScore: match.score.overall,
+        matchRank: index + 1,
+        matchFactors: {
+          compliance: match.score.components.compliance.weighted,
+          skills: match.score.components.skills.weighted,
+          experience: match.score.components.experience.weighted,
+          trust: match.score.components.trust.weighted,
+          rate: match.score.components.rate.weighted,
+          availability: match.score.components.availability.weighted,
+          successHistory: match.score.components.successHistory.weighted,
+          responsiveness: match.score.components.responsiveness.weighted,
+        },
+        searchCriteria: criteria,
+      })
+    );
+
+    await Promise.allSettled(recordPromises);
+  }
+}

@@ -103,6 +103,13 @@ model User {
   freelancerCompliances             FreelancerCompliance[]
   securityClearances                SecurityClearance[]
   freelancerComplianceAttestations  FreelancerComplianceAttestation[]
+  
+  // SmartMatch
+  workPattern                       FreelancerWorkPattern?
+  skillEndorsementsReceived         FreelancerSkillEndorsement[] @relation("SkillEndorsements")
+  skillEndorsementsGiven            FreelancerSkillEndorsement[] @relation("GivenEndorsements")
+  matchingEventsAsClient            MatchingEvent[] @relation("ClientMatchingEvents")
+  matchingEventsAsFreelancer        MatchingEvent[] @relation("FreelancerMatchingEvents")
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -5159,4 +5166,222 @@ enum ScalingEventType {
   MANUAL_CHANGE
   AUTO_SCALE
   INITIAL_PROVISION
+}
+
+// ============================================================================
+// SMARTMATCH - INTELLIGENT MATCHING SYSTEM
+// ============================================================================
+
+model FreelancerWorkPattern {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String   @unique @map("user_id") @db.Uuid
+  
+  // Availability
+  weeklyHoursAvailable  Int?     @map("weekly_hours_available")
+  preferredHoursPerWeek Int?     @map("preferred_hours_per_week")
+  
+  // Schedule
+  workingDays           String[] @map("working_days") // ['MONDAY', 'TUESDAY', ...]
+  workingHoursStart     String?  @map("working_hours_start") // '09:00'
+  workingHoursEnd       String?  @map("working_hours_end") // '17:00'
+  timezone              String?
+  
+  // Response patterns (calculated from history)
+  avgResponseTimeMinutes Int?    @map("avg_response_time_minutes")
+  avgFirstBidTimeHours   Int?    @map("avg_first_bid_time_hours")
+  
+  // Work preferences
+  preferredProjectDuration String[] @map("preferred_project_duration")
+  preferredBudgetMin       Decimal? @map("preferred_budget_min") @db.Decimal(12, 2)
+  preferredBudgetMax       Decimal? @map("preferred_budget_max") @db.Decimal(12, 2)
+  preferredLocationType    String[] @map("preferred_location_type")
+  
+  // Capacity
+  currentActiveProjects Int @default(0) @map("current_active_projects")
+  maxConcurrentProjects Int @default(3) @map("max_concurrent_projects")
+  
+  // Not available periods
+  unavailablePeriods    Json?    @map("unavailable_periods")
+  // [{ startDate, endDate, reason }]
+  
+  // Last activity
+  lastActiveAt          DateTime? @map("last_active_at")
+  lastBidAt             DateTime? @map("last_bid_at")
+  lastProjectCompletedAt DateTime? @map("last_project_completed_at")
+  
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("freelancer_work_patterns")
+  @@index([timezone])
+  @@index([lastActiveAt])
+}
+
+model MatchingEvent {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  
+  // Context
+  eventType         MatchingEventType @map("event_type")
+  projectId         String?  @map("project_id") @db.Uuid
+  serviceId         String?  @map("service_id") @db.Uuid
+  
+  // Participants
+  clientUserId      String   @map("client_user_id") @db.Uuid
+  freelancerUserId  String   @map("freelancer_user_id") @db.Uuid
+  
+  // Matching context
+  matchScore        Int?     @map("match_score")
+  matchRank         Int?     @map("match_rank")
+  matchFactors      Json?    @map("match_factors")
+  // { compliance: 0.95, skills: 0.85, trust: 0.78, rate: 0.90, ... }
+  
+  // Outcome
+  outcome           MatchingOutcome?
+  outcomeAt         DateTime? @map("outcome_at")
+  
+  // For learning
+  wasHired          Boolean?  @map("was_hired")
+  projectSuccessful Boolean?  @map("project_successful")
+  clientSatisfactionScore Int? @map("client_satisfaction_score")
+  
+  // Metadata
+  searchCriteria    Json?    @map("search_criteria")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  client            User     @relation("ClientMatchingEvents", fields: [clientUserId], references: [id], onDelete: Cascade)
+  freelancer        User     @relation("FreelancerMatchingEvents", fields: [freelancerUserId], references: [id], onDelete: Cascade)
+  
+  @@map("matching_events")
+  @@index([projectId])
+  @@index([freelancerUserId])
+  @@index([clientUserId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model RateIntelligence {
+  id                  String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  
+  // Segmentation
+  skillCategory       String   @map("skill_category")
+  primarySkill        String?  @map("primary_skill")
+  experienceLevel     ExperienceLevel @map("experience_level")
+  region              String?  // 'US', 'EU', 'ASIA', 'GLOBAL'
+  
+  // Rate statistics
+  sampleSize          Int      @map("sample_size")
+  avgHourlyRate       Decimal  @map("avg_hourly_rate") @db.Decimal(10, 2)
+  medianHourlyRate    Decimal  @map("median_hourly_rate") @db.Decimal(10, 2)
+  minHourlyRate       Decimal  @map("min_hourly_rate") @db.Decimal(10, 2)
+  maxHourlyRate       Decimal  @map("max_hourly_rate") @db.Decimal(10, 2)
+  percentile25        Decimal  @db.Decimal(10, 2)
+  percentile75        Decimal  @db.Decimal(10, 2)
+  percentile90        Decimal  @db.Decimal(10, 2)
+  
+  // Fixed project rates
+  avgFixedProjectRate Decimal? @map("avg_fixed_project_rate") @db.Decimal(12, 2)
+  
+  // Trends
+  rateChangePct30d    Decimal? @map("rate_change_pct_30d") @db.Decimal(5, 2)
+  rateChangePct90d    Decimal? @map("rate_change_pct_90d") @db.Decimal(5, 2)
+  
+  // Period
+  periodStart         DateTime @map("period_start")
+  periodEnd           DateTime @map("period_end")
+  
+  createdAt           DateTime @default(now()) @map("created_at")
+  
+  @@map("rate_intelligence")
+  @@unique([skillCategory, primarySkill, experienceLevel, region, periodStart])
+  @@index([skillCategory])
+  @@index([primarySkill])
+}
+
+model SkillRelationship {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  
+  // Skills
+  skill1            String
+  skill2            String
+  
+  // Relationship type
+  relationshipType  SkillRelationType @map("relationship_type")
+  
+  // Strength (0-1)
+  strength          Decimal  @db.Decimal(3, 2)
+  
+  // Bidirectional flag
+  bidirectional     Boolean  @default(true)
+  
+  // Source
+  source            String   // 'MANUAL', 'INFERRED', 'ML_MODEL'
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  @@map("skill_relationships")
+  @@unique([skill1, skill2])
+  @@index([skill1])
+  @@index([skill2])
+}
+
+model FreelancerSkillEndorsement {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  skill             String
+  
+  // Endorsement details
+  endorsedByUserId  String   @map("endorsed_by_user_id") @db.Uuid
+  endorsementType   EndorsementType @map("endorsement_type")
+  
+  // Context
+  projectId         String?  @map("project_id") @db.Uuid
+  comment           String?
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  user              User     @relation("SkillEndorsements", fields: [userId], references: [id], onDelete: Cascade)
+  endorsedBy        User     @relation("GivenEndorsements", fields: [endorsedByUserId], references: [id], onDelete: Cascade)
+  
+  @@map("freelancer_skill_endorsements")
+  @@unique([userId, skill, endorsedByUserId])
+  @@index([userId, skill])
+}
+
+enum MatchingEventType {
+  SEARCH_RESULT
+  RECOMMENDATION
+  INVITATION_SENT
+  BID_SUBMITTED
+  BID_VIEWED
+  BID_SHORTLISTED
+  INTERVIEW_SCHEDULED
+  HIRED
+  PROJECT_COMPLETED
+}
+
+enum MatchingOutcome {
+  IGNORED
+  VIEWED
+  SHORTLISTED
+  INTERVIEWED
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+enum SkillRelationType {
+  PARENT_CHILD      // React -> JavaScript
+  SIBLING           // React <-> Vue
+  COMPLEMENTARY     // Frontend -> UX Design
+  PREREQUISITE      // Kubernetes requires Docker
+}
+
+enum EndorsementType {
+  WORKED_WITH       // Endorsed based on working together
+  VERIFIED_SKILL    // Endorsed after seeing work
+  RECOMMENDATION    // General recommendation
 }
