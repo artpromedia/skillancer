@@ -133,6 +133,19 @@ export type {
   KillSwitchAction,
   AccessRevocation,
   RevocationScope,
+  // Rate Intelligence types
+  RateDataPoint,
+  RateAggregate,
+  FreelancerRateHistory,
+  RateRecommendation,
+  SkillDemandTrend,
+  RateSourceType,
+  RateType,
+  PeriodType,
+  RateChangeReason,
+  RecommendationType,
+  RecommendationStatus,
+  DemandLevel,
 } from '@prisma/client';
 
 // Prisma namespace is already exported via client.ts

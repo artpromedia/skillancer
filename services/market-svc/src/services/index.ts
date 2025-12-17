@@ -56,3 +56,8 @@ export { BidQualityService } from './bid-quality.service.js';
 export { ServiceCatalogService } from './service-catalog.service.js';
 export { ServiceOrderService } from './service-order.service.js';
 export { ServiceReviewService } from './service-review.service.js';
+
+// Rate Intelligence System
+export { RateIntelligenceService, RateIntelligenceError } from './rate-intelligence.service.js';
+export { createRateDataCollectorService } from './rate-data-collector.service.js';
+export type { RateDataCollectorService } from './rate-data-collector.service.js';

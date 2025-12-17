@@ -14,7 +14,7 @@ import type {
   DeliveryFile,
   OrderListParams,
 } from '../types/service-catalog.types.js';
-import type { PrismaClient, Prisma } from '@skillancer/database';
+import type { PrismaClient, Prisma, PackageTier } from '@skillancer/database';
 
 /**
  * Service Order Repository
@@ -39,7 +39,7 @@ export class ServiceOrderRepository {
     sellerId: string;
     packageId: string;
     packageName: string;
-    packageTier: string;
+    packageTier: PackageTier;
     packagePrice: number;
     packageDeliveryDays: number;
     packageRevisionsIncluded: number;
@@ -505,6 +505,7 @@ export class ServiceOrderRepository {
    */
   async createRevisionRequest(
     orderId: string,
+    deliveryId: string,
     data: { description: string; attachments?: Array<{ name: string; url: string }> }
   ) {
     // Get the next revision number
@@ -519,6 +520,7 @@ export class ServiceOrderRepository {
       this.prisma.serviceRevisionRequest.create({
         data: {
           orderId,
+          deliveryId,
           revisionNumber,
           description: data.description,
           attachments: (data.attachments || []) as unknown as Prisma.InputJsonValue,

@@ -51,35 +51,46 @@ export class ServiceOrderService {
   // ===========================================================================
 
   /**
-   * Create a new service order
+   * Validate service is available for ordering
    */
-  async createOrder(buyerId: string, input: CreateOrderInput) {
-    // Get service
-    const service = await this.serviceRepository.findById(input.serviceId);
+  private validateServiceForOrder(
+    service: { status: string; isActive: boolean; freelancerId: string } | null,
+    buyerId: string
+  ): asserts service is NonNullable<typeof service> {
     if (!service) {
       throw new ServiceCatalogError(ServiceCatalogErrorCode.SERVICE_NOT_FOUND);
     }
-
     if (service.status !== 'ACTIVE' || !service.isActive) {
       throw new ServiceCatalogError(ServiceCatalogErrorCode.SERVICE_NOT_ACTIVE);
     }
-
-    // Cannot order own service
     if (service.freelancerId === buyerId) {
       throw new ServiceCatalogError(ServiceCatalogErrorCode.CANNOT_ORDER_OWN_SERVICE);
     }
+  }
 
-    // Get package
-    const pkg = await this.serviceRepository.findPackageById(input.packageId);
-    if (!pkg || pkg.serviceId !== input.serviceId) {
+  /**
+   * Validate package is available for ordering
+   */
+  private validatePackageForOrder(
+    pkg: { isActive: boolean; serviceId: string } | null,
+    serviceId: string
+  ): asserts pkg is NonNullable<typeof pkg> {
+    if (!pkg?.serviceId || pkg.serviceId !== serviceId) {
       throw new ServiceCatalogError(ServiceCatalogErrorCode.PACKAGE_NOT_FOUND);
     }
-
     if (!pkg.isActive) {
       throw new ServiceCatalogError(ServiceCatalogErrorCode.PACKAGE_NOT_ACTIVE);
     }
+  }
 
-    // Calculate pricing - convert Decimals to numbers for arithmetic
+  /**
+   * Calculate order pricing including add-ons
+   */
+  private async calculateOrderPricing(
+    serviceId: string,
+    pkg: { price: number | { toNumber(): number }; deliveryDays: number | { toNumber(): number } },
+    addOnIds?: Array<{ addOnId: string; quantity?: number }>
+  ) {
     const subtotal = Number(pkg.price);
     let addOnsTotal = 0;
     let totalDeliveryDays = Number(pkg.deliveryDays);
@@ -91,34 +102,13 @@ export class ServiceOrderService {
       quantity: number;
     }> = [];
 
-    // Process add-ons
-    if (input.addOnIds && input.addOnIds.length > 0) {
-      for (const addOnItem of input.addOnIds) {
+    if (addOnIds && addOnIds.length > 0) {
+      for (const addOnItem of addOnIds) {
         const addOn = await this.serviceRepository.findAddOnById(addOnItem.addOnId);
-        if (!addOn || addOn.serviceId !== input.serviceId) {
-          throw new ServiceCatalogError(ServiceCatalogErrorCode.ADD_ON_NOT_FOUND);
-        }
+        this.validateAddOnForOrder(addOn, serviceId, addOnItem.quantity);
 
-        if (!addOn.isActive) {
-          throw new ServiceCatalogError(ServiceCatalogErrorCode.ADD_ON_NOT_ACTIVE);
-        }
-
-        // Validate quantity
+        // After validateAddOnForOrder, addOn is guaranteed to be non-null
         const quantity = addOnItem.quantity || 1;
-        if (!addOn.allowQuantity && quantity > 1) {
-          throw new ServiceCatalogError(
-            ServiceCatalogErrorCode.INVALID_ADD_ON_QUANTITY,
-            `Add-on "${addOn.title}" does not allow multiple quantities`
-          );
-        }
-
-        if (addOn.maxQuantity && quantity > addOn.maxQuantity) {
-          throw new ServiceCatalogError(
-            ServiceCatalogErrorCode.INVALID_ADD_ON_QUANTITY,
-            `Add-on "${addOn.title}" has a maximum quantity of ${addOn.maxQuantity}`
-          );
-        }
-
         const addOnPrice = Number(addOn.price) * quantity;
         addOnsTotal += addOnPrice;
         totalDeliveryDays += Number(addOn.additionalDays) * quantity;
@@ -132,6 +122,59 @@ export class ServiceOrderService {
         });
       }
     }
+
+    return { subtotal, addOnsTotal, totalDeliveryDays, addOnDetails };
+  }
+
+  /**
+   * Validate add-on is available for ordering
+   */
+  private validateAddOnForOrder(
+    addOn: {
+      isActive: boolean;
+      serviceId: string;
+      allowQuantity: boolean;
+      maxQuantity: number | null;
+      title: string;
+    } | null,
+    serviceId: string,
+    quantity = 1
+  ): asserts addOn is NonNullable<typeof addOn> {
+    if (!addOn?.serviceId || addOn.serviceId !== serviceId) {
+      throw new ServiceCatalogError(ServiceCatalogErrorCode.ADD_ON_NOT_FOUND);
+    }
+    if (!addOn.isActive) {
+      throw new ServiceCatalogError(ServiceCatalogErrorCode.ADD_ON_NOT_ACTIVE);
+    }
+    if (!addOn.allowQuantity && quantity > 1) {
+      throw new ServiceCatalogError(
+        ServiceCatalogErrorCode.INVALID_ADD_ON_QUANTITY,
+        `Add-on "${addOn.title}" does not allow multiple quantities`
+      );
+    }
+    if (addOn.maxQuantity && quantity > addOn.maxQuantity) {
+      throw new ServiceCatalogError(
+        ServiceCatalogErrorCode.INVALID_ADD_ON_QUANTITY,
+        `Add-on "${addOn.title}" has a maximum quantity of ${addOn.maxQuantity}`
+      );
+    }
+  }
+
+  /**
+   * Create a new service order
+   */
+  async createOrder(buyerId: string, input: CreateOrderInput) {
+    // Get and validate service
+    const service = await this.serviceRepository.findById(input.serviceId);
+    this.validateServiceForOrder(service, buyerId);
+
+    // Get and validate package
+    const pkg = await this.serviceRepository.findPackageById(input.packageId);
+    this.validatePackageForOrder(pkg, input.serviceId);
+
+    // Calculate pricing
+    const { subtotal, addOnsTotal, totalDeliveryDays, addOnDetails } =
+      await this.calculateOrderPricing(input.serviceId, pkg, input.addOnIds);
 
     // Calculate fees and total
     const discount = 0; // TODO: Handle coupons
@@ -428,9 +471,9 @@ export class ServiceOrderService {
 
     // Get the latest delivery
     const deliveries = await this.orderRepository.findDeliveriesByOrderId(orderId);
-    const latestDelivery = deliveries[deliveries.length - 1];
+    const latestDelivery = deliveries.at(-1);
 
-    if (!latestDelivery || latestDelivery.status !== 'PENDING_REVIEW') {
+    if (latestDelivery?.status !== 'PENDING_REVIEW') {
       throw new ServiceCatalogError(ServiceCatalogErrorCode.DELIVERY_NOT_FOUND);
     }
 
@@ -483,7 +526,7 @@ export class ServiceOrderService {
 
     // Get the latest delivery and mark it for revision
     const deliveries = await this.orderRepository.findDeliveriesByOrderId(orderId);
-    const latestDelivery = deliveries[deliveries.length - 1];
+    const latestDelivery = deliveries.at(-1);
 
     if (latestDelivery) {
       await this.orderRepository.requestRevisionForDelivery(latestDelivery.id);

@@ -12,7 +12,7 @@
 
 import { config } from '../config/index.js';
 
-import type { ECRBuildParams, ECRPushResult } from '../types/environment.types.js';
+import type { ECRBuildParams } from '../types/environment.types.js';
 
 // =============================================================================
 // TYPES

@@ -108,12 +108,12 @@ export const DEFAULT_WEIGHTS: SmartMatchWeights = {
 export function normalizeWeights(weights: Partial<SmartMatchWeights>): SmartMatchWeights {
   const merged = { ...DEFAULT_WEIGHTS, ...weights };
 
-  // Ensure weights sum to 1.0
+  // Ensure weights sum to 1
   const sum = Object.values(merged).reduce((a, b) => a + b, 0);
 
-  if (Math.abs(sum - 1.0) > 0.01) {
-    // Normalize weights to sum to 1.0
-    const factor = 1.0 / sum;
+  if (Math.abs(sum - 1) > 0.01) {
+    // Normalize weights to sum to 1
+    const factor = 1 / sum;
     return {
       compliance: merged.compliance * factor,
       skills: merged.skills * factor,
@@ -207,9 +207,16 @@ export function generateScoreCacheKey(
   freelancerUserId: string,
   criteria: MatchingCriteria
 ): string {
+  const sortedSkills = criteria.skills
+    ? [...criteria.skills].sort((a, b) => a.localeCompare(b))
+    : undefined;
+  const sortedCompliance = criteria.requiredCompliance
+    ? [...criteria.requiredCompliance].sort((a, b) => a.localeCompare(b))
+    : undefined;
+
   const criteriaHash = JSON.stringify({
-    skills: criteria.skills?.sort(),
-    requiredCompliance: criteria.requiredCompliance?.sort(),
+    skills: sortedSkills,
+    requiredCompliance: sortedCompliance,
     requiredClearance: criteria.requiredClearance,
     budgetMin: criteria.budgetMin,
     budgetMax: criteria.budgetMax,
@@ -220,7 +227,7 @@ export function generateScoreCacheKey(
   // Simple hash function
   let hash = 0;
   for (let i = 0; i < criteriaHash.length; i++) {
-    const char = criteriaHash.charCodeAt(i);
+    const char = criteriaHash.codePointAt(i) || 0;
     hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
@@ -229,21 +236,31 @@ export function generateScoreCacheKey(
 }
 
 export function generateSearchCacheKey(criteria: MatchingCriteria): string {
+  const sortedSkills = criteria.skills
+    ? [...criteria.skills].sort((a, b) => a.localeCompare(b))
+    : undefined;
+  const sortedCompliance = criteria.requiredCompliance
+    ? [...criteria.requiredCompliance].sort((a, b) => a.localeCompare(b))
+    : undefined;
+  const sortedExclude = criteria.excludeUserIds
+    ? [...criteria.excludeUserIds].sort((a, b) => a.localeCompare(b))
+    : undefined;
+
   const criteriaHash = JSON.stringify({
-    skills: criteria.skills?.sort(),
-    requiredCompliance: criteria.requiredCompliance?.sort(),
+    skills: sortedSkills,
+    requiredCompliance: sortedCompliance,
     requiredClearance: criteria.requiredClearance,
     budgetMin: criteria.budgetMin,
     budgetMax: criteria.budgetMax,
     experienceLevel: criteria.experienceLevel,
     minTrustScore: criteria.minTrustScore,
-    excludeUserIds: criteria.excludeUserIds?.sort(),
+    excludeUserIds: sortedExclude,
   });
 
   // Simple hash function
   let hash = 0;
   for (let i = 0; i < criteriaHash.length; i++) {
-    const char = criteriaHash.charCodeAt(i);
+    const char = criteriaHash.codePointAt(i) || 0;
     hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }

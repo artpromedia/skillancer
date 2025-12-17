@@ -5,7 +5,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
 }
 
 datasource db {
@@ -110,6 +110,10 @@ model User {
   skillEndorsementsGiven            FreelancerSkillEndorsement[] @relation("GivenEndorsements")
   matchingEventsAsClient            MatchingEvent[] @relation("ClientMatchingEvents")
   matchingEventsAsFreelancer        MatchingEvent[] @relation("FreelancerMatchingEvents")
+  
+  // Rate Intelligence
+  rateHistory                       FreelancerRateHistory[]
+  rateRecommendations               RateRecommendation[]
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -5384,4 +5388,291 @@ enum EndorsementType {
   WORKED_WITH       // Endorsed based on working together
   VERIFIED_SKILL    // Endorsed after seeing work
   RECOMMENDATION    // General recommendation
+}
+
+// ============================================================================
+// RATE INTELLIGENCE SYSTEM
+// ============================================================================
+
+model RateDataPoint {
+  id                  String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  
+  // Source
+  sourceType          RateSourceType @map("source_type")
+  sourceId            String         @map("source_id") @db.Uuid // contractId, bidId, serviceOrderId
+  
+  // Categorization
+  primarySkill        String         @map("primary_skill")
+  secondarySkills     String[]       @map("secondary_skills")
+  skillCategory       String         @map("skill_category")
+  
+  // Rate details
+  rateType            RateType       @map("rate_type")
+  hourlyRate          Decimal?       @map("hourly_rate") @db.Decimal(10, 2)
+  fixedRate           Decimal?       @map("fixed_rate") @db.Decimal(12, 2)
+  projectDurationDays Int?           @map("project_duration_days")
+  effectiveHourlyRate Decimal?       @map("effective_hourly_rate") @db.Decimal(10, 2)
+  
+  // Context
+  experienceLevel     ExperienceLevel @map("experience_level")
+  freelancerUserId    String         @map("freelancer_user_id") @db.Uuid
+  clientUserId        String         @map("client_user_id") @db.Uuid
+  
+  // Geography
+  freelancerCountry   String?        @map("freelancer_country")
+  freelancerRegion    String?        @map("freelancer_region") // 'US', 'EU', 'ASIA', etc.
+  clientCountry       String?        @map("client_country")
+  
+  // Outcome
+  wasAccepted         Boolean        @map("was_accepted")
+  projectCompleted    Boolean?       @map("project_completed")
+  clientRating        Int?           @map("client_rating") // 1-5
+  
+  // Compliance premium
+  complianceRequired  String[]       @map("compliance_required")
+  hasCompliancePremium Boolean       @default(false) @map("has_compliance_premium")
+  
+  // Timestamp
+  occurredAt          DateTime       @map("occurred_at")
+  
+  createdAt           DateTime       @default(now()) @map("created_at")
+  
+  @@map("rate_data_points")
+  @@index([primarySkill])
+  @@index([skillCategory])
+  @@index([experienceLevel])
+  @@index([freelancerRegion])
+  @@index([occurredAt])
+  @@index([wasAccepted])
+  @@index([sourceType, sourceId])
+}
+
+model RateAggregate {
+  id                   String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  
+  // Segmentation
+  skillCategory        String          @map("skill_category")
+  primarySkill         String?         @map("primary_skill")
+  experienceLevel      ExperienceLevel @map("experience_level")
+  region               String          // 'US', 'EU', 'ASIA', 'GLOBAL'
+  
+  // Period
+  periodType           PeriodType      @map("period_type")
+  periodStart          DateTime        @map("period_start")
+  periodEnd            DateTime        @map("period_end")
+  
+  // Sample info
+  sampleSize           Int             @map("sample_size")
+  acceptedCount        Int             @map("accepted_count")
+  completedCount       Int             @map("completed_count")
+  
+  // Hourly rate statistics
+  hourlyRateMin        Decimal         @map("hourly_rate_min") @db.Decimal(10, 2)
+  hourlyRateMax        Decimal         @map("hourly_rate_max") @db.Decimal(10, 2)
+  hourlyRateAvg        Decimal         @map("hourly_rate_avg") @db.Decimal(10, 2)
+  hourlyRateMedian     Decimal         @map("hourly_rate_median") @db.Decimal(10, 2)
+  hourlyRateStdDev     Decimal         @map("hourly_rate_std_dev") @db.Decimal(10, 2)
+  
+  // Percentiles
+  hourlyRateP10        Decimal         @map("hourly_rate_p10") @db.Decimal(10, 2)
+  hourlyRateP25        Decimal         @map("hourly_rate_p25") @db.Decimal(10, 2)
+  hourlyRateP75        Decimal         @map("hourly_rate_p75") @db.Decimal(10, 2)
+  hourlyRateP90        Decimal         @map("hourly_rate_p90") @db.Decimal(10, 2)
+  
+  // Fixed rate statistics (for project-based)
+  fixedRateMin         Decimal?        @map("fixed_rate_min") @db.Decimal(12, 2)
+  fixedRateMax         Decimal?        @map("fixed_rate_max") @db.Decimal(12, 2)
+  fixedRateAvg         Decimal?        @map("fixed_rate_avg") @db.Decimal(12, 2)
+  fixedRateMedian      Decimal?        @map("fixed_rate_median") @db.Decimal(12, 2)
+  
+  // Acceptance rate by price tier
+  acceptanceRateLow    Decimal?        @map("acceptance_rate_low") @db.Decimal(5, 4) // < P25
+  acceptanceRateMid    Decimal?        @map("acceptance_rate_mid") @db.Decimal(5, 4) // P25-P75
+  acceptanceRateHigh   Decimal?        @map("acceptance_rate_high") @db.Decimal(5, 4) // > P75
+  
+  // Success correlation
+  avgRatingLowPrice    Decimal?        @map("avg_rating_low_price") @db.Decimal(3, 2)
+  avgRatingMidPrice    Decimal?        @map("avg_rating_mid_price") @db.Decimal(3, 2)
+  avgRatingHighPrice   Decimal?        @map("avg_rating_high_price") @db.Decimal(3, 2)
+  
+  // Compliance premium analysis
+  compliancePremiumPct Decimal?        @map("compliance_premium_pct") @db.Decimal(5, 2)
+  
+  // Trend
+  rateChangeFromPrevious Decimal?      @map("rate_change_from_previous") @db.Decimal(5, 2)
+  
+  createdAt            DateTime        @default(now()) @map("created_at")
+  
+  @@map("rate_aggregates")
+  @@unique([skillCategory, primarySkill, experienceLevel, region, periodType, periodStart])
+  @@index([skillCategory])
+  @@index([primarySkill])
+  @@index([experienceLevel])
+  @@index([region])
+  @@index([periodStart])
+}
+
+model FreelancerRateHistory {
+  id                   String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId               String           @map("user_id") @db.Uuid
+  
+  // Rate change
+  previousHourlyRate   Decimal?         @map("previous_hourly_rate") @db.Decimal(10, 2)
+  newHourlyRate        Decimal          @map("new_hourly_rate") @db.Decimal(10, 2)
+  changeReason         RateChangeReason @map("change_reason")
+  
+  // Context
+  marketPosition       String?          @map("market_position") // 'BELOW_MARKET', 'AT_MARKET', 'ABOVE_MARKET'
+  percentileAtChange   Int?             @map("percentile_at_change")
+  
+  // Impact tracking
+  bidsBeforeChange     Int?             @map("bids_before_change")
+  bidsAfterChange      Int?             @map("bids_after_change")
+  winRateBeforeChange  Decimal?         @map("win_rate_before_change") @db.Decimal(5, 4)
+  winRateAfterChange   Decimal?         @map("win_rate_after_change") @db.Decimal(5, 4)
+  
+  changedAt            DateTime         @map("changed_at")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  
+  user                 User             @relation(fields: [userId], references: [id])
+  
+  @@map("freelancer_rate_history")
+  @@index([userId])
+  @@index([changedAt])
+}
+
+model RateRecommendation {
+  id                      String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                  String               @map("user_id") @db.Uuid
+  
+  // Recommendation type
+  recommendationType      RecommendationType   @map("recommendation_type")
+  
+  // Current state
+  currentRate             Decimal              @map("current_rate") @db.Decimal(10, 2)
+  currentPercentile       Int                  @map("current_percentile")
+  
+  // Recommendation
+  recommendedRateMin      Decimal              @map("recommended_rate_min") @db.Decimal(10, 2)
+  recommendedRateMax      Decimal              @map("recommended_rate_max") @db.Decimal(10, 2)
+  recommendedPercentile   Int                  @map("recommended_percentile")
+  
+  // Reasoning
+  reasons                 Json                 // [{ factor, description, impact }]
+  
+  // Projected impact
+  projectedWinRateChange  Decimal?             @map("projected_win_rate_change") @db.Decimal(5, 4)
+  projectedEarningsChange Decimal?             @map("projected_earnings_change") @db.Decimal(5, 2)
+  
+  // Status
+  status                  RecommendationStatus @default(PENDING)
+  viewedAt                DateTime?            @map("viewed_at")
+  actionTaken             String?              @map("action_taken")
+  actionTakenAt           DateTime?            @map("action_taken_at")
+  
+  // Validity
+  validUntil              DateTime             @map("valid_until")
+  
+  createdAt               DateTime             @default(now()) @map("created_at")
+  
+  user                    User                 @relation(fields: [userId], references: [id])
+  
+  @@map("rate_recommendations")
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SkillDemandTrend {
+  id                       String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  
+  // Skill
+  skill                    String
+  skillCategory            String      @map("skill_category")
+  
+  // Period
+  periodStart              DateTime    @map("period_start")
+  periodEnd                DateTime    @map("period_end")
+  
+  // Demand metrics
+  projectCount             Int         @map("project_count")
+  totalBudget              Decimal     @map("total_budget") @db.Decimal(14, 2)
+  avgBudget                Decimal     @map("avg_budget") @db.Decimal(12, 2)
+  
+  // Supply metrics
+  activeFreelancers        Int         @map("active_freelancers")
+  totalBids                Int         @map("total_bids")
+  avgBidsPerProject        Decimal     @map("avg_bids_per_project") @db.Decimal(5, 2)
+  
+  // Supply/demand ratio
+  demandSupplyRatio        Decimal     @map("demand_supply_ratio") @db.Decimal(5, 2)
+  
+  // Trend
+  demandChangeFromPrevious Decimal?    @map("demand_change_from_previous") @db.Decimal(5, 2)
+  rateChangeFromPrevious   Decimal?    @map("rate_change_from_previous") @db.Decimal(5, 2)
+  
+  // Categorization
+  demandLevel              DemandLevel @map("demand_level")
+  
+  createdAt                DateTime    @default(now()) @map("created_at")
+  
+  @@map("skill_demand_trends")
+  @@unique([skill, periodStart])
+  @@index([skill])
+  @@index([skillCategory])
+  @@index([demandLevel])
+  @@index([periodStart])
+}
+
+enum RateSourceType {
+  CONTRACT
+  BID
+  SERVICE_ORDER
+  PROFILE_RATE
+}
+
+enum RateType {
+  HOURLY
+  FIXED
+  MILESTONE
+}
+
+enum PeriodType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
+enum RateChangeReason {
+  MARKET_ADJUSTMENT
+  EXPERIENCE_INCREASE
+  SKILL_ADDITION
+  DEMAND_BASED
+  RECOMMENDATION_FOLLOWED
+  MANUAL_CHANGE
+}
+
+enum RecommendationType {
+  RATE_INCREASE
+  RATE_DECREASE
+  RATE_OPTIMIZATION
+  SKILL_BASED_ADJUSTMENT
+  DEMAND_BASED_ADJUSTMENT
+}
+
+enum RecommendationStatus {
+  PENDING
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum DemandLevel {
+  VERY_LOW
+  LOW
+  MODERATE
+  HIGH
+  VERY_HIGH
 }

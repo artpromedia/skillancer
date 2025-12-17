@@ -5,9 +5,10 @@
 
 import { registerAdminReviewRoutes } from './admin-reviews.routes.js';
 import { registerEnhancedReviewRoutes } from './enhanced-reviews.routes.js';
+import { rateIntelligenceRoutes } from './rate-intelligence.routes.js';
 import { registerReviewRoutes } from './reviews.routes.js';
-import { registerServiceOrdersRoutes } from './service-orders.routes.js';
-import { registerServicesRoutes } from './services.routes.js';
+import { registerServiceOrderRoutes } from './service-orders.routes.js';
+import { registerServiceRoutes } from './services.routes.js';
 
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
@@ -51,7 +52,7 @@ export async function registerRoutes(
   // Register service catalog routes
   await fastify.register(
     (instance) => {
-      registerServicesRoutes(instance, deps);
+      registerServiceRoutes(instance, deps);
     },
     { prefix: '/services' }
   );
@@ -59,16 +60,24 @@ export async function registerRoutes(
   // Register service orders routes
   await fastify.register(
     (instance) => {
-      registerServiceOrdersRoutes(instance, deps);
+      registerServiceOrderRoutes(instance, deps);
     },
     { prefix: '/service-orders' }
   );
+
+  // Register rate intelligence routes
+  await fastify.register(
+    (instance) => {
+      rateIntelligenceRoutes(instance);
+    },
+    { prefix: '/market' }
+  );
 }
 
-export {
-  registerReviewRoutes,
-  registerAdminReviewRoutes,
-  registerEnhancedReviewRoutes,
-  registerServicesRoutes,
-  registerServiceOrdersRoutes,
-};
+// Re-export route registration functions
+export { registerReviewRoutes } from './reviews.routes.js';
+export { registerAdminReviewRoutes } from './admin-reviews.routes.js';
+export { registerEnhancedReviewRoutes } from './enhanced-reviews.routes.js';
+export { registerServiceRoutes } from './services.routes.js';
+export { registerServiceOrderRoutes } from './service-orders.routes.js';
+export { rateIntelligenceRoutes } from './rate-intelligence.routes.js';

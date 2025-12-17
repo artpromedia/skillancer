@@ -344,30 +344,38 @@ export function createEnvironmentPodRepository(prisma: PrismaClient): Environmen
   }
 
   async function update(id: string, input: UpdatePodInput): Promise<Pod> {
+    // Build update data - only include defined fields
+    const simpleFields = [
+      'name',
+      'description',
+      'status',
+      'kasmId',
+      'kasmStatus',
+      'autoScalingEnabled',
+      'securityPolicyId',
+      'connectionUrl',
+      'connectionToken',
+      'lastAccessedAt',
+      'terminatedAt',
+      'expiresAt',
+      'totalCostCents',
+    ] as const;
+
+    const jsonFields = ['currentResources', 'resourceLimits', 'autoScalingConfig'] as const;
+
     const data: Prisma.PodUpdateInput = {};
 
-    if (input.name !== undefined) data.name = input.name;
-    if (input.description !== undefined) data.description = input.description;
-    if (input.status !== undefined) data.status = input.status;
-    if (input.kasmId !== undefined) data.kasmId = input.kasmId;
-    if (input.kasmStatus !== undefined) data.kasmStatus = input.kasmStatus;
-    if (input.currentResources !== undefined) {
-      data.currentResources = input.currentResources as unknown as Prisma.InputJsonValue;
+    for (const field of simpleFields) {
+      if (input[field] !== undefined) {
+        (data as Record<string, unknown>)[field] = input[field];
+      }
     }
-    if (input.resourceLimits !== undefined) {
-      data.resourceLimits = input.resourceLimits as unknown as Prisma.InputJsonValue;
+
+    for (const field of jsonFields) {
+      if (input[field] !== undefined) {
+        (data as Record<string, unknown>)[field] = input[field] as Prisma.InputJsonValue;
+      }
     }
-    if (input.autoScalingEnabled !== undefined) data.autoScalingEnabled = input.autoScalingEnabled;
-    if (input.autoScalingConfig !== undefined) {
-      data.autoScalingConfig = input.autoScalingConfig as unknown as Prisma.InputJsonValue;
-    }
-    if (input.securityPolicyId !== undefined) data.securityPolicyId = input.securityPolicyId;
-    if (input.connectionUrl !== undefined) data.connectionUrl = input.connectionUrl;
-    if (input.connectionToken !== undefined) data.connectionToken = input.connectionToken;
-    if (input.lastAccessedAt !== undefined) data.lastAccessedAt = input.lastAccessedAt;
-    if (input.terminatedAt !== undefined) data.terminatedAt = input.terminatedAt;
-    if (input.expiresAt !== undefined) data.expiresAt = input.expiresAt;
-    if (input.totalCostCents !== undefined) data.totalCostCents = input.totalCostCents;
 
     return prisma.pod.update({
       where: { id },
@@ -456,16 +464,8 @@ export function createEnvironmentPodRepository(prisma: PrismaClient): Environmen
     });
   }
 
-  async function getRecentResourceHistory(
-    podId: string,
-    limit: number
-  ): Promise<PodResourceHistory[]> {
-    return prisma.podResourceHistory.findMany({
-      where: { podId },
-      orderBy: { recordedAt: 'desc' },
-      take: limit,
-    });
-  }
+  // getRecentResourceHistory is an alias for getResourceHistory for backwards compatibility
+  const getRecentResourceHistory = getResourceHistory;
 
   // ---------------------------------------------------------------------------
   // Pod sessions

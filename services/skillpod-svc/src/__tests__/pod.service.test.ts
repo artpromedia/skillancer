@@ -455,7 +455,7 @@ describe('PodService', () => {
         resources: { ...(mockPod.resources as object), ...newResources },
       } as Pod);
 
-      const result = await podService.resizePod('pod-id', newResources);
+      await podService.resizePod('pod-id', newResources);
 
       expect(mockKasmService.resizeWorkspace).toHaveBeenCalled();
       expect(mockPodRepository.createResourceHistory).toHaveBeenCalled();

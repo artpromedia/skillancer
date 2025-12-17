@@ -64,23 +64,24 @@ export interface AddComplianceInput {
 }
 
 export interface AddClearanceInput {
-  clearanceLevel: ClearanceLevel;
+  level: ClearanceLevel;
   grantedBy: string;
   investigationType?: string;
-  investigationDate?: Date;
-  grantedAt: Date;
-  expiresAt?: Date;
+  investigationDate?: Date | string;
+  grantedDate: Date | string;
+  expirationDate?: Date | string;
   polygraphCompleted?: boolean;
-  polygraphDate?: Date;
+  polygraphDate?: Date | string;
 }
 
 export interface AddAttestationInput {
-  requirementCode: string;
+  requirementId: string;
   tenantRequirementId?: string;
   answers: Record<string, unknown>;
-  ipAddress: string;
+  ipAddress?: string;
   userAgent?: string;
-  digitalSignature?: string;
+  signature?: string;
+  validUntil?: Date | string;
 }
 
 export interface CheckEligibilityInput {

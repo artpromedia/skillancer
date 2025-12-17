@@ -328,46 +328,54 @@ export function createTemplateRepository(prisma: PrismaClient): TemplateReposito
   }
 
   async function update(id: string, input: UpdateTemplateInput): Promise<PodTemplate> {
+    // Build update data object - only include fields that are defined
+    const simpleFields = [
+      'name',
+      'slug',
+      'description',
+      'shortDescription',
+      'category',
+      'tags',
+      'kasmImageId',
+      'ecrImageUri',
+      'startupScript',
+      'iconUrl',
+      'screenshotUrls',
+      'documentationUrl',
+      'isPublic',
+      'isActive',
+      'isFeatured',
+      'version',
+      'changelog',
+      'avgRating',
+      'ratingCount',
+      'usageCount',
+    ] as const;
+
+    const jsonFields = [
+      'installedTools',
+      'defaultConfig',
+      'defaultResources',
+      'minResources',
+      'maxResources',
+      'environmentVars',
+    ] as const;
+
     const data: Prisma.PodTemplateUpdateInput = {};
 
-    if (input.name !== undefined) data.name = input.name;
-    if (input.slug !== undefined) data.slug = input.slug;
-    if (input.description !== undefined) data.description = input.description;
-    if (input.shortDescription !== undefined) data.shortDescription = input.shortDescription;
-    if (input.category !== undefined) data.category = input.category;
-    if (input.tags !== undefined) data.tags = input.tags;
-    if (input.kasmImageId !== undefined) data.kasmImageId = input.kasmImageId;
-    if (input.ecrImageUri !== undefined) data.ecrImageUri = input.ecrImageUri;
-    if (input.installedTools !== undefined) {
-      data.installedTools = input.installedTools as unknown as Prisma.InputJsonValue;
+    // Copy simple fields that are defined
+    for (const field of simpleFields) {
+      if (input[field] !== undefined) {
+        (data as Record<string, unknown>)[field] = input[field];
+      }
     }
-    if (input.defaultConfig !== undefined) {
-      data.defaultConfig = input.defaultConfig as Prisma.InputJsonValue;
+
+    // Copy JSON fields with type casting
+    for (const field of jsonFields) {
+      if (input[field] !== undefined) {
+        (data as Record<string, unknown>)[field] = input[field] as Prisma.InputJsonValue;
+      }
     }
-    if (input.defaultResources !== undefined) {
-      data.defaultResources = input.defaultResources as unknown as Prisma.InputJsonValue;
-    }
-    if (input.minResources !== undefined) {
-      data.minResources = input.minResources as unknown as Prisma.InputJsonValue;
-    }
-    if (input.maxResources !== undefined) {
-      data.maxResources = input.maxResources as unknown as Prisma.InputJsonValue;
-    }
-    if (input.startupScript !== undefined) data.startupScript = input.startupScript;
-    if (input.environmentVars !== undefined) {
-      data.environmentVars = input.environmentVars as Prisma.InputJsonValue;
-    }
-    if (input.iconUrl !== undefined) data.iconUrl = input.iconUrl;
-    if (input.screenshotUrls !== undefined) data.screenshotUrls = input.screenshotUrls;
-    if (input.documentationUrl !== undefined) data.documentationUrl = input.documentationUrl;
-    if (input.isPublic !== undefined) data.isPublic = input.isPublic;
-    if (input.isActive !== undefined) data.isActive = input.isActive;
-    if (input.isFeatured !== undefined) data.isFeatured = input.isFeatured;
-    if (input.version !== undefined) data.version = input.version;
-    if (input.changelog !== undefined) data.changelog = input.changelog;
-    if (input.avgRating !== undefined) data.avgRating = input.avgRating;
-    if (input.ratingCount !== undefined) data.ratingCount = input.ratingCount;
-    if (input.usageCount !== undefined) data.usageCount = input.usageCount;
 
     return prisma.podTemplate.update({
       where: { id },

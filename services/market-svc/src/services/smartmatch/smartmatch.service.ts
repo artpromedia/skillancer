@@ -593,13 +593,13 @@ export class SmartMatchService {
     freelancerSkills: string[]
   ): Promise<Map<string, RelatedSkillMatch | null>> {
     const map = new Map<string, RelatedSkillMatch | null>();
-    const normalizedFreelancerSkills = freelancerSkills.map((s) => s.toLowerCase());
+    const normalizedFreelancerSkills = new Set(freelancerSkills.map((s) => s.toLowerCase()));
 
     for (const skill of requiredSkills) {
       const normalizedSkill = skill.toLowerCase();
 
       // If freelancer has exact skill, no need to find related
-      if (normalizedFreelancerSkills.includes(normalizedSkill)) {
+      if (normalizedFreelancerSkills.has(normalizedSkill)) {
         map.set(normalizedSkill, null);
         continue;
       }
@@ -711,13 +711,15 @@ export class SmartMatchService {
     requiredCompliance: string[],
     _preferredCompliance: string[]
   ): ComplianceStatus {
-    const userComplianceTypes = (user.freelancerCompliances || []).map((c) => c.complianceType);
+    const userComplianceTypes = new Set(
+      (user.freelancerCompliances || []).map((c) => c.complianceType)
+    );
 
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const metRequirements = requiredCompliance.filter((r) => userComplianceTypes.includes(r));
-    const missingRequirements = requiredCompliance.filter((r) => !userComplianceTypes.includes(r));
+    const metRequirements = requiredCompliance.filter((r) => userComplianceTypes.has(r));
+    const missingRequirements = requiredCompliance.filter((r) => !userComplianceTypes.has(r));
 
     const expiringRequirements = (user.freelancerCompliances || [])
       .filter((c) => c.expiresAt && new Date(c.expiresAt) <= thirtyDaysFromNow)

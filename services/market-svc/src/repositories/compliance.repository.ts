@@ -9,6 +9,8 @@
  * Compliance data access layer for freelancer compliance management
  */
 
+import { type PrismaClient, Prisma } from '@skillancer/database';
+
 import type {
   AddComplianceInput,
   AddClearanceInput,
@@ -16,8 +18,8 @@ import type {
   ComplianceType,
   ClearanceLevel,
   ComplianceVerificationStatus,
+  ComplianceCategory,
 } from '../types/compliance.types.js';
-import type { PrismaClient, Prisma } from '@skillancer/database';
 
 // ============================================================================
 // Types for repository operations
@@ -101,19 +103,19 @@ export class ComplianceRepository {
     return this.prisma.freelancerCompliance.create({
       data: {
         userId,
-        type: input.type,
-        category: input.category,
-        certificationNumber: input.certificationNumber ?? null,
+        complianceType: input.complianceType,
+        certificationName: input.certificationName ?? null,
+        certificationId: input.certificationId ?? null,
         issuingOrganization: input.issuingOrganization ?? null,
-        issueDate: input.issueDate ? new Date(input.issueDate) : null,
-        expirationDate: input.expirationDate ? new Date(input.expirationDate) : null,
+        issuedAt: input.issuedAt ?? null,
+        expiresAt: input.expiresAt ?? null,
         documentUrl: input.documentUrl ?? null,
-        documentMetadata: (input.documentMetadata as Prisma.InputJsonValue) ?? null,
-        trainingHours: input.trainingHours ?? null,
+        selfAttested: input.selfAttested ?? false,
+        attestedAt: input.selfAttested ? new Date() : null,
+        trainingCompleted: input.trainingCompleted ?? false,
+        trainingCompletedAt: input.trainingCompleted ? new Date() : null,
         trainingProvider: input.trainingProvider ?? null,
-        trainingCompletedAt: input.trainingCompletedAt ? new Date(input.trainingCompletedAt) : null,
         verificationStatus: 'PENDING',
-        metadata: (input.metadata as Prisma.InputJsonValue) ?? null,
       },
     });
   }
@@ -129,7 +131,8 @@ export class ComplianceRepository {
           select: {
             id: true,
             email: true,
-            fullName: true,
+            firstName: true,
+            lastName: true,
           },
         },
         verificationLogs: {
@@ -146,9 +149,9 @@ export class ComplianceRepository {
   async findComplianceByUserAndType(userId: string, type: ComplianceType) {
     return this.prisma.freelancerCompliance.findUnique({
       where: {
-        userId_type: {
+        userId_complianceType: {
           userId,
-          type,
+          complianceType: type,
         },
       },
     });
@@ -162,10 +165,10 @@ export class ComplianceRepository {
 
     const where: Prisma.FreelancerComplianceWhereInput = {
       userId,
-      ...(type && { type }),
+      ...(type && { complianceType: type }),
       ...(status && { verificationStatus: status }),
       ...(!includeExpired && {
-        OR: [{ expirationDate: null }, { expirationDate: { gte: new Date() } }],
+        OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
       }),
     };
 
@@ -194,43 +197,51 @@ export class ComplianceRepository {
   async updateCompliance(
     id: string,
     data: Partial<{
-      certificationNumber: string;
+      certificationName: string;
+      certificationId: string;
       issuingOrganization: string;
-      issueDate: Date;
-      expirationDate: Date;
+      issuedAt: Date;
+      expiresAt: Date;
       documentUrl: string;
-      documentMetadata: Record<string, unknown>;
-      trainingHours: number;
+      selfAttested: boolean;
+      attestedAt: Date;
+      trainingCompleted: boolean;
       trainingProvider: string;
       trainingCompletedAt: Date;
       verificationStatus: ComplianceVerificationStatus;
       verifiedAt: Date;
       verifiedBy: string;
-      metadata: Record<string, unknown>;
+      verificationDetails: Record<string, unknown>;
     }>
   ) {
     return this.prisma.freelancerCompliance.update({
       where: { id },
       data: {
-        ...(data.certificationNumber !== undefined && {
-          certificationNumber: data.certificationNumber,
+        ...(data.certificationName !== undefined && {
+          certificationName: data.certificationName,
+        }),
+        ...(data.certificationId !== undefined && {
+          certificationId: data.certificationId,
         }),
         ...(data.issuingOrganization !== undefined && {
           issuingOrganization: data.issuingOrganization,
         }),
-        ...(data.issueDate && { issueDate: data.issueDate }),
-        ...(data.expirationDate && { expirationDate: data.expirationDate }),
+        ...(data.issuedAt && { issuedAt: data.issuedAt }),
+        ...(data.expiresAt && { expiresAt: data.expiresAt }),
         ...(data.documentUrl !== undefined && { documentUrl: data.documentUrl }),
-        ...(data.documentMetadata && {
-          documentMetadata: data.documentMetadata as Prisma.InputJsonValue,
+        ...(data.selfAttested !== undefined && { selfAttested: data.selfAttested }),
+        ...(data.attestedAt && { attestedAt: data.attestedAt }),
+        ...(data.trainingCompleted !== undefined && {
+          trainingCompleted: data.trainingCompleted,
         }),
-        ...(data.trainingHours !== undefined && { trainingHours: data.trainingHours }),
         ...(data.trainingProvider !== undefined && { trainingProvider: data.trainingProvider }),
         ...(data.trainingCompletedAt && { trainingCompletedAt: data.trainingCompletedAt }),
         ...(data.verificationStatus && { verificationStatus: data.verificationStatus }),
         ...(data.verifiedAt && { verifiedAt: data.verifiedAt }),
         ...(data.verifiedBy && { verifiedBy: data.verifiedBy }),
-        ...(data.metadata && { metadata: data.metadata as Prisma.InputJsonValue }),
+        ...(data.verificationDetails && {
+          verificationDetails: data.verificationDetails as Prisma.InputJsonValue,
+        }),
       },
     });
   }
@@ -254,7 +265,7 @@ export class ComplianceRepository {
 
     return this.prisma.freelancerCompliance.findMany({
       where: {
-        expirationDate: {
+        expiresAt: {
           gte: now,
           lte: futureDate,
         },
@@ -265,11 +276,12 @@ export class ComplianceRepository {
           select: {
             id: true,
             email: true,
-            fullName: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },
-      orderBy: { expirationDate: 'asc' },
+      orderBy: { expiresAt: 'asc' },
     });
   }
 
@@ -279,7 +291,7 @@ export class ComplianceRepository {
   async getExpiredCompliances() {
     return this.prisma.freelancerCompliance.findMany({
       where: {
-        expirationDate: {
+        expiresAt: {
           lt: new Date(),
         },
         verificationStatus: {
@@ -310,16 +322,16 @@ export class ComplianceRepository {
     return this.prisma.securityClearance.create({
       data: {
         userId,
-        level: input.level,
+        clearanceLevel: input.level,
         grantedBy: input.grantedBy,
-        caseNumber: input.caseNumber ?? null,
-        grantedDate: new Date(input.grantedDate),
-        expirationDate: input.expirationDate ? new Date(input.expirationDate) : null,
+        grantedAt: new Date(input.grantedDate),
+        expiresAt: input.expirationDate ? new Date(input.expirationDate) : null,
         investigationType: input.investigationType ?? null,
-        polygraphType: input.polygraphType ?? null,
-        documentUrl: input.documentUrl ?? null,
+        investigationDate: input.investigationDate ? new Date(input.investigationDate) : null,
+        polygraphCompleted: input.polygraphCompleted ?? false,
+        polygraphDate: input.polygraphDate ? new Date(input.polygraphDate) : null,
+        verificationStatus: 'PENDING',
         isActive: true,
-        metadata: (input.metadata as Prisma.InputJsonValue) ?? null,
       },
     });
   }
@@ -335,7 +347,8 @@ export class ComplianceRepository {
           select: {
             id: true,
             email: true,
-            fullName: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },
@@ -348,9 +361,9 @@ export class ComplianceRepository {
   async findClearanceByUserAndLevel(userId: string, level: ClearanceLevel) {
     return this.prisma.securityClearance.findUnique({
       where: {
-        userId_level: {
+        userId_clearanceLevel: {
           userId,
-          level,
+          clearanceLevel: level,
         },
       },
     });
@@ -364,17 +377,17 @@ export class ComplianceRepository {
 
     const where: Prisma.SecurityClearanceWhereInput = {
       userId,
-      ...(level && { level }),
+      ...(level && { clearanceLevel: level }),
       ...(isActive !== undefined && { isActive }),
       ...(!includeExpired && {
-        OR: [{ expirationDate: null }, { expirationDate: { gte: new Date() } }],
+        OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
       }),
     };
 
     const [items, total] = await Promise.all([
       this.prisma.securityClearance.findMany({
         where,
-        orderBy: { grantedDate: 'desc' },
+        orderBy: { grantedAt: 'desc' },
         take: limit,
         skip: offset,
       }),
@@ -391,30 +404,40 @@ export class ComplianceRepository {
     id: string,
     data: Partial<{
       grantedBy: string;
-      caseNumber: string;
-      grantedDate: Date;
-      expirationDate: Date;
+      grantedAt: Date;
+      expiresAt: Date;
       investigationType: string;
-      polygraphType: string;
-      documentUrl: string;
+      investigationDate: Date;
+      polygraphCompleted: boolean;
+      polygraphDate: Date;
+      verificationStatus: ComplianceVerificationStatus;
+      verifiedAt: Date;
+      verificationMethod: string;
       isActive: boolean;
-      metadata: Record<string, unknown>;
+      internalNotes: string;
     }>
   ) {
     return this.prisma.securityClearance.update({
       where: { id },
       data: {
         ...(data.grantedBy !== undefined && { grantedBy: data.grantedBy }),
-        ...(data.caseNumber !== undefined && { caseNumber: data.caseNumber }),
-        ...(data.grantedDate && { grantedDate: data.grantedDate }),
-        ...(data.expirationDate && { expirationDate: data.expirationDate }),
+        ...(data.grantedAt && { grantedAt: data.grantedAt }),
+        ...(data.expiresAt && { expiresAt: data.expiresAt }),
         ...(data.investigationType !== undefined && {
           investigationType: data.investigationType,
         }),
-        ...(data.polygraphType !== undefined && { polygraphType: data.polygraphType }),
-        ...(data.documentUrl !== undefined && { documentUrl: data.documentUrl }),
+        ...(data.investigationDate && { investigationDate: data.investigationDate }),
+        ...(data.polygraphCompleted !== undefined && {
+          polygraphCompleted: data.polygraphCompleted,
+        }),
+        ...(data.polygraphDate && { polygraphDate: data.polygraphDate }),
+        ...(data.verificationStatus && { verificationStatus: data.verificationStatus }),
+        ...(data.verifiedAt && { verifiedAt: data.verifiedAt }),
+        ...(data.verificationMethod !== undefined && {
+          verificationMethod: data.verificationMethod,
+        }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
-        ...(data.metadata && { metadata: data.metadata as Prisma.InputJsonValue }),
+        ...(data.internalNotes !== undefined && { internalNotes: data.internalNotes }),
       },
     });
   }
@@ -438,7 +461,7 @@ export class ComplianceRepository {
 
     return this.prisma.securityClearance.findMany({
       where: {
-        expirationDate: {
+        expiresAt: {
           gte: now,
           lte: futureDate,
         },
@@ -449,11 +472,12 @@ export class ComplianceRepository {
           select: {
             id: true,
             email: true,
-            fullName: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },
-      orderBy: { expirationDate: 'asc' },
+      orderBy: { expiresAt: 'asc' },
     });
   }
 
@@ -466,24 +490,22 @@ export class ComplianceRepository {
    */
   async addAttestation(userId: string, input: AddAttestationInput) {
     // Calculate expiration date (default: 1 year from now)
-    const validUntil = input.validUntil
+    const expiresAt = input.validUntil
       ? new Date(input.validUntil)
       : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
 
     return this.prisma.freelancerComplianceAttestation.create({
       data: {
         userId,
-        requirementId: input.requirementId,
+        requirementCode: input.requirementId,
+        tenantRequirementId: input.tenantRequirementId ?? null,
         attestedAt: new Date(),
-        validUntil,
+        expiresAt,
         answers: input.answers as Prisma.InputJsonValue,
-        ipAddress: input.ipAddress ?? null,
+        ipAddress: input.ipAddress ?? '',
         userAgent: input.userAgent ?? null,
-        signature: input.signature ?? null,
-        metadata: (input.metadata as Prisma.InputJsonValue) ?? null,
-      },
-      include: {
-        requirement: true,
+        digitalSignature: input.signature ?? null,
+        isActive: true,
       },
     });
   }
@@ -499,10 +521,10 @@ export class ComplianceRepository {
           select: {
             id: true,
             email: true,
-            fullName: true,
+            firstName: true,
+            lastName: true,
           },
         },
-        requirement: true,
       },
     });
   }
@@ -510,15 +532,13 @@ export class ComplianceRepository {
   /**
    * Find active attestation by user and requirement
    */
-  async findActiveAttestation(userId: string, requirementId: string) {
+  async findActiveAttestation(userId: string, requirementCode: string) {
     return this.prisma.freelancerComplianceAttestation.findFirst({
       where: {
         userId,
-        requirementId,
-        validUntil: { gte: new Date() },
-      },
-      include: {
-        requirement: true,
+        requirementCode,
+        expiresAt: { gte: new Date() },
+        isActive: true,
       },
     });
   }
@@ -531,8 +551,8 @@ export class ComplianceRepository {
 
     const where: Prisma.FreelancerComplianceAttestationWhereInput = {
       userId,
-      ...(requirementId && { requirementId }),
-      ...(!includeExpired && { validUntil: { gte: new Date() } }),
+      ...(requirementId && { requirementCode: requirementId }),
+      ...(!includeExpired && { expiresAt: { gte: new Date() }, isActive: true }),
     };
 
     const [items, total] = await Promise.all([
@@ -541,9 +561,6 @@ export class ComplianceRepository {
         orderBy: { attestedAt: 'desc' },
         take: limit,
         skip: offset,
-        include: {
-          requirement: true,
-        },
       }),
       this.prisma.freelancerComplianceAttestation.count({ where }),
     ]);
@@ -561,22 +578,23 @@ export class ComplianceRepository {
 
     return this.prisma.freelancerComplianceAttestation.findMany({
       where: {
-        validUntil: {
+        expiresAt: {
           gte: now,
           lte: futureDate,
         },
+        isActive: true,
       },
       include: {
         user: {
           select: {
             id: true,
             email: true,
-            fullName: true,
+            firstName: true,
+            lastName: true,
           },
         },
-        requirement: true,
       },
-      orderBy: { validUntil: 'asc' },
+      orderBy: { expiresAt: 'asc' },
     });
   }
 
@@ -596,7 +614,7 @@ export class ComplianceRepository {
   /**
    * List all active requirements
    */
-  async listRequirements(params: { isActive?: boolean; category?: string }) {
+  async listRequirements(params: { isActive?: boolean; category?: ComplianceCategory }) {
     const { isActive = true, category } = params;
 
     return this.prisma.complianceRequirement.findMany({
@@ -612,24 +630,36 @@ export class ComplianceRepository {
    * Create a compliance requirement
    */
   async createRequirement(data: {
+    code: string;
     name: string;
     description: string;
-    category: string;
-    requiredComplianceTypes: ComplianceType[];
-    requiredClearanceLevel?: ClearanceLevel;
-    attestationQuestions: Array<{ question: string; required: boolean }>;
+    category: ComplianceCategory;
+    requiresCertification?: boolean;
+    requiresTraining?: boolean;
+    requiresAttestation?: boolean;
+    requiresBackgroundCheck?: boolean;
     validityPeriodDays?: number;
+    verificationRequired?: boolean;
+    verificationProviders?: string[];
+    trainingUrl?: string;
+    certificationUrl?: string;
     isActive?: boolean;
   }) {
     return this.prisma.complianceRequirement.create({
       data: {
+        code: data.code,
         name: data.name,
         description: data.description,
         category: data.category,
-        requiredComplianceTypes: data.requiredComplianceTypes,
-        requiredClearanceLevel: data.requiredClearanceLevel ?? null,
-        attestationQuestions: data.attestationQuestions as Prisma.InputJsonValue,
+        requiresCertification: data.requiresCertification ?? false,
+        requiresTraining: data.requiresTraining ?? false,
+        requiresAttestation: data.requiresAttestation ?? false,
+        requiresBackgroundCheck: data.requiresBackgroundCheck ?? false,
         validityPeriodDays: data.validityPeriodDays ?? 365,
+        verificationRequired: data.verificationRequired ?? true,
+        verificationProviders: data.verificationProviders ?? [],
+        trainingUrl: data.trainingUrl ?? null,
+        certificationUrl: data.certificationUrl ?? null,
         isActive: data.isActive ?? true,
       },
     });
@@ -643,11 +673,16 @@ export class ComplianceRepository {
     data: Partial<{
       name: string;
       description: string;
-      category: string;
-      requiredComplianceTypes: ComplianceType[];
-      requiredClearanceLevel: ClearanceLevel | null;
-      attestationQuestions: Array<{ question: string; required: boolean }>;
+      category: ComplianceCategory;
+      requiresCertification: boolean;
+      requiresTraining: boolean;
+      requiresAttestation: boolean;
+      requiresBackgroundCheck: boolean;
       validityPeriodDays: number;
+      verificationRequired: boolean;
+      verificationProviders: string[];
+      trainingUrl: string | null;
+      certificationUrl: string | null;
       isActive: boolean;
     }>
   ) {
@@ -657,18 +692,29 @@ export class ComplianceRepository {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
         ...(data.category !== undefined && { category: data.category }),
-        ...(data.requiredComplianceTypes && {
-          requiredComplianceTypes: data.requiredComplianceTypes,
+        ...(data.requiresCertification !== undefined && {
+          requiresCertification: data.requiresCertification,
         }),
-        ...(data.requiredClearanceLevel !== undefined && {
-          requiredClearanceLevel: data.requiredClearanceLevel,
+        ...(data.requiresTraining !== undefined && {
+          requiresTraining: data.requiresTraining,
         }),
-        ...(data.attestationQuestions && {
-          attestationQuestions: data.attestationQuestions as Prisma.InputJsonValue,
+        ...(data.requiresAttestation !== undefined && {
+          requiresAttestation: data.requiresAttestation,
+        }),
+        ...(data.requiresBackgroundCheck !== undefined && {
+          requiresBackgroundCheck: data.requiresBackgroundCheck,
         }),
         ...(data.validityPeriodDays !== undefined && {
           validityPeriodDays: data.validityPeriodDays,
         }),
+        ...(data.verificationRequired !== undefined && {
+          verificationRequired: data.verificationRequired,
+        }),
+        ...(data.verificationProviders !== undefined && {
+          verificationProviders: data.verificationProviders,
+        }),
+        ...(data.trainingUrl !== undefined && { trainingUrl: data.trainingUrl }),
+        ...(data.certificationUrl !== undefined && { certificationUrl: data.certificationUrl }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
     });
@@ -687,12 +733,9 @@ export class ComplianceRepository {
     return this.prisma.tenantComplianceRequirement.findMany({
       where: {
         tenantId,
-        ...(isRequired !== undefined && { isRequired }),
+        ...(isRequired !== undefined && { requiresAttestation: isRequired }),
       },
-      include: {
-        requirement: true,
-      },
-      orderBy: { requirement: { name: 'asc' } },
+      orderBy: { name: 'asc' },
     });
   }
 
@@ -701,19 +744,30 @@ export class ComplianceRepository {
    */
   async addTenantRequirement(data: {
     tenantId: string;
-    requirementId: string;
-    isRequired: boolean;
-    customSettings?: Record<string, unknown>;
+    code: string;
+    name: string;
+    description?: string;
+    requiresCertification?: boolean;
+    requiresTraining?: boolean;
+    requiresAttestation?: boolean;
+    attestationQuestions?: Array<{ question: string; type: string; requiredAnswer?: string }>;
+    validityPeriodDays?: number;
+    isActive?: boolean;
   }) {
     return this.prisma.tenantComplianceRequirement.create({
       data: {
         tenantId: data.tenantId,
-        requirementId: data.requirementId,
-        isRequired: data.isRequired,
-        customSettings: (data.customSettings as Prisma.InputJsonValue) ?? null,
-      },
-      include: {
-        requirement: true,
+        code: data.code,
+        name: data.name,
+        description: data.description ?? null,
+        requiresCertification: data.requiresCertification ?? false,
+        requiresTraining: data.requiresTraining ?? false,
+        requiresAttestation: data.requiresAttestation ?? true,
+        attestationQuestions: data.attestationQuestions
+          ? (data.attestationQuestions as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        validityPeriodDays: data.validityPeriodDays ?? null,
+        isActive: data.isActive ?? true,
       },
     });
   }
@@ -724,20 +778,39 @@ export class ComplianceRepository {
   async updateTenantRequirement(
     id: string,
     data: Partial<{
-      isRequired: boolean;
-      customSettings: Record<string, unknown>;
+      name: string;
+      description: string | null;
+      requiresCertification: boolean;
+      requiresTraining: boolean;
+      requiresAttestation: boolean;
+      attestationQuestions: Array<{
+        question: string;
+        type: string;
+        requiredAnswer?: string;
+      }> | null;
+      validityPeriodDays: number | null;
+      isActive: boolean;
     }>
   ) {
     return this.prisma.tenantComplianceRequirement.update({
       where: { id },
       data: {
-        ...(data.isRequired !== undefined && { isRequired: data.isRequired }),
-        ...(data.customSettings && {
-          customSettings: data.customSettings as Prisma.InputJsonValue,
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.requiresCertification !== undefined && {
+          requiresCertification: data.requiresCertification,
         }),
-      },
-      include: {
-        requirement: true,
+        ...(data.requiresTraining !== undefined && { requiresTraining: data.requiresTraining }),
+        ...(data.requiresAttestation !== undefined && {
+          requiresAttestation: data.requiresAttestation,
+        }),
+        ...(data.attestationQuestions !== undefined && {
+          attestationQuestions: data.attestationQuestions as Prisma.InputJsonValue,
+        }),
+        ...(data.validityPeriodDays !== undefined && {
+          validityPeriodDays: data.validityPeriodDays,
+        }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
     });
   }
@@ -761,19 +834,22 @@ export class ComplianceRepository {
   async createVerificationLog(data: {
     complianceId: string;
     verificationMethod: string;
-    verificationResult: boolean;
-    verificationDetails?: Record<string, unknown>;
-    verifiedBy?: string;
-    externalReference?: string;
+    verificationProvider?: string;
+    status: ComplianceVerificationStatus;
+    failureReason?: string;
+    responseData?: Record<string, unknown>;
   }) {
     return this.prisma.complianceVerificationLog.create({
       data: {
         complianceId: data.complianceId,
         verificationMethod: data.verificationMethod,
-        verificationResult: data.verificationResult,
-        verificationDetails: (data.verificationDetails as Prisma.InputJsonValue) ?? null,
-        verifiedBy: data.verifiedBy ?? null,
-        externalReference: data.externalReference ?? null,
+        verificationProvider: data.verificationProvider ?? null,
+        status: data.status,
+        failureReason: data.failureReason ?? null,
+        responseData: data.responseData
+          ? (data.responseData as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        attemptedAt: new Date(),
       },
     });
   }
@@ -798,7 +874,7 @@ export class ComplianceRepository {
           compliance: {
             select: {
               id: true,
-              type: true,
+              complianceType: true,
               userId: true,
             },
           },
@@ -821,18 +897,18 @@ export class ComplianceRepository {
     const { complianceTypes, clearanceLevel, requirementIds, limit = 100, offset = 0 } = params;
 
     // Build the query for finding eligible freelancers
+    // Filter users by status instead of role (role is on TenantMember)
     const userWhere: Prisma.UserWhereInput = {
-      role: 'FREELANCER',
-      isActive: true,
+      status: 'ACTIVE',
     };
 
     // Get users with required compliances
     if (complianceTypes && complianceTypes.length > 0) {
       userWhere.freelancerCompliances = {
         some: {
-          type: { in: complianceTypes },
+          complianceType: { in: complianceTypes },
           verificationStatus: 'VERIFIED',
-          OR: [{ expirationDate: null }, { expirationDate: { gte: new Date() } }],
+          OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
         },
       };
     }
@@ -841,9 +917,9 @@ export class ComplianceRepository {
     if (clearanceLevel) {
       userWhere.securityClearances = {
         some: {
-          level: clearanceLevel,
+          clearanceLevel,
           isActive: true,
-          OR: [{ expirationDate: null }, { expirationDate: { gte: new Date() } }],
+          OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
         },
       };
     }
@@ -857,25 +933,23 @@ export class ComplianceRepository {
           freelancerCompliances: {
             where: {
               verificationStatus: 'VERIFIED',
-              OR: [{ expirationDate: null }, { expirationDate: { gte: new Date() } }],
+              OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
             },
           },
           securityClearances: {
             where: {
               isActive: true,
-              OR: [{ expirationDate: null }, { expirationDate: { gte: new Date() } }],
+              OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
             },
           },
           freelancerComplianceAttestations: {
             where: {
-              validUntil: { gte: new Date() },
+              expiresAt: { gte: new Date() },
+              isActive: true,
               ...(requirementIds &&
                 requirementIds.length > 0 && {
-                  requirementId: { in: requirementIds },
+                  requirementCode: { in: requirementIds },
                 }),
-            },
-            include: {
-              requirement: true,
             },
           },
         },
@@ -905,7 +979,7 @@ export class ComplianceRepository {
         where: {
           userId,
           verificationStatus: 'VERIFIED',
-          OR: [{ expirationDate: null }, { expirationDate: { gte: now } }],
+          OR: [{ expiresAt: null }, { expiresAt: { gte: now } }],
         },
       }),
       this.prisma.freelancerCompliance.count({
@@ -914,18 +988,18 @@ export class ComplianceRepository {
       this.prisma.freelancerCompliance.count({
         where: {
           userId,
-          OR: [{ verificationStatus: 'EXPIRED' }, { expirationDate: { lt: now } }],
+          OR: [{ verificationStatus: 'EXPIRED' }, { expiresAt: { lt: now } }],
         },
       }),
       this.prisma.securityClearance.count({
         where: {
           userId,
           isActive: true,
-          OR: [{ expirationDate: null }, { expirationDate: { gte: now } }],
+          OR: [{ expiresAt: null }, { expiresAt: { gte: now } }],
         },
       }),
       this.prisma.freelancerComplianceAttestation.count({
-        where: { userId, validUntil: { gte: now } },
+        where: { userId, expiresAt: { gte: now }, isActive: true },
       }),
     ]);
 
@@ -951,7 +1025,8 @@ export class ComplianceRepository {
         select: {
           id: true,
           email: true,
-          fullName: true,
+          firstName: true,
+          lastName: true,
         },
       }),
       this.prisma.freelancerCompliance.findMany({
@@ -966,15 +1041,13 @@ export class ComplianceRepository {
       }),
       this.prisma.securityClearance.findMany({
         where: { userId },
-        orderBy: { grantedDate: 'desc' },
+        orderBy: { grantedAt: 'desc' },
       }),
       this.prisma.freelancerComplianceAttestation.findMany({
         where: {
           userId,
-          validUntil: { gte: now },
-        },
-        include: {
-          requirement: true,
+          expiresAt: { gte: now },
+          isActive: true,
         },
         orderBy: { attestedAt: 'desc' },
       }),

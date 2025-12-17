@@ -19,7 +19,7 @@ import type {
   AutoScalingConfig,
   ScalingDecision,
 } from '../types/environment.types.js';
-import type { Pod, Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import type { Redis as RedisType } from 'ioredis';
 
 // =============================================================================
@@ -69,6 +69,163 @@ const DEFAULT_MEMORY_THRESHOLD_UP = 85;
 const DEFAULT_MEMORY_THRESHOLD_DOWN = 40;
 const DEFAULT_SCALE_UP_COOLDOWN = 300; // 5 minutes
 const DEFAULT_SCALE_DOWN_COOLDOWN = 600; // 10 minutes
+
+// =============================================================================
+// HELPER FUNCTIONS (outer scope)
+// =============================================================================
+
+/**
+ * Create a no-scale decision with given reason
+ */
+function createNoScaleDecision(podId: string, reason: string): ScalingDecision {
+  return {
+    podId,
+    shouldScale: false,
+    reason,
+  };
+}
+
+/**
+ * Evaluate CPU-based scaling decision
+ */
+function evaluateCpuScaling(
+  cpuPercent: number,
+  currentResources: ResourceSpec,
+  config: AutoScalingConfig,
+  cooldown: CooldownStatus
+): ScalingDecision {
+  const cpuThresholdUp = config.cpuThreshold || DEFAULT_CPU_THRESHOLD_UP;
+  const cpuThresholdDown = DEFAULT_CPU_THRESHOLD_DOWN;
+
+  // Check if we should scale up
+  if (cpuPercent > cpuThresholdUp && cooldown.canScaleUp) {
+    const newCpu = Math.min(currentResources.cpu * 1.5, config.maxResources.cpu);
+
+    if (newCpu > currentResources.cpu) {
+      return {
+        podId: '',
+        shouldScale: true,
+        direction: 'up',
+        reason: `CPU usage ${cpuPercent.toFixed(1)}% exceeds ${cpuThresholdUp}%`,
+        currentResources,
+        targetResources: {
+          ...currentResources,
+          cpu: Math.ceil(newCpu),
+        },
+        currentMetrics: {
+          cpuPercent,
+          memoryPercent: 0,
+          diskPercent: 0,
+          networkIn: 0,
+          networkOut: 0,
+        },
+      };
+    }
+  }
+
+  // Check if we should scale down
+  if (cpuPercent < cpuThresholdDown && cooldown.canScaleDown) {
+    const newCpu = Math.max(currentResources.cpu * 0.7, config.minResources.cpu);
+
+    if (newCpu < currentResources.cpu) {
+      return {
+        podId: '',
+        shouldScale: true,
+        direction: 'down',
+        reason: `CPU usage ${cpuPercent.toFixed(1)}% below ${cpuThresholdDown}%`,
+        currentResources,
+        targetResources: {
+          ...currentResources,
+          cpu: Math.floor(newCpu),
+        },
+        currentMetrics: {
+          cpuPercent,
+          memoryPercent: 0,
+          diskPercent: 0,
+          networkIn: 0,
+          networkOut: 0,
+        },
+      };
+    }
+  }
+
+  return {
+    podId: '',
+    shouldScale: false,
+    reason: 'CPU within thresholds',
+  };
+}
+
+/**
+ * Evaluate memory-based scaling decision
+ */
+function evaluateMemoryScaling(
+  memoryPercent: number,
+  currentResources: ResourceSpec,
+  config: AutoScalingConfig,
+  cooldown: CooldownStatus
+): ScalingDecision {
+  const memoryThresholdUp = config.memoryThreshold || DEFAULT_MEMORY_THRESHOLD_UP;
+  const memoryThresholdDown = DEFAULT_MEMORY_THRESHOLD_DOWN;
+
+  // Check if we should scale up
+  if (memoryPercent > memoryThresholdUp && cooldown.canScaleUp) {
+    const newMemory = Math.min(currentResources.memory * 1.5, config.maxResources.memory);
+
+    if (newMemory > currentResources.memory) {
+      return {
+        podId: '',
+        shouldScale: true,
+        direction: 'up',
+        reason: `Memory usage ${memoryPercent.toFixed(1)}% exceeds ${memoryThresholdUp}%`,
+        currentResources,
+        targetResources: {
+          ...currentResources,
+          memory: Math.ceil(newMemory / 1024) * 1024, // Round to nearest GB
+        },
+        currentMetrics: {
+          cpuPercent: 0,
+          memoryPercent,
+          diskPercent: 0,
+          networkIn: 0,
+          networkOut: 0,
+        },
+      };
+    }
+  }
+
+  // Check if we should scale down
+  if (memoryPercent < memoryThresholdDown && cooldown.canScaleDown) {
+    const newMemory = Math.max(currentResources.memory * 0.7, config.minResources.memory);
+
+    if (newMemory < currentResources.memory) {
+      return {
+        podId: '',
+        shouldScale: true,
+        direction: 'down',
+        reason: `Memory usage ${memoryPercent.toFixed(1)}% below ${memoryThresholdDown}%`,
+        currentResources,
+        targetResources: {
+          ...currentResources,
+          memory: Math.floor(newMemory / 1024) * 1024, // Round to nearest GB
+        },
+        currentMetrics: {
+          cpuPercent: 0,
+          memoryPercent,
+          diskPercent: 0,
+          networkIn: 0,
+          networkOut: 0,
+        },
+      };
+    }
+  }
+
+  return {
+    podId: '',
+    shouldScale: false,
+    reason: 'Memory within thresholds',
+  };
+}
 
 // =============================================================================
 // SERVICE IMPLEMENTATION
@@ -294,152 +451,8 @@ export function createAutoScalingService(
   }
 
   // ===========================================================================
-  // HELPER FUNCTIONS
+  // INTERNAL HELPER FUNCTIONS
   // ===========================================================================
-
-  function createNoScaleDecision(podId: string, reason: string): ScalingDecision {
-    return {
-      podId,
-      shouldScale: false,
-      reason,
-    };
-  }
-
-  function evaluateCpuScaling(
-    cpuPercent: number,
-    currentResources: ResourceSpec,
-    config: AutoScalingConfig,
-    cooldown: CooldownStatus
-  ): ScalingDecision {
-    const cpuThresholdUp = config.cpuThreshold || DEFAULT_CPU_THRESHOLD_UP;
-    const cpuThresholdDown = DEFAULT_CPU_THRESHOLD_DOWN;
-
-    // Check if we should scale up
-    if (cpuPercent > cpuThresholdUp && cooldown.canScaleUp) {
-      const newCpu = Math.min(currentResources.cpu * 1.5, config.maxResources.cpu);
-
-      if (newCpu > currentResources.cpu) {
-        return {
-          podId: '',
-          shouldScale: true,
-          direction: 'up',
-          reason: `CPU usage ${cpuPercent.toFixed(1)}% exceeds ${cpuThresholdUp}%`,
-          currentResources,
-          targetResources: {
-            ...currentResources,
-            cpu: Math.ceil(newCpu),
-          },
-          currentMetrics: {
-            cpuPercent,
-            memoryPercent: 0,
-            diskPercent: 0,
-            networkIn: 0,
-            networkOut: 0,
-          },
-        };
-      }
-    }
-
-    // Check if we should scale down
-    if (cpuPercent < cpuThresholdDown && cooldown.canScaleDown) {
-      const newCpu = Math.max(currentResources.cpu * 0.7, config.minResources.cpu);
-
-      if (newCpu < currentResources.cpu) {
-        return {
-          podId: '',
-          shouldScale: true,
-          direction: 'down',
-          reason: `CPU usage ${cpuPercent.toFixed(1)}% below ${cpuThresholdDown}%`,
-          currentResources,
-          targetResources: {
-            ...currentResources,
-            cpu: Math.floor(newCpu),
-          },
-          currentMetrics: {
-            cpuPercent,
-            memoryPercent: 0,
-            diskPercent: 0,
-            networkIn: 0,
-            networkOut: 0,
-          },
-        };
-      }
-    }
-
-    return {
-      podId: '',
-      shouldScale: false,
-      reason: 'CPU within thresholds',
-    };
-  }
-
-  function evaluateMemoryScaling(
-    memoryPercent: number,
-    currentResources: ResourceSpec,
-    config: AutoScalingConfig,
-    cooldown: CooldownStatus
-  ): ScalingDecision {
-    const memoryThresholdUp = config.memoryThreshold || DEFAULT_MEMORY_THRESHOLD_UP;
-    const memoryThresholdDown = DEFAULT_MEMORY_THRESHOLD_DOWN;
-
-    // Check if we should scale up
-    if (memoryPercent > memoryThresholdUp && cooldown.canScaleUp) {
-      const newMemory = Math.min(currentResources.memory * 1.5, config.maxResources.memory);
-
-      if (newMemory > currentResources.memory) {
-        return {
-          podId: '',
-          shouldScale: true,
-          direction: 'up',
-          reason: `Memory usage ${memoryPercent.toFixed(1)}% exceeds ${memoryThresholdUp}%`,
-          currentResources,
-          targetResources: {
-            ...currentResources,
-            memory: Math.ceil(newMemory / 1024) * 1024, // Round to nearest GB
-          },
-          currentMetrics: {
-            cpuPercent: 0,
-            memoryPercent,
-            diskPercent: 0,
-            networkIn: 0,
-            networkOut: 0,
-          },
-        };
-      }
-    }
-
-    // Check if we should scale down
-    if (memoryPercent < memoryThresholdDown && cooldown.canScaleDown) {
-      const newMemory = Math.max(currentResources.memory * 0.7, config.minResources.memory);
-
-      if (newMemory < currentResources.memory) {
-        return {
-          podId: '',
-          shouldScale: true,
-          direction: 'down',
-          reason: `Memory usage ${memoryPercent.toFixed(1)}% below ${memoryThresholdDown}%`,
-          currentResources,
-          targetResources: {
-            ...currentResources,
-            memory: Math.floor(newMemory / 1024) * 1024, // Round to nearest GB
-          },
-          currentMetrics: {
-            cpuPercent: 0,
-            memoryPercent,
-            diskPercent: 0,
-            networkIn: 0,
-            networkOut: 0,
-          },
-        };
-      }
-    }
-
-    return {
-      podId: '',
-      shouldScale: false,
-      reason: 'Memory within thresholds',
-    };
-  }
 
   async function setCooldown(podId: string, direction: 'up' | 'down'): Promise<void> {
     const pod = await podRepository.findById(podId);

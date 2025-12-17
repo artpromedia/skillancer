@@ -145,21 +145,79 @@ export interface SkillsScoreResult {
   factors: ScoreFactor[];
 }
 
+/**
+ * Process a single skill match and return match info
+ */
+function processSkillMatch(
+  required: string,
+  normalizedRequired: string,
+  normalizedFreelancerSkills: Set<string>,
+  endorsementCounts: SkillEndorsementInfo[],
+  relatedSkillsMap: Map<string, RelatedSkillMatch | null>
+): { type: 'exact' | 'endorsed' | 'related' | 'missing'; factor: ScoreFactor } {
+  // Check exact match
+  if (normalizedFreelancerSkills.has(normalizedRequired)) {
+    const endorsement = endorsementCounts.find((e) => e.skill.toLowerCase() === normalizedRequired);
+
+    if (endorsement && endorsement.count > 0) {
+      return {
+        type: 'endorsed',
+        factor: {
+          name: `${required} (Endorsed)`,
+          value: `${endorsement.count} endorsements`,
+          impact: 'POSITIVE',
+          description: `Skill endorsed by ${endorsement.count} client(s)`,
+        },
+      };
+    }
+    return {
+      type: 'exact',
+      factor: {
+        name: required,
+        value: 'Exact match',
+        impact: 'POSITIVE',
+        description: 'Has this exact skill',
+      },
+    };
+  }
+
+  // Check related skills
+  const relatedSkill = relatedSkillsMap.get(normalizedRequired);
+  if (relatedSkill) {
+    return {
+      type: 'related',
+      factor: {
+        name: required,
+        value: `Related: ${relatedSkill.skill}`,
+        impact: 'NEUTRAL',
+        description: `Has related skill: ${relatedSkill.skill} (${Math.round(relatedSkill.strength * 100)}% relevance)`,
+      },
+    };
+  }
+
+  return {
+    type: 'missing',
+    factor: {
+      name: required,
+      value: 'Missing',
+      impact: 'NEGATIVE',
+      description: 'Does not have this skill or related skills',
+    },
+  };
+}
+
 export function scoreSkills(
   freelancerSkills: string[],
   requiredSkills: string[],
   endorsementCounts: SkillEndorsementInfo[],
   relatedSkillsMap: Map<string, RelatedSkillMatch | null>
 ): SkillsScoreResult {
-  const factors: ScoreFactor[] = [];
-  let score = 0;
-
   if (requiredSkills.length === 0) {
     return { score: 100, factors: [] };
   }
 
-  // Normalize skills for comparison
-  const normalizedFreelancerSkills = freelancerSkills.map((s) => s.toLowerCase());
+  const factors: ScoreFactor[] = [];
+  const normalizedFreelancerSkills = new Set(freelancerSkills.map((s) => s.toLowerCase()));
 
   let exactMatches = 0;
   let relatedMatches = 0;
@@ -167,53 +225,21 @@ export function scoreSkills(
 
   for (const required of requiredSkills) {
     const normalizedRequired = required.toLowerCase();
+    const match = processSkillMatch(
+      required,
+      normalizedRequired,
+      normalizedFreelancerSkills,
+      endorsementCounts,
+      relatedSkillsMap
+    );
 
-    // Check exact match
-    if (normalizedFreelancerSkills.includes(normalizedRequired)) {
+    factors.push(match.factor);
+    if (match.type === 'exact') exactMatches++;
+    if (match.type === 'endorsed') {
       exactMatches++;
-
-      // Check if skill is endorsed
-      const endorsement = endorsementCounts.find(
-        (e) => e.skill.toLowerCase() === normalizedRequired
-      );
-
-      if (endorsement && endorsement.count > 0) {
-        endorsedMatches++;
-        factors.push({
-          name: `${required} (Endorsed)`,
-          value: `${endorsement.count} endorsements`,
-          impact: 'POSITIVE',
-          description: `Skill endorsed by ${endorsement.count} client(s)`,
-        });
-      } else {
-        factors.push({
-          name: required,
-          value: 'Exact match',
-          impact: 'POSITIVE',
-          description: 'Has this exact skill',
-        });
-      }
-    } else {
-      // Check related skills
-      const relatedSkill = relatedSkillsMap.get(normalizedRequired);
-
-      if (relatedSkill) {
-        relatedMatches++;
-        factors.push({
-          name: required,
-          value: `Related: ${relatedSkill.skill}`,
-          impact: 'NEUTRAL',
-          description: `Has related skill: ${relatedSkill.skill} (${Math.round(relatedSkill.strength * 100)}% relevance)`,
-        });
-      } else {
-        factors.push({
-          name: required,
-          value: 'Missing',
-          impact: 'NEGATIVE',
-          description: 'Does not have this skill or related skills',
-        });
-      }
+      endorsedMatches++;
     }
+    if (match.type === 'related') relatedMatches++;
   }
 
   // Calculate score
@@ -222,7 +248,7 @@ export function scoreSkills(
   const relatedMatchScore = (relatedMatches / totalRequired) * 20;
   const endorsementBonus = (endorsedMatches / totalRequired) * 10;
 
-  score = exactMatchScore + relatedMatchScore + endorsementBonus;
+  let score = exactMatchScore + relatedMatchScore + endorsementBonus;
 
   // Depth bonus: having more skills than required
   const extraSkills = freelancerSkills.length - requiredSkills.length;
@@ -344,10 +370,17 @@ export function scoreTrust(
   // Direct trust score mapping
   let score = trustScore;
 
+  // Determine trust score impact
+  const getTrustImpact = (): 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' => {
+    if (trustScore >= 70) return 'POSITIVE';
+    if (trustScore >= 50) return 'NEUTRAL';
+    return 'NEGATIVE';
+  };
+
   factors.push({
     name: 'Trust Score',
     value: trustScore,
-    impact: trustScore >= 70 ? 'POSITIVE' : trustScore >= 50 ? 'NEUTRAL' : 'NEGATIVE',
+    impact: getTrustImpact(),
     description: `Platform trust score of ${trustScore}/100`,
   });
 
@@ -356,7 +389,7 @@ export function scoreTrust(
   factors.push({
     name: 'Verification Level',
     value: verificationLevel,
-    impact: verificationLevel !== 'NONE' ? 'POSITIVE' : 'NEUTRAL',
+    impact: verificationLevel === 'NONE' ? 'NEUTRAL' : 'POSITIVE',
     description: `${verificationLevel} identity verification`,
   });
 
@@ -536,8 +569,8 @@ function calculateTimezoneOverlap(
   const defaultStart = 9;
   const defaultEnd = 17;
 
-  const start1 = workStart ? parseInt(workStart.split(':')[0], 10) : defaultStart;
-  const end1 = workEnd ? parseInt(workEnd.split(':')[0], 10) : defaultEnd;
+  const start1 = workStart ? Number.parseInt(workStart.split(':')[0], 10) : defaultStart;
+  const end1 = workEnd ? Number.parseInt(workEnd.split(':')[0], 10) : defaultEnd;
 
   // Get timezone offsets
   const offset1 = getTimezoneOffset(tz1);
@@ -552,6 +585,144 @@ function calculateTimezoneOverlap(
   const overlapEnd = Math.min(defaultEnd, adjustedEnd1);
 
   return Math.max(0, overlapEnd - overlapStart);
+}
+
+/**
+ * Score capacity based on current vs max projects
+ */
+function scoreCapacity(workPattern: FreelancerWorkPattern): {
+  scoreAdjust: number;
+  factor: ScoreFactor;
+} {
+  if (workPattern.currentActiveProjects >= workPattern.maxConcurrentProjects) {
+    return {
+      scoreAdjust: -40, // 20 - 60 base
+      factor: {
+        name: 'Capacity',
+        value: 'At maximum',
+        impact: 'NEGATIVE',
+        description: `Currently handling ${workPattern.currentActiveProjects} projects (max: ${workPattern.maxConcurrentProjects})`,
+      },
+    };
+  }
+  const availableSlots = workPattern.maxConcurrentProjects - workPattern.currentActiveProjects;
+  return {
+    scoreAdjust: 20,
+    factor: {
+      name: 'Capacity',
+      value: `${availableSlots} slots available`,
+      impact: 'POSITIVE',
+      description: `Can take on ${availableSlots} more project(s)`,
+    },
+  };
+}
+
+/**
+ * Score weekly hours availability
+ */
+function scoreWeeklyHours(
+  workPattern: FreelancerWorkPattern,
+  hoursPerWeek: number
+): { scoreAdjust: number; factor: ScoreFactor } | null {
+  if (!workPattern.weeklyHoursAvailable) return null;
+
+  const isAvailable = workPattern.weeklyHoursAvailable >= hoursPerWeek;
+  return {
+    scoreAdjust: isAvailable ? 15 : -15,
+    factor: {
+      name: 'Weekly Hours',
+      value: `${workPattern.weeklyHoursAvailable}hrs available`,
+      impact: isAvailable ? 'POSITIVE' : 'NEGATIVE',
+      description: isAvailable
+        ? `Has ${workPattern.weeklyHoursAvailable} hours/week available (${hoursPerWeek} needed)`
+        : `Only ${workPattern.weeklyHoursAvailable} hours/week available (${hoursPerWeek} needed)`,
+    },
+  };
+}
+
+/**
+ * Score timezone overlap
+ */
+function scoreTimezoneOverlap(
+  workPattern: FreelancerWorkPattern,
+  clientTimezone: string
+): { scoreAdjust: number; factor: ScoreFactor } {
+  const freelancerTimezone = workPattern.timezone ?? 'UTC';
+  const overlapHours = calculateTimezoneOverlap(
+    freelancerTimezone,
+    clientTimezone,
+    workPattern.workingHoursStart,
+    workPattern.workingHoursEnd
+  );
+
+  if (overlapHours >= 4) {
+    return {
+      scoreAdjust: 10,
+      factor: {
+        name: 'Timezone Overlap',
+        value: `${overlapHours} hours`,
+        impact: 'POSITIVE',
+        description: `${overlapHours} hours of working time overlap`,
+      },
+    };
+  }
+  if (overlapHours > 0) {
+    return {
+      scoreAdjust: 0,
+      factor: {
+        name: 'Timezone Overlap',
+        value: `${overlapHours} hours`,
+        impact: 'NEUTRAL',
+        description: `Limited timezone overlap (${overlapHours} hours)`,
+      },
+    };
+  }
+  return {
+    scoreAdjust: -10,
+    factor: {
+      name: 'Timezone Overlap',
+      value: 'No overlap',
+      impact: 'NEGATIVE',
+      description: 'No working hours overlap with client timezone',
+    },
+  };
+}
+
+/**
+ * Score recent activity
+ */
+function scoreRecentActivity(
+  lastActiveAt: Date | null
+): { scoreAdjust: number; factor: ScoreFactor } | null {
+  if (!lastActiveAt) return null;
+
+  const daysSinceActive = Math.floor(
+    (Date.now() - new Date(lastActiveAt).getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysSinceActive <= 1) {
+    return {
+      scoreAdjust: 5,
+      factor: {
+        name: 'Recent Activity',
+        value: 'Active today',
+        impact: 'POSITIVE',
+        description: 'Active on platform today',
+      },
+    };
+  }
+  if (daysSinceActive > 14) {
+    return {
+      scoreAdjust: -10,
+      factor: {
+        name: 'Recent Activity',
+        value: `${daysSinceActive} days ago`,
+        impact: 'NEGATIVE',
+        description: `Last active ${daysSinceActive} days ago`,
+      },
+    };
+  }
+  return null;
 }
 
 export function scoreAvailability(
@@ -574,105 +745,32 @@ export function scoreAvailability(
     return { score, factors };
   }
 
-  // Check capacity
-  if (workPattern.currentActiveProjects >= workPattern.maxConcurrentProjects) {
-    score = 20;
-    factors.push({
-      name: 'Capacity',
-      value: 'At maximum',
-      impact: 'NEGATIVE',
-      description: `Currently handling ${workPattern.currentActiveProjects} projects (max: ${workPattern.maxConcurrentProjects})`,
-    });
-  } else {
-    const availableSlots = workPattern.maxConcurrentProjects - workPattern.currentActiveProjects;
-    score += 20;
-    factors.push({
-      name: 'Capacity',
-      value: `${availableSlots} slots available`,
-      impact: 'POSITIVE',
-      description: `Can take on ${availableSlots} more project(s)`,
-    });
-  }
+  // Score capacity
+  const capacityResult = scoreCapacity(workPattern);
+  score += capacityResult.scoreAdjust;
+  factors.push(capacityResult.factor);
 
-  // Check hours per week
-  if (hoursPerWeek && workPattern.weeklyHoursAvailable) {
-    if (workPattern.weeklyHoursAvailable >= hoursPerWeek) {
-      score += 15;
-      factors.push({
-        name: 'Weekly Hours',
-        value: `${workPattern.weeklyHoursAvailable}hrs available`,
-        impact: 'POSITIVE',
-        description: `Has ${workPattern.weeklyHoursAvailable} hours/week available (${hoursPerWeek} needed)`,
-      });
-    } else {
-      score -= 15;
-      factors.push({
-        name: 'Weekly Hours',
-        value: `${workPattern.weeklyHoursAvailable}hrs available`,
-        impact: 'NEGATIVE',
-        description: `Only ${workPattern.weeklyHoursAvailable} hours/week available (${hoursPerWeek} needed)`,
-      });
+  // Score weekly hours
+  if (hoursPerWeek) {
+    const hoursResult = scoreWeeklyHours(workPattern, hoursPerWeek);
+    if (hoursResult) {
+      score += hoursResult.scoreAdjust;
+      factors.push(hoursResult.factor);
     }
   }
 
-  // Check timezone overlap
+  // Score timezone overlap
   if (clientTimezone && workPattern.timezone) {
-    const overlapHours = calculateTimezoneOverlap(
-      workPattern.timezone,
-      clientTimezone,
-      workPattern.workingHoursStart,
-      workPattern.workingHoursEnd
-    );
-
-    if (overlapHours >= 4) {
-      score += 10;
-      factors.push({
-        name: 'Timezone Overlap',
-        value: `${overlapHours} hours`,
-        impact: 'POSITIVE',
-        description: `${overlapHours} hours of working time overlap`,
-      });
-    } else if (overlapHours > 0) {
-      factors.push({
-        name: 'Timezone Overlap',
-        value: `${overlapHours} hours`,
-        impact: 'NEUTRAL',
-        description: `Limited timezone overlap (${overlapHours} hours)`,
-      });
-    } else {
-      score -= 10;
-      factors.push({
-        name: 'Timezone Overlap',
-        value: 'No overlap',
-        impact: 'NEGATIVE',
-        description: 'No working hours overlap with client timezone',
-      });
-    }
+    const tzResult = scoreTimezoneOverlap(workPattern, clientTimezone);
+    score += tzResult.scoreAdjust;
+    factors.push(tzResult.factor);
   }
 
-  // Check last activity
-  if (workPattern.lastActiveAt) {
-    const daysSinceActive = Math.floor(
-      (Date.now() - new Date(workPattern.lastActiveAt).getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    if (daysSinceActive <= 1) {
-      score += 5;
-      factors.push({
-        name: 'Recent Activity',
-        value: 'Active today',
-        impact: 'POSITIVE',
-        description: 'Active on platform today',
-      });
-    } else if (daysSinceActive > 14) {
-      score -= 10;
-      factors.push({
-        name: 'Recent Activity',
-        value: `${daysSinceActive} days ago`,
-        impact: 'NEGATIVE',
-        description: `Last active ${daysSinceActive} days ago`,
-      });
-    }
+  // Score recent activity
+  const activityResult = scoreRecentActivity(workPattern.lastActiveAt);
+  if (activityResult) {
+    score += activityResult.scoreAdjust;
+    factors.push(activityResult.factor);
   }
 
   return { score: Math.min(100, Math.max(0, score)), factors };
@@ -732,7 +830,7 @@ export function scoreSuccessHistory(metrics: FreelancerSuccessMetrics): SuccessH
         impact: 'POSITIVE',
         description: `Exceptional ${metrics.avgRating.toFixed(1)}/5 rating from ${metrics.reviewCount} reviews`,
       });
-    } else if (metrics.avgRating >= 4.0) {
+    } else if (metrics.avgRating >= 4) {
       score += 15;
       factors.push({
         name: 'Client Rating',

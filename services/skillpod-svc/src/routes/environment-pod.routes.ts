@@ -81,11 +81,11 @@ const ListPodsQuerySchema = z.object({
   page: z
     .string()
     .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 1)),
+    .transform((v) => (v ? Number.parseInt(v, 10) : 1)),
   limit: z
     .string()
     .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 20)),
+    .transform((v) => (v ? Number.parseInt(v, 10) : 20)),
 });
 
 // =============================================================================
@@ -104,6 +104,28 @@ interface AuthenticatedRequest extends FastifyRequest {
     tenantId: string;
     roles: string[];
   };
+}
+
+/**
+ * Handle pod operation errors and return appropriate response
+ */
+function handlePodOperationError(error: unknown, reply: FastifyReply): void {
+  if (error instanceof Error) {
+    const errorMappings: Array<{ pattern: string; status: number; message?: string }> = [
+      { pattern: 'TEMPLATE_NOT_FOUND', status: 400, message: 'Template not found' },
+      { pattern: 'QUOTA_EXCEEDED', status: 400, message: 'Resource quota exceeded' },
+      { pattern: 'INVALID_RESOURCES', status: 400 },
+      { pattern: 'INVALID_STATUS', status: 400 },
+    ];
+
+    for (const mapping of errorMappings) {
+      if (error.message.includes(mapping.pattern)) {
+        void reply.status(mapping.status).send({ error: mapping.message || error.message });
+        return;
+      }
+    }
+  }
+  throw error;
 }
 
 export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async (
@@ -233,18 +255,7 @@ export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async 
 
         return await reply.status(201).send({ pod });
       } catch (error) {
-        if (error instanceof Error) {
-          if (error.message.includes('TEMPLATE_NOT_FOUND')) {
-            return reply.status(400).send({ error: 'Template not found' });
-          }
-          if (error.message.includes('QUOTA_EXCEEDED')) {
-            return reply.status(400).send({ error: 'Resource quota exceeded' });
-          }
-          if (error.message.includes('INVALID_RESOURCES')) {
-            return reply.status(400).send({ error: error.message });
-          }
-        }
-        throw error;
+        handlePodOperationError(error, reply);
       }
     }
   );
@@ -283,10 +294,7 @@ export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async 
         const pod = await podService.startPod(podId);
         return await reply.send({ pod });
       } catch (error) {
-        if (error instanceof Error && error.message.includes('INVALID_STATUS')) {
-          return reply.status(400).send({ error: error.message });
-        }
-        throw error;
+        handlePodOperationError(error, reply);
       }
     }
   );
@@ -325,10 +333,7 @@ export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async 
         const pod = await podService.stopPod(podId);
         return await reply.send({ pod });
       } catch (error) {
-        if (error instanceof Error && error.message.includes('INVALID_STATUS')) {
-          return reply.status(400).send({ error: error.message });
-        }
-        throw error;
+        handlePodOperationError(error, reply);
       }
     }
   );
@@ -367,10 +372,7 @@ export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async 
         const pod = await podService.hibernatePod(podId);
         return await reply.send({ pod });
       } catch (error) {
-        if (error instanceof Error && error.message.includes('INVALID_STATUS')) {
-          return reply.status(400).send({ error: error.message });
-        }
-        throw error;
+        handlePodOperationError(error, reply);
       }
     }
   );
@@ -409,10 +411,7 @@ export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async 
         const pod = await podService.resumePod(podId);
         return await reply.send({ pod });
       } catch (error) {
-        if (error instanceof Error && error.message.includes('INVALID_STATUS')) {
-          return reply.status(400).send({ error: error.message });
-        }
-        throw error;
+        handlePodOperationError(error, reply);
       }
     }
   );
@@ -586,11 +585,8 @@ export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async 
           if (error.message.includes('UNAUTHORIZED')) {
             return reply.status(403).send({ error: 'Access denied' });
           }
-          if (error.message.includes('INVALID_STATUS')) {
-            return reply.status(400).send({ error: 'Pod is not running' });
-          }
         }
-        throw error;
+        handlePodOperationError(error, reply);
       }
     }
   );

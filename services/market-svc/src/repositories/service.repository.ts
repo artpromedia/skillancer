@@ -159,35 +159,43 @@ export class ServiceRepository {
    * Update a service
    */
   async update(id: string, input: UpdateServiceInput) {
+    // Build update data - only include defined fields
+    const simpleFields = [
+      'title',
+      'description',
+      'shortDescription',
+      'category',
+      'subcategory',
+      'tags',
+      'basePrice',
+      'currency',
+      'deliveryDays',
+      'revisionsIncluded',
+      'thumbnailUrl',
+      'galleryUrls',
+      'videoUrl',
+      'isActive',
+    ] as const;
+
+    const jsonFields = ['deliverables', 'requirements', 'faqs'] as const;
+
+    const data: Prisma.ServiceUpdateInput = {};
+
+    for (const field of simpleFields) {
+      if (input[field] !== undefined) {
+        (data as Record<string, unknown>)[field] = input[field];
+      }
+    }
+
+    for (const field of jsonFields) {
+      if (input[field] !== undefined) {
+        (data as Record<string, unknown>)[field] = input[field] as Prisma.InputJsonValue;
+      }
+    }
+
     return this.prisma.service.update({
       where: { id },
-      data: {
-        ...(input.title !== undefined && { title: input.title }),
-        ...(input.description !== undefined && { description: input.description }),
-        ...(input.shortDescription !== undefined && { shortDescription: input.shortDescription }),
-        ...(input.category !== undefined && { category: input.category }),
-        ...(input.subcategory !== undefined && { subcategory: input.subcategory }),
-        ...(input.tags !== undefined && { tags: input.tags }),
-        ...(input.basePrice !== undefined && { basePrice: input.basePrice }),
-        ...(input.currency !== undefined && { currency: input.currency }),
-        ...(input.deliveryDays !== undefined && { deliveryDays: input.deliveryDays }),
-        ...(input.revisionsIncluded !== undefined && {
-          revisionsIncluded: input.revisionsIncluded,
-        }),
-        ...(input.deliverables !== undefined && {
-          deliverables: input.deliverables as unknown as Prisma.InputJsonValue,
-        }),
-        ...(input.requirements !== undefined && {
-          requirements: input.requirements as unknown as Prisma.InputJsonValue,
-        }),
-        ...(input.thumbnailUrl !== undefined && { thumbnailUrl: input.thumbnailUrl }),
-        ...(input.galleryUrls !== undefined && { galleryUrls: input.galleryUrls }),
-        ...(input.videoUrl !== undefined && { videoUrl: input.videoUrl }),
-        ...(input.faqs !== undefined && {
-          faqs: input.faqs as unknown as Prisma.InputJsonValue,
-        }),
-        ...(input.isActive !== undefined && { isActive: input.isActive }),
-      },
+      data,
       include: this.getServiceIncludes(),
     });
   }

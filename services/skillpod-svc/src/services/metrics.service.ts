@@ -41,6 +41,11 @@ interface MetricsConfig {
   sampleIntervalSeconds: number;
 }
 
+const DEFAULT_METRICS_CONFIG: MetricsConfig = {
+  retentionMinutes: 60,
+  sampleIntervalSeconds: 30,
+};
+
 // =============================================================================
 // SERVICE IMPLEMENTATION
 // =============================================================================
@@ -48,7 +53,7 @@ interface MetricsConfig {
 export function createMetricsService(
   redis: RedisType,
   kasmService: KasmWorkspacesService,
-  config: MetricsConfig = { retentionMinutes: 60, sampleIntervalSeconds: 30 }
+  config: MetricsConfig = DEFAULT_METRICS_CONFIG
 ): MetricsService {
   const METRICS_KEY_PREFIX = 'pod:metrics:';
   const LATEST_KEY_PREFIX = 'pod:metrics:latest:';

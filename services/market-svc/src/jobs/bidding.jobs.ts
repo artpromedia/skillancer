@@ -80,48 +80,18 @@ export class BiddingJobs {
     try {
       this.logger.info({ msg: 'Starting job', job: jobName });
 
-      // Process bid notifications
-      const notifications = await this.getNotifications('bid:notifications', 100);
+      // Define notification queues to process
+      const queues = [
+        { key: 'bid:notifications', type: 'bid' },
+        { key: 'invitation:notifications', type: 'invitation' },
+        { key: 'question:notifications', type: 'question' },
+      ];
 
-      for (const notification of notifications) {
-        try {
-          this.sendNotification(notification);
-          processed++;
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          errors.push(`Failed to process bid notification: ${errorMessage}`);
-          this.logger.error({
-            msg: 'Failed to process bid notification',
-            notification,
-            error: errorMessage,
-          });
-        }
-      }
-
-      // Process invitation notifications
-      const invNotifications = await this.getNotifications('invitation:notifications', 100);
-
-      for (const notification of invNotifications) {
-        try {
-          this.sendNotification(notification);
-          processed++;
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          errors.push(`Failed to process invitation notification: ${errorMessage}`);
-        }
-      }
-
-      // Process question notifications
-      const qNotifications = await this.getNotifications('question:notifications', 100);
-
-      for (const notification of qNotifications) {
-        try {
-          this.sendNotification(notification);
-          processed++;
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          errors.push(`Failed to process question notification: ${errorMessage}`);
-        }
+      // Process each queue
+      for (const queue of queues) {
+        const result = await this.processNotificationQueue(queue.key, queue.type);
+        processed += result.processed;
+        errors.push(...result.errors);
       }
 
       this.logger.info({ msg: 'Job completed', job: jobName, processed, errors: errors.length });
@@ -134,6 +104,36 @@ export class BiddingJobs {
     } finally {
       await this.releaseLock(jobName);
     }
+  }
+
+  /**
+   * Process a single notification queue
+   */
+  private async processNotificationQueue(
+    queueKey: string,
+    type: string
+  ): Promise<{ processed: number; errors: string[] }> {
+    const errors: string[] = [];
+    let processed = 0;
+
+    const notifications = await this.getNotifications(queueKey, 100);
+
+    for (const notification of notifications) {
+      try {
+        this.sendNotification(notification);
+        processed++;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        errors.push(`Failed to process ${type} notification: ${errorMessage}`);
+        this.logger.error({
+          msg: `Failed to process ${type} notification`,
+          notification,
+          error: errorMessage,
+        });
+      }
+    }
+
+    return { processed, errors };
   }
 
   /**

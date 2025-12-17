@@ -102,6 +102,34 @@ interface ConnectionToken {
 }
 
 // =============================================================================
+// HELPER FUNCTIONS (outer scope)
+// =============================================================================
+
+/**
+ * Validate pod resources against min/max limits
+ */
+function validateResources(resources: ResourceSpec, min: ResourceSpec, max: ResourceSpec): void {
+  if (resources.cpu < min.cpu || resources.cpu > max.cpu) {
+    throw new PodError('INVALID_RESOURCES', `CPU must be between ${min.cpu} and ${max.cpu}`);
+  }
+  if (resources.memory < min.memory || resources.memory > max.memory) {
+    throw new PodError(
+      'INVALID_RESOURCES',
+      `Memory must be between ${min.memory} and ${max.memory}`
+    );
+  }
+  if (resources.storage < min.storage || resources.storage > max.storage) {
+    throw new PodError(
+      'INVALID_RESOURCES',
+      `Storage must be between ${min.storage} and ${max.storage}`
+    );
+  }
+  if (resources.gpu && !max.gpu) {
+    throw new PodError('INVALID_RESOURCES', 'GPU not allowed for this template');
+  }
+}
+
+// =============================================================================
 // SERVICE IMPLEMENTATION
 // =============================================================================
 
@@ -555,27 +583,6 @@ export function createPodService(
   // ===========================================================================
   // HELPER FUNCTIONS
   // ===========================================================================
-
-  function validateResources(resources: ResourceSpec, min: ResourceSpec, max: ResourceSpec): void {
-    if (resources.cpu < min.cpu || resources.cpu > max.cpu) {
-      throw new PodError('INVALID_RESOURCES', `CPU must be between ${min.cpu} and ${max.cpu}`);
-    }
-    if (resources.memory < min.memory || resources.memory > max.memory) {
-      throw new PodError(
-        'INVALID_RESOURCES',
-        `Memory must be between ${min.memory} and ${max.memory}`
-      );
-    }
-    if (resources.storage < min.storage || resources.storage > max.storage) {
-      throw new PodError(
-        'INVALID_RESOURCES',
-        `Storage must be between ${min.storage} and ${max.storage}`
-      );
-    }
-    if (resources.gpu && !max.gpu) {
-      throw new PodError('INVALID_RESOURCES', 'GPU not allowed for this template');
-    }
-  }
 
   function startStatusMonitoring(podId: string, kasmId: string): void {
     // Start background status monitoring

@@ -101,6 +101,181 @@ function createCacheService(redis: RedisType): CacheService {
 }
 
 // =============================================================================
+// HELPER FUNCTIONS (outer scope)
+// =============================================================================
+
+/**
+ * Get apt package name for a tool
+ */
+function getAptPackageName(tool: ToolDefinition): string {
+  const mapping: Record<string, string> = {
+    Git: 'git',
+    'Node.js': 'nodejs',
+    Python: 'python3',
+    'Python 3': 'python3',
+    pip: 'python3-pip',
+    Docker: 'docker.io',
+    curl: 'curl',
+    wget: 'wget',
+    vim: 'vim',
+    nano: 'nano',
+  };
+
+  return mapping[tool.name] || tool.name.toLowerCase();
+}
+
+/**
+ * Register image with Kasm (mock implementation)
+ */
+async function registerWithKasm(params: CreateTemplateParams, imageUri: string): Promise<string> {
+  // In production, this would call the Kasm API to register the image
+  // For now, we'll generate a mock Kasm image ID
+  const kasmImageId = `kasm-${params.slug}-${Date.now().toString(36)}`;
+
+  console.log(`Registering image with Kasm:`);
+  console.log(`  Name: ${params.name}`);
+  console.log(`  Image URI: ${imageUri}`);
+  console.log(`  Kasm ID: ${kasmImageId}`);
+
+  return kasmImageId;
+}
+
+/**
+ * Get minimum resources for a category
+ */
+function getMinResources(category: TemplateCategory): ResourceSpec {
+  const defaults: Record<TemplateCategory, ResourceSpec> = {
+    DEVELOPMENT: { cpu: 2, memory: 4096, storage: 20, gpu: false },
+    FINANCE: { cpu: 2, memory: 4096, storage: 20, gpu: false },
+    DESIGN: { cpu: 4, memory: 8192, storage: 50, gpu: false },
+    DATA_SCIENCE: { cpu: 4, memory: 8192, storage: 50, gpu: false },
+    GENERAL: { cpu: 1, memory: 2048, storage: 10, gpu: false },
+    SECURITY: { cpu: 2, memory: 4096, storage: 20, gpu: false },
+    DEVOPS: { cpu: 2, memory: 4096, storage: 30, gpu: false },
+    CUSTOM: { cpu: 1, memory: 2048, storage: 10, gpu: false },
+  };
+
+  return defaults[category];
+}
+
+/**
+ * Get maximum resources for a category
+ */
+function getMaxResources(category: TemplateCategory): ResourceSpec {
+  const defaults: Record<TemplateCategory, ResourceSpec> = {
+    DEVELOPMENT: { cpu: 8, memory: 32768, storage: 200, gpu: true },
+    FINANCE: { cpu: 8, memory: 16384, storage: 100, gpu: false },
+    DESIGN: { cpu: 16, memory: 65536, storage: 500, gpu: true },
+    DATA_SCIENCE: { cpu: 32, memory: 131072, storage: 1000, gpu: true, gpuType: 'nvidia-t4' },
+    GENERAL: { cpu: 4, memory: 8192, storage: 50, gpu: false },
+    SECURITY: { cpu: 8, memory: 16384, storage: 100, gpu: false },
+    DEVOPS: { cpu: 8, memory: 16384, storage: 200, gpu: false },
+    CUSTOM: { cpu: 16, memory: 65536, storage: 500, gpu: true },
+  };
+
+  return defaults[category];
+}
+
+/**
+ * Estimate launch time based on template configuration
+ */
+function estimateLaunchTime(params: CreateTemplateParams): number {
+  let estimate = 60; // Base time in seconds
+
+  // Add time for tools
+  estimate += params.installedTools.length * 5;
+
+  // Add time for storage
+  estimate += Math.floor(params.defaultResources.storage / 10) * 5;
+
+  // Add time for GPU
+  if (params.defaultResources.gpu) {
+    estimate += 30;
+  }
+
+  return Math.min(estimate, 300); // Cap at 5 minutes
+}
+
+/**
+ * Increment version string (e.g., "1.0.0" -> "1.0.1")
+ */
+function incrementVersion(version: string): string {
+  const parts = version.split('.');
+  const patch = Number.parseInt(parts[2] || '0', 10) + 1;
+  return `${parts[0]}.${parts[1]}.${patch}`;
+}
+
+/**
+ * Generate Dockerfile content from base image and tools
+ */
+function generateDockerfile(
+  baseImage: BaseImage,
+  tools: ToolDefinition[],
+  params: Partial<CreateTemplateParams>
+): string {
+  const lines: string[] = [
+    `FROM ${baseImage.registryUri}:${baseImage.imageTag}`,
+    '',
+    '# Set environment variables',
+    'ENV DEBIAN_FRONTEND=noninteractive',
+  ];
+
+  // Add custom environment variables
+  if (params.environmentVars) {
+    for (const [key, value] of Object.entries(params.environmentVars)) {
+      lines.push(`ENV ${key}="${value}"`);
+    }
+  }
+
+  lines.push('', '# Install tools');
+
+  // Group tools by installation method
+  const aptTools: string[] = [];
+  const customTools: ToolDefinition[] = [];
+
+  for (const tool of tools) {
+    if (tool.installCommand) {
+      customTools.push(tool);
+    } else {
+      aptTools.push(getAptPackageName(tool));
+    }
+  }
+
+  // Install apt packages in one layer
+  if (aptTools.length > 0) {
+    lines.push(
+      'RUN apt-get update && apt-get install -y \\',
+      `    ${aptTools.join(' \\\n    ')} \\`,
+      '    && rm -rf /var/lib/apt/lists/*'
+    );
+  }
+
+  // Install custom tools
+  for (const tool of customTools) {
+    lines.push('', `# Install ${tool.name}`, `RUN ${tool.installCommand}`);
+
+    if (tool.verifyCommand) {
+      lines.push(`RUN ${tool.verifyCommand}`);
+    }
+  }
+
+  // Add startup script
+  if (params.startupScript) {
+    lines.push(
+      '',
+      '# Add startup script',
+      'COPY startup.sh /usr/local/bin/startup.sh',
+      'RUN chmod +x /usr/local/bin/startup.sh'
+    );
+  }
+
+  // Set working directory and user
+  lines.push('', 'WORKDIR /home/kasm-user', '', '# Switch to non-root user', 'USER 1000');
+
+  return lines.join('\n');
+}
+
+// =============================================================================
 // SERVICE IMPLEMENTATION
 // =============================================================================
 
@@ -411,159 +586,6 @@ export function createTemplateService(
     });
 
     return imageUri;
-  }
-
-  function generateDockerfile(
-    baseImage: BaseImage,
-    tools: ToolDefinition[],
-    params: Partial<CreateTemplateParams>
-  ): string {
-    const lines: string[] = [
-      `FROM ${baseImage.registryUri}:${baseImage.imageTag}`,
-      '',
-      '# Set environment variables',
-      'ENV DEBIAN_FRONTEND=noninteractive',
-    ];
-
-    // Add custom environment variables
-    if (params.environmentVars) {
-      for (const [key, value] of Object.entries(params.environmentVars)) {
-        lines.push(`ENV ${key}="${value}"`);
-      }
-    }
-
-    lines.push('');
-    lines.push('# Install tools');
-
-    // Group tools by installation method
-    const aptTools: string[] = [];
-    const customTools: ToolDefinition[] = [];
-
-    for (const tool of tools) {
-      if (tool.installCommand) {
-        customTools.push(tool);
-      } else {
-        aptTools.push(getAptPackageName(tool));
-      }
-    }
-
-    // Install apt packages in one layer
-    if (aptTools.length > 0) {
-      lines.push('RUN apt-get update && apt-get install -y \\');
-      lines.push(`    ${aptTools.join(' \\\n    ')} \\`);
-      lines.push('    && rm -rf /var/lib/apt/lists/*');
-    }
-
-    // Install custom tools
-    for (const tool of customTools) {
-      lines.push('');
-      lines.push(`# Install ${tool.name}`);
-      lines.push(`RUN ${tool.installCommand}`);
-
-      if (tool.verifyCommand) {
-        lines.push(`RUN ${tool.verifyCommand}`);
-      }
-    }
-
-    // Add startup script
-    if (params.startupScript) {
-      lines.push('');
-      lines.push('# Add startup script');
-      lines.push('COPY startup.sh /usr/local/bin/startup.sh');
-      lines.push('RUN chmod +x /usr/local/bin/startup.sh');
-    }
-
-    // Set working directory
-    lines.push('');
-    lines.push('WORKDIR /home/kasm-user');
-    lines.push('');
-    lines.push('# Switch to non-root user');
-    lines.push('USER 1000');
-
-    return lines.join('\n');
-  }
-
-  function getAptPackageName(tool: ToolDefinition): string {
-    const mapping: Record<string, string> = {
-      Git: 'git',
-      'Node.js': 'nodejs',
-      Python: 'python3',
-      'Python 3': 'python3',
-      pip: 'python3-pip',
-      Docker: 'docker.io',
-      curl: 'curl',
-      wget: 'wget',
-      vim: 'vim',
-      nano: 'nano',
-    };
-
-    return mapping[tool.name] || tool.name.toLowerCase();
-  }
-
-  async function registerWithKasm(params: CreateTemplateParams, imageUri: string): Promise<string> {
-    // In production, this would call the Kasm API to register the image
-    // For now, we'll generate a mock Kasm image ID
-    const kasmImageId = `kasm-${params.slug}-${Date.now().toString(36)}`;
-
-    console.log(`Registering image with Kasm:`);
-    console.log(`  Name: ${params.name}`);
-    console.log(`  Image URI: ${imageUri}`);
-    console.log(`  Kasm ID: ${kasmImageId}`);
-
-    return kasmImageId;
-  }
-
-  function getMinResources(category: TemplateCategory): ResourceSpec {
-    const defaults: Record<TemplateCategory, ResourceSpec> = {
-      DEVELOPMENT: { cpu: 2, memory: 4096, storage: 20, gpu: false },
-      FINANCE: { cpu: 2, memory: 4096, storage: 20, gpu: false },
-      DESIGN: { cpu: 4, memory: 8192, storage: 50, gpu: false },
-      DATA_SCIENCE: { cpu: 4, memory: 8192, storage: 50, gpu: false },
-      GENERAL: { cpu: 1, memory: 2048, storage: 10, gpu: false },
-      SECURITY: { cpu: 2, memory: 4096, storage: 20, gpu: false },
-      DEVOPS: { cpu: 2, memory: 4096, storage: 30, gpu: false },
-      CUSTOM: { cpu: 1, memory: 2048, storage: 10, gpu: false },
-    };
-
-    return defaults[category];
-  }
-
-  function getMaxResources(category: TemplateCategory): ResourceSpec {
-    const defaults: Record<TemplateCategory, ResourceSpec> = {
-      DEVELOPMENT: { cpu: 8, memory: 32768, storage: 200, gpu: true },
-      FINANCE: { cpu: 8, memory: 16384, storage: 100, gpu: false },
-      DESIGN: { cpu: 16, memory: 65536, storage: 500, gpu: true },
-      DATA_SCIENCE: { cpu: 32, memory: 131072, storage: 1000, gpu: true, gpuType: 'nvidia-t4' },
-      GENERAL: { cpu: 4, memory: 8192, storage: 50, gpu: false },
-      SECURITY: { cpu: 8, memory: 16384, storage: 100, gpu: false },
-      DEVOPS: { cpu: 8, memory: 16384, storage: 200, gpu: false },
-      CUSTOM: { cpu: 16, memory: 65536, storage: 500, gpu: true },
-    };
-
-    return defaults[category];
-  }
-
-  function estimateLaunchTime(params: CreateTemplateParams): number {
-    let estimate = 60; // Base time in seconds
-
-    // Add time for tools
-    estimate += params.installedTools.length * 5;
-
-    // Add time for storage
-    estimate += Math.floor(params.defaultResources.storage / 10) * 5;
-
-    // Add time for GPU
-    if (params.defaultResources.gpu) {
-      estimate += 30;
-    }
-
-    return Math.min(estimate, 300); // Cap at 5 minutes
-  }
-
-  function incrementVersion(version: string): string {
-    const parts = version.split('.');
-    const patch = parseInt(parts[2] || '0') + 1;
-    return `${parts[0]}.${parts[1]}.${patch}`;
   }
 
   return {

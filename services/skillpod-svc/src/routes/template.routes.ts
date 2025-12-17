@@ -124,11 +124,11 @@ const ListTemplatesQuerySchema = z.object({
   page: z
     .string()
     .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 1)),
+    .transform((v) => (v ? Number.parseInt(v, 10) : 1)),
   limit: z
     .string()
     .optional()
-    .transform((v) => (v ? parseInt(v, 10) : 20)),
+    .transform((v) => (v ? Number.parseInt(v, 10) : 20)),
 });
 
 // =============================================================================

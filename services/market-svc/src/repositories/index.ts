@@ -17,3 +17,10 @@ export * from './service-review.repository.js';
 
 // Compliance System
 export * from './compliance.repository.js';
+
+// Rate Intelligence System
+export * from './rate-data.repository.js';
+export * from './rate-aggregate.repository.js';
+export * from './demand-trend.repository.js';
+export * from './rate-recommendation.repository.js';
+export * from './rate-history.repository.js';
