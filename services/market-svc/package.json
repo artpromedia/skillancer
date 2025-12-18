@@ -23,6 +23,7 @@
     "@skillancer/utils": "workspace:*",
     "fastify": "^4.26.0",
     "ioredis": "^5.3.2",
+    "stripe": "^14.0.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {

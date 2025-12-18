@@ -84,9 +84,21 @@ export class ContractInvoiceRepository {
     const platformFee = subtotal.mul(new Prisma.Decimal(0.1));
     const total = subtotal.add(platformFee);
 
+    // Get contract to retrieve clientUserId and freelancerUserId
+    const contract = await this.prisma.contractV2.findUnique({
+      where: { id: data.contractId },
+      select: { clientUserId: true, freelancerUserId: true },
+    });
+
+    if (!contract) {
+      throw new Error('Contract not found');
+    }
+
     // Build data object conditionally
     const createData: Prisma.ContractInvoiceUncheckedCreateInput = {
       contractId: data.contractId,
+      clientUserId: contract.clientUserId,
+      freelancerUserId: contract.freelancerUserId,
       invoiceNumber,
       periodStart: data.periodStart ?? null,
       periodEnd: data.periodEnd ?? null,
@@ -156,12 +168,23 @@ export class ContractInvoiceRepository {
   }
 
   /**
-   * Update invoice status
+   * Update invoice status with optional additional data
    */
-  async updateStatus(id: string, status: ContractInvoiceStatus) {
+  async updateStatus(
+    id: string,
+    status: ContractInvoiceStatus,
+    additionalData?: Partial<{
+      issuedAt: Date;
+      viewedAt: Date;
+      paidAt: Date;
+      paymentTransactionId: string;
+      paymentMethod: string;
+      notes: string;
+    }>
+  ) {
     return this.prisma.contractInvoice.update({
       where: { id },
-      data: { status },
+      data: { status, ...additionalData },
       include: this.defaultInclude,
     });
   }
@@ -247,11 +270,22 @@ export class ContractInvoiceRepository {
     data: InvoiceWithDetails[];
     total: number;
   }> {
-    const { contractId, status, dateFrom, dateTo, page = 1, limit = 20 } = options;
+    const {
+      contractId,
+      clientUserId,
+      freelancerUserId,
+      status,
+      dateFrom,
+      dateTo,
+      page = 1,
+      limit = 20,
+    } = options;
 
     const where: Prisma.ContractInvoiceWhereInput = {};
 
     if (contractId) where.contractId = contractId;
+    if (clientUserId) where.clientUserId = clientUserId;
+    if (freelancerUserId) where.freelancerUserId = freelancerUserId;
 
     if (status) {
       where.status = Array.isArray(status) ? { in: status } : status;
@@ -419,5 +453,26 @@ export class ContractInvoiceRepository {
     return this.prisma.contractInvoice.delete({
       where: { id },
     });
+  }
+
+  /**
+   * List invoices by contract ID
+   */
+  async listByContract(contractId: string, options?: InvoiceListOptions) {
+    return this.list({ ...options, contractId });
+  }
+
+  /**
+   * List invoices by client user ID
+   */
+  async listByClient(clientUserId: string, options?: InvoiceListOptions) {
+    return this.list({ ...options, clientUserId });
+  }
+
+  /**
+   * List invoices by freelancer user ID
+   */
+  async listByFreelancer(freelancerUserId: string, options?: InvoiceListOptions) {
+    return this.list({ ...options, freelancerUserId });
   }
 }

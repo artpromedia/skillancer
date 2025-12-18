@@ -172,6 +172,14 @@ export type {
   ContractDisputeReason,
   ContractDisputeStatus,
   ContractDisputeResolution,
+  // Escrow V2 types
+  EscrowAccountV2,
+  EscrowTransactionV2,
+  InvoiceLineItem,
+  EscrowAccountStatusV2,
+  EscrowTransactionTypeV2,
+  EscrowTransactionStatusV2,
+  InvoiceLineItemType,
   // Service types
   ServicePackage,
   ServiceAddOn,
@@ -227,4 +235,9 @@ export {
   ContractDisputeReason as ContractDisputeReasonEnum,
   ContractDisputeStatus as ContractDisputeStatusEnum,
   ContractDisputeResolution as ContractDisputeResolutionEnum,
+  // Escrow V2 enums
+  EscrowAccountStatusV2 as EscrowAccountStatusV2Enum,
+  EscrowTransactionTypeV2 as EscrowTransactionTypeV2Enum,
+  EscrowTransactionStatusV2 as EscrowTransactionStatusV2Enum,
+  InvoiceLineItemType as InvoiceLineItemTypeEnum,
 } from '@prisma/client';

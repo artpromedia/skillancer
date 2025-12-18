@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/consistent-type-imports */
 /**
  * @module @skillancer/market-svc/types/contract
  * Contract Management System types - Aligned with existing repository interfaces
@@ -480,8 +481,10 @@ export interface InvoiceLineItem {
   description: string;
   quantity: number;
   unitPrice: number;
-  type: 'milestone' | 'time' | 'expense' | 'adjustment';
-  referenceId?: string;
+  type: import('@skillancer/database').InvoiceLineItemType;
+  milestoneId?: string;
+  timeEntryId?: string;
+  orderIndex?: number;
 }
 
 /** Input for creating an invoice */
@@ -499,6 +502,8 @@ export interface CreateInvoiceInput {
 /** Options for listing invoices */
 export interface InvoiceListOptions {
   contractId?: string;
+  clientUserId?: string;
+  freelancerUserId?: string;
   status?:
     | import('@skillancer/database').ContractInvoiceStatus
     | import('@skillancer/database').ContractInvoiceStatus[];
@@ -506,6 +511,7 @@ export interface InvoiceListOptions {
   dateTo?: Date;
   page?: number;
   limit?: number;
+  offset?: number | undefined;
 }
 
 // =============================================
@@ -551,4 +557,225 @@ export interface PaginatedResult<T> {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+// =============================================
+// Escrow Types (for escrow.repository.ts & escrow.service.ts)
+// =============================================
+
+export {
+  EscrowAccountStatusV2,
+  EscrowTransactionTypeV2,
+  EscrowTransactionStatusV2,
+  InvoiceLineItemType,
+} from '@skillancer/database';
+
+/** Fee calculation result */
+export interface FeeCalculation {
+  grossAmount: number;
+  platformFee: number;
+  platformFeePercent: number;
+  processingFee: number;
+  processingFeePercent: number;
+  netAmount: number;
+  totalCharge: number;
+}
+
+/** Fee breakdown item for display */
+export interface FeeBreakdownItem {
+  label: string;
+  amount: number;
+  description?: string;
+}
+
+/** Fee preview with breakdown */
+export interface FeePreview extends FeeCalculation {
+  breakdown: FeeBreakdownItem[];
+}
+
+/** Parameters for funding escrow */
+export interface FundEscrowParams {
+  contractId: string;
+  clientUserId: string;
+  amount: number;
+  milestoneId?: string | undefined;
+  paymentMethodId: string;
+  idempotencyKey?: string | undefined;
+}
+
+/** Parameters for releasing escrow funds */
+export interface ReleaseEscrowParams {
+  contractId: string;
+  clientUserId: string;
+  milestoneId?: string | undefined;
+  amount?: number | undefined;
+  notes?: string | undefined;
+}
+
+/** Parameters for refunding escrow */
+export interface RefundEscrowParams {
+  contractId: string;
+  initiatedBy: string;
+  milestoneId?: string | undefined;
+  amount?: number | undefined;
+  reason: string;
+}
+
+/** Parameters for freezing escrow (dispute) */
+export interface FreezeEscrowParams {
+  contractId: string;
+  disputeId: string;
+  amount?: number | undefined;
+}
+
+/** Parameters for unfreezing escrow */
+export interface UnfreezeEscrowParams {
+  contractId: string;
+  disputeId: string;
+  amount?: number | undefined;
+}
+
+/** Parameters for resolving a dispute */
+export interface ResolveDisputeParams {
+  disputeId: string;
+  resolution: import('@skillancer/database').ContractDisputeResolution;
+  clientRefundAmount?: number | undefined;
+  freelancerPayoutAmount?: number | undefined;
+  resolvedBy: string;
+  resolutionNotes?: string | undefined;
+}
+
+/** Escrow account summary */
+export interface EscrowAccountSummary {
+  id: string;
+  contractId: string;
+  balance: number;
+  pendingBalance: number;
+  releasedBalance: number;
+  refundedBalance: number;
+  disputedBalance: number;
+  availableBalance: number;
+  currency: string;
+  status: import('@skillancer/database').EscrowAccountStatusV2;
+  contract: {
+    id: string;
+    title: string;
+    contractNumber: string;
+    status: string;
+    clientUserId: string;
+    freelancerUserId: string;
+  };
+}
+
+/** Escrow transaction summary */
+export interface EscrowTransactionSummary {
+  id: string;
+  transactionType: import('@skillancer/database').EscrowTransactionTypeV2;
+  status: import('@skillancer/database').EscrowTransactionStatusV2;
+  amount: number;
+  platformFee: number;
+  processingFee: number;
+  netAmount: number;
+  currency: string;
+  milestoneId?: string | null;
+  milestoneTitle?: string | null;
+  invoiceId?: string | null;
+  invoiceNumber?: string | null;
+  description?: string | null;
+  stripePaymentIntentId?: string | null;
+  createdAt: Date;
+  processedAt?: Date | null;
+}
+
+/** Fund escrow result */
+export interface FundEscrowResult {
+  transaction: EscrowTransactionSummary;
+  clientSecret?: string;
+  requiresAction: boolean;
+  escrowAccount: EscrowAccountSummary;
+}
+
+/** Release escrow result */
+export interface ReleaseEscrowResult {
+  transaction: EscrowTransactionSummary;
+  escrowAccount: EscrowAccountSummary;
+  payoutScheduled: boolean;
+}
+
+/** Refund escrow result */
+export interface RefundEscrowResult {
+  transaction: EscrowTransactionSummary;
+  escrowAccount: EscrowAccountSummary;
+  stripeRefundId?: string;
+}
+
+// =============================================
+// Invoice Line Item Types
+// =============================================
+
+/** Input for creating an invoice line item */
+export interface CreateLineItemInput {
+  type: import('@skillancer/database').InvoiceLineItemType;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  milestoneId?: string;
+  timeEntryId?: string;
+  orderIndex?: number;
+}
+
+/** Invoice with line items */
+export interface InvoiceWithLineItems extends InvoiceWithDetails {
+  lineItems: Array<{
+    id: string;
+    type: import('@skillancer/database').InvoiceLineItemType;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    amount: number;
+    milestoneId?: string | null;
+    timeEntryId?: string | null;
+    orderIndex: number;
+  }>;
+}
+
+// =============================================
+// Payout Types
+// =============================================
+
+/** Payout account summary */
+export interface PayoutAccountSummary {
+  id: string;
+  userId: string;
+  stripeConnectAccountId: string | null;
+  accountType: string;
+  status: string;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  defaultCurrency: string;
+  requiresVerification: boolean;
+  verificationFields: string[];
+}
+
+/** Input for creating a payout */
+export interface CreatePayoutInput {
+  freelancerUserId: string;
+  amount: number;
+  currency?: string;
+  invoiceId?: string;
+  contractId?: string;
+  description?: string;
+}
+
+/** Payout result */
+export interface PayoutResult {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  stripeTransferId?: string | null;
+  stripePayoutId?: string | null;
+  estimatedArrival?: Date | null;
+  failureCode?: string | null;
+  failureMessage?: string | null;
 }

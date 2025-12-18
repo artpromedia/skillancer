@@ -5,10 +5,14 @@
 
 import { registerAdminReviewRoutes } from './admin-reviews.routes.js';
 import { registerEnhancedReviewRoutes } from './enhanced-reviews.routes.js';
+import { registerEscrowRoutes } from './escrow.routes.js';
+import { registerInvoiceRoutes } from './invoices.routes.js';
+import { registerPayoutRoutes } from './payouts.routes.js';
 import { rateIntelligenceRoutes } from './rate-intelligence.routes.js';
 import { registerReviewRoutes } from './reviews.routes.js';
 import { registerServiceOrderRoutes } from './service-orders.routes.js';
 import { registerServiceRoutes } from './services.routes.js';
+import { registerStripeWebhookRoutes } from './stripe-webhooks.routes.js';
 
 // Contract routes and services - TODO: Uncomment when implemented
 // import { contractRoutes } from './contract.routes.js';
@@ -31,6 +35,7 @@ export interface RouteDependencies {
   prisma: PrismaClient;
   redis: Redis;
   logger: Logger;
+  stripeWebhookSecret?: string;
 }
 
 export async function registerRoutes(
@@ -85,6 +90,45 @@ export async function registerRoutes(
     { prefix: '/market' }
   );
 
+  // Register escrow routes
+  await fastify.register(
+    (instance) => {
+      registerEscrowRoutes(instance, deps);
+    },
+    { prefix: '/escrow' }
+  );
+
+  // Register invoice routes
+  await fastify.register(
+    (instance) => {
+      registerInvoiceRoutes(instance, deps);
+    },
+    { prefix: '/invoices' }
+  );
+
+  // Register payout routes
+  await fastify.register(
+    (instance) => {
+      registerPayoutRoutes(instance, deps);
+    },
+    { prefix: '/payouts' }
+  );
+
+  // Register Stripe webhook routes
+  if (deps.stripeWebhookSecret) {
+    await fastify.register(
+      (instance) => {
+        registerStripeWebhookRoutes(instance, {
+          prisma: deps.prisma,
+          logger: deps.logger,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          stripeWebhookSecret: deps.stripeWebhookSecret!,
+        });
+      },
+      { prefix: '/webhooks' }
+    );
+  }
+
   // TODO: Register contract management routes when implemented
   // const activityService = new ContractActivityService(deps.prisma, deps.logger);
   // const signatureService = new ContractSignatureService(deps.prisma, deps.logger, activityService);
@@ -128,6 +172,10 @@ export { registerEnhancedReviewRoutes } from './enhanced-reviews.routes.js';
 export { registerServiceRoutes } from './services.routes.js';
 export { registerServiceOrderRoutes } from './service-orders.routes.js';
 export { rateIntelligenceRoutes } from './rate-intelligence.routes.js';
+export { registerEscrowRoutes } from './escrow.routes.js';
+export { registerInvoiceRoutes } from './invoices.routes.js';
+export { registerPayoutRoutes } from './payouts.routes.js';
+export { registerStripeWebhookRoutes } from './stripe-webhooks.routes.js';
 // TODO: Export contract routes when implemented
 // export { contractRoutes } from './contract.routes.js';
 // export { contractSubRoutes } from './contract-sub.routes.js';

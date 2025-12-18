@@ -15,7 +15,6 @@ import type {
   TimeEntryListOptions,
   TimeEntryWithDetails,
   TimeEntrySummary,
-  TimeEntryEvidence,
 } from '../types/contract.types.js';
 import type { PrismaClient, TimeEntryStatusV2 } from '@skillancer/database';
 
@@ -149,6 +148,7 @@ export class TimeEntryRepository {
       rejectionReason: string;
       paidAt: Date;
       invoiceId: string;
+      invoicedAt: Date;
     }>
   ) {
     return this.prisma.timeEntryV2.update({
@@ -238,7 +238,16 @@ export class TimeEntryRepository {
     data: TimeEntryWithDetails[];
     total: number;
   }> {
-    const { contractId, freelancerId, status, dateFrom, dateTo, page = 1, limit = 50 } = options;
+    const {
+      contractId,
+      freelancerId,
+      status,
+      dateFrom,
+      dateTo,
+      invoiced,
+      page = 1,
+      limit = 50,
+    } = options;
 
     const where: Prisma.TimeEntryV2WhereInput = {};
 
@@ -253,6 +262,11 @@ export class TimeEntryRepository {
       where.date = {};
       if (dateFrom) where.date.gte = dateFrom;
       if (dateTo) where.date.lte = dateTo;
+    }
+
+    // Filter by invoiced status
+    if (invoiced !== undefined) {
+      where.invoiceId = invoiced ? { not: null } : null;
     }
 
     const [data, total] = await Promise.all([
