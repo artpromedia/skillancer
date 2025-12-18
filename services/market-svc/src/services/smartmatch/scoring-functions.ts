@@ -569,8 +569,8 @@ function calculateTimezoneOverlap(
   const defaultStart = 9;
   const defaultEnd = 17;
 
-  const start1 = workStart ? Number.parseInt(workStart.split(':')[0], 10) : defaultStart;
-  const end1 = workEnd ? Number.parseInt(workEnd.split(':')[0], 10) : defaultEnd;
+  const start1 = workStart ? Number.parseInt(workStart.split(':')[0] ?? '9', 10) : defaultStart;
+  const end1 = workEnd ? Number.parseInt(workEnd.split(':')[0] ?? '17', 10) : defaultEnd;
 
   // Get timezone offsets
   const offset1 = getTimezoneOffset(tz1);
@@ -767,7 +767,7 @@ export function scoreAvailability(
   }
 
   // Score recent activity
-  const activityResult = scoreRecentActivity(workPattern.lastActiveAt);
+  const activityResult = scoreRecentActivity(workPattern.lastActiveAt ?? null);
   if (activityResult) {
     score += activityResult.scoreAdjust;
     factors.push(activityResult.factor);
@@ -904,7 +904,10 @@ export function scoreResponsiveness(
   }
 
   // Average response time
-  if (workPattern.avgResponseTimeMinutes !== null) {
+  if (
+    workPattern.avgResponseTimeMinutes !== null &&
+    workPattern.avgResponseTimeMinutes !== undefined
+  ) {
     const responseHours = workPattern.avgResponseTimeMinutes / 60;
 
     if (responseHours <= 1) {

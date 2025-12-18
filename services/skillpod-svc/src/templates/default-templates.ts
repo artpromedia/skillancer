@@ -4,6 +4,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 
 import type {
   ToolDefinition,
@@ -16,7 +17,8 @@ import type { TemplateCategory } from '@prisma/client';
 // TOOL DEFINITIONS
 // =============================================================================
 
-export const COMMON_TOOLS: Record<string, ToolDefinition> = {
+// Type assertion to avoid ToolDefinition | undefined when accessing properties
+export const COMMON_TOOLS = {
   // Version Control
   git: {
     name: 'Git',
@@ -369,7 +371,7 @@ export const COMMON_TOOLS: Record<string, ToolDefinition> = {
     category: 'utility',
     description: 'Interactive process viewer',
   },
-};
+} as const satisfies Record<string, ToolDefinition>;
 
 // =============================================================================
 // DEFAULT TEMPLATES

@@ -20,6 +20,10 @@ export interface SkillPodConfig {
   redis: {
     url: string;
   };
+  aws?: {
+    region: string;
+    accountId: string;
+  };
   vdi: {
     provider: 'kasm' | 'appstream';
     kasmApiUrl: string;
@@ -86,6 +90,12 @@ export function getConfig(): SkillPodConfig {
     redis: {
       url: process.env.REDIS_URL || 'redis://localhost:6379',
     },
+    aws: process.env.AWS_REGION
+      ? {
+          region: process.env.AWS_REGION,
+          accountId: process.env.AWS_ACCOUNT_ID || '',
+        }
+      : undefined,
     vdi: vdiConfig,
     security: {
       jwtSecret: process.env.JWT_SECRET || 'development-secret',
@@ -137,6 +147,9 @@ export const config = {
   },
   get redis() {
     return getConfig().redis;
+  },
+  get aws() {
+    return getConfig().aws;
   },
   get vdi() {
     return getConfig().vdi;

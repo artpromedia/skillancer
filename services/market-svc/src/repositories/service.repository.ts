@@ -66,44 +66,50 @@ export class ServiceRepository {
         orderCount: 0,
         completedCount: 0,
         ratingCount: 0,
-        packages: packages?.length
+        ...(packages && packages.length > 0
           ? {
-              create: packages.map((pkg, index) => ({
-                name: pkg.name,
-                tier: pkg.tier,
-                description: pkg.description ?? null,
-                price: pkg.price,
-                deliveryDays: pkg.deliveryDays,
-                revisionsIncluded: pkg.revisionsIncluded,
-                features: pkg.features as unknown as Prisma.InputJsonValue,
-                deliverables: pkg.deliverables as unknown as Prisma.InputJsonValue,
-                maxRevisions: pkg.maxRevisions ?? null,
-                isActive: true,
-                sortOrder: index,
-              })),
+              packages: {
+                create: packages.map((pkg, index) => ({
+                  name: pkg.name,
+                  tier: pkg.tier,
+                  description: pkg.description ?? null,
+                  price: pkg.price,
+                  deliveryDays: pkg.deliveryDays,
+                  revisionsIncluded: pkg.revisionsIncluded,
+                  features: pkg.features as unknown as Prisma.InputJsonValue,
+                  deliverables: pkg.deliverables as unknown as Prisma.InputJsonValue,
+                  maxRevisions: pkg.maxRevisions ?? null,
+                  isActive: true,
+                  sortOrder: index,
+                })),
+              },
             }
-          : undefined,
-        addOns: addOns?.length
+          : {}),
+        ...(addOns && addOns.length > 0
           ? {
-              create: addOns.map((addOn, index) => ({
-                title: addOn.title,
-                description: addOn.description ?? null,
-                price: addOn.price,
-                additionalDays: addOn.additionalDays ?? 0,
-                allowQuantity: addOn.allowQuantity ?? false,
-                maxQuantity: addOn.maxQuantity ?? null,
-                isActive: true,
-                sortOrder: index,
-              })),
+              addOns: {
+                create: addOns.map((addOn, index) => ({
+                  title: addOn.title,
+                  description: addOn.description ?? null,
+                  price: addOn.price,
+                  additionalDays: addOn.additionalDays ?? 0,
+                  allowQuantity: addOn.allowQuantity ?? false,
+                  maxQuantity: addOn.maxQuantity ?? null,
+                  isActive: true,
+                  sortOrder: index,
+                })),
+              },
             }
-          : undefined,
-        skills: skills?.length
+          : {}),
+        ...(skills && skills.length > 0
           ? {
-              create: skills.map((skillId) => ({
-                skillId,
-              })),
+              skills: {
+                create: skills.map((skillId) => ({
+                  skillId,
+                })),
+              },
             }
-          : undefined,
+          : {}),
       },
       include: this.getServiceIncludes(),
     });
@@ -121,10 +127,22 @@ export class ServiceRepository {
 
   /**
    * Find a service by slug
+   * Note: Slug is unique per freelancer, not globally.
+   * This returns the first match if multiple freelancers use the same slug.
    */
   async findBySlug(slug: string) {
-    return this.prisma.service.findUnique({
+    return this.prisma.service.findFirst({
       where: { slug },
+      include: this.getServiceIncludes(),
+    });
+  }
+
+  /**
+   * Find a service by freelancer ID and slug (unique combination)
+   */
+  async findByFreelancerSlug(freelancerId: string, slug: string) {
+    return this.prisma.service.findUnique({
+      where: { freelancerId_slug: { freelancerId, slug } },
       include: this.getServiceIncludes(),
     });
   }
@@ -189,7 +207,7 @@ export class ServiceRepository {
 
     for (const field of jsonFields) {
       if (input[field] !== undefined) {
-        (data as Record<string, unknown>)[field] = input[field] as Prisma.InputJsonValue;
+        (data as Record<string, unknown>)[field] = input[field] as unknown as Prisma.InputJsonValue;
       }
     }
 
@@ -265,7 +283,8 @@ export class ServiceRepository {
       // Need to recalculate average rating
       const service = await this.findById(id);
       if (service) {
-        const currentTotal = (service.avgRating ?? 0) * service.ratingCount;
+        const currentAvg = service.avgRating ? Number(service.avgRating) : 0;
+        const currentTotal = currentAvg * service.ratingCount;
         const newCount = service.ratingCount + 1;
         const newAvg = (currentTotal + rating) / newCount;
 

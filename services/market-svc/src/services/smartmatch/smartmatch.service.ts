@@ -69,7 +69,7 @@ interface PrismaProfile {
 }
 
 interface PrismaTrustScore {
-  score?: number | null;
+  overallScore: number;
 }
 
 interface PrismaRatingAggregation {
@@ -91,6 +91,13 @@ interface PrismaClearance {
   clearanceLevel: string;
 }
 
+interface PrismaContractV2 {
+  id: string;
+  status: string;
+  completedAt: Date | null;
+  clientUserId: string;
+}
+
 interface FreelancerProfile {
   id: string;
   displayName?: string | null;
@@ -102,7 +109,8 @@ interface FreelancerProfile {
   profile?: PrismaProfile | null;
   trustScore?: PrismaTrustScore | null;
   ratingAggregation?: PrismaRatingAggregation | null;
-  contractsAsFreelancer: PrismaContract[];
+  contractsAsFreelancer?: PrismaContract[];
+  contractsAsFreelancerV2?: PrismaContractV2[];
   freelancerCompliances?: PrismaCompliance[];
   securityClearances?: PrismaClearance[];
 }
@@ -228,11 +236,11 @@ export class SmartMatchService {
 
     const experienceScore = scoreExperience(
       profile.profile?.yearsExperience ?? null,
-      profile.contractsAsFreelancer.length,
+      (profile.contractsAsFreelancer?.length ?? 0) + (profile.contractsAsFreelancerV2?.length ?? 0),
       criteria.experienceLevel
     );
 
-    const trustScoreValue = profile.trustScore?.score ?? 50;
+    const trustScoreValue = profile.trustScore?.overallScore ?? 50;
     const trustScoreResult = scoreTrust(
       trustScoreValue,
       profile.verificationLevel as VerificationLevel,
@@ -320,9 +328,11 @@ export class SmartMatchService {
 
     for (const user of users) {
       try {
-        const score = await this.calculateMatchScore(user.id, criteria, {
-          weights: options.weights,
-        });
+        const score = await this.calculateMatchScore(
+          user.id,
+          criteria,
+          options.weights ? { weights: normalizeWeights(options.weights) } : undefined
+        );
 
         // Skip if essential requirements not met (score = 0 in compliance)
         if (score.components.compliance.score === 0 && criteria.requiredCompliance?.length) {
@@ -330,12 +340,12 @@ export class SmartMatchService {
         }
 
         const complianceStatus = this.buildComplianceStatus(
-          user,
+          user as unknown as FreelancerProfile,
           criteria.requiredCompliance || [],
           criteria.preferredCompliance || []
         );
 
-        const freelancerSummary = this.buildFreelancerSummary(user);
+        const freelancerSummary = this.buildFreelancerSummary(user as unknown as FreelancerProfile);
 
         scoredMatches.push({
           freelancer: freelancerSummary,
@@ -492,8 +502,8 @@ export class SmartMatchService {
       userId: freelancerUserId,
       skill,
       endorsementType: data.endorsementType,
-      projectId: data.projectId,
-      comment: data.comment,
+      ...(data.projectId && { projectId: data.projectId }),
+      ...(data.comment && { comment: data.comment }),
     });
   }
 
@@ -543,9 +553,9 @@ export class SmartMatchService {
   ) {
     return this.repository.getMarketRate({
       skillCategory,
-      primarySkill,
-      experienceLevel,
-      region,
+      ...(primarySkill && { primarySkill }),
+      ...(experienceLevel && { experienceLevel }),
+      ...(region && { region }),
     });
   }
 
@@ -561,7 +571,9 @@ export class SmartMatchService {
   // ===========================================================================
 
   private async buildComplianceProfile(userId: string): Promise<ComplianceProfile> {
-    const profile = await this.repository.getFreelancerProfile(userId);
+    const profile = (await this.repository.getFreelancerProfile(
+      userId
+    )) as FreelancerProfile | null;
 
     if (!profile) {
       return {
@@ -574,15 +586,15 @@ export class SmartMatchService {
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const compliances = (profile.freelancerCompliances || []).map((c) => ({
+    const compliances = (profile.freelancerCompliances || []).map((c: PrismaCompliance) => ({
       type: c.complianceType,
       isExpiringSoon: c.expiresAt ? new Date(c.expiresAt) <= thirtyDaysFromNow : false,
     }));
 
     return {
-      complianceTypes: compliances.map((c) => c.type),
+      complianceTypes: compliances.map((c: { type: string }) => c.type),
       clearanceLevels: (profile.securityClearances || []).map(
-        (c) => c.clearanceLevel
+        (c: PrismaClearance) => c.clearanceLevel
       ) as ClearanceLevel[],
       compliances,
     };
@@ -609,7 +621,7 @@ export class SmartMatchService {
 
       // Check if freelancer has any related skill
       const matchingRelated = relatedSkills.find((rel) =>
-        normalizedFreelancerSkills.includes(rel.skill.toLowerCase())
+        normalizedFreelancerSkills.has(rel.skill.toLowerCase())
       );
 
       map.set(normalizedSkill, matchingRelated || null);
@@ -619,7 +631,9 @@ export class SmartMatchService {
   }
 
   private async getSuccessMetrics(userId: string): Promise<FreelancerSuccessMetrics> {
-    const profile = await this.repository.getFreelancerProfile(userId);
+    const profile = (await this.repository.getFreelancerProfile(
+      userId
+    )) as FreelancerProfile | null;
 
     if (!profile) {
       return {
@@ -633,12 +647,20 @@ export class SmartMatchService {
       };
     }
 
-    const contracts = profile.contractsAsFreelancer || [];
-    const completed = contracts.filter((c) => c.status === 'COMPLETED');
-    const cancelled = contracts.filter((c) => c.status === 'CANCELLED');
+    // Combine both old and new contract relations
+    const contractsV1 = profile.contractsAsFreelancer || [];
+    const contractsV2 = profile.contractsAsFreelancerV2 || [];
 
-    // Calculate repeat client rate
-    const clientIds = contracts.map((c) => c.clientUserId).filter(Boolean) as string[];
+    // Use V2 contracts if available, otherwise fall back to V1
+    const contracts = contractsV2.length > 0 ? contractsV2 : contractsV1;
+    const completed = contracts.filter((c: { status: string }) => c.status === 'COMPLETED');
+    const cancelled = contracts.filter((c: { status: string }) => c.status === 'CANCELLED');
+
+    // Calculate repeat client rate - use clientUserId from V2 or clientId from V1
+    const clientIds =
+      contractsV2.length > 0
+        ? (contractsV2.map((c: PrismaContractV2) => c.clientUserId).filter(Boolean) as string[])
+        : (contractsV1.map((c: PrismaContract) => c.clientUserId).filter(Boolean) as string[]);
     const uniqueClients = new Set(clientIds).size;
     const repeatClients = clientIds.length > uniqueClients ? clientIds.length - uniqueClients : 0;
 
@@ -656,30 +678,47 @@ export class SmartMatchService {
   }
 
   private convertWorkPattern(pattern: WorkPatternData): FreelancerWorkPattern {
-    return {
+    const result: Record<string, unknown> = {
       id: pattern.id,
       userId: pattern.userId,
-      weeklyHoursAvailable: pattern.weeklyHoursAvailable,
-      preferredHoursPerWeek: pattern.preferredHoursPerWeek,
       workingDays: pattern.workingDays || [],
-      workingHoursStart: pattern.workingHoursStart,
-      workingHoursEnd: pattern.workingHoursEnd,
-      timezone: pattern.timezone,
-      avgResponseTimeMinutes: pattern.avgResponseTimeMinutes,
-      avgFirstBidTimeHours: pattern.avgFirstBidTimeHours,
       preferredProjectDuration: pattern.preferredProjectDuration || [],
-      preferredBudgetMin: pattern.preferredBudgetMin ? Number(pattern.preferredBudgetMin) : null,
-      preferredBudgetMax: pattern.preferredBudgetMax ? Number(pattern.preferredBudgetMax) : null,
       preferredLocationType: pattern.preferredLocationType || [],
       currentActiveProjects: pattern.currentActiveProjects ?? 0,
       maxConcurrentProjects: pattern.maxConcurrentProjects ?? 3,
-      unavailablePeriods: pattern.unavailablePeriods,
-      lastActiveAt: pattern.lastActiveAt,
-      lastBidAt: pattern.lastBidAt,
-      lastProjectCompletedAt: pattern.lastProjectCompletedAt,
       createdAt: pattern.createdAt,
       updatedAt: pattern.updatedAt,
     };
+
+    // Only add optional properties when they're defined (not undefined)
+    if (pattern.weeklyHoursAvailable !== undefined)
+      result.weeklyHoursAvailable = pattern.weeklyHoursAvailable;
+    if (pattern.preferredHoursPerWeek !== undefined)
+      result.preferredHoursPerWeek = pattern.preferredHoursPerWeek;
+    if (pattern.workingHoursStart !== undefined)
+      result.workingHoursStart = pattern.workingHoursStart;
+    if (pattern.workingHoursEnd !== undefined) result.workingHoursEnd = pattern.workingHoursEnd;
+    if (pattern.timezone !== undefined) result.timezone = pattern.timezone;
+    if (pattern.avgResponseTimeMinutes !== undefined)
+      result.avgResponseTimeMinutes = pattern.avgResponseTimeMinutes;
+    if (pattern.avgFirstBidTimeHours !== undefined)
+      result.avgFirstBidTimeHours = pattern.avgFirstBidTimeHours;
+    if (pattern.preferredBudgetMin !== undefined)
+      result.preferredBudgetMin = pattern.preferredBudgetMin
+        ? Number(pattern.preferredBudgetMin)
+        : null;
+    if (pattern.preferredBudgetMax !== undefined)
+      result.preferredBudgetMax = pattern.preferredBudgetMax
+        ? Number(pattern.preferredBudgetMax)
+        : null;
+    if (pattern.unavailablePeriods !== undefined)
+      result.unavailablePeriods = pattern.unavailablePeriods ?? null;
+    if (pattern.lastActiveAt !== undefined) result.lastActiveAt = pattern.lastActiveAt;
+    if (pattern.lastBidAt !== undefined) result.lastBidAt = pattern.lastBidAt;
+    if (pattern.lastProjectCompletedAt !== undefined)
+      result.lastProjectCompletedAt = pattern.lastProjectCompletedAt;
+
+    return result as unknown as FreelancerWorkPattern;
   }
 
   private convertMarketRate(rate: MarketRateData): RateIntelligence {
@@ -687,7 +726,7 @@ export class SmartMatchService {
       id: rate.id,
       skillCategory: rate.skillCategory,
       primarySkill: rate.primarySkill,
-      experienceLevel: rate.experienceLevel,
+      experienceLevel: rate.experienceLevel as RateIntelligence['experienceLevel'],
       region: rate.region,
       sampleSize: rate.sampleSize,
       avgHourlyRate: Number(rate.avgHourlyRate),
@@ -745,7 +784,8 @@ export class SmartMatchService {
         ? Number(user.ratingAggregation.averageRating)
         : null,
       reviewCount: user.ratingAggregation?.totalReviews ?? 0,
-      totalProjects: (user.contractsAsFreelancer || []).length,
+      totalProjects:
+        (user.contractsAsFreelancer?.length ?? 0) + (user.contractsAsFreelancerV2?.length ?? 0),
       verificationLevel: (user.verificationLevel as VerificationLevel) ?? 'NONE',
     };
   }
@@ -762,7 +802,7 @@ export class SmartMatchService {
         eventType: 'SEARCH_RESULT',
         clientUserId,
         freelancerUserId: match.freelancer.userId,
-        projectId: criteria.projectId,
+        ...(criteria.projectId && { projectId: criteria.projectId }),
         matchScore: match.score.overall,
         matchRank: index + 1,
         matchFactors: {

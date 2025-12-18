@@ -60,10 +60,11 @@ export type {
 export { createDLPService } from './dlp.service.js';
 export type {
   DLPService,
-  TransferEvaluationParams,
-  TransferEvaluationResult,
-  SensitiveDataMatch,
-  DLPScanResult,
+  TransferRequest,
+  TransferResult,
+  SensitiveDataPattern,
+  MalwareScanResult,
+  DLPConfig,
 } from './dlp.service.js';
 
 export { createRecordingService } from './recording.service.js';
@@ -109,20 +110,16 @@ export type {
 
 // Environment management services
 export { createECRService } from './ecr.service.js';
-export type { ECRService, ECRBuildResult, ECRListResult, ImageInfo } from './ecr.service.js';
+export type { ECRService, ECRImageInfo, ECRAuthToken } from './ecr.service.js';
 
 export { createMetricsService } from './metrics.service.js';
 export type { MetricsService, PodMetrics } from './metrics.service.js';
 
 export { createStorageService } from './storage.service.js';
-export type {
-  StorageService,
-  CreateVolumeParams,
-  VolumeInfo,
-  ResizeVolumeParams,
-  AttachVolumeParams,
-  DetachVolumeParams,
-} from './storage.service.js';
+export type { StorageService } from './storage.service.js';
+
+// Re-export volume types from environment types
+export type { CreateVolumeParams, VolumeInfo } from '../types/environment.types.js';
 
 export { createTemplateService, TemplateError } from './template.service.js';
 export type { TemplateService } from './template.service.js';

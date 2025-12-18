@@ -61,3 +61,5 @@ export { ServiceReviewService } from './service-review.service.js';
 export { RateIntelligenceService, RateIntelligenceError } from './rate-intelligence.service.js';
 export { createRateDataCollectorService } from './rate-data-collector.service.js';
 export type { RateDataCollectorService } from './rate-data-collector.service.js';
+
+// Contract Management System (services TBD)

@@ -493,7 +493,18 @@ export function registerServiceOrderRoutes(fastify: FastifyInstance, deps: Order
       const { id } = request.params as { id: string };
       const body = SendMessageSchema.parse(request.body);
 
-      const message = await orderService.sendMessage(id, user.id, body);
+      // Map attachments to remove undefined properties for exactOptionalPropertyTypes
+      const attachments = body.attachments?.map((a) => ({
+        name: a.name,
+        url: a.url,
+        ...(a.size !== undefined && { size: a.size }),
+        ...(a.type !== undefined && { type: a.type }),
+      }));
+
+      const message = await orderService.sendMessage(id, user.id, {
+        content: body.content,
+        ...(attachments && { attachments }),
+      });
 
       logger.info({
         msg: 'Order message sent',
@@ -645,8 +656,8 @@ export function registerServiceReviewRoutes(fastify: FastifyInstance, deps: Orde
       };
 
       const result = await reviewService.getServiceReviews(serviceId, {
-        minRating: minRating ? Number(minRating) : undefined,
-        sortBy: sortBy as any,
+        ...(minRating && { minRating: Number(minRating) }),
+        ...(sortBy && { sortBy: sortBy as 'newest' | 'helpful' | 'highest' | 'lowest' }),
         page: Number(page) || 1,
         limit: Math.min(Number(limit) || 20, 50),
       });
@@ -735,7 +746,18 @@ export function registerServiceReviewRoutes(fastify: FastifyInstance, deps: Orde
       const { id } = request.params as { id: string };
       const body = CreateReviewSchema.partial().parse(request.body);
 
-      const review = await reviewService.updateReview(id, user.id, body);
+      // Filter out undefined values for exactOptionalPropertyTypes
+      const updateData: Record<string, unknown> = {};
+      if (body.overallRating !== undefined) updateData.overallRating = body.overallRating;
+      if (body.title !== undefined) updateData.title = body.title;
+      if (body.content !== undefined) updateData.content = body.content;
+      if (body.communicationRating !== undefined)
+        updateData.communicationRating = body.communicationRating;
+      if (body.qualityRating !== undefined) updateData.qualityRating = body.qualityRating;
+      if (body.deliveryRating !== undefined) updateData.deliveryRating = body.deliveryRating;
+      if (body.valueRating !== undefined) updateData.valueRating = body.valueRating;
+
+      const review = await reviewService.updateReview(id, user.id, updateData);
 
       logger.info({
         msg: 'Service review updated',

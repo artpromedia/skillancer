@@ -116,8 +116,8 @@ export class ServiceOrderService {
         addOnDetails.push({
           addOnId: addOn.id,
           title: addOn.title,
-          price: addOn.price,
-          additionalDays: addOn.additionalDays,
+          price: Number(addOn.price),
+          additionalDays: Number(addOn.additionalDays),
           quantity,
         });
       }
@@ -195,7 +195,7 @@ export class ServiceOrderService {
       packageId: input.packageId,
       packageName: pkg.name,
       packageTier: pkg.tier,
-      packagePrice: pkg.price,
+      packagePrice: Number(pkg.price),
       packageDeliveryDays: pkg.deliveryDays,
       packageRevisionsIncluded: pkg.revisionsIncluded,
       packageFeatures: pkg.features,
@@ -431,7 +431,7 @@ export class ServiceOrderService {
     }
 
     const delivery = await this.orderRepository.createDelivery(orderId, {
-      message: input.message,
+      ...(input.message && { message: input.message }),
       files: input.files,
     });
 
@@ -528,14 +528,19 @@ export class ServiceOrderService {
     const deliveries = await this.orderRepository.findDeliveriesByOrderId(orderId);
     const latestDelivery = deliveries.at(-1);
 
-    if (latestDelivery) {
-      await this.orderRepository.requestRevisionForDelivery(latestDelivery.id);
+    if (!latestDelivery) {
+      throw new ServiceCatalogError(
+        ServiceCatalogErrorCode.DELIVERY_NOT_FOUND,
+        'No delivery found to request revision for'
+      );
     }
 
+    await this.orderRepository.requestRevisionForDelivery(latestDelivery.id);
+
     // Create revision request
-    const revision = await this.orderRepository.createRevisionRequest(orderId, {
+    const revision = await this.orderRepository.createRevisionRequest(orderId, latestDelivery.id, {
       description: input.description,
-      attachments: input.attachments,
+      ...(input.attachments && { attachments: input.attachments }),
     });
 
     this.logger.info({
@@ -607,8 +612,8 @@ export class ServiceOrderService {
 
     const message = await this.orderRepository.createMessage(orderId, userId, {
       content: input.content,
-      attachments: input.attachments,
-      messageType: input.messageType,
+      ...(input.attachments && { attachments: input.attachments }),
+      ...(input.messageType && { messageType: input.messageType }),
     });
 
     this.logger.info({

@@ -20,7 +20,7 @@ import type {
   SkillRelationType,
   ExperienceLevel,
 } from '../types/smartmatch.types.js';
-import type { PrismaClient, Prisma } from '@skillancer/database';
+import { Prisma, type PrismaClient } from '@skillancer/database';
 
 // ============================================================================
 // Types for repository operations
@@ -135,7 +135,7 @@ export class SmartMatchRepository {
           maxConcurrentProjects: data.maxConcurrentProjects,
         }),
         ...(data.unavailablePeriods && {
-          unavailablePeriods: data.unavailablePeriods as Prisma.InputJsonValue,
+          unavailablePeriods: data.unavailablePeriods as unknown as Prisma.InputJsonValue,
         }),
       },
       create: {
@@ -151,7 +151,8 @@ export class SmartMatchRepository {
         preferredBudgetMax: data.preferredBudgetMax ?? null,
         preferredLocationType: data.preferredLocationType ?? [],
         maxConcurrentProjects: data.maxConcurrentProjects ?? 3,
-        unavailablePeriods: (data.unavailablePeriods as Prisma.InputJsonValue) ?? null,
+        unavailablePeriods:
+          (data.unavailablePeriods as unknown as Prisma.InputJsonValue) ?? Prisma.JsonNull,
       },
     });
   }
@@ -257,8 +258,12 @@ export class SmartMatchRepository {
         freelancerUserId: data.freelancerUserId,
         matchScore: data.matchScore ?? null,
         matchRank: data.matchRank ?? null,
-        matchFactors: (data.matchFactors as Prisma.InputJsonValue) ?? null,
-        searchCriteria: (data.searchCriteria as Prisma.InputJsonValue) ?? null,
+        matchFactors: data.matchFactors
+          ? (data.matchFactors as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        searchCriteria: data.searchCriteria
+          ? (data.searchCriteria as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
       },
     });
   }
@@ -378,11 +383,17 @@ export class SmartMatchRepository {
   async getMarketRate(params: RateIntelligenceParams) {
     const { skillCategory, primarySkill, experienceLevel, region } = params;
 
+    // Filter out 'ANY' experience level - it's a filter flag, not a database value
+    const prismaExpLevel =
+      experienceLevel && experienceLevel !== 'ANY' ? experienceLevel : undefined;
+
     return this.prisma.rateIntelligence.findFirst({
       where: {
         skillCategory,
         ...(primarySkill && { primarySkill }),
-        ...(experienceLevel && { experienceLevel }),
+        ...(prismaExpLevel && {
+          experienceLevel: prismaExpLevel as 'ENTRY' | 'INTERMEDIATE' | 'EXPERT',
+        }),
         ...(region && { region }),
         periodEnd: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Within last 30 days
       },
@@ -392,11 +403,12 @@ export class SmartMatchRepository {
 
   /**
    * Create or update rate intelligence
+   * Note: experienceLevel must be a valid Prisma enum value (ENTRY, INTERMEDIATE, EXPERT)
    */
   async upsertRateIntelligence(data: {
     skillCategory: string;
     primarySkill?: string | null;
-    experienceLevel: ExperienceLevel;
+    experienceLevel: 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
     region?: string | null;
     sampleSize: number;
     avgHourlyRate: number;
@@ -416,9 +428,9 @@ export class SmartMatchRepository {
       where: {
         skillCategory_primarySkill_experienceLevel_region_periodStart: {
           skillCategory: data.skillCategory,
-          primarySkill: data.primarySkill ?? null,
+          primarySkill: data.primarySkill ?? '',
           experienceLevel: data.experienceLevel,
-          region: data.region ?? null,
+          region: data.region ?? '',
           periodStart: data.periodStart,
         },
       },
@@ -436,7 +448,25 @@ export class SmartMatchRepository {
         rateChangePct90d: data.rateChangePct90d ?? null,
         periodEnd: data.periodEnd,
       },
-      create: data,
+      create: {
+        skillCategory: data.skillCategory,
+        primarySkill: data.primarySkill ?? null,
+        experienceLevel: data.experienceLevel,
+        region: data.region ?? null,
+        sampleSize: data.sampleSize,
+        avgHourlyRate: data.avgHourlyRate,
+        medianHourlyRate: data.medianHourlyRate,
+        minHourlyRate: data.minHourlyRate,
+        maxHourlyRate: data.maxHourlyRate,
+        percentile25: data.percentile25,
+        percentile75: data.percentile75,
+        percentile90: data.percentile90,
+        avgFixedProjectRate: data.avgFixedProjectRate ?? null,
+        rateChangePct30d: data.rateChangePct30d ?? null,
+        rateChangePct90d: data.rateChangePct90d ?? null,
+        periodStart: data.periodStart,
+        periodEnd: data.periodEnd,
+      },
     });
   }
 
@@ -655,6 +685,14 @@ export class SmartMatchRepository {
             completedAt: true,
           },
         },
+        contractsAsFreelancerV2: {
+          select: {
+            id: true,
+            status: true,
+            completedAt: true,
+            clientUserId: true,
+          },
+        },
       },
     });
   }
@@ -715,11 +753,11 @@ export class SmartMatchRepository {
           securityClearances: {
             where: {
               isActive: true,
-              OR: [{ expirationDate: null }, { expirationDate: { gte: new Date() } }],
+              OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
             },
           },
           skillEndorsementsReceived: true,
-          contractsAsFreelancer: {
+          contractsAsFreelancerV2: {
             where: {
               status: 'COMPLETED',
             },

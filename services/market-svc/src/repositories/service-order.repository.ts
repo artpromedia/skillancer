@@ -14,7 +14,12 @@ import type {
   DeliveryFile,
   OrderListParams,
 } from '../types/service-catalog.types.js';
-import type { PrismaClient, Prisma, PackageTier } from '@skillancer/database';
+import {
+  type PrismaClient,
+  type Prisma,
+  PackageTier,
+  ServiceMessageType,
+} from '@skillancer/database';
 
 /**
  * Service Order Repository
@@ -60,7 +65,6 @@ export class ServiceOrderRepository {
     currency: string;
     deliveryDays: number;
     revisionsIncluded: number;
-    couponId?: string;
   }) {
     const { addOns, packageId, ...orderData } = data;
 
@@ -82,7 +86,6 @@ export class ServiceOrderRepository {
         deliveryDays: orderData.deliveryDays,
         revisionsIncluded: orderData.revisionsIncluded,
         revisionsUsed: 0,
-        couponId: orderData.couponId ?? null,
         items: {
           create: {
             packageId,
@@ -96,17 +99,19 @@ export class ServiceOrderRepository {
             quantity: 1,
           },
         },
-        orderAddOns: addOns?.length
+        ...(addOns && addOns.length > 0
           ? {
-              create: addOns.map((addOn) => ({
-                addOnId: addOn.addOnId,
-                title: addOn.title,
-                price: addOn.price,
-                additionalDays: addOn.additionalDays,
-                quantity: addOn.quantity,
-              })),
+              addOns: {
+                create: addOns.map((addOn) => ({
+                  addOnId: addOn.addOnId,
+                  title: addOn.title,
+                  price: addOn.price,
+                  additionalDays: addOn.additionalDays,
+                  quantity: addOn.quantity,
+                })),
+              },
             }
-          : undefined,
+          : {}),
       },
       include: this.getOrderIncludes(),
     });
@@ -586,7 +591,7 @@ export class ServiceOrderRepository {
     data: {
       content: string;
       attachments?: unknown;
-      messageType?: string;
+      messageType?: ServiceMessageType;
     }
   ) {
     return this.prisma.serviceOrderMessage.create({
@@ -595,7 +600,7 @@ export class ServiceOrderRepository {
         senderId,
         content: data.content,
         attachments: (data.attachments || []) as Prisma.InputJsonValue,
-        messageType: (data.messageType || 'TEXT') as Prisma.InputJsonValue,
+        messageType: data.messageType ?? 'TEXT',
         isRead: false,
       },
       include: {

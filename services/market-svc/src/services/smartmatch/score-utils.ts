@@ -286,13 +286,16 @@ export function formatBudgetRange(min?: number | null, max?: number | null): str
   if (min === undefined && max === undefined) {
     return 'Open Budget';
   }
-  if (min !== undefined && max !== undefined) {
+  if (min !== undefined && min !== null && max !== undefined && max !== null) {
     return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
   }
-  if (min !== undefined) {
+  if (min !== undefined && min !== null) {
     return `$${min.toLocaleString()}+`;
   }
-  return `Up to $${max?.toLocaleString()}`;
+  if (max !== undefined && max !== null) {
+    return `Up to $${max.toLocaleString()}`;
+  }
+  return 'Open Budget';
 }
 
 // =============================================================================

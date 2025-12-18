@@ -1,0 +1,554 @@
+/**
+ * @module @skillancer/market-svc/types/contract
+ * Contract Management System types - Aligned with existing repository interfaces
+ */
+
+import type {
+  ContractV2,
+  ContractMilestoneV2,
+  TimeEntryV2,
+  ContractAmendment,
+  ContractActivity,
+  ContractSignature,
+  ContractInvoice,
+  ContractDispute,
+  ContractDisputeMessage,
+  ContractTemplate,
+  User,
+  Tenant,
+  Job,
+} from '@skillancer/database';
+
+// Re-export enums for convenience
+export {
+  ContractSourceType,
+  ContractTypeV2,
+  RateTypeV2,
+  ContractStatusV2,
+  MilestoneStatusV2,
+  TimeEntryStatusV2,
+  EvidenceType,
+  AmendmentStatus,
+  TerminationType,
+  ContractActivityType,
+  SignatureType,
+  ContractInvoiceStatus,
+  ContractDisputeReason,
+  ContractDisputeStatus,
+  ContractDisputeResolution,
+} from '@skillancer/database';
+
+// =============================================
+// Contract Types (for contract.repository.ts)
+// =============================================
+
+/** Contract with all related entities */
+export interface ContractWithDetails extends ContractV2 {
+  client: Pick<User, 'id' | 'email' | 'displayName' | 'avatarUrl'>;
+  freelancer: Pick<User, 'id' | 'email' | 'displayName' | 'avatarUrl'>;
+  tenant: Pick<Tenant, 'id' | 'name' | 'slug'> | null;
+  job: Pick<Job, 'id' | 'title' | 'status'> | null;
+  milestones: ContractMilestoneV2[];
+  _count: {
+    timeEntries: number;
+    amendments: number;
+    activities: number;
+    invoices: number;
+    disputes: number;
+  };
+}
+
+/** Contract summary for dashboard lists */
+export interface ContractSummary {
+  id: string;
+  title: string;
+  contractNumber: string;
+  status: import('@skillancer/database').ContractStatusV2;
+  contractType: import('@skillancer/database').ContractTypeV2;
+  rateType: import('@skillancer/database').RateTypeV2;
+  totalBilled: number;
+  totalPaid: number;
+  totalInEscrow: number;
+  startDate: Date;
+  endDate: Date | null;
+  client: { id: string; displayName: string | null; avatarUrl: string | null };
+  freelancer: { id: string; displayName: string | null; avatarUrl: string | null };
+  progressPercent: number;
+  daysRemaining: number | null;
+  hasActiveDispute: boolean;
+  pendingAmendments: number;
+}
+
+/** Milestone input for contract creation */
+export interface ContractMilestoneInput {
+  title: string;
+  description?: string;
+  amount: number;
+  dueDate?: Date;
+  orderIndex?: number;
+  deliverables?: Array<{ title: string; description?: string; required?: boolean }>;
+}
+
+/** Input for creating a contract */
+export interface CreateContractInput {
+  tenantId?: string | null;
+  clientUserId: string;
+  freelancerUserId: string;
+  projectId?: string | null;
+  bidId?: string | null;
+  serviceOrderId?: string | null;
+  sourceType: import('@skillancer/database').ContractSourceType;
+  contractType: import('@skillancer/database').ContractTypeV2;
+  rateType: import('@skillancer/database').RateTypeV2;
+  title: string;
+  description?: string;
+  scope: string;
+  hourlyRate?: number;
+  weeklyHoursMin?: number;
+  weeklyHoursMax?: number;
+  fixedAmount?: number;
+  retainerAmount?: number;
+  currency?: string;
+  startDate: Date;
+  endDate?: Date;
+  estimatedDurationDays?: number;
+  paymentTermsDays?: number;
+  noticePeriodDays?: number;
+  includesNda?: boolean;
+  includesIpAssignment?: boolean;
+  includesNonCompete?: boolean;
+  customTerms?: string;
+  complianceRequirements?: string[];
+  skillpodRequired?: boolean;
+  skillpodPodId?: string;
+  milestones?: ContractMilestoneInput[];
+}
+
+/** Input for updating a contract */
+export interface UpdateContractInput {
+  title?: string;
+  description?: string;
+  scope?: string;
+  hourlyRate?: number;
+  weeklyHoursMin?: number;
+  weeklyHoursMax?: number;
+  fixedAmount?: number;
+  retainerAmount?: number;
+  startDate?: Date;
+  endDate?: Date;
+  paymentTermsDays?: number;
+  noticePeriodDays?: number;
+  includesNda?: boolean;
+  includesIpAssignment?: boolean;
+  includesNonCompete?: boolean;
+  customTerms?: string;
+  complianceRequirements?: string[];
+  documentUrl?: string;
+}
+
+/** Options for listing contracts */
+export interface ContractListOptions {
+  tenantId?: string;
+  clientId?: string;
+  freelancerId?: string;
+  userId?: string;
+  jobId?: string;
+  status?:
+    | import('@skillancer/database').ContractStatusV2
+    | import('@skillancer/database').ContractStatusV2[];
+  contractType?:
+    | import('@skillancer/database').ContractTypeV2
+    | import('@skillancer/database').ContractTypeV2[];
+  rateType?:
+    | import('@skillancer/database').RateTypeV2
+    | import('@skillancer/database').RateTypeV2[];
+  startDateFrom?: Date;
+  startDateTo?: Date;
+  endDateFrom?: Date;
+  endDateTo?: Date;
+  hasActiveDispute?: boolean;
+  hasPendingAmendments?: boolean;
+  search?: string;
+  sortBy?: 'createdAt' | 'startDate' | 'endDate' | 'totalContractValue' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+// =============================================
+// Milestone Types (for contract-milestone.repository.ts)
+// =============================================
+
+/** Milestone with contract info */
+export interface MilestoneWithDetails extends ContractMilestoneV2 {
+  contract: {
+    id: string;
+    title: string;
+    contractNumber: string;
+    clientId: string;
+    freelancerId: string;
+  };
+}
+
+/** Input for creating a milestone */
+export interface CreateContractMilestoneInput {
+  title: string;
+  description?: string;
+  amount: number;
+  dueDate?: Date;
+  orderIndex?: number;
+  deliverables?: Array<{ title: string; description?: string; required?: boolean }>;
+}
+
+/** Input for updating a milestone */
+export interface UpdateMilestoneInput {
+  title?: string;
+  description?: string;
+  amount?: number;
+  dueDate?: Date;
+  orderIndex?: number;
+  deliverables?: Array<{ title: string; description?: string; required?: boolean }>;
+}
+
+/** Options for listing milestones */
+export interface MilestoneListOptions {
+  contractId?: string;
+  status?:
+    | import('@skillancer/database').MilestoneStatusV2
+    | import('@skillancer/database').MilestoneStatusV2[];
+  dueDateFrom?: Date;
+  dueDateTo?: Date;
+  page?: number;
+  limit?: number;
+}
+
+/** Deliverable submission */
+export interface DeliverableSubmission {
+  title: string;
+  url?: string;
+  notes?: string;
+  submittedAt?: Date;
+}
+
+// =============================================
+// Time Entry Types (for time-entry.repository.ts)
+// =============================================
+
+/** Time entry with related info */
+export interface TimeEntryWithDetails extends TimeEntryV2 {
+  contract: {
+    id: string;
+    title: string;
+    contractNumber: string;
+    clientUserId: string;
+    hourlyRate: import('@prisma/client').Prisma.Decimal | null;
+  };
+  freelancer: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+}
+
+/** Input for creating a time entry */
+export interface CreateTimeEntryInput {
+  contractId: string;
+  freelancerUserId: string;
+  date: Date;
+  startTime?: Date;
+  endTime?: Date;
+  durationMinutes: number;
+  description: string;
+  taskCategory?: string;
+  hourlyRate: number;
+  currency?: string;
+  evidenceType?: import('@skillancer/database').EvidenceType;
+  evidence?: TimeEntryEvidence[];
+  skillpodSessionId?: string;
+  autoTracked?: boolean;
+}
+
+/** Time entry evidence */
+export interface TimeEntryEvidence {
+  type: 'screenshot' | 'recording' | 'file';
+  url: string;
+  timestamp?: Date;
+  metadata?: Record<string, unknown>;
+}
+
+/** Input for updating a time entry */
+export interface UpdateTimeEntryInput {
+  date?: Date;
+  startTime?: Date;
+  endTime?: Date;
+  durationMinutes?: number;
+  description?: string;
+  taskCategory?: string;
+  evidence?: TimeEntryEvidence[];
+}
+
+/** Options for listing time entries */
+export interface TimeEntryListOptions {
+  contractId?: string;
+  freelancerId?: string;
+  status?:
+    | import('@skillancer/database').TimeEntryStatusV2
+    | import('@skillancer/database').TimeEntryStatusV2[];
+  dateFrom?: Date;
+  dateTo?: Date;
+  invoiced?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+/** Time entry summary */
+export interface TimeEntrySummary {
+  totalMinutes: number;
+  totalAmount: number;
+  entriesCount: number;
+  approvedMinutes: number;
+  pendingMinutes: number;
+}
+
+// =============================================
+// Activity Types (for contract-activity.repository.ts)
+// =============================================
+
+/** Activity with actor info */
+export interface ActivityWithDetails extends ContractActivity {
+  actor: Pick<User, 'id' | 'displayName' | 'avatarUrl'> | null;
+}
+
+/** Input for logging an activity */
+export interface LogActivityInput {
+  contractId: string;
+  actorUserId?: string | null;
+  actorType?: 'CLIENT' | 'FREELANCER' | 'SYSTEM' | 'ADMIN';
+  activityType: import('@skillancer/database').ContractActivityType;
+  description: string;
+  milestoneId?: string | null;
+  timeEntryId?: string | null;
+  invoiceId?: string | null;
+  amendmentId?: string | null;
+  disputeId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  visibleToClient?: boolean;
+  visibleToFreelancer?: boolean;
+}
+
+/** Options for listing activities */
+export interface ActivityListOptions {
+  contractId: string;
+  activityType?:
+    | import('@skillancer/database').ContractActivityType
+    | import('@skillancer/database').ContractActivityType[];
+  actorUserId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  visibleToClient?: boolean;
+  visibleToFreelancer?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+// =============================================
+// Amendment Types (for contract-amendment.repository.ts)
+// =============================================
+
+/** Amendment with related info */
+export interface AmendmentWithDetails extends ContractAmendment {
+  contract: {
+    id: string;
+    title: string;
+    contractNumber: string;
+    clientId: string;
+    freelancerId: string;
+  };
+  proposer: Pick<User, 'id' | 'displayName'>;
+}
+
+/** Input for creating an amendment */
+export interface CreateAmendmentInput {
+  contractId: string;
+  proposedById: string;
+  title: string;
+  description: string;
+  reason: string;
+  changes: AmendmentChange[];
+  documentUrl?: string;
+}
+
+/** Amendment change record */
+export interface AmendmentChange {
+  field: string;
+  oldValue: unknown;
+  newValue: unknown;
+}
+
+/** Options for listing amendments */
+export interface AmendmentListOptions {
+  contractId?: string;
+  proposedById?: string;
+  status?:
+    | import('@skillancer/database').AmendmentStatus
+    | import('@skillancer/database').AmendmentStatus[];
+  page?: number;
+  limit?: number;
+}
+
+// =============================================
+// Signature Types (for contract-signature.repository.ts)
+// =============================================
+
+/** Signature with user info */
+export interface SignatureWithDetails extends ContractSignature {
+  user: Pick<User, 'id' | 'email' | 'displayName'>;
+}
+
+/** Input for creating a signature */
+export interface CreateSignatureInput {
+  contractId: string;
+  userId: string;
+  signerRole: 'CLIENT' | 'FREELANCER';
+  signatureType: import('@skillancer/database').SignatureType;
+  signatureImage?: string | null;
+  signatureText?: string | null;
+  ipAddress: string;
+  userAgent: string;
+  documentHash: string;
+  documentVersion: number;
+  termsVersion: string;
+}
+
+// =============================================
+// Dispute Types (for contract-dispute.repository.ts)
+// =============================================
+
+/** Dispute with related info */
+export interface DisputeWithDetails extends ContractDispute {
+  contract: {
+    id: string;
+    title: string;
+    contractNumber: string;
+    clientUserId: string;
+    freelancerUserId: string;
+  };
+  raiser: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+  messages: ContractDisputeMessage[];
+}
+
+/** Input for creating a dispute */
+export interface CreateDisputeInput {
+  contractId: string;
+  raisedById: string;
+  reason: import('@skillancer/database').ContractDisputeReason;
+  description: string;
+  milestoneId?: string;
+  timeEntryId?: string;
+  disputedAmount: number;
+  currency?: string;
+  evidenceUrls?: string[];
+}
+
+/** Options for listing disputes */
+export interface DisputeListOptions {
+  contractId?: string;
+  raisedById?: string;
+  status?:
+    | import('@skillancer/database').ContractDisputeStatus
+    | import('@skillancer/database').ContractDisputeStatus[];
+  page?: number;
+  limit?: number;
+}
+
+// =============================================
+// Invoice Types (for contract-invoice.repository.ts)
+// =============================================
+
+/** Invoice with related info */
+export interface InvoiceWithDetails extends ContractInvoice {
+  contract: {
+    id: string;
+    title: string;
+    contractNumber: string;
+    clientUserId: string;
+    freelancerUserId: string;
+    client?: { id: string; displayName: string | null; email: string };
+    freelancer?: { id: string; displayName: string | null; email: string };
+  };
+  timeEntries: TimeEntryV2[];
+}
+
+/** Invoice line item (for display/calculation purposes) */
+export interface InvoiceLineItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  type: 'milestone' | 'time' | 'expense' | 'adjustment';
+  referenceId?: string;
+}
+
+/** Input for creating an invoice */
+export interface CreateInvoiceInput {
+  contractId: string;
+  periodStart?: Date;
+  periodEnd?: Date;
+  timeEntryIds?: string[];
+  milestoneIds?: string[];
+  lineItems?: Omit<InvoiceLineItem, 'amount'>[];
+  notes?: string;
+  dueDate?: Date;
+}
+
+/** Options for listing invoices */
+export interface InvoiceListOptions {
+  contractId?: string;
+  status?:
+    | import('@skillancer/database').ContractInvoiceStatus
+    | import('@skillancer/database').ContractInvoiceStatus[];
+  dateFrom?: Date;
+  dateTo?: Date;
+  page?: number;
+  limit?: number;
+}
+
+// =============================================
+// Template Types (for contract-template.repository.ts)
+// =============================================
+
+/** Template with usage count - Note: ContractTemplate doesn't have direct relation to ContractV2 */
+export interface ContractTemplateWithDetails extends ContractTemplate {
+  usageCount?: number;
+}
+
+/** Input for creating a template */
+export interface CreateContractTemplateInput {
+  tenantId?: string | null;
+  name: string;
+  description?: string | null;
+  contractType: import('@skillancer/database').ContractTypeV2;
+  rateType: import('@skillancer/database').RateTypeV2;
+  templateContent: string;
+  variables: unknown;
+  clauses: unknown;
+  isDefault?: boolean;
+}
+
+/** Input for updating a template */
+export interface UpdateContractTemplateInput {
+  name?: string;
+  description?: string | null;
+  templateContent?: string;
+  variables?: unknown;
+  clauses?: unknown;
+  isActive?: boolean;
+  isDefault?: boolean;
+}
+
+// =============================================
+// Paginated Results
+// =============================================
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}

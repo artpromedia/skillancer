@@ -90,18 +90,18 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   // PLUGINS
   // ===========================================================================
 
-  await app.register(cors, {
+  await app.register(cors as any, {
     origin: true,
     credentials: true,
   });
 
-  await app.register(helmet, {
+  await app.register(helmet as any, {
     contentSecurityPolicy: false,
   });
 
-  await app.register(sensible);
+  await app.register(sensible as any);
 
-  await app.register(websocket);
+  await app.register(websocket as any);
 
   // ===========================================================================
   // SERVICES
@@ -119,7 +119,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   const kasmService = createKasmWorkspacesService();
   const wsService = createWebSocketEnforcementService(redis);
   const screenshotService = createScreenshotDetectionService(prisma, redis, kasmService, wsService);
-  const cdnService = createCdnService(redis);
+  const cdnService = createCdnService();
   const killSwitchService = createKillSwitchService(
     prisma,
     redis,

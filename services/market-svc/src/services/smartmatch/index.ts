@@ -27,9 +27,8 @@ export {
   sortMatches,
   paginate,
   generateSearchId,
-  generateMatchCacheKey,
-  generateWorkPatternCacheKey,
-  generateMarketRateCacheKey,
+  generateScoreCacheKey,
+  generateSearchCacheKey,
   formatBudgetRange,
   calculateCompetitionLevel,
 } from './score-utils.js';

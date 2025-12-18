@@ -19,8 +19,15 @@ export interface ResourceSpec {
   cpu: number; // vCPUs
   memory: number; // MB
   storage: number; // GB
+  gpus?: number;
   gpu?: boolean;
   gpuType?: string;
+  // Extended fields for resource pools
+  totalCpu?: number;
+  totalMemory?: number;
+  totalStorage?: number;
+  totalGpus?: number;
+  activePods?: number;
 }
 
 export interface ResourceUtilization {
@@ -35,12 +42,32 @@ export interface ResourceUtilization {
 // TOOL DEFINITIONS
 // =============================================================================
 
-export type ToolCategory = 'IDE' | 'LANGUAGE' | 'DATABASE' | 'TOOL' | 'FRAMEWORK' | 'OTHER';
+export type ToolCategory =
+  | 'IDE'
+  | 'LANGUAGE'
+  | 'DATABASE'
+  | 'TOOL'
+  | 'FRAMEWORK'
+  | 'OTHER'
+  // Extended categories for template tools
+  | 'version-control'
+  | 'editor'
+  | 'runtime'
+  | 'package-manager'
+  | 'container'
+  | 'database'
+  | 'cloud'
+  | 'infrastructure'
+  | 'data-science'
+  | 'design'
+  | 'security'
+  | 'utility';
 
 export interface ToolDefinition {
   name: string;
   version: string;
   category: ToolCategory;
+  description?: string;
   installCommand?: string;
   verifyCommand?: string;
   configPath?: string;
@@ -133,6 +160,8 @@ export interface AutoScalingConfig {
   enabled: boolean;
   minResources: ResourceSpec;
   maxResources: ResourceSpec;
+  cpuThreshold?: number; // For backward compat
+  memoryThreshold?: number; // For backward compat
   cpuScaleUpThreshold: number; // percentage
   cpuScaleDownThreshold: number;
   memoryScaleUpThreshold: number;
@@ -144,15 +173,19 @@ export interface AutoScalingConfig {
 export interface CreatePodParams {
   tenantId: string;
   ownerId: string;
+  userId?: string; // Alias for ownerId
   templateId?: string;
   name: string;
   description?: string;
   resources?: Partial<ResourceSpec>;
   securityPolicyId?: string;
   autoScalingEnabled?: boolean;
+  autoScaling?: AutoScalingConfig;
   autoScalingConfig?: AutoScalingConfig;
   persistentStorage?: boolean;
   expiresAt?: Date;
+  environmentVars?: Record<string, string>;
+  sessionDurationMinutes?: number;
 }
 
 export interface UpdatePodParams {
@@ -179,11 +212,21 @@ export interface PodConnectionInfo {
   expiresAt: Date;
 }
 
+export interface PodConnectionDetails {
+  connectionUrl: string;
+  connectionToken: string;
+  expiresAt: Date;
+  kasmSessionId?: string;
+}
+
 export interface ResizePodParams {
   cpu?: number;
   memory?: number;
   storage?: number;
   gpu?: boolean;
+  gpuType?: string;
+  reason?: string;
+  triggeredBy?: string;
 }
 
 // =============================================================================
@@ -249,6 +292,7 @@ export interface UpdateResourcePoolParams {
 }
 
 export interface TenantQuota {
+  tenantId?: string;
   maxCpu: number;
   usedCpu: number;
   maxMemory: number;
@@ -256,6 +300,7 @@ export interface TenantQuota {
   maxStorage: number;
   usedStorage: number;
   maxPods: number;
+  maxConcurrentPods?: number;
   activePods: number;
   maxGpus: number;
   usedGpus: number;
@@ -274,10 +319,22 @@ export interface TenantUsage {
 // =============================================================================
 
 export interface ScalingDecision {
-  action: 'SCALE_UP' | 'SCALE_DOWN' | 'NONE';
+  podId?: string;
+  shouldScale?: boolean;
+  action?: 'SCALE_UP' | 'SCALE_DOWN' | 'NONE';
+  direction?: 'up' | 'down';
   newCpu?: number;
   newMemory?: number;
   reason?: string;
+  currentResources?: ResourceSpec;
+  targetResources?: ResourceSpec;
+  currentMetrics?: {
+    cpuPercent: number;
+    memoryPercent: number;
+    diskPercent: number;
+    networkIn: number;
+    networkOut: number;
+  };
 }
 
 export interface ScalingEvent {
@@ -373,6 +430,9 @@ export type PodErrorCode =
   | 'INVALID_RESOURCES'
   | 'QUOTA_EXCEEDED'
   | 'INVALID_POD_STATE'
+  | 'INVALID_STATUS'
+  | 'INVALID_DURATION'
+  | 'UNAUTHORIZED'
   | 'POD_NOT_RUNNING'
   | 'ACCESS_DENIED'
   | 'PROVISION_FAILED'

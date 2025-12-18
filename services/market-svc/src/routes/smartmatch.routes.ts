@@ -6,7 +6,7 @@
  */
 
 import { SmartMatchError } from '../errors/smartmatch.errors.js';
-import { SmartMatchService } from '../services/smartmatch/smartmatch.service.js';
+import { SmartMatchService, normalizeWeights } from '../services/smartmatch/index.js';
 
 import type {
   MatchingCriteria,
@@ -15,7 +15,7 @@ import type {
   MatchingOutcome,
 } from '../types/smartmatch.types.js';
 import type { PrismaClient } from '@skillancer/database';
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply, FastifySchema } from 'fastify';
 
 // =============================================================================
 // TYPE DECLARATIONS FOR FASTIFY
@@ -30,6 +30,12 @@ interface AuthenticatedRequest extends FastifyRequest {
     id: string;
   };
 }
+
+// OpenAPI-compatible schema type that includes tags
+type OpenAPISchema = FastifySchema & {
+  tags?: string[];
+  summary?: string;
+};
 
 // =============================================================================
 // REQUEST/RESPONSE SCHEMAS
@@ -118,12 +124,16 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
             },
           },
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const { freelancerUserId, criteria, weights } = request.body;
 
-      const score = await service.calculateMatchScore(freelancerUserId, criteria, { weights });
+      const score = await service.calculateMatchScore(
+        freelancerUserId,
+        criteria,
+        weights ? { weights: normalizeWeights(weights) } : undefined
+      );
 
       return reply.send({
         success: true,
@@ -183,7 +193,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
             },
           },
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const userId = (request as AuthenticatedRequest).user?.id;
@@ -195,10 +205,10 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
       const { page, limit, sortBy } = request.query;
 
       const result = await service.findMatches(userId, criteria, {
-        weights,
-        page,
-        limit,
-        sortBy,
+        ...(weights && { weights: normalizeWeights(weights) }),
+        ...(page && { page }),
+        ...(limit && { limit }),
+        ...(sortBy && { sortBy: sortBy as 'score' | 'rate' | 'trust' }),
       });
 
       return reply.send({
@@ -253,7 +263,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
           },
           required: ['eventType', 'freelancerUserId'],
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const userId = (request as AuthenticatedRequest).user?.id;
@@ -264,9 +274,9 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
       const { eventType, freelancerUserId, projectId, serviceId, matchScore } = request.body;
 
       await service.recordMatchingEvent(eventType, userId, freelancerUserId, {
-        projectId,
-        serviceId,
-        matchScore,
+        ...(projectId && { projectId }),
+        ...(serviceId && { serviceId }),
+        ...(matchScore !== undefined && { matchScore }),
       });
 
       return reply.status(201).send({ success: true });
@@ -318,16 +328,16 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
           },
           required: ['outcome'],
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const { eventId } = request.params;
       const { outcome, wasHired, projectSuccessful, clientSatisfactionScore } = request.body;
 
       await service.updateMatchingOutcome(eventId, outcome, {
-        wasHired,
-        projectSuccessful,
-        clientSatisfactionScore,
+        ...(wasHired !== undefined && { wasHired }),
+        ...(projectSuccessful !== undefined && { projectSuccessful }),
+        ...(clientSatisfactionScore !== undefined && { clientSatisfactionScore }),
       });
 
       return reply.send({ success: true });
@@ -355,7 +365,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
             userId: { type: 'string' },
           },
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const userId = request.params.userId || (request as AuthenticatedRequest).user?.id;
@@ -420,7 +430,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
             maxConcurrentProjects: { type: 'number', minimum: 1, maximum: 20 },
           },
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const userId = (request as AuthenticatedRequest).user?.id;
@@ -446,7 +456,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
       schema: {
         tags: ['smartmatch'],
         summary: 'Track user activity',
-      },
+      } as OpenAPISchema,
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request as AuthenticatedRequest).user?.id;
@@ -501,7 +511,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
           },
           required: ['skill', 'endorsementType'],
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const endorserUserId = (request as AuthenticatedRequest).user?.id;
@@ -514,8 +524,8 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
 
       const endorsement = await service.endorseSkill(endorserUserId, userId, skill, {
         endorsementType,
-        projectId,
-        comment,
+        ...(projectId && { projectId }),
+        ...(comment && { comment }),
       });
 
       return reply.status(201).send({
@@ -550,7 +560,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
             skill: { type: 'string' },
           },
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const { userId } = request.params;
@@ -595,7 +605,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
           },
           required: ['skillCategory'],
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const { skillCategory, primarySkill, experienceLevel, region } = request.query;
@@ -639,7 +649,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
             periods: { type: 'integer', minimum: 1, maximum: 24, default: 6 },
           },
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const { skillCategory } = request.params;
@@ -676,7 +686,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
           },
           required: ['skill'],
         },
-      },
+      } as OpenAPISchema,
     },
     async (request, reply) => {
       const { skill } = request.params;
