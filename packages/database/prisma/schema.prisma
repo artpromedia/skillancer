@@ -170,6 +170,12 @@ model User {
   mileageLogs                       MileageLog[]              @relation("UserMileageLogs")
   taxProfile                        TaxProfile?               @relation("UserTaxProfile")
 
+  // Invoicing
+  invoices                          Invoice[]                 @relation("FreelancerInvoices")
+  invoiceTemplates                  InvoiceTemplate[]         @relation("FreelancerInvoiceTemplates")
+  recurringInvoices                 RecurringInvoice[]        @relation("FreelancerRecurringInvoices")
+  invoiceSettings                   InvoiceSettings?          @relation("UserInvoiceSettings")
+
   @@unique([oauthProvider, oauthId])
   @@index([email])
   @@index([status])
@@ -7292,6 +7298,10 @@ model Client {
   // Financial Tracking
   transactions FinancialTransaction[] @relation("ClientTransactions")
 
+  // Invoicing
+  invoices          Invoice[]          @relation("ClientInvoices")
+  recurringInvoices RecurringInvoice[] @relation("ClientRecurringInvoices")
+
   @@unique([freelancerUserId, email])
   @@index([freelancerUserId])
   @@index([status])
@@ -7778,6 +7788,9 @@ model CockpitProject {
 
   // Financial Tracking
   transactions   FinancialTransaction[] @relation("ProjectTransactions")
+
+  // Invoicing
+  invoices       Invoice[]              @relation("ProjectInvoices")
 
   @@map("cockpit_projects")
   @@index([freelancerUserId])
@@ -9211,4 +9224,488 @@ enum FilingStatus {
 enum AccountingMethod {
   CASH
   ACCRUAL
+}
+
+// ============================================================================
+// INVOICING SYSTEM
+// Professional invoicing, payments, templates, recurring billing
+// ============================================================================
+
+model Invoice {
+  id               String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String  @map("freelancer_user_id") @db.Uuid
+  clientId         String  @map("client_id") @db.Uuid
+
+  // Invoice identification
+  invoiceNumber   String  @unique @map("invoice_number") @db.VarChar(50)
+  referenceNumber String? @map("reference_number") @db.VarChar(100)
+
+  // Project association
+  projectId  String? @map("project_id") @db.Uuid
+  contractId String? @map("contract_id") @db.Uuid
+
+  // Dates
+  issueDate DateTime  @map("issue_date") @db.Date
+  dueDate   DateTime  @map("due_date") @db.Date
+  paidDate  DateTime? @map("paid_date") @db.Date
+
+  // Status
+  status InvoiceStatus @default(DRAFT)
+
+  // Currency
+  currency     String   @default("USD") @db.VarChar(3)
+  exchangeRate Decimal? @map("exchange_rate") @db.Decimal(10, 6)
+
+  // Amounts
+  subtotal      Decimal      @db.Decimal(14, 2)
+  discountType  DiscountType? @map("discount_type")
+  discountValue Decimal?     @map("discount_value") @db.Decimal(10, 2)
+  discountAmount Decimal     @default(0) @map("discount_amount") @db.Decimal(14, 2)
+
+  // Tax
+  taxEnabled Boolean  @default(false) @map("tax_enabled")
+  taxRate    Decimal? @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount  Decimal  @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  taxLabel   String?  @map("tax_label") @db.VarChar(50)
+  taxNumber  String?  @map("tax_number") @db.VarChar(100)
+
+  // Totals
+  total      Decimal @db.Decimal(14, 2)
+  amountPaid Decimal @default(0) @map("amount_paid") @db.Decimal(14, 2)
+  amountDue  Decimal @map("amount_due") @db.Decimal(14, 2)
+
+  // Late fees
+  lateFeeEnabled   Boolean     @default(false) @map("late_fee_enabled")
+  lateFeeType      LateFeeType? @map("late_fee_type")
+  lateFeeValue     Decimal?    @map("late_fee_value") @db.Decimal(10, 2)
+  lateFeeAmount    Decimal     @default(0) @map("late_fee_amount") @db.Decimal(14, 2)
+  lateFeeAppliedAt DateTime?   @map("late_fee_applied_at")
+
+  // Content
+  title      String? @db.VarChar(255)
+  summary    String? @db.Text
+  notes      String? @db.Text
+  terms      String? @db.Text
+  footerText String? @map("footer_text") @db.Text
+
+  // Branding
+  templateId  String? @map("template_id") @db.Uuid
+  logoUrl     String? @map("logo_url") @db.VarChar(500)
+  accentColor String? @map("accent_color") @db.VarChar(7)
+
+  // Payment
+  paymentInstructions    String?  @map("payment_instructions") @db.Text
+  acceptedPaymentMethods String[] @map("accepted_payment_methods")
+
+  // Online payment
+  stripePaymentIntentId String? @map("stripe_payment_intent_id") @db.VarChar(255)
+  stripeInvoiceId       String? @map("stripe_invoice_id") @db.VarChar(255)
+  paypalOrderId         String? @map("paypal_order_id") @db.VarChar(255)
+
+  // Client portal
+  viewToken    String    @unique @map("view_token") @db.VarChar(64)
+  viewCount    Int       @default(0) @map("view_count")
+  lastViewedAt DateTime? @map("last_viewed_at")
+
+  // PDF
+  pdfUrl         String?   @map("pdf_url") @db.VarChar(500)
+  pdfGeneratedAt DateTime? @map("pdf_generated_at")
+
+  // Recurring
+  isRecurring         Boolean @default(false) @map("is_recurring")
+  recurringScheduleId String? @map("recurring_schedule_id") @db.Uuid
+
+  // Reminders
+  remindersSent  Int       @default(0) @map("reminders_sent")
+  lastReminderAt DateTime? @map("last_reminder_at")
+  nextReminderAt DateTime? @map("next_reminder_at")
+
+  // Sent tracking
+  sentAt DateTime? @map("sent_at")
+  sentTo String[]  @map("sent_to")
+
+  // Voiding
+  voidedAt   DateTime? @map("voided_at")
+  voidReason String?   @map("void_reason") @db.Text
+
+  // Metadata
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  freelancer        User              @relation("FreelancerInvoices", fields: [freelancerUserId], references: [id])
+  client            Client            @relation("ClientInvoices", fields: [clientId], references: [id])
+  project           CockpitProject?   @relation("ProjectInvoices", fields: [projectId], references: [id])
+  template          InvoiceTemplate?  @relation(fields: [templateId], references: [id])
+  recurringSchedule RecurringInvoice? @relation("RecurringInvoiceInstances", fields: [recurringScheduleId], references: [id])
+  lineItems         InvoiceLineItem[]
+  payments          InvoicePayment[]
+  activities        InvoiceActivity[]
+
+  @@map("invoices")
+  @@index([freelancerUserId])
+  @@index([clientId])
+  @@index([projectId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([issueDate])
+  @@index([viewToken])
+  @@index([invoiceNumber])
+}
+
+model InvoiceLineItem {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  invoiceId String @map("invoice_id") @db.Uuid
+
+  // Order
+  orderIndex Int @default(0) @map("order_index")
+
+  // Item details
+  itemType    LineItemType @default(SERVICE) @map("item_type")
+  description String       @db.Text
+
+  // Quantity and rate
+  quantity  Decimal @db.Decimal(10, 4)
+  unitType  String? @map("unit_type") @db.VarChar(50)
+  unitPrice Decimal @map("unit_price") @db.Decimal(14, 2)
+
+  // Amount
+  amount Decimal @db.Decimal(14, 2)
+
+  // Tax
+  isTaxable Boolean  @default(true) @map("is_taxable")
+  taxRate   Decimal? @map("tax_rate") @db.Decimal(5, 2)
+
+  // References
+  timeEntryIds String[] @map("time_entry_ids")
+  milestoneId  String?  @map("milestone_id") @db.Uuid
+  projectId    String?  @map("project_id") @db.Uuid
+  taskId       String?  @map("task_id") @db.Uuid
+
+  // Date range (for time-based billing)
+  periodStart DateTime? @map("period_start") @db.Date
+  periodEnd   DateTime? @map("period_end") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_line_items")
+  @@index([invoiceId])
+}
+
+model InvoicePayment {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  invoiceId String @map("invoice_id") @db.Uuid
+
+  // Payment details
+  amount   Decimal @db.Decimal(14, 2)
+  currency String  @default("USD") @db.VarChar(3)
+
+  // Date
+  paymentDate DateTime @map("payment_date") @db.Date
+
+  // Method
+  paymentMethod InvoicePaymentMethod @map("payment_method")
+
+  // Transaction reference
+  transactionId       String? @map("transaction_id") @db.VarChar(255)
+  stripePaymentId     String? @map("stripe_payment_id") @db.VarChar(255)
+  paypalTransactionId String? @map("paypal_transaction_id") @db.VarChar(255)
+
+  // Notes
+  notes String? @db.Text
+
+  // Status
+  status InvoicePaymentStatus @default(COMPLETED)
+
+  // Refund
+  isRefund          Boolean @default(false) @map("is_refund")
+  refundedPaymentId String? @map("refunded_payment_id") @db.Uuid
+  refundReason      String? @map("refund_reason") @db.Text
+
+  // Financial transaction link
+  financialTransactionId String? @map("financial_transaction_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("invoice_payments")
+  @@index([invoiceId])
+  @@index([paymentDate])
+}
+
+model InvoiceTemplate {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String @map("freelancer_user_id") @db.Uuid
+
+  // Template details
+  name        String  @db.VarChar(100)
+  description String? @db.VarChar(500)
+  isDefault   Boolean @default(false) @map("is_default")
+
+  // Branding
+  logoUrl     String?        @map("logo_url") @db.VarChar(500)
+  accentColor String         @default("#3B82F6") @map("accent_color") @db.VarChar(7)
+  fontFamily  String         @default("Inter") @map("font_family") @db.VarChar(50)
+
+  // Layout
+  layout       TemplateLayout @default(CLASSIC)
+  showLogo     Boolean        @default(true) @map("show_logo")
+  showPaymentQR Boolean       @default(false) @map("show_payment_qr")
+
+  // Business info
+  businessName    String? @map("business_name") @db.VarChar(200)
+  businessAddress Json?   @map("business_address")
+  businessEmail   String? @map("business_email") @db.VarChar(255)
+  businessPhone   String? @map("business_phone") @db.VarChar(50)
+  businessWebsite String? @map("business_website") @db.VarChar(255)
+  taxNumber       String? @map("tax_number") @db.VarChar(100)
+
+  // Default content
+  defaultNotes        String? @map("default_notes") @db.Text
+  defaultTerms        String? @map("default_terms") @db.Text
+  defaultFooter       String? @map("default_footer") @db.Text
+  paymentInstructions String? @map("payment_instructions") @db.Text
+
+  // Default settings
+  defaultDueDays  Int      @default(30) @map("default_due_days")
+  defaultTaxRate  Decimal? @map("default_tax_rate") @db.Decimal(5, 2)
+  defaultTaxLabel String?  @map("default_tax_label") @db.VarChar(50)
+  defaultCurrency String   @default("USD") @map("default_currency") @db.VarChar(3)
+  defaultLateFee  Json?    @map("default_late_fee")
+
+  // Payment methods
+  acceptedPaymentMethods String[] @default(["bank_transfer"]) @map("accepted_payment_methods")
+  stripeEnabled          Boolean  @default(false) @map("stripe_enabled")
+  paypalEnabled          Boolean  @default(false) @map("paypal_enabled")
+
+  // Custom CSS
+  customCss String? @map("custom_css") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  freelancer       User              @relation("FreelancerInvoiceTemplates", fields: [freelancerUserId], references: [id])
+  invoices         Invoice[]
+  recurringInvoices RecurringInvoice[]
+
+  @@map("invoice_templates")
+  @@index([freelancerUserId])
+}
+
+model RecurringInvoice {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String @map("freelancer_user_id") @db.Uuid
+  clientId         String @map("client_id") @db.Uuid
+
+  // Schedule name
+  name String @db.VarChar(200)
+
+  // Template for generated invoices
+  templateId String? @map("template_id") @db.Uuid
+
+  // Line items template
+  lineItems Json @map("line_items")
+
+  // Amounts
+  subtotal  Decimal  @db.Decimal(14, 2)
+  taxRate   Decimal? @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount Decimal  @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  total     Decimal  @db.Decimal(14, 2)
+  currency  String   @default("USD") @db.VarChar(3)
+
+  // Schedule
+  frequency  RecurrenceFrequency
+  interval   Int                 @default(1)
+  dayOfMonth Int?                @map("day_of_month")
+  dayOfWeek  Int?                @map("day_of_week")
+
+  // Dates
+  startDate       DateTime  @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  nextInvoiceDate DateTime? @map("next_invoice_date") @db.Date
+  lastInvoiceDate DateTime? @map("last_invoice_date") @db.Date
+
+  // Tracking
+  invoiceCount Int  @default(0) @map("invoice_count")
+  maxInvoices  Int? @map("max_invoices")
+
+  // Settings
+  dueDays  Int     @default(30) @map("due_days")
+  autoSend Boolean @default(true) @map("auto_send")
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+  isPaused Boolean @default(false) @map("is_paused")
+
+  // Project
+  projectId String? @map("project_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  freelancer User             @relation("FreelancerRecurringInvoices", fields: [freelancerUserId], references: [id])
+  client     Client           @relation("ClientRecurringInvoices", fields: [clientId], references: [id])
+  template   InvoiceTemplate? @relation(fields: [templateId], references: [id])
+  invoices   Invoice[]        @relation("RecurringInvoiceInstances")
+
+  @@map("recurring_invoices")
+  @@index([freelancerUserId])
+  @@index([clientId])
+  @@index([nextInvoiceDate])
+  @@index([isActive])
+}
+
+model InvoiceActivity {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  invoiceId String @map("invoice_id") @db.Uuid
+
+  // Activity details
+  activityType InvoiceActivityType @map("activity_type")
+  description  String              @db.VarChar(500)
+
+  // Actor
+  actorType String  @map("actor_type") @db.VarChar(50)
+  actorId   String? @map("actor_id") @db.Uuid
+
+  // Metadata
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@map("invoice_activities")
+  @@index([invoiceId])
+  @@index([createdAt])
+}
+
+model InvoiceSettings {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  // Numbering
+  invoicePrefix     String @default("INV") @map("invoice_prefix") @db.VarChar(20)
+  nextInvoiceNumber Int    @default(1) @map("next_invoice_number")
+  numberPadding     Int    @default(4) @map("number_padding")
+  numberFormat      String @default("{prefix}-{year}{number}") @map("number_format") @db.VarChar(100)
+
+  // Defaults
+  defaultDueDays    Int     @default(30) @map("default_due_days")
+  defaultCurrency   String  @default("USD") @map("default_currency") @db.VarChar(3)
+  defaultTemplateId String? @map("default_template_id") @db.Uuid
+
+  // Tax
+  defaultTaxEnabled Boolean  @default(false) @map("default_tax_enabled")
+  defaultTaxRate    Decimal? @map("default_tax_rate") @db.Decimal(5, 2)
+  defaultTaxLabel   String?  @map("default_tax_label") @db.VarChar(50)
+  taxNumber         String?  @map("tax_number") @db.VarChar(100)
+
+  // Late fees
+  defaultLateFeeEnabled Boolean      @default(false) @map("default_late_fee_enabled")
+  defaultLateFeeType    LateFeeType? @map("default_late_fee_type")
+  defaultLateFeeValue   Decimal?     @map("default_late_fee_value") @db.Decimal(10, 2)
+  lateFeeGraceDays      Int          @default(0) @map("late_fee_grace_days")
+
+  // Reminders
+  autoReminders Boolean @default(true) @map("auto_reminders")
+  reminderDays  Int[]   @default([7, 3, 1, 0, -3, -7]) @map("reminder_days")
+
+  // Payment
+  stripeAccountId String? @map("stripe_account_id") @db.VarChar(255)
+  paypalEmail     String? @map("paypal_email") @db.VarChar(255)
+  bankDetails     Json?   @map("bank_details")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation("UserInvoiceSettings", fields: [userId], references: [id])
+
+  @@map("invoice_settings")
+}
+
+// ============================================================================
+// INVOICE ENUMS
+// ============================================================================
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  SENT
+  VIEWED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  VOIDED
+  CANCELLED
+}
+
+enum LineItemType {
+  SERVICE
+  PRODUCT
+  EXPENSE
+  DISCOUNT
+  TIME
+  MILESTONE
+  RETAINER
+  OTHER
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum LateFeeType {
+  PERCENTAGE
+  FIXED
+  DAILY_PERCENTAGE
+  DAILY_FIXED
+}
+
+enum InvoicePaymentMethod {
+  BANK_TRANSFER
+  CREDIT_CARD
+  STRIPE
+  PAYPAL
+  CHECK
+  CASH
+  CRYPTO
+  OTHER
+}
+
+enum InvoicePaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum TemplateLayout {
+  CLASSIC
+  MODERN
+  MINIMAL
+  DETAILED
+  COMPACT
+}
+
+enum InvoiceActivityType {
+  CREATED
+  UPDATED
+  SENT
+  VIEWED
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
+  REMINDER_SENT
+  LATE_FEE_APPLIED
+  STATUS_CHANGED
+  VOIDED
+  DOWNLOADED
+  COMMENT_ADDED
 }

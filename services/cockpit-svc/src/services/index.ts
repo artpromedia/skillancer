@@ -37,3 +37,11 @@ export { FinancialReportsService } from './financial-reports.service.js';
 export { FinancialGoalService } from './financial-goal.service.js';
 export { MileageService } from './mileage.service.js';
 export { PlaidService } from './plaid.service.js';
+
+// Invoice Services (CP-3.2: Professional Invoicing)
+export { InvoiceService } from './invoice.service.js';
+export { InvoiceTemplateService } from './invoice-template.service.js';
+export { RecurringInvoiceService } from './recurring-invoice.service.js';
+export { InvoicePaymentService } from './invoice-payment.service.js';
+export { InvoiceSettingsService } from './invoice-settings.service.js';
+export { InvoicePdfService } from './invoice-pdf.service.js';

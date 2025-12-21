@@ -47,3 +47,6 @@ export type {
 
 // Financial types (CP-3.1: Income & Expense Tracking)
 export * from './finance.types.js';
+
+// Invoice types (CP-3.2: Professional Invoicing)
+export * from './invoice.types.js';

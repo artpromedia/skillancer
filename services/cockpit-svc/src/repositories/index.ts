@@ -45,3 +45,11 @@ export { RecurringTransactionRepository } from './recurring-transaction.reposito
 export { FinancialGoalRepository } from './financial-goal.repository.js';
 export { MileageLogRepository } from './mileage-log.repository.js';
 export { TaxProfileRepository } from './tax-profile.repository.js';
+
+// Invoice Repositories (CP-3.2: Professional Invoicing)
+export { InvoiceRepository } from './invoice.repository.js';
+export { InvoicePaymentRepository } from './invoice-payment.repository.js';
+export { InvoiceTemplateRepository } from './invoice-template.repository.js';
+export { RecurringInvoiceRepository } from './recurring-invoice.repository.js';
+export { InvoiceActivityRepository } from './invoice-activity.repository.js';
+export { InvoiceSettingsRepository } from './invoice-settings.repository.js';
