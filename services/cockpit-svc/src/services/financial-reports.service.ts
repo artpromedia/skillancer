@@ -127,23 +127,23 @@ export class FinancialReportsService {
     const transactions = await this.prisma.financialTransaction.findMany({
       where: {
         userId,
-        transactionDate: { gte: startDate, lte: endDate },
+        date: { gte: startDate, lte: endDate },
         status: 'CONFIRMED',
       },
-      orderBy: { transactionDate: 'asc' },
+      orderBy: { date: 'asc' },
       select: {
-        transactionType: true,
+        type: true,
         amount: true,
-        transactionDate: true,
+        date: true,
       },
     });
 
     // Calculate opening balance (sum of all transactions before start date)
     const openingBalanceResult = await this.prisma.financialTransaction.groupBy({
-      by: ['transactionType'],
+      by: ['type'],
       where: {
         userId,
-        transactionDate: { lt: startDate },
+        date: { lt: startDate },
         status: 'CONFIRMED',
       },
       _sum: { amount: true },
@@ -151,8 +151,8 @@ export class FinancialReportsService {
 
     let openingBalance = 0;
     for (const r of openingBalanceResult) {
-      const amount = Number(r._sum.amount) || 0;
-      openingBalance += r.transactionType === 'INCOME' ? amount : -amount;
+      const amount = Number(r._sum?.amount) || 0;
+      openingBalance += r.type === 'INCOME' ? amount : -amount;
     }
 
     // Build daily breakdown
@@ -162,7 +162,7 @@ export class FinancialReportsService {
     let runningBalance = openingBalance;
 
     for (const t of transactions) {
-      const dateKey = t.transactionDate.toISOString().split('T')[0];
+      const dateKey = t.date.toISOString().split('T')[0]!;
       const amount = Number(t.amount);
 
       if (!dailyMap.has(dateKey)) {
@@ -171,11 +171,11 @@ export class FinancialReportsService {
 
       const day = dailyMap.get(dateKey)!;
 
-      if (t.transactionType === 'INCOME') {
+      if (t.type === 'INCOME') {
         day.inflow += amount;
         runningBalance += amount;
         inflows.push({
-          date: t.transactionDate,
+          date: t.date,
           amount,
           runningBalance,
         });
@@ -183,7 +183,7 @@ export class FinancialReportsService {
         day.outflow += amount;
         runningBalance -= amount;
         outflows.push({
-          date: t.transactionDate,
+          date: t.date,
           amount,
           runningBalance,
         });
@@ -239,25 +239,25 @@ export class FinancialReportsService {
     const incomeResult = await this.prisma.financialTransaction.aggregate({
       where: {
         userId,
-        transactionType: 'INCOME',
-        transactionDate: { gte: startDate, lte: endDate },
+        type: 'INCOME',
+        date: { gte: startDate, lte: endDate },
         status: 'CONFIRMED',
       },
       _sum: { amount: true },
     });
-    const grossIncome = Number(incomeResult._sum.amount) || 0;
+    const grossIncome = Number(incomeResult._sum?.amount) || 0;
 
     // Get all expenses
     const expenseResult = await this.prisma.financialTransaction.aggregate({
       where: {
         userId,
-        transactionType: 'EXPENSE',
-        transactionDate: { gte: startDate, lte: endDate },
+        type: 'EXPENSE',
+        date: { gte: startDate, lte: endDate },
         status: 'CONFIRMED',
       },
       _sum: { amount: true },
     });
-    const totalExpenses = Number(expenseResult._sum.amount) || 0;
+    const totalExpenses = Number(expenseResult._sum?.amount) || 0;
 
     // Get tax deductible expenses by category
     const taxDeductible = await this.transactionRepository.getTaxDeductibleExpenses(
@@ -278,22 +278,17 @@ export class FinancialReportsService {
     const netSelfEmploymentIncome = grossIncome - totalDeductions;
     const taxableIncome = Math.max(0, netSelfEmploymentIncome);
 
-    // Calculate estimated taxes
-    const seTaxRate = taxProfile?.selfEmploymentTaxRate
-      ? Number(taxProfile.selfEmploymentTaxRate)
-      : 0.153;
-    const estimatedSelfEmploymentTax = taxableIncome * seTaxRate;
+    // Calculate estimated taxes (standard self-employment tax rate is 15.3%)
+    const seTaxRate = 0.153;
+    const estimatedSelfEmploymentTax =
+      taxProfile?.estimatedSelfEmploymentTax ?? taxableIncome * seTaxRate;
 
     // Simplified income tax estimate (would need more complex calculation)
     const estimatedIncomeTax = taxProfile?.estimatedIncomeTax ?? taxableIncome * 0.22;
     const totalEstimatedTax = estimatedSelfEmploymentTax + Number(estimatedIncomeTax);
 
     // Generate quarterly payment schedule
-    const quarterlyPayments = this.generateQuarterlyPaymentSchedule(
-      taxYear,
-      totalEstimatedTax,
-      taxProfile?.quarterlyPaymentDates as Date[] | undefined
-    );
+    const quarterlyPayments = this.generateQuarterlyPaymentSchedule(taxYear, totalEstimatedTax);
 
     // Generate Schedule C data
     const scheduleCData = await this.generateScheduleCData(
@@ -394,15 +389,15 @@ export class FinancialReportsService {
     const taxDeductibleResult = await this.prisma.financialTransaction.aggregate({
       where: {
         userId,
-        transactionType: 'EXPENSE',
-        isTaxDeductible: true,
-        transactionDate: { gte: startDate, lte: endDate },
+        type: 'EXPENSE',
+        isDeductible: true,
+        date: { gte: startDate, lte: endDate },
         status: 'CONFIRMED',
       },
       _sum: { amount: true },
     });
 
-    const taxDeductibleTotal = Number(taxDeductibleResult._sum.amount) || 0;
+    const taxDeductibleTotal = Number(taxDeductibleResult._sum?.amount) || 0;
     const taxDeductiblePercentage =
       totalExpenses > 0 ? (taxDeductibleTotal / totalExpenses) * 100 : 0;
 
@@ -441,8 +436,8 @@ export class FinancialReportsService {
       by: ['source'],
       where: {
         userId,
-        transactionType: 'INCOME',
-        transactionDate: { gte: startDate, lte: endDate },
+        type: 'INCOME',
+        date: { gte: startDate, lte: endDate },
         status: 'CONFIRMED',
       },
       _sum: { amount: true },
@@ -465,8 +460,8 @@ export class FinancialReportsService {
     // Build source breakdown
     const bySource = incomeBySource.map((s) => ({
       source: s.source,
-      amount: Number(s._sum.amount) || 0,
-      percentage: totalIncome > 0 ? ((Number(s._sum.amount) || 0) / totalIncome) * 100 : 0,
+      amount: Number(s._sum?.amount) || 0,
+      percentage: totalIncome > 0 ? ((Number(s._sum?.amount) || 0) / totalIncome) * 100 : 0,
       transactionCount: s._count.id,
     }));
 
@@ -519,8 +514,8 @@ export class FinancialReportsService {
       by: ['projectId'],
       where: {
         userId,
-        transactionType: 'INCOME',
-        transactionDate: { gte: startDate, lte: endDate },
+        type: 'INCOME',
+        date: { gte: startDate, lte: endDate },
         status: 'CONFIRMED',
         projectId: { not: null },
       },
@@ -539,11 +534,11 @@ export class FinancialReportsService {
     });
 
     const projectMap = new Map(projects.map((p) => [p.id, p]));
-    const total = results.reduce((sum, r) => sum + (Number(r._sum.amount) || 0), 0);
+    const total = results.reduce((sum, r) => sum + (Number(r._sum?.amount) || 0), 0);
 
     return results.map((r) => {
       const project = r.projectId ? projectMap.get(r.projectId) : null;
-      const amount = Number(r._sum.amount) || 0;
+      const amount = Number(r._sum?.amount) || 0;
 
       return {
         projectId: r.projectId ?? 'no-project',
@@ -571,8 +566,8 @@ export class FinancialReportsService {
       by: ['vendor'],
       where: {
         userId,
-        transactionType: 'EXPENSE',
-        transactionDate: { gte: startDate, lte: endDate },
+        type: 'EXPENSE',
+        date: { gte: startDate, lte: endDate },
         status: 'CONFIRMED',
         vendor: { not: null },
       },
@@ -584,7 +579,7 @@ export class FinancialReportsService {
 
     return results.map((r) => ({
       vendor: r.vendor ?? 'Unknown',
-      amount: Number(r._sum.amount) || 0,
+      amount: Number(r._sum?.amount) || 0,
       transactionCount: r._count.id,
     }));
   }
@@ -716,20 +711,17 @@ export class FinancialReportsService {
    */
   private generateQuarterlyPaymentSchedule(
     taxYear: number,
-    totalTax: number,
-    paymentDates?: Date[]
+    totalTax: number
   ): TaxReport['quarterlyPayments'] {
     const now = new Date();
     const quarterlyAmount = totalTax / 4;
 
-    const defaultDates = [
+    const dates = [
       new Date(taxYear, 3, 15), // April 15
       new Date(taxYear, 5, 15), // June 15
       new Date(taxYear, 8, 15), // September 15
       new Date(taxYear + 1, 0, 15), // January 15 (next year)
     ];
-
-    const dates = paymentDates ?? defaultDates;
 
     return dates.map((dueDate, index) => ({
       quarter: index + 1,

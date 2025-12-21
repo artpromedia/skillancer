@@ -16,7 +16,9 @@ import type {
   ExternalCalendarData,
   NormalizedEventData,
 } from '../types/calendar.types.js';
-import type { OAuth2Client } from 'google-auth-library';
+
+// Use the OAuth2Client type from the googleapis package itself
+type OAuth2Client = InstanceType<typeof google.auth.OAuth2>;
 
 const logger = createLogger({ name: 'google-calendar' });
 

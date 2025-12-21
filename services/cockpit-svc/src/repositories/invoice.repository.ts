@@ -9,13 +9,8 @@ import type {
   InvoiceFilters,
   CreateLineItemParams,
 } from '../types/invoice.types.js';
-import type {
-  Prisma,
-  PrismaClient,
-  Invoice,
-  InvoiceStatus,
-  InvoiceLineItem,
-} from '@skillancer/database';
+import type { Invoice, InvoiceStatus, InvoiceLineItem } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 export class InvoiceRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -108,7 +103,7 @@ export class InvoiceRepository {
         client: true,
         project: true,
         lineItems: {
-          orderBy: { sortOrder: 'asc' },
+          orderBy: { createdAt: 'asc' },
         },
         payments: {
           orderBy: { paymentDate: 'desc' },
@@ -118,7 +113,7 @@ export class InvoiceRepository {
           orderBy: { createdAt: 'desc' },
           take: 50,
         },
-        recurringInvoice: true,
+        recurringSchedule: true,
       },
     });
   }
@@ -132,7 +127,7 @@ export class InvoiceRepository {
       include: {
         client: true,
         lineItems: {
-          orderBy: { sortOrder: 'asc' },
+          orderBy: { createdAt: 'asc' },
         },
         payments: {
           where: { status: 'COMPLETED' },
@@ -203,7 +198,7 @@ export class InvoiceRepository {
     }
 
     if (filters.isOverdue) {
-      where.status = { in: ['SENT', 'VIEWED', 'PARTIAL'] };
+      where.status = { in: ['SENT', 'VIEWED', 'PARTIALLY_PAID'] };
       where.dueDate = { lt: new Date() };
     }
 
@@ -211,7 +206,9 @@ export class InvoiceRepository {
       where.OR = [
         { invoiceNumber: { contains: filters.search, mode: 'insensitive' } },
         { title: { contains: filters.search, mode: 'insensitive' } },
-        { client: { name: { contains: filters.search, mode: 'insensitive' } } },
+        { client: { firstName: { contains: filters.search, mode: 'insensitive' } } },
+        { client: { lastName: { contains: filters.search, mode: 'insensitive' } } },
+        { client: { companyName: { contains: filters.search, mode: 'insensitive' } } },
       ];
     }
 
@@ -236,7 +233,7 @@ export class InvoiceRepository {
         where,
         include: {
           client: {
-            select: { id: true, name: true, email: true },
+            select: { id: true, firstName: true, lastName: true, companyName: true, email: true },
           },
           project: {
             select: { id: true, name: true },
@@ -255,7 +252,7 @@ export class InvoiceRepository {
   /**
    * Update invoice
    */
-  async update(id: string, data: Partial<Invoice>): Promise<Invoice> {
+  async update(id: string, data: Prisma.InvoiceUpdateInput): Promise<Invoice> {
     return this.prisma.invoice.update({
       where: { id },
       data,
@@ -275,9 +272,9 @@ export class InvoiceRepository {
     if (status === 'SENT') {
       updateData.sentAt = new Date();
     } else if (status === 'VIEWED') {
-      updateData.viewedAt = new Date();
+      updateData.lastViewedAt = new Date();
     } else if (status === 'PAID') {
-      updateData.paidAt = new Date();
+      updateData.paidDate = new Date();
     }
 
     return this.prisma.invoice.update({
@@ -295,7 +292,7 @@ export class InvoiceRepository {
     if (amountDue <= 0) {
       status = 'PAID';
     } else if (amountPaid > 0) {
-      status = 'PARTIAL';
+      status = 'PARTIALLY_PAID';
     }
 
     return this.prisma.invoice.update({
@@ -303,7 +300,7 @@ export class InvoiceRepository {
       data: {
         amountPaid,
         amountDue,
-        ...(status && { status, paidAt: status === 'PAID' ? new Date() : undefined }),
+        ...(status && { status, paidDate: status === 'PAID' ? new Date() : undefined }),
       },
     });
   }
@@ -315,8 +312,8 @@ export class InvoiceRepository {
     const invoice = await this.findById(id);
     if (!invoice) throw new Error('Invoice not found');
 
-    const newTotal = invoice.total + lateFeeAmount;
-    const newAmountDue = invoice.amountDue + lateFeeAmount;
+    const newTotal = Number(invoice.total) + lateFeeAmount;
+    const newAmountDue = Number(invoice.amountDue) + lateFeeAmount;
 
     return this.prisma.invoice.update({
       where: { id },
@@ -347,7 +344,6 @@ export class InvoiceRepository {
       where: { id },
       data: {
         lastReminderAt: new Date(),
-        reminderCount: { increment: 1 },
       },
     });
   }
@@ -405,7 +401,7 @@ export class InvoiceRepository {
 
     return this.prisma.invoice.findMany({
       where: {
-        status: { in: ['SENT', 'VIEWED', 'PARTIAL'] },
+        status: { in: ['SENT', 'VIEWED', 'PARTIALLY_PAID'] },
         lateFeeEnabled: true,
         dueDate: { lt: gracePeriodDate },
         OR: [
@@ -424,7 +420,7 @@ export class InvoiceRepository {
 
     return this.prisma.invoice.findMany({
       where: {
-        status: { in: ['SENT', 'VIEWED', 'PARTIAL'] },
+        status: { in: ['SENT', 'VIEWED', 'PARTIALLY_PAID'] },
         nextReminderAt: { lte: now },
       },
       include: {
@@ -449,7 +445,7 @@ export class InvoiceRepository {
       this.prisma.invoice.aggregate({
         where: {
           freelancerUserId,
-          status: { in: ['SENT', 'VIEWED', 'PARTIAL'] },
+          status: { in: ['SENT', 'VIEWED', 'PARTIALLY_PAID'] },
         },
         _sum: { amountDue: true },
         _count: true,
@@ -457,7 +453,7 @@ export class InvoiceRepository {
       this.prisma.invoice.aggregate({
         where: {
           freelancerUserId,
-          status: { in: ['SENT', 'VIEWED', 'PARTIAL'] },
+          status: { in: ['SENT', 'VIEWED', 'PARTIALLY_PAID'] },
           dueDate: { lt: now },
         },
         _sum: { amountDue: true },
@@ -466,8 +462,8 @@ export class InvoiceRepository {
     ]);
 
     return {
-      totalOutstanding: outstanding._sum.amountDue ?? 0,
-      totalOverdue: overdue._sum.amountDue ?? 0,
+      totalOutstanding: Number(outstanding._sum.amountDue ?? 0),
+      totalOverdue: Number(overdue._sum.amountDue ?? 0),
       overdueCount: overdue._count,
       pendingCount: outstanding._count,
     };

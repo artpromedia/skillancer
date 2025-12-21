@@ -8,7 +8,8 @@ import {
   FinancialTransactionRepository,
 } from '../repositories/index.js';
 
-import type { PrismaClient, RecurringTransaction } from '@skillancer/database';
+import type { RecurringTransaction } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 
@@ -129,7 +130,7 @@ export class RecurringTransactionWorker {
    * Process due recurring transactions and create actual transactions
    */
   private async processDueTransactions(): Promise<number> {
-    const dueRecurring = await this.recurringRepo.findDue();
+    const dueRecurring = await this.recurringRepo.findDueForProcessing();
     let created = 0;
 
     for (const recurring of dueRecurring) {
@@ -141,31 +142,18 @@ export class RecurringTransactionWorker {
         // Create the transaction
         const transaction = await this.transactionRepo.create({
           userId: recurring.userId,
-          accountId: recurring.accountId,
-          transactionType: recurring.transactionType as 'INCOME' | 'EXPENSE',
+          accountId: recurring.accountId ?? undefined,
+          transactionType: recurring.type as 'INCOME' | 'EXPENSE',
           amount: Number(recurring.amount),
           transactionDate: recurring.nextOccurrence!,
-          description: recurring.description ?? undefined,
+          description: recurring.description ?? 'Recurring transaction',
           vendor: recurring.vendor ?? undefined,
-          categoryId: recurring.categoryId ?? undefined,
-          isTaxDeductible: recurring.isTaxDeductible,
-          taxDeductionPercentage: recurring.taxDeductionPercentage
-            ? Number(recurring.taxDeductionPercentage)
-            : undefined,
-          source: 'RECURRING',
-          status: 'PENDING',
+          isTaxDeductible: recurring.isDeductible,
         });
 
-        // Update the recurring transaction
-        const nextDate = this.calculateNextOccurrence(recurring);
-        await this.recurringRepo.update(recurring.id, {
-          lastOccurrence: recurring.nextOccurrence,
-        });
-        // Update next occurrence separately
-        await this.prisma.recurringTransaction.update({
-          where: { id: recurring.id },
-          data: { nextOccurrence: nextDate },
-        });
+        // Update the recurring transaction using markProcessed which handles both
+        // lastOccurrence and nextOccurrence updates
+        await this.recurringRepo.markProcessed(recurring.id);
 
         created++;
 
@@ -202,24 +190,36 @@ export class RecurringTransactionWorker {
 
   /**
    * Send reminders for upcoming recurring transactions
+   * Sends reminders 3 days before occurrence for all active recurring transactions
    */
   private async sendUpcomingReminders(): Promise<number> {
-    const upcoming = await this.recurringRepo.findUpcoming(7); // 7 days ahead
+    // Find all active recurring transactions with upcoming occurrences
+    const now = new Date();
+    const reminderDate = new Date();
+    reminderDate.setDate(reminderDate.getDate() + 3); // 3 days ahead
+
+    // Get transactions due in exactly 3 days
+    const upcoming = await this.prisma.recurringTransaction.findMany({
+      where: {
+        isActive: true,
+        nextOccurrence: {
+          gte: now,
+          lte: reminderDate,
+        },
+        OR: [{ endDate: null }, { endDate: { gte: now } }],
+      },
+    });
+
     let reminders = 0;
 
     for (const recurring of upcoming) {
-      if (!recurring.reminderDays || recurring.reminderDays <= 0) {
-        continue;
-      }
-
-      const now = new Date();
       const nextOccurrence = recurring.nextOccurrence!;
       const daysUntil = Math.ceil(
         (nextOccurrence.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      // Check if we should send a reminder
-      if (daysUntil !== recurring.reminderDays) {
+      // Only send reminder at 3 days before
+      if (daysUntil !== 3) {
         continue;
       }
 
@@ -330,11 +330,7 @@ export class RecurringTransactionWorker {
         next.setMonth(next.getMonth() + 3);
         break;
 
-      case 'SEMIANNUALLY':
-        next.setMonth(next.getMonth() + 6);
-        break;
-
-      case 'ANNUALLY':
+      case 'YEARLY':
         next.setFullYear(next.getFullYear() + 1);
         break;
 

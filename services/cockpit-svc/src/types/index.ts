@@ -4,7 +4,68 @@
  */
 
 export * from './crm.types.js';
-export * from './project.types.js';
+
+// Export from project.types, excluding duplicates that conflict with invoice.types
+export type {
+  // Project types
+  CreateProjectParams,
+  UpdateProjectParams,
+  ProjectFilters,
+  ProjectWithDetails,
+  ProjectWithMetrics,
+  // Task types
+  CreateTaskParams,
+  UpdateTaskParams,
+  TaskFilters,
+  TaskWithSubtasks,
+  TaskOrder,
+  TaskStats,
+  // Milestone types
+  CreateMilestoneParams,
+  UpdateMilestoneParams,
+  MilestoneWithProgress,
+  Deliverable,
+  // Activity types
+  ProjectActivityItem,
+  LogActivityParams as ProjectLogActivityParams,
+  // File types
+  CreateFileParams,
+  FileFilters,
+  // Template types - use aliases to avoid conflicts
+  TemplateTask,
+  TemplateMilestone,
+  CreateTemplateParams as ProjectCreateTemplateParams,
+  UpdateTemplateParams as ProjectUpdateTemplateParams,
+  TemplateWithUsage,
+  ProjectTemplateWithStats,
+  // Time entry types
+  CreateTimeEntryParams as ProjectCreateTimeEntryParams,
+  UpdateTimeEntryParams as ProjectUpdateTimeEntryParams,
+  TimeEntryFilters as ProjectTimeEntryFilters,
+  TimeStats,
+  // Workload types
+  CapacitySettings,
+  DailyWorkload,
+  WorkloadView,
+  WorkloadDay,
+  WorkloadSummary,
+  // Stats types
+  ProjectStats,
+  TimeSummary,
+  FinancialSummary,
+  Deadline,
+  // Enum re-exports
+  ProjectType,
+  ProjectStatus,
+  BudgetType,
+  TaskStatus,
+  MilestoneStatus,
+  Priority,
+  ProjectSource,
+  ProjectFileType,
+  ProjectActivityType,
+  TimeEntrySource,
+} from './project.types.js';
 
 // Export from time-tracking.types, excluding duplicates from crm.types
 export type {

@@ -7,7 +7,8 @@ import { InvoiceError, InvoiceErrorCode } from '../errors/invoice.errors.js';
 import { InvoiceSettingsRepository } from '../repositories/index.js';
 
 import type { UpdateSettingsParams, BankDetails } from '../types/invoice.types.js';
-import type { PrismaClient, InvoiceSettings } from '@skillancer/database';
+import type { InvoiceSettings } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 export class InvoiceSettingsService {
@@ -107,7 +108,7 @@ export class InvoiceSettingsService {
 
     const year = new Date().getFullYear().toString();
     const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    const paddedNumber = String(settings.nextNumber).padStart(settings.numberPadding, '0');
+    const paddedNumber = String(settings.nextInvoiceNumber).padStart(settings.numberPadding, '0');
 
     return settings.numberFormat
       .replace('{prefix}', settings.invoicePrefix)

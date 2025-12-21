@@ -9,12 +9,8 @@ import type {
   CategoryFilters,
   CategoryWithStats,
 } from '../types/finance.types.js';
-import type {
-  Prisma,
-  PrismaClient,
-  TransactionCategory,
-  FinancialTransactionType,
-} from '@skillancer/database';
+import type { TransactionCategory, FinancialTransactionType } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 // Default IRS Schedule C categories for freelancers
 export const DEFAULT_EXPENSE_CATEGORIES = [
@@ -71,12 +67,10 @@ export class TransactionCategoryRepository {
         name: data.name,
         type: data.type,
         parentId: data.parentId ?? null,
-        description: data.description ?? null,
         icon: data.icon ?? null,
         color: data.color ?? null,
         irsCategory: data.irsCategory ?? null,
-        scheduleC: data.scheduleC ?? null,
-        defaultTaxDeductible: data.defaultTaxDeductible ?? false,
+        isDeductible: data.isDeductible ?? true,
         isSystem: false,
       },
     });
@@ -93,8 +87,7 @@ export class TransactionCategoryRepository {
         name: cat.name,
         type: 'EXPENSE' as FinancialTransactionType,
         irsCategory: cat.irsCategory,
-        scheduleC: cat.scheduleC,
-        defaultTaxDeductible: true,
+        isDeductible: true,
         isSystem: true,
       })),
       // Income categories
@@ -195,35 +188,54 @@ export class TransactionCategoryRepository {
     startDate: Date,
     endDate: Date
   ): Promise<CategoryWithStats[]> {
+    // Get categories with children
     const categories = await this.prisma.transactionCategory.findMany({
       where: { userId, isActive: true, parentId: null },
       include: {
         children: { where: { isActive: true } },
-        transactions: {
-          where: {
-            transactionDate: { gte: startDate, lte: endDate },
-            status: 'CONFIRMED',
-          },
-          select: { amount: true },
-        },
       },
     });
 
+    // Get transaction stats by category name
+    const transactionStats = await this.prisma.financialTransaction.groupBy({
+      by: ['category'],
+      where: {
+        userId,
+        date: { gte: startDate, lte: endDate },
+        status: 'CONFIRMED',
+      },
+      _count: { id: true },
+      _sum: { amount: true },
+    });
+
+    // Create a map for quick lookup
+    const statsMap = new Map(
+      transactionStats.map((stat) => [
+        stat.category,
+        {
+          count: stat._count.id,
+          amount: Number(stat._sum.amount ?? 0),
+        },
+      ])
+    );
+
     return categories.map((category) => {
-      const transactionCount = category.transactions.length;
-      const totalAmount = category.transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+      const stats = statsMap.get(category.name) ?? { count: 0, amount: 0 };
 
       // Calculate child stats if any
-      const children = category.children.map((child) => ({
-        ...child,
-        transactionCount: 0, // Would need separate query
-        totalAmount: 0,
-      }));
+      const children = category.children.map((child) => {
+        const childStats = statsMap.get(child.name) ?? { count: 0, amount: 0 };
+        return {
+          ...child,
+          transactionCount: childStats.count,
+          totalAmount: childStats.amount,
+        };
+      });
 
       return {
         ...category,
-        transactionCount,
-        totalAmount,
+        transactionCount: stats.count,
+        totalAmount: stats.amount,
         children: children.length > 0 ? children : undefined,
       } as CategoryWithStats;
     });
@@ -254,12 +266,10 @@ export class TransactionCategoryRepository {
       where: { id },
       data: {
         name: data.name,
-        description: data.description,
         icon: data.icon,
         color: data.color,
         irsCategory: data.irsCategory,
-        scheduleC: data.scheduleC,
-        defaultTaxDeductible: data.defaultTaxDeductible,
+        isDeductible: data.isDeductible,
         isActive: data.isActive,
       },
     });
@@ -287,9 +297,9 @@ export class TransactionCategoryRepository {
   /**
    * Count transactions using a category
    */
-  async countTransactions(categoryId: string): Promise<number> {
+  async countTransactionsByName(userId: string, categoryName: string): Promise<number> {
     return this.prisma.financialTransaction.count({
-      where: { categoryId },
+      where: { userId, category: categoryName },
     });
   }
 
@@ -309,21 +319,34 @@ export class TransactionCategoryRepository {
   async getCategorySuggestion(userId: string, vendor: string): Promise<TransactionCategory | null> {
     // Find most common category used for this vendor
     const result = await this.prisma.financialTransaction.groupBy({
-      by: ['categoryId'],
+      by: ['category'],
       where: {
         userId,
         vendor: { equals: vendor, mode: 'insensitive' },
-        categoryId: { not: null },
       },
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
       take: 1,
     });
 
-    if (result.length === 0 || !result[0].categoryId) {
+    const topResult = result[0];
+    if (!topResult || !topResult.category) {
       return null;
     }
 
-    return this.findById(result[0].categoryId);
+    // Find the category by name
+    return this.findByNameAnyType(userId, topResult.category);
+  }
+
+  /**
+   * Find category by name for a user (any type)
+   */
+  async findByNameAnyType(userId: string, name: string): Promise<TransactionCategory | null> {
+    return this.prisma.transactionCategory.findFirst({
+      where: {
+        userId,
+        name: { equals: name, mode: 'insensitive' },
+      },
+    });
   }
 }

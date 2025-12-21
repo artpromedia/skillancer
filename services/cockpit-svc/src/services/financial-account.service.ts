@@ -15,7 +15,8 @@ import type {
   AccountFilters,
   FinancialAccountWithBalance,
 } from '../types/finance.types.js';
-import type { PrismaClient, FinancialAccount } from '@skillancer/database';
+import type { FinancialAccount } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 export class FinancialAccountService {
@@ -46,10 +47,10 @@ export class FinancialAccountService {
       throw new FinanceError(FinanceErrorCode.ACCOUNT_ALREADY_EXISTS);
     }
 
-    // If this is the first account, make it default
+    // If this is the first account, make it primary
     const accountCount = await this.accountRepository.countByUserId(params.userId);
     if (accountCount === 0) {
-      params.isDefault = true;
+      params.isPrimary = true;
     }
 
     // Initialize default categories if user doesn't have any
@@ -135,18 +136,18 @@ export class FinancialAccountService {
       throw new FinanceError(FinanceErrorCode.ACCOUNT_NOT_FOUND);
     }
 
-    // If setting as default, unset other defaults
-    if (params.isDefault === true) {
-      await this.accountRepository.setAsDefault(userId, accountId);
+    // If setting as primary, unset other primaries
+    if (params.isPrimary === true) {
+      await this.accountRepository.setAsPrimary(userId, accountId);
     }
 
-    // Don't allow unsetting the only default
-    if (params.isDefault === false && existing.isDefault) {
-      const defaultCount = await this.prisma.financialAccount.count({
-        where: { userId, isDefault: true, isActive: true },
+    // Don't allow unsetting the only primary
+    if (params.isPrimary === false && existing.isPrimary) {
+      const primaryCount = await this.prisma.financialAccount.count({
+        where: { userId, isPrimary: true, isActive: true },
       });
 
-      if (defaultCount <= 1) {
+      if (primaryCount <= 1) {
         throw new FinanceError(FinanceErrorCode.DEFAULT_ACCOUNT_REQUIRED);
       }
     }
@@ -159,9 +160,9 @@ export class FinancialAccountService {
   }
 
   /**
-   * Set account as default
+   * Set account as primary
    */
-  async setAsDefault(accountId: string, userId: string): Promise<void> {
+  async setAsPrimary(accountId: string, userId: string): Promise<void> {
     const account = await this.accountRepository.findById(accountId);
 
     if (!account || account.userId !== userId) {
@@ -172,9 +173,9 @@ export class FinancialAccountService {
       throw new FinanceError(FinanceErrorCode.ACCOUNT_INACTIVE);
     }
 
-    await this.accountRepository.setAsDefault(userId, accountId);
+    await this.accountRepository.setAsPrimary(userId, accountId);
 
-    this.logger.info({ accountId, userId }, 'Account set as default');
+    this.logger.info({ accountId, userId }, 'Account set as primary');
   }
 
   /**
@@ -187,20 +188,20 @@ export class FinancialAccountService {
       throw new FinanceError(FinanceErrorCode.ACCOUNT_NOT_FOUND);
     }
 
-    // Don't allow deactivating the only default account
-    if (account.isDefault) {
+    // Don't allow deactivating the only primary account
+    if (account.isPrimary) {
       const activeCount = await this.accountRepository.countByUserId(userId, true);
       if (activeCount <= 1) {
         throw new FinanceError(FinanceErrorCode.CANNOT_DELETE_DEFAULT_ACCOUNT);
       }
 
-      // Set another account as default
+      // Set another account as primary
       const otherAccount = await this.prisma.financialAccount.findFirst({
         where: { userId, id: { not: accountId }, isActive: true },
       });
 
       if (otherAccount) {
-        await this.accountRepository.setAsDefault(userId, otherAccount.id);
+        await this.accountRepository.setAsPrimary(userId, otherAccount.id);
       }
     }
 
@@ -226,8 +227,8 @@ export class FinancialAccountService {
       throw new FinanceError(FinanceErrorCode.ACCOUNT_HAS_TRANSACTIONS);
     }
 
-    // Don't allow deleting the only default account
-    if (account.isDefault) {
+    // Don't allow deleting the only primary account
+    if (account.isPrimary) {
       throw new FinanceError(FinanceErrorCode.CANNOT_DELETE_DEFAULT_ACCOUNT);
     }
 
@@ -246,8 +247,8 @@ export class FinancialAccountService {
       name: string;
       type: string;
       balance: number;
-      isDefault: boolean;
-      isPlaidConnected: boolean;
+      isPrimary: boolean;
+      isConnected: boolean;
       lastSyncAt: Date | null;
     }>;
   }> {
@@ -263,8 +264,8 @@ export class FinancialAccountService {
         name: account.name,
         type: account.accountType,
         balance,
-        isDefault: account.isDefault,
-        isPlaidConnected: account.isPlaidConnected,
+        isPrimary: account.isPrimary,
+        isConnected: account.isConnected,
         lastSyncAt: account.lastSyncAt,
       };
     });
@@ -287,7 +288,7 @@ export class FinancialAccountService {
 
     // Calculate balance from transactions
     const result = await this.prisma.financialTransaction.groupBy({
-      by: ['transactionType'],
+      by: ['type'],
       where: {
         accountId,
         status: 'CONFIRMED',
@@ -297,10 +298,10 @@ export class FinancialAccountService {
 
     let balance = 0;
     for (const r of result) {
-      const amount = Number(r._sum.amount) || 0;
-      if (r.transactionType === 'INCOME') {
+      const amount = Number(r._sum?.amount) || 0;
+      if (r.type === 'INCOME') {
         balance += amount;
-      } else if (r.transactionType === 'EXPENSE') {
+      } else if (r.type === 'EXPENSE') {
         balance -= amount;
       }
     }

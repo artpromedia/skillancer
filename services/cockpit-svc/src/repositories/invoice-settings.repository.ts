@@ -4,7 +4,8 @@
  */
 
 import type { UpdateSettingsParams } from '../types/invoice.types.js';
-import type { Prisma, PrismaClient, InvoiceSettings } from '@skillancer/database';
+import type { InvoiceSettings } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 export class InvoiceSettingsRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -12,17 +13,17 @@ export class InvoiceSettingsRepository {
   /**
    * Get or create settings for a user
    */
-  async getOrCreate(freelancerUserId: string): Promise<InvoiceSettings> {
-    const existing = await this.findByUserId(freelancerUserId);
+  async getOrCreate(userId: string): Promise<InvoiceSettings> {
+    const existing = await this.findByUserId(userId);
     if (existing) return existing;
 
     return this.prisma.invoiceSettings.create({
       data: {
-        freelancerUserId,
+        userId,
         invoicePrefix: 'INV',
         numberPadding: 4,
         numberFormat: '{prefix}-{year}{number}',
-        nextNumber: 1,
+        nextInvoiceNumber: 1,
         defaultDueDays: 30,
         defaultCurrency: 'USD',
       },
@@ -32,24 +33,24 @@ export class InvoiceSettingsRepository {
   /**
    * Find settings by user ID
    */
-  async findByUserId(freelancerUserId: string): Promise<InvoiceSettings | null> {
+  async findByUserId(userId: string): Promise<InvoiceSettings | null> {
     return this.prisma.invoiceSettings.findUnique({
-      where: { freelancerUserId },
+      where: { userId },
     });
   }
 
   /**
    * Update settings
    */
-  async update(freelancerUserId: string, data: UpdateSettingsParams): Promise<InvoiceSettings> {
+  async update(userId: string, data: UpdateSettingsParams): Promise<InvoiceSettings> {
     return this.prisma.invoiceSettings.upsert({
-      where: { freelancerUserId },
+      where: { userId },
       create: {
-        freelancerUserId,
+        userId,
         invoicePrefix: data.invoicePrefix ?? 'INV',
         numberPadding: data.numberPadding ?? 4,
         numberFormat: data.numberFormat ?? '{prefix}-{year}{number}',
-        nextNumber: 1,
+        nextInvoiceNumber: 1,
         defaultDueDays: data.defaultDueDays ?? 30,
         defaultCurrency: data.defaultCurrency ?? 'USD',
         defaultTemplateId: data.defaultTemplateId ?? null,
@@ -94,17 +95,17 @@ export class InvoiceSettingsRepository {
   /**
    * Generate next invoice number
    */
-  async generateNextNumber(freelancerUserId: string): Promise<string> {
+  async generateNextNumber(userId: string): Promise<string> {
     // Use transaction for atomicity
     return this.prisma.$transaction(async (tx) => {
       const settings = await tx.invoiceSettings.upsert({
-        where: { freelancerUserId },
+        where: { userId },
         create: {
-          freelancerUserId,
+          userId,
           invoicePrefix: 'INV',
           numberPadding: 4,
           numberFormat: '{prefix}-{year}{number}',
-          nextNumber: 1,
+          nextInvoiceNumber: 1,
           defaultDueDays: 30,
           defaultCurrency: 'USD',
         },
@@ -112,10 +113,10 @@ export class InvoiceSettingsRepository {
       });
 
       // Increment the number
-      const nextNumber = settings.nextNumber;
+      const nextNumber = settings.nextInvoiceNumber;
       await tx.invoiceSettings.update({
-        where: { freelancerUserId },
-        data: { nextNumber: { increment: 1 } },
+        where: { userId },
+        data: { nextInvoiceNumber: { increment: 1 } },
       });
 
       // Format the invoice number
@@ -136,18 +137,15 @@ export class InvoiceSettingsRepository {
   /**
    * Update Stripe account
    */
-  async updateStripeAccount(
-    freelancerUserId: string,
-    stripeAccountId: string
-  ): Promise<InvoiceSettings> {
+  async updateStripeAccount(userId: string, stripeAccountId: string): Promise<InvoiceSettings> {
     return this.prisma.invoiceSettings.upsert({
-      where: { freelancerUserId },
+      where: { userId },
       create: {
-        freelancerUserId,
+        userId,
         invoicePrefix: 'INV',
         numberPadding: 4,
         numberFormat: '{prefix}-{year}{number}',
-        nextNumber: 1,
+        nextInvoiceNumber: 1,
         defaultDueDays: 30,
         defaultCurrency: 'USD',
         stripeAccountId,
@@ -159,15 +157,15 @@ export class InvoiceSettingsRepository {
   /**
    * Update PayPal email
    */
-  async updatePayPalEmail(freelancerUserId: string, paypalEmail: string): Promise<InvoiceSettings> {
+  async updatePayPalEmail(userId: string, paypalEmail: string): Promise<InvoiceSettings> {
     return this.prisma.invoiceSettings.upsert({
-      where: { freelancerUserId },
+      where: { userId },
       create: {
-        freelancerUserId,
+        userId,
         invoicePrefix: 'INV',
         numberPadding: 4,
         numberFormat: '{prefix}-{year}{number}',
-        nextNumber: 1,
+        nextInvoiceNumber: 1,
         defaultDueDays: 30,
         defaultCurrency: 'USD',
         paypalEmail,
@@ -180,17 +178,17 @@ export class InvoiceSettingsRepository {
    * Update bank details
    */
   async updateBankDetails(
-    freelancerUserId: string,
+    userId: string,
     bankDetails: UpdateSettingsParams['bankDetails']
   ): Promise<InvoiceSettings> {
     return this.prisma.invoiceSettings.upsert({
-      where: { freelancerUserId },
+      where: { userId },
       create: {
-        freelancerUserId,
+        userId,
         invoicePrefix: 'INV',
         numberPadding: 4,
         numberFormat: '{prefix}-{year}{number}',
-        nextNumber: 1,
+        nextInvoiceNumber: 1,
         defaultDueDays: 30,
         defaultCurrency: 'USD',
         bankDetails: bankDetails as Prisma.InputJsonValue,
@@ -202,11 +200,11 @@ export class InvoiceSettingsRepository {
   /**
    * Get reminder settings
    */
-  async getReminderSettings(freelancerUserId: string): Promise<{
+  async getReminderSettings(userId: string): Promise<{
     autoReminders: boolean;
     reminderDays: number[];
   }> {
-    const settings = await this.getOrCreate(freelancerUserId);
+    const settings = await this.getOrCreate(userId);
     return {
       autoReminders: settings.autoReminders,
       reminderDays: settings.reminderDays,

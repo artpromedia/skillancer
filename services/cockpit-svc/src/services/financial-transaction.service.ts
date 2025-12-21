@@ -19,7 +19,8 @@ import type {
   BulkCategorizeParams,
   BulkUpdateTransactionsParams,
 } from '../types/finance.types.js';
-import type { PrismaClient, FinancialTransaction } from '@skillancer/database';
+import type { FinancialTransaction } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 export class FinancialTransactionService {
@@ -59,7 +60,7 @@ export class FinancialTransactionService {
       }
 
       // Auto-set tax deductible based on category default
-      if (params.isTaxDeductible === undefined && category.defaultTaxDeductible) {
+      if (params.isTaxDeductible === undefined && category.isDeductible) {
         params.isTaxDeductible = true;
       }
     }
@@ -164,7 +165,7 @@ export class FinancialTransactionService {
     }
 
     // Validate new category if changed
-    if (params.categoryId && params.categoryId !== existing.categoryId) {
+    if (params.categoryId && params.categoryId !== existing.category) {
       const category = await this.categoryRepository.findById(params.categoryId);
       if (!category || category.userId !== userId) {
         throw new FinanceError(FinanceErrorCode.CATEGORY_NOT_FOUND);
@@ -236,7 +237,7 @@ export class FinancialTransactionService {
 
     return this.transactionRepository.update(transactionId, {
       categoryId,
-      isTaxDeductible: category.defaultTaxDeductible ?? undefined,
+      isTaxDeductible: category.isDeductible ?? undefined,
     });
   }
 
@@ -317,10 +318,10 @@ export class FinancialTransactionService {
         categoryId: split.categoryId,
         clientId: original.clientId ?? undefined,
         projectId: original.projectId ?? undefined,
-        transactionType: original.transactionType,
+        transactionType: original.type,
         amount: split.amount,
         currency: original.currency,
-        transactionDate: original.transactionDate,
+        transactionDate: original.date,
         description: split.description ?? original.description,
         vendor: original.vendor ?? undefined,
         isTaxDeductible: split.isTaxDeductible,
@@ -423,7 +424,7 @@ export class FinancialTransactionService {
 
     // Calculate balance from transactions
     const result = await this.prisma.financialTransaction.groupBy({
-      by: ['transactionType'],
+      by: ['type'],
       where: {
         accountId,
         status: 'CONFIRMED',
@@ -433,10 +434,10 @@ export class FinancialTransactionService {
 
     let balance = 0;
     for (const r of result) {
-      const amount = Number(r._sum.amount) || 0;
-      if (r.transactionType === 'INCOME') {
+      const amount = Number(r._sum?.amount) || 0;
+      if (r.type === 'INCOME') {
         balance += amount;
-      } else if (r.transactionType === 'EXPENSE') {
+      } else if (r.type === 'EXPENSE') {
         balance -= amount;
       }
     }

@@ -19,7 +19,7 @@
 
 import { z } from 'zod';
 
-import { FinanceError, getStatusCode } from '../errors/finance.errors.js';
+import { FinanceError } from '../errors/finance.errors.js';
 import {
   RecurringTransactionRepository,
   TransactionCategoryRepository,
@@ -43,22 +43,15 @@ import type { Redis } from 'ioredis';
 
 // -- Account Schemas --
 const CreateAccountSchema = z.object({
-  accountType: z.enum([
-    'CHECKING',
-    'SAVINGS',
-    'CREDIT_CARD',
-    'CASH',
-    'PAYPAL',
-    'STRIPE',
-    'VENMO',
-    'CRYPTO',
-    'OTHER',
-  ]),
+  accountType: z.enum(['CHECKING', 'SAVINGS', 'CREDIT_CARD', 'CASH', 'PAYPAL', 'STRIPE', 'OTHER']),
   name: z.string().min(1).max(100),
   institutionName: z.string().max(100).optional(),
   accountNumber: z.string().max(4).optional(),
   currentBalance: z.number().default(0),
   currency: z.string().length(3).default('USD'),
+  isDefault: z.boolean().optional(),
+  color: z.string().max(20).optional(),
+  icon: z.string().max(50).optional(),
 });
 
 const UpdateAccountSchema = z.object({
@@ -70,20 +63,23 @@ const UpdateAccountSchema = z.object({
 
 // -- Transaction Schemas --
 const CreateTransactionSchema = z.object({
-  accountId: z.string().uuid(),
+  accountId: z.string().uuid().optional(),
   transactionType: z.enum(['INCOME', 'EXPENSE', 'TRANSFER']),
   amount: z.number().positive(),
   transactionDate: z.string().transform((s) => new Date(s)),
-  description: z.string().max(500).optional(),
+  description: z.string().min(1).max(500),
   vendor: z.string().max(255).optional(),
   categoryId: z.string().uuid().optional(),
   clientId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
-  invoiceId: z.string().uuid().optional(),
+  invoiceNumber: z.string().max(100).optional(),
   notes: z.string().max(2000).optional(),
+  receiptUrl: z.string().url().optional(),
   isTaxDeductible: z.boolean().default(false),
-  taxDeductionPercentage: z.number().min(0).max(100).optional(),
+  taxDeductiblePercentage: z.number().min(0).max(100).optional(),
   tags: z.array(z.string()).optional(),
+  isRecurring: z.boolean().optional(),
+  recurringTransactionId: z.string().uuid().optional(),
 });
 
 const UpdateTransactionSchema = CreateTransactionSchema.partial().omit({ accountId: true });
@@ -94,7 +90,7 @@ const ListTransactionsSchema = z.object({
   categoryId: z.string().uuid().optional(),
   clientId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
-  status: z.enum(['PENDING', 'CLEARED', 'RECONCILED', 'VOID']).optional(),
+  status: z.enum(['PENDING', 'CONFIRMED', 'VOIDED']).optional(),
   isTaxDeductible: z
     .string()
     .transform((s) => s === 'true')
@@ -110,7 +106,7 @@ const ListTransactionsSchema = z.object({
   minAmount: z.string().transform(Number).optional(),
   maxAmount: z.string().transform(Number).optional(),
   search: z.string().optional(),
-  sortBy: z.enum(['date', 'amount', 'description', 'category']).optional(),
+  sortBy: z.enum(['transactionDate', 'amount', 'createdAt']).optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
   page: z.string().transform(Number).default('1'),
   limit: z.string().transform(Number).default('50'),
@@ -135,30 +131,24 @@ const SplitTransactionSchema = z.object({
 // -- Category Schemas --
 const CreateCategorySchema = z.object({
   name: z.string().min(1).max(100),
-  transactionType: z.enum(['INCOME', 'EXPENSE']),
+  type: z.enum(['INCOME', 'EXPENSE']),
   irsCategory: z.string().max(100).optional(),
   parentId: z.string().uuid().optional(),
   color: z.string().max(7).optional(),
   icon: z.string().max(50).optional(),
+  isDeductible: z.boolean().optional(),
 });
 
 // -- Recurring Transaction Schemas --
 const CreateRecurringSchema = z.object({
-  accountId: z.string().uuid(),
-  transactionType: z.enum(['INCOME', 'EXPENSE']),
+  accountId: z.string().uuid().optional(),
+  type: z.enum(['INCOME', 'EXPENSE']),
   amount: z.number().positive(),
-  description: z.string().max(500).optional(),
+  description: z.string().max(500),
   vendor: z.string().max(255).optional(),
-  categoryId: z.string().uuid().optional(),
-  frequency: z.enum([
-    'DAILY',
-    'WEEKLY',
-    'BIWEEKLY',
-    'MONTHLY',
-    'QUARTERLY',
-    'SEMIANNUALLY',
-    'ANNUALLY',
-  ]),
+  category: z.string().max(100),
+  subcategory: z.string().max(100).optional(),
+  frequency: z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']),
   startDate: z.string().transform((s) => new Date(s)),
   endDate: z
     .string()
@@ -166,50 +156,52 @@ const CreateRecurringSchema = z.object({
     .optional(),
   dayOfMonth: z.number().min(1).max(31).optional(),
   dayOfWeek: z.number().min(0).max(6).optional(),
-  isTaxDeductible: z.boolean().default(false),
+  isDeductible: z.boolean().default(false),
   autoCreate: z.boolean().default(true),
-  reminderDays: z.number().min(0).max(30).optional(),
+  requiresConfirmation: z.boolean().default(false),
+  clientId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
 });
 
-const UpdateRecurringSchema = CreateRecurringSchema.partial();
+const UpdateRecurringSchema = CreateRecurringSchema.partial().extend({
+  isActive: z.boolean().optional(),
+  isPaused: z.boolean().optional(),
+});
 
 // -- Goal Schemas --
 const CreateGoalSchema = z.object({
-  goalType: z.enum([
-    'SAVINGS',
-    'INCOME',
-    'EXPENSE_REDUCTION',
-    'PROFIT',
-    'TAX_SAVINGS',
-    'DEBT_PAYOFF',
-    'EMERGENCY_FUND',
-    'CUSTOM',
-  ]),
+  goalType: z.enum(['INCOME', 'SAVINGS', 'EXPENSE_LIMIT', 'PROFIT']),
   name: z.string().min(1).max(200),
   targetAmount: z.number().positive(),
   startDate: z.string().transform((s) => new Date(s)),
-  endDate: z.string().transform((s) => new Date(s)),
-  periodType: z.enum(['MONTHLY', 'QUARTERLY', 'ANNUAL']).optional(),
-  trackingAccountIds: z.array(z.string().uuid()).optional(),
-  trackingCategoryIds: z.array(z.string().uuid()).optional(),
-  notes: z.string().max(2000).optional(),
+  endDate: z
+    .string()
+    .transform((s) => new Date(s))
+    .optional(),
+  periodType: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM']).optional(),
+  linkedCategoryIds: z.array(z.string().uuid()).optional(),
+  description: z.string().max(2000).optional(),
+  icon: z.string().max(50).optional(),
+  color: z.string().max(20).optional(),
 });
 
 const UpdateGoalSchema = CreateGoalSchema.partial().extend({
-  status: z.enum(['ACTIVE', 'COMPLETED', 'CANCELLED', 'PAUSED']).optional(),
+  status: z.enum(['IN_PROGRESS', 'ACHIEVED', 'FAILED', 'CANCELLED']).optional(),
+  currentAmount: z.number().optional(),
 });
 
 // -- Mileage Schemas --
 const CreateMileageSchema = z.object({
-  tripDate: z.string().transform((s) => new Date(s)),
-  purpose: z.enum(['BUSINESS', 'MEDICAL', 'CHARITY', 'PERSONAL']),
-  startLocation: z.string().max(500),
-  endLocation: z.string().max(500),
+  date: z.string().transform((s) => new Date(s)),
+  purpose: z.enum(['CLIENT_MEETING', 'BUSINESS_ERRAND', 'TRAVEL', 'OTHER']),
+  description: z.string().max(500),
+  startLocation: z.string().max(500).optional(),
+  endLocation: z.string().max(500).optional(),
   miles: z.number().positive(),
   clientId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
-  notes: z.string().max(2000).optional(),
-  vehicleDescription: z.string().max(200).optional(),
+  roundTrip: z.boolean().optional(),
+  vehicleId: z.string().uuid().optional(),
 });
 
 const UpdateMileageSchema = CreateMileageSchema.partial();
@@ -223,7 +215,7 @@ const ListMileageSchema = z.object({
     .string()
     .transform((s) => new Date(s))
     .optional(),
-  purpose: z.enum(['BUSINESS', 'MEDICAL', 'CHARITY', 'PERSONAL']).optional(),
+  purpose: z.enum(['CLIENT_MEETING', 'BUSINESS_ERRAND', 'TRAVEL', 'OTHER']).optional(),
   clientId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
   page: z.string().transform(Number).default('1'),
@@ -246,18 +238,31 @@ const ReportDateRangeSchema = z.object({
 
 // -- Tax Schemas --
 const CreateTaxProfileSchema = z.object({
-  taxYear: z.number().min(2000).max(2100),
-  businessType: z.enum(['SOLE_PROPRIETOR', 'SINGLE_MEMBER_LLC', 'PARTNERSHIP', 'S_CORP', 'C_CORP']),
+  businessType: z.enum([
+    'SOLE_PROPRIETOR',
+    'LLC_SINGLE',
+    'LLC_MULTI',
+    'PARTNERSHIP',
+    'S_CORP',
+    'C_CORP',
+  ]),
   filingStatus: z.enum([
     'SINGLE',
     'MARRIED_FILING_JOINTLY',
     'MARRIED_FILING_SEPARATELY',
     'HEAD_OF_HOUSEHOLD',
+    'QUALIFYING_WIDOW',
   ]),
-  state: z.string().length(2),
-  estimatedAnnualIncome: z.number().positive().optional(),
-  selfEmploymentTaxRate: z.number().min(0).max(100).optional(),
+  stateOfResidence: z.string().length(2).optional(),
+  stateIncomeTaxRate: z.number().min(0).max(100).optional(),
+  estimatedTaxRate: z.number().min(0).max(100).optional(),
   accountingMethod: z.enum(['CASH', 'ACCRUAL']).optional(),
+  businessName: z.string().max(200).optional(),
+  ein: z.string().max(20).optional(),
+  hasHomeOffice: z.boolean().optional(),
+  homeOfficeSquareFeet: z.number().positive().optional(),
+  totalHomeSquareFeet: z.number().positive().optional(),
+  hasBusinessVehicle: z.boolean().optional(),
 });
 
 const UpdateTaxProfileSchema = CreateTaxProfileSchema.partial();
@@ -265,6 +270,7 @@ const UpdateTaxProfileSchema = CreateTaxProfileSchema.partial();
 // -- Plaid Schemas --
 const PlaidConnectSchema = z.object({
   publicToken: z.string(),
+  institutionId: z.string(),
   institutionName: z.string(),
   accounts: z.array(
     z.object({
@@ -274,6 +280,7 @@ const PlaidConnectSchema = z.object({
       subtype: z.string().optional(),
       mask: z.string().optional(),
       currentBalance: z.number().optional(),
+      availableBalance: z.number().optional(),
     })
   ),
 });
@@ -335,7 +342,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
   // Error handler
   const handleError = (error: unknown, reply: any) => {
     if (error instanceof FinanceError) {
-      return reply.status(getStatusCode(error.code)).send({
+      return reply.status(error.httpStatus).send({
         success: false,
         error: {
           code: error.code,
@@ -378,7 +385,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const includeInactive = (request.query as any).includeInactive === 'true';
 
-      const accounts = await accountService.listAccounts(user.id, includeInactive);
+      const accounts = await accountService.listAccounts(user.id, { isActive: !includeInactive });
 
       return await reply.send({
         success: true,
@@ -447,7 +454,17 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
     try {
       const user = getUser(request);
 
-      const summary = await accountService.getBalancesSummary(user.id);
+      // Get all accounts and calculate summary
+      const accounts = await accountService.listAccounts(user.id);
+      const summary = {
+        totalBalance: accounts.reduce((sum, acc) => sum + Number(acc.currentBalance || 0), 0),
+        accountCount: accounts.length,
+        accounts: accounts.map((a) => ({
+          id: a.id,
+          name: a.name,
+          balance: Number(a.currentBalance || 0),
+        })),
+      };
 
       return await reply.send({
         success: true,
@@ -498,7 +515,12 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       return await reply.send({
         success: true,
         data: result.transactions,
-        pagination: result.pagination,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: result.totalPages,
+        },
       });
     } catch (error) {
       return handleError(error, reply);
@@ -564,11 +586,11 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const body = BulkCategorizeSchema.parse(request.body);
 
-      const count = await transactionService.bulkCategorize(
-        body.transactionIds,
-        body.categoryId,
-        user.id
-      );
+      const count = await transactionService.bulkUpdate({
+        userId: user.id,
+        transactionIds: body.transactionIds,
+        updates: { categoryId: body.categoryId },
+      });
 
       logger.info({ count, userId: user.id }, 'Transactions bulk categorized');
 
@@ -588,7 +610,11 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const { id } = request.params as { id: string };
       const body = SplitTransactionSchema.parse(request.body);
 
-      const transactions = await transactionService.splitTransaction(id, user.id, body.splits);
+      const transactions = await transactionService.splitTransaction({
+        userId: user.id,
+        originalTransactionId: id,
+        splits: body.splits,
+      });
 
       logger.info(
         { originalId: id, splitCount: transactions.length, userId: user.id },
@@ -605,30 +631,12 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
   });
 
   // POST /finance/transactions/:id/receipt - Upload receipt
-  fastify.post('/transactions/:id/receipt', async (request, reply) => {
-    try {
-      const user = getUser(request);
-      const { id } = request.params as { id: string };
-      const data = await request.file();
-
-      if (!data) {
-        return await reply.status(400).send({
-          success: false,
-          error: { code: 'MISSING_RECEIPT', message: 'No file uploaded' },
-        });
-      }
-
-      const transaction = await transactionService.uploadReceipt(id, user.id, data);
-
-      logger.info({ transactionId: id, userId: user.id }, 'Receipt uploaded');
-
-      return await reply.send({
-        success: true,
-        data: transaction,
-      });
-    } catch (error) {
-      return handleError(error, reply);
-    }
+  // TODO: Implement receipt upload functionality
+  fastify.post('/transactions/:id/receipt', async (_request, reply) => {
+    return reply.status(501).send({
+      success: false,
+      error: { code: 'NOT_IMPLEMENTED', message: 'Receipt upload not yet implemented' },
+    });
   });
 
   // ==========================================================================
@@ -664,7 +672,6 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const category = await categoryRepo.create({
         userId: user.id,
         ...body,
-        isSystem: false,
       });
 
       logger.info({ categoryId: category.id, userId: user.id }, 'Category created');
@@ -683,7 +690,11 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
     try {
       const user = getUser(request);
 
-      const hierarchy = await categoryRepo.getHierarchy(user.id);
+      const hierarchy = await categoryRepo.findByFilters({
+        userId: user.id,
+        isActive: true,
+        includeHierarchy: true,
+      });
 
       return await reply.send({
         success: true,
@@ -845,7 +856,10 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const includeCompleted = (request.query as any).includeCompleted === 'true';
 
-      const goals = await goalService.listGoals(user.id, includeCompleted);
+      const goals = await goalService.listGoals({
+        userId: user.id,
+        status: includeCompleted ? undefined : 'IN_PROGRESS',
+      });
 
       return await reply.send({
         success: true,
@@ -862,7 +876,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const { id } = request.params as { id: string };
 
-      const goal = await goalService.getGoalWithProgress(id, user.id);
+      const goal = await goalService.getGoal(id, user.id);
 
       return await reply.send({
         success: true,
@@ -949,7 +963,12 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       return await reply.send({
         success: true,
         data: result.logs,
-        pagination: result.pagination,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: result.totalPages,
+        },
       });
     } catch (error) {
       return handleError(error, reply);
@@ -1014,8 +1033,10 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
     try {
       const user = getUser(request);
       const year = parseInt((request.query as any).year ?? new Date().getFullYear().toString(), 10);
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year, 11, 31, 23, 59, 59, 999);
 
-      const summary = await mileageService.getMileageSummary(user.id, year);
+      const summary = await mileageService.getMileageSummary(user.id, startDate, endDate);
 
       return await reply.send({
         success: true,
@@ -1036,7 +1057,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const query = ReportDateRangeSchema.parse(request.query);
 
-      const report = await reportsService.getProfitAndLossReport({
+      const report = await reportsService.generateProfitLossReport({
         userId: user.id,
         ...query,
       });
@@ -1056,7 +1077,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const query = ReportDateRangeSchema.parse(request.query);
 
-      const report = await reportsService.getCashFlowReport({
+      const report = await reportsService.generateCashFlowReport({
         userId: user.id,
         ...query,
       });
@@ -1076,7 +1097,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const year = parseInt((request.query as any).year ?? new Date().getFullYear().toString(), 10);
 
-      const report = await reportsService.getTaxReport({ userId: user.id, year });
+      const report = await reportsService.generateTaxReport(user.id, year);
 
       return await reply.send({
         success: true,
@@ -1093,7 +1114,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const query = ReportDateRangeSchema.parse(request.query);
 
-      const report = await reportsService.getExpenseBreakdown({
+      const report = await reportsService.generateExpenseBreakdown({
         userId: user.id,
         ...query,
       });
@@ -1113,7 +1134,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const query = ReportDateRangeSchema.parse(request.query);
 
-      const report = await reportsService.getIncomeBySource({
+      const report = await reportsService.generateIncomeSources({
         userId: user.id,
         ...query,
       });
@@ -1131,8 +1152,26 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
   fastify.get('/reports/dashboard', async (request, reply) => {
     try {
       const user = getUser(request);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-      const dashboard = await reportsService.getDashboardSummary(user.id);
+      // Get profit/loss for current month as dashboard summary
+      const profitLoss = await reportsService.generateProfitLossReport({
+        userId: user.id,
+        startDate: startOfMonth,
+        endDate: endOfMonth,
+      });
+
+      const dashboard = {
+        period: profitLoss.period,
+        summary: {
+          totalIncome: profitLoss.income.total,
+          totalExpenses: profitLoss.expenses.total,
+          netProfit: profitLoss.netProfit,
+          profitMargin: profitLoss.profitMargin,
+        },
+      };
 
       return await reply.send({
         success: true,
@@ -1153,7 +1192,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const body = CreateTaxProfileSchema.parse(request.body);
 
-      const existing = await taxProfileRepo.findByUserAndYear(user.id, body.taxYear);
+      const existing = await taxProfileRepo.findByUser(user.id);
       let profile;
 
       if (existing) {
@@ -1165,10 +1204,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
         });
       }
 
-      logger.info(
-        { profileId: profile.id, userId: user.id, taxYear: body.taxYear },
-        'Tax profile saved'
-      );
+      logger.info({ profileId: profile.id, userId: user.id }, 'Tax profile saved');
 
       return await reply.status(existing ? 200 : 201).send({
         success: true,
@@ -1183,9 +1219,8 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
   fastify.get('/tax-profile', async (request, reply) => {
     try {
       const user = getUser(request);
-      const year = parseInt((request.query as any).year ?? new Date().getFullYear().toString(), 10);
 
-      const profile = await taxProfileRepo.findByUserAndYear(user.id, year);
+      const profile = await taxProfileRepo.findByUser(user.id);
 
       if (!profile) {
         return await reply.status(404).send({
@@ -1209,7 +1244,14 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
       const user = getUser(request);
       const year = parseInt((request.query as any).year ?? new Date().getFullYear().toString(), 10);
 
-      const estimates = await taxProfileRepo.calculateQuarterlyEstimates(user.id, year);
+      const estimates = await taxProfileRepo.getWithEstimates(user.id, year);
+
+      if (!estimates) {
+        return await reply.status(404).send({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Tax profile not found' },
+        });
+      }
 
       return await reply.send({
         success: true,

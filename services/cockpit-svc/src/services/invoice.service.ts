@@ -32,8 +32,34 @@ import type {
   PaymentOption,
   CreateLineItemParams,
 } from '../types/invoice.types.js';
-import type { PrismaClient, Invoice, InvoiceStatus } from '@skillancer/database';
+import type {
+  Invoice,
+  InvoiceStatus,
+  Client,
+  InvoiceLineItem,
+  InvoicePayment,
+  InvoiceTemplate,
+} from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
+
+/**
+ * Helper to get client display name from Client object
+ */
+function getClientDisplayName(client: Client | null | undefined): string {
+  if (!client) return '';
+  if (client.companyName) return client.companyName;
+  const parts = [client.firstName, client.lastName].filter(Boolean);
+  return parts.join(' ') || '';
+}
+
+// Type for invoice with included relations
+type InvoiceWithRelations = Invoice & {
+  client?: Client | null;
+  lineItems?: InvoiceLineItem[];
+  payments?: InvoicePayment[];
+  template?: InvoiceTemplate | null;
+};
 
 export class InvoiceService {
   private readonly invoiceRepository: InvoiceRepository;
@@ -193,10 +219,15 @@ export class InvoiceService {
       amountUpdates = { subtotal, discountAmount, taxAmount, total, amountDue: total };
     }
 
+    // Extract lineItems as they need special handling
+    const { lineItems, ...updateData } = params;
+
     const invoice = await this.invoiceRepository.update(invoiceId, {
-      ...params,
+      ...updateData,
       ...amountUpdates,
     });
+
+    // TODO: Handle lineItems update separately if needed
 
     await this.activityRepository.logUpdated(invoiceId, userId, Object.keys(params));
 
@@ -213,11 +244,14 @@ export class InvoiceService {
     userId: string,
     options?: SendInvoiceOptions
   ): Promise<Invoice> {
-    const invoice = await this.invoiceRepository.findByIdWithDetails(invoiceId);
+    const invoiceRaw = await this.invoiceRepository.findByIdWithDetails(invoiceId);
 
-    if (!invoice || invoice.freelancerUserId !== userId) {
+    if (!invoiceRaw || invoiceRaw.freelancerUserId !== userId) {
       throw invoiceErrors.notFound(invoiceId);
     }
+
+    // Cast to include relations
+    const invoice = invoiceRaw as InvoiceWithRelations;
 
     if (invoice.status === 'VOIDED') {
       throw invoiceErrors.voided(invoiceId);
@@ -387,12 +421,14 @@ export class InvoiceService {
    * Get public invoice view for client portal
    */
   async getPublicView(viewToken: string): Promise<PublicInvoiceView> {
-    const invoice = await this.invoiceRepository.findByViewToken(viewToken);
+    const invoiceResult = await this.invoiceRepository.findByViewToken(viewToken);
 
-    if (!invoice) {
+    if (!invoiceResult) {
       throw new InvoiceError(InvoiceErrorCode.INVALID_VIEW_TOKEN);
     }
 
+    // Cast to include relations that are included in the query
+    const invoice = invoiceResult as InvoiceWithRelations;
     const template = invoice.template;
     const client = invoice.client;
 
@@ -468,7 +504,7 @@ export class InvoiceService {
         logoUrl: template?.logoUrl,
       },
       client: {
-        name: client?.name ?? '',
+        name: getClientDisplayName(client),
         email: client?.email,
         address: client?.address as PublicInvoiceView['client']['address'],
       },
@@ -514,24 +550,30 @@ export class InvoiceService {
         totalPaidThisYear: 0, // TODO: Calculate
         avgDaysToPayment: 0, // TODO: Calculate
       },
-      recentInvoices: recentInvoices.map((inv) => ({
-        id: inv.id,
-        invoiceNumber: inv.invoiceNumber,
-        clientName: inv.client?.name ?? 'Unknown',
-        total: Number(inv.total),
-        amountDue: Number(inv.amountDue),
-        status: inv.status,
-        dueDate: inv.dueDate,
-        isOverdue: inv.dueDate < now && !['PAID', 'VOIDED', 'DRAFT'].includes(inv.status),
-      })),
-      overdueInvoices: overdueInvoices.map((inv) => ({
-        id: inv.id,
-        invoiceNumber: inv.invoiceNumber,
-        clientName: inv.client?.name ?? 'Unknown',
-        amountDue: Number(inv.amountDue),
-        dueDate: inv.dueDate,
-        daysOverdue: Math.floor((now.getTime() - inv.dueDate.getTime()) / (1000 * 60 * 60 * 24)),
-      })),
+      recentInvoices: recentInvoices.map((inv) => {
+        const invoiceWithClient = inv as InvoiceWithRelations;
+        return {
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          clientName: getClientDisplayName(invoiceWithClient.client),
+          total: Number(inv.total),
+          amountDue: Number(inv.amountDue),
+          status: inv.status,
+          dueDate: inv.dueDate,
+          isOverdue: inv.dueDate < now && !['PAID', 'VOIDED', 'DRAFT'].includes(inv.status),
+        };
+      }),
+      overdueInvoices: overdueInvoices.map((inv) => {
+        const invoiceWithClient = inv as InvoiceWithRelations;
+        return {
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          clientName: getClientDisplayName(invoiceWithClient.client),
+          amountDue: Number(inv.amountDue),
+          dueDate: inv.dueDate,
+          daysOverdue: Math.floor((now.getTime() - inv.dueDate.getTime()) / (1000 * 60 * 60 * 24)),
+        };
+      }),
       monthlyTrend,
     };
   }

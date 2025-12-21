@@ -8,7 +8,8 @@ import type {
   UpdateTaxProfileParams,
   TaxProfileWithEstimates,
 } from '../types/finance.types.js';
-import type { Prisma, PrismaClient, TaxProfile } from '@skillancer/database';
+import type { TaxProfile } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 // 2024 Self-employment tax rate
 export const SELF_EMPLOYMENT_TAX_RATE = 0.153; // 15.3%
@@ -25,7 +26,7 @@ export const TAX_BRACKETS = {
     { min: 243725, max: 609350, rate: 0.35 },
     { min: 609350, max: Infinity, rate: 0.37 },
   ],
-  MARRIED_JOINT: [
+  MARRIED_FILING_JOINTLY: [
     { min: 0, max: 23200, rate: 0.1 },
     { min: 23200, max: 94300, rate: 0.12 },
     { min: 94300, max: 201050, rate: 0.22 },
@@ -34,7 +35,7 @@ export const TAX_BRACKETS = {
     { min: 487450, max: 731200, rate: 0.35 },
     { min: 731200, max: Infinity, rate: 0.37 },
   ],
-  MARRIED_SEPARATE: [
+  MARRIED_FILING_SEPARATELY: [
     { min: 0, max: 11600, rate: 0.1 },
     { min: 11600, max: 47150, rate: 0.12 },
     { min: 47150, max: 100525, rate: 0.22 },
@@ -42,7 +43,7 @@ export const TAX_BRACKETS = {
     { min: 191950, max: 243725, rate: 0.32 },
     { min: 243725, max: 365600, rate: 0.35 },
     { min: 365600, max: Infinity, rate: 0.37 },
-  ],
+  ] as const,
   HEAD_OF_HOUSEHOLD: [
     { min: 0, max: 16550, rate: 0.1 },
     { min: 16550, max: 63100, rate: 0.12 },
@@ -69,24 +70,15 @@ export class TaxProfileRepository {
    * Create a new tax profile
    */
   async create(data: CreateTaxProfileParams): Promise<TaxProfile> {
-    // Generate quarterly payment dates if not provided
-    const quarterlyPaymentDates =
-      data.quarterlyPaymentDates ?? this.generateQuarterlyDates(data.taxYear);
-
     return this.prisma.taxProfile.create({
       data: {
         userId: data.userId,
-        taxYear: data.taxYear,
         businessType: data.businessType,
         filingStatus: data.filingStatus,
         accountingMethod: data.accountingMethod ?? 'CASH',
         businessName: data.businessName ?? null,
         ein: data.ein ?? null,
-        businessAddress: data.businessAddress ?? null,
-        standardMileageRate: data.standardMileageRate ?? 0.67,
-        selfEmploymentTaxRate: data.selfEmploymentTaxRate ?? SELF_EMPLOYMENT_TAX_RATE,
         estimatedTaxRate: data.estimatedTaxRate ?? null,
-        quarterlyPaymentDates,
       },
     });
   }
@@ -101,55 +93,38 @@ export class TaxProfileRepository {
   }
 
   /**
-   * Find tax profile by user and year
+   * Find tax profile by user
    */
-  async findByUserAndYear(userId: string, taxYear: number): Promise<TaxProfile | null> {
-    return this.prisma.taxProfile.findFirst({
-      where: { userId, taxYear },
-    });
-  }
-
-  /**
-   * Find all tax profiles for a user
-   */
-  async findByUserId(userId: string): Promise<TaxProfile[]> {
-    return this.prisma.taxProfile.findMany({
+  async findByUser(userId: string): Promise<TaxProfile | null> {
+    return this.prisma.taxProfile.findUnique({
       where: { userId },
-      orderBy: { taxYear: 'desc' },
     });
   }
 
   /**
-   * Get current year's tax profile
+   * Get current tax profile for user
    */
-  async findCurrentYear(userId: string): Promise<TaxProfile | null> {
-    const currentYear = new Date().getFullYear();
-    return this.findByUserAndYear(userId, currentYear);
+  async findCurrentProfile(userId: string): Promise<TaxProfile | null> {
+    return this.findByUser(userId);
   }
 
   /**
-   * Get or create current year's tax profile
+   * Get or create tax profile for user
    */
-  async getOrCreateCurrentYear(
+  async getOrCreate(
     userId: string,
     defaults?: Partial<CreateTaxProfileParams>
   ): Promise<TaxProfile> {
-    const currentYear = new Date().getFullYear();
-    let profile = await this.findByUserAndYear(userId, currentYear);
+    let profile = await this.findByUser(userId);
 
     if (!profile) {
-      // Copy from previous year if exists
-      const previousYear = await this.findByUserAndYear(userId, currentYear - 1);
-
       profile = await this.create({
         userId,
-        taxYear: currentYear,
-        businessType: previousYear?.businessType ?? defaults?.businessType ?? 'SOLE_PROPRIETORSHIP',
-        filingStatus: previousYear?.filingStatus ?? defaults?.filingStatus ?? 'SINGLE',
-        accountingMethod: previousYear?.accountingMethod ?? defaults?.accountingMethod ?? 'CASH',
-        businessName: previousYear?.businessName ?? defaults?.businessName,
-        ein: previousYear?.ein ?? defaults?.ein,
-        businessAddress: previousYear?.businessAddress ?? defaults?.businessAddress,
+        businessType: defaults?.businessType ?? 'SOLE_PROPRIETOR',
+        filingStatus: defaults?.filingStatus ?? 'SINGLE',
+        accountingMethod: defaults?.accountingMethod ?? 'CASH',
+        businessName: defaults?.businessName,
+        ein: defaults?.ein,
       });
     }
 
@@ -168,20 +143,16 @@ export class TaxProfileRepository {
         accountingMethod: data.accountingMethod,
         businessName: data.businessName,
         ein: data.ein,
-        businessAddress: data.businessAddress,
-        standardMileageRate: data.standardMileageRate,
-        selfEmploymentTaxRate: data.selfEmploymentTaxRate,
         estimatedTaxRate: data.estimatedTaxRate,
-        quarterlyPaymentDates: data.quarterlyPaymentDates,
       },
     });
   }
 
   /**
-   * Get tax profile with calculated estimates
+   * Get tax profile with calculated estimates for a given year
    */
   async getWithEstimates(userId: string, taxYear: number): Promise<TaxProfileWithEstimates | null> {
-    const profile = await this.findByUserAndYear(userId, taxYear);
+    const profile = await this.findByUser(userId);
     if (!profile) return null;
 
     // Get income and expenses for the year
@@ -192,8 +163,8 @@ export class TaxProfileRepository {
       this.prisma.financialTransaction.aggregate({
         where: {
           userId,
-          transactionType: 'INCOME',
-          transactionDate: { gte: startDate, lte: endDate },
+          type: 'INCOME',
+          date: { gte: startDate, lte: endDate },
           status: 'CONFIRMED',
         },
         _sum: { amount: true },
@@ -201,9 +172,9 @@ export class TaxProfileRepository {
       this.prisma.financialTransaction.aggregate({
         where: {
           userId,
-          transactionType: 'EXPENSE',
-          isTaxDeductible: true,
-          transactionDate: { gte: startDate, lte: endDate },
+          type: 'EXPENSE',
+          isDeductible: true,
+          date: { gte: startDate, lte: endDate },
           status: 'CONFIRMED',
         },
         _sum: { amount: true },
@@ -211,16 +182,15 @@ export class TaxProfileRepository {
       this.prisma.mileageLog.aggregate({
         where: {
           userId,
-          purpose: 'BUSINESS',
           date: { gte: startDate, lte: endDate },
         },
-        _sum: { deductibleAmount: true },
+        _sum: { deductionAmount: true },
       }),
     ]);
 
-    const estimatedIncome = Number(incomeResult._sum.amount) || 0;
-    const estimatedExpenses = Number(expenseResult._sum.amount) || 0;
-    const mileageDeduction = Number(mileageResult._sum.deductibleAmount) || 0;
+    const estimatedIncome = Number(incomeResult._sum?.amount) || 0;
+    const estimatedExpenses = Number(expenseResult._sum?.amount) || 0;
+    const mileageDeduction = Number(mileageResult._sum?.deductionAmount) || 0;
     const homeOfficeDeduction = 0; // Would need separate calculation
     const otherDeductions = 0;
     const totalDeductions =
@@ -230,8 +200,7 @@ export class TaxProfileRepository {
     const taxableIncome = Math.max(0, netSelfEmploymentIncome);
 
     // Calculate self-employment tax
-    const seTaxRate = Number(profile.selfEmploymentTaxRate) || SELF_EMPLOYMENT_TAX_RATE;
-    const estimatedSelfEmploymentTax = taxableIncome * seTaxRate;
+    const estimatedSelfEmploymentTax = taxableIncome * SELF_EMPLOYMENT_TAX_RATE;
 
     // Calculate income tax (simplified)
     const brackets = this.getTaxBrackets(profile.filingStatus);
@@ -285,9 +254,15 @@ export class TaxProfileRepository {
    * Get tax brackets for filing status
    */
   private getTaxBrackets(
-    filingStatus: 'SINGLE' | 'MARRIED_JOINT' | 'MARRIED_SEPARATE' | 'HEAD_OF_HOUSEHOLD'
+    filingStatus:
+      | 'SINGLE'
+      | 'MARRIED_FILING_JOINTLY'
+      | 'MARRIED_FILING_SEPARATELY'
+      | 'HEAD_OF_HOUSEHOLD'
+      | 'QUALIFYING_WIDOW'
   ): Array<{ min: number; max: number; rate: number }> {
-    return TAX_BRACKETS[filingStatus] || TAX_BRACKETS.SINGLE;
+    const brackets = TAX_BRACKETS[filingStatus as keyof typeof TAX_BRACKETS];
+    return [...(brackets || TAX_BRACKETS.SINGLE)];
   }
 
   /**

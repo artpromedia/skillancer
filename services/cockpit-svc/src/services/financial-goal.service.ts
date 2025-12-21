@@ -12,7 +12,8 @@ import type {
   GoalFilters,
   GoalWithProgress,
 } from '../types/finance.types.js';
-import type { PrismaClient, FinancialGoal } from '@skillancer/database';
+import type { FinancialGoal } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 export class FinancialGoalService {
@@ -113,7 +114,7 @@ export class FinancialGoalService {
     const startDate = params.startDate ?? existing.startDate;
     const endDate = params.endDate ?? existing.endDate;
 
-    if (endDate && endDate < startDate) {
+    if (endDate && startDate && endDate < startDate) {
       throw new FinanceError(FinanceErrorCode.INVALID_GOAL_DATES);
     }
 
@@ -152,13 +153,13 @@ export class FinancialGoalService {
       throw new FinanceError(FinanceErrorCode.GOAL_NOT_FOUND);
     }
 
-    if (goal.status !== 'ACTIVE') {
+    if (goal.status !== 'IN_PROGRESS') {
       throw new FinanceError(FinanceErrorCode.GOAL_ALREADY_COMPLETED);
     }
 
     const updated = await this.goalRepository.updateProgress(goalId, currentAmount);
 
-    if (updated.status === 'COMPLETED') {
+    if (updated.status === 'ACHIEVED') {
       this.logger.info({ goalId, userId }, 'Financial goal completed!');
     }
 
@@ -192,7 +193,7 @@ export class FinancialGoalService {
       throw new FinanceError(FinanceErrorCode.GOAL_NOT_FOUND);
     }
 
-    if (goal.status === 'COMPLETED') {
+    if (goal.status === 'ACHIEVED') {
       throw new FinanceError(FinanceErrorCode.GOAL_ALREADY_COMPLETED);
     }
 
@@ -213,7 +214,7 @@ export class FinancialGoalService {
       throw new FinanceError(FinanceErrorCode.GOAL_NOT_FOUND);
     }
 
-    if (goal.status === 'COMPLETED') {
+    if (goal.status === 'ACHIEVED') {
       throw new FinanceError(FinanceErrorCode.GOAL_ALREADY_COMPLETED);
     }
 
@@ -251,7 +252,7 @@ export class FinancialGoalService {
     topGoals: GoalWithProgress[];
   }> {
     const activeGoals = await this.goalRepository.findActiveWithProgress(userId);
-    const completedGoals = await this.goalRepository.findByUserId(userId, 'COMPLETED');
+    const completedGoals = await this.goalRepository.findByUserId(userId, 'ACHIEVED');
 
     const totalTargetAmount = activeGoals.reduce((sum, g) => sum + Number(g.targetAmount), 0);
     const totalCurrentAmount = activeGoals.reduce((sum, g) => sum + Number(g.currentAmount), 0);

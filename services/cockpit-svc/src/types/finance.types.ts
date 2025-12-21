@@ -3,6 +3,7 @@
  * Type definitions for the income & expense tracking system
  */
 
+// Import from @prisma/client directly until @skillancer/database exports are fixed
 import type {
   FinancialAccount,
   FinancialTransaction,
@@ -25,10 +26,10 @@ import type {
   BusinessType,
   FilingStatus,
   AccountingMethod,
-} from '@skillancer/database';
+} from '@prisma/client';
 
-// Re-export enums for service layer use
-export type {
+// Re-export enums using export...from for proper TypeScript module semantics
+export {
   FinancialAccountType,
   FinancialTransactionType,
   FinancialTransactionSource,
@@ -41,7 +42,7 @@ export type {
   BusinessType,
   FilingStatus,
   AccountingMethod,
-} from '@skillancer/database';
+} from '@prisma/client';
 
 // ============================================================================
 // FINANCIAL ACCOUNT TYPES
@@ -55,7 +56,7 @@ export interface CreateFinancialAccountParams {
   accountNumber?: string;
   currentBalance?: number;
   currency?: string;
-  isDefault?: boolean;
+  isPrimary?: boolean;
   color?: string;
   icon?: string;
 }
@@ -66,7 +67,7 @@ export interface UpdateFinancialAccountParams {
   accountNumber?: string;
   currentBalance?: number;
   currency?: string;
-  isDefault?: boolean;
+  isPrimary?: boolean;
   color?: string;
   icon?: string;
   isActive?: boolean;
@@ -171,9 +172,9 @@ export interface TransactionFilters {
   sortOrder?: 'asc' | 'desc';
 }
 
-export interface TransactionWithDetails extends FinancialTransaction {
+export interface TransactionWithDetails extends Omit<FinancialTransaction, 'category'> {
   account?: Pick<FinancialAccount, 'id' | 'name' | 'accountType'> | null;
-  category?: Pick<TransactionCategory, 'id' | 'name' | 'type' | 'icon' | 'color'> | null;
+  category?: string | Pick<TransactionCategory, 'id' | 'name' | 'type' | 'icon' | 'color'> | null;
   client?: Pick<Client, 'id' | 'firstName' | 'lastName' | 'companyName'> | null;
   project?: Pick<CockpitProject, 'id' | 'name'> | null;
 }
@@ -213,47 +214,53 @@ export interface BulkUpdateTransactionsParams {
 
 export interface CreateRecurringTransactionParams {
   userId: string;
-  categoryId?: string;
+  category: string;
+  subcategory?: string;
   accountId?: string;
-  transactionType: FinancialTransactionType;
+  type: FinancialTransactionType;
   amount: number;
   currency?: string;
   description: string;
   vendor?: string;
   frequency: RecurrenceFrequency;
+  interval?: number;
   startDate: Date;
   endDate?: Date;
   dayOfMonth?: number;
   dayOfWeek?: number;
-  isTaxDeductible?: boolean;
-  taxDeductiblePercentage?: number;
+  isDeductible?: boolean;
   autoCreate?: boolean;
-  reminderDays?: number;
+  requiresConfirmation?: boolean;
+  clientId?: string;
+  projectId?: string;
 }
 
 export interface UpdateRecurringTransactionParams {
-  categoryId?: string;
+  category?: string;
+  subcategory?: string;
   accountId?: string;
   amount?: number;
   currency?: string;
   description?: string;
   vendor?: string;
   frequency?: RecurrenceFrequency;
+  interval?: number;
   endDate?: Date;
   dayOfMonth?: number;
   dayOfWeek?: number;
-  isTaxDeductible?: boolean;
-  taxDeductiblePercentage?: number;
+  isDeductible?: boolean;
   isActive?: boolean;
+  isPaused?: boolean;
   autoCreate?: boolean;
-  reminderDays?: number;
+  requiresConfirmation?: boolean;
+  clientId?: string;
+  projectId?: string;
 }
 
-export interface RecurringTransactionWithDetails extends RecurringTransaction {
-  category?: Pick<TransactionCategory, 'id' | 'name' | 'type' | 'icon'> | null;
+export interface RecurringTransactionWithDetails extends Omit<RecurringTransaction, 'category'> {
+  categoryDetails?: Pick<TransactionCategory, 'id' | 'name' | 'type' | 'icon'> | null;
   account?: Pick<FinancialAccount, 'id' | 'name'> | null;
   generatedTransactionCount?: number;
-  nextOccurrence?: Date;
 }
 
 // ============================================================================
@@ -265,22 +272,18 @@ export interface CreateCategoryParams {
   name: string;
   type: FinancialTransactionType;
   parentId?: string;
-  description?: string;
   icon?: string;
   color?: string;
   irsCategory?: string;
-  scheduleC?: string;
-  defaultTaxDeductible?: boolean;
+  isDeductible?: boolean;
 }
 
 export interface UpdateCategoryParams {
   name?: string;
-  description?: string;
   icon?: string;
   color?: string;
   irsCategory?: string;
-  scheduleC?: string;
-  defaultTaxDeductible?: boolean;
+  isDeductible?: boolean;
   isActive?: boolean;
 }
 
@@ -357,36 +360,32 @@ export interface CreateMileageLogParams {
   projectId?: string;
   clientId?: string;
   date: Date;
-  startLocation: string;
-  endLocation: string;
-  distance: number;
-  distanceUnit?: 'MILES' | 'KILOMETERS';
+  description: string;
+  startLocation?: string;
+  endLocation?: string;
+  miles: number;
   purpose: MileagePurpose;
-  notes?: string;
-  vehicleInfo?: string;
-  odometerStart?: number;
-  odometerEnd?: number;
+  roundTrip?: boolean;
+  taxYear?: number;
+  vehicleId?: string;
 }
 
 export interface UpdateMileageLogParams {
   projectId?: string;
   clientId?: string;
   date?: Date;
+  description?: string;
   startLocation?: string;
   endLocation?: string;
-  distance?: number;
-  distanceUnit?: 'MILES' | 'KILOMETERS';
+  miles?: number;
   purpose?: MileagePurpose;
-  notes?: string;
-  vehicleInfo?: string;
-  odometerStart?: number;
-  odometerEnd?: number;
+  roundTrip?: boolean;
+  vehicleId?: string;
 }
 
 export interface MileageLogWithDetails extends MileageLog {
   client?: Pick<Client, 'id' | 'firstName' | 'lastName' | 'companyName'> | null;
   project?: Pick<CockpitProject, 'id' | 'name'> | null;
-  deductibleAmount?: number;
 }
 
 export interface MileageFilters {
@@ -402,10 +401,10 @@ export interface MileageFilters {
 
 export interface MileageSummary {
   totalMiles: number;
-  businessMiles: number;
-  personalMiles: number;
-  charitableMiles: number;
-  medicalMiles: number;
+  clientMeetingMiles: number;
+  businessErrandMiles: number;
+  travelMiles: number;
+  otherMiles: number;
   estimatedDeduction: number;
 }
 
@@ -415,17 +414,18 @@ export interface MileageSummary {
 
 export interface CreateTaxProfileParams {
   userId: string;
-  taxYear: number;
   businessType: BusinessType;
   filingStatus: FilingStatus;
   accountingMethod?: AccountingMethod;
   businessName?: string;
   ein?: string;
-  businessAddress?: string;
-  standardMileageRate?: number;
-  selfEmploymentTaxRate?: number;
   estimatedTaxRate?: number;
-  quarterlyPaymentDates?: Date[];
+  stateOfResidence?: string;
+  stateIncomeTaxRate?: number;
+  hasHomeOffice?: boolean;
+  homeOfficeSquareFeet?: number;
+  totalHomeSquareFeet?: number;
+  hasBusinessVehicle?: boolean;
 }
 
 export interface UpdateTaxProfileParams {
@@ -434,11 +434,13 @@ export interface UpdateTaxProfileParams {
   accountingMethod?: AccountingMethod;
   businessName?: string;
   ein?: string;
-  businessAddress?: string;
-  standardMileageRate?: number;
-  selfEmploymentTaxRate?: number;
   estimatedTaxRate?: number;
-  quarterlyPaymentDates?: Date[];
+  stateOfResidence?: string;
+  stateIncomeTaxRate?: number;
+  hasHomeOffice?: boolean;
+  homeOfficeSquareFeet?: number;
+  totalHomeSquareFeet?: number;
+  hasBusinessVehicle?: boolean;
 }
 
 export interface TaxProfileWithEstimates extends TaxProfile {

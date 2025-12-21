@@ -24,10 +24,7 @@ export {
 } from './recurring-transaction.worker.js';
 
 // Invoice Workers (CP-3.2: Professional Invoicing)
-export {
-  RecurringInvoiceWorker,
-  type RecurringInvoiceNotification,
-} from './recurring-invoice.worker.js';
+export { RecurringInvoiceWorker } from './recurring-invoice.worker.js';
 export {
   InvoiceReminderWorker,
   type InvoiceReminderNotification,

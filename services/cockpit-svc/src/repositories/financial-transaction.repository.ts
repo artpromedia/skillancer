@@ -10,13 +10,12 @@ import type {
   TransactionWithDetails,
 } from '../types/finance.types.js';
 import type {
-  Prisma,
-  PrismaClient,
   FinancialTransaction,
   FinancialTransactionType,
   FinancialTransactionSource,
   FinancialTransactionStatus,
-} from '@skillancer/database';
+} from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 export interface TransactionAggregate {
   totalIncome: number;
@@ -36,22 +35,20 @@ export class FinancialTransactionRepository {
       data: {
         userId: data.userId,
         accountId: data.accountId ?? null,
-        categoryId: data.categoryId ?? null,
+        category: data.categoryId ?? 'Uncategorized',
         clientId: data.clientId ?? null,
         projectId: data.projectId ?? null,
-        transactionType: data.transactionType,
+        type: data.transactionType,
         amount: data.amount,
         currency: data.currency ?? 'USD',
-        transactionDate: data.transactionDate,
+        date: data.transactionDate,
         description: data.description,
         vendor: data.vendor ?? null,
-        invoiceNumber: data.invoiceNumber ?? null,
         notes: data.notes ?? null,
         receiptUrl: data.receiptUrl ?? null,
         isRecurring: data.isRecurring ?? false,
-        recurringTransactionId: data.recurringTransactionId ?? null,
-        isTaxDeductible: data.isTaxDeductible ?? false,
-        taxDeductiblePercentage: data.taxDeductiblePercentage ?? 100,
+        recurringRuleId: data.recurringTransactionId ?? null,
+        isDeductible: data.isTaxDeductible ?? false,
         tags: data.tags ?? [],
         source: 'MANUAL',
         status: 'CONFIRMED',
@@ -78,14 +75,15 @@ export class FinancialTransactionRepository {
       data: {
         userId: data.userId,
         accountId: data.accountId,
-        transactionType: data.transactionType,
+        type: data.transactionType,
         amount: data.amount,
         currency: data.currency ?? 'USD',
-        transactionDate: data.transactionDate,
+        date: data.transactionDate,
         description: data.description,
         vendor: data.vendor ?? null,
+        category: 'Uncategorized',
         plaidTransactionId: data.plaidTransactionId,
-        source: 'PLAID',
+        source: 'BANK_IMPORT',
         status: data.isPending ? 'PENDING' : 'CONFIRMED',
       },
     });
@@ -108,7 +106,6 @@ export class FinancialTransactionRepository {
       where: { id },
       include: {
         account: { select: { id: true, name: true, accountType: true } },
-        category: { select: { id: true, name: true, type: true, icon: true, color: true } },
         client: { select: { id: true, firstName: true, lastName: true, companyName: true } },
         project: { select: { id: true, name: true } },
       },
@@ -136,17 +133,20 @@ export class FinancialTransactionRepository {
     const limit = filters.limit ?? 50;
     const skip = (page - 1) * limit;
 
-    const orderBy: Prisma.FinancialTransactionOrderByWithRelationInput = {};
-    const sortBy = filters.sortBy ?? 'transactionDate';
+    const sortBy = filters.sortBy ?? 'date';
     const sortOrder = filters.sortOrder ?? 'desc';
-    orderBy[sortBy] = sortOrder;
+
+    // Build orderBy with proper typing
+    const orderByField = sortBy === 'transactionDate' ? 'date' : sortBy;
+    const orderBy = {
+      [orderByField]: sortOrder,
+    } as Prisma.FinancialTransactionOrderByWithRelationInput;
 
     const [transactions, total] = await Promise.all([
       this.prisma.financialTransaction.findMany({
         where,
         include: {
           account: { select: { id: true, name: true, accountType: true } },
-          category: { select: { id: true, name: true, type: true, icon: true, color: true } },
           client: { select: { id: true, firstName: true, lastName: true, companyName: true } },
           project: { select: { id: true, name: true } },
         },
@@ -167,10 +167,10 @@ export class FinancialTransactionRepository {
     return this.prisma.financialTransaction.findMany({
       where: {
         userId,
-        categoryId: null,
+        category: 'Uncategorized',
         status: 'CONFIRMED',
       },
-      orderBy: { transactionDate: 'desc' },
+      orderBy: { date: 'desc' },
       take: limit,
     });
   }
@@ -183,11 +183,10 @@ export class FinancialTransactionRepository {
       where: { userId },
       include: {
         account: { select: { id: true, name: true, accountType: true } },
-        category: { select: { id: true, name: true, type: true, icon: true, color: true } },
         client: { select: { id: true, firstName: true, lastName: true, companyName: true } },
         project: { select: { id: true, name: true } },
       },
-      orderBy: { transactionDate: 'desc' },
+      orderBy: { date: 'desc' },
       take: limit,
     });
   }
@@ -200,19 +199,17 @@ export class FinancialTransactionRepository {
       where: { id },
       data: {
         accountId: data.accountId,
-        categoryId: data.categoryId,
+        category: data.categoryId,
         clientId: data.clientId,
         projectId: data.projectId,
         amount: data.amount,
         currency: data.currency,
-        transactionDate: data.transactionDate,
+        date: data.transactionDate,
         description: data.description,
         vendor: data.vendor,
-        invoiceNumber: data.invoiceNumber,
         notes: data.notes,
         receiptUrl: data.receiptUrl,
-        isTaxDeductible: data.isTaxDeductible,
-        taxDeductiblePercentage: data.taxDeductiblePercentage,
+        isDeductible: data.isTaxDeductible,
         tags: data.tags,
         status: data.status,
         isReconciled: data.isReconciled,
@@ -240,7 +237,7 @@ export class FinancialTransactionRepository {
       where: { id: existing.id },
       data: {
         amount: data.amount,
-        transactionDate: data.transactionDate,
+        date: data.transactionDate,
         description: data.description,
         vendor: data.vendor,
         status: data.isPending ? 'PENDING' : 'CONFIRMED',
@@ -254,7 +251,7 @@ export class FinancialTransactionRepository {
   async bulkUpdateCategory(transactionIds: string[], categoryId: string): Promise<number> {
     const result = await this.prisma.financialTransaction.updateMany({
       where: { id: { in: transactionIds } },
-      data: { categoryId },
+      data: { category: categoryId },
     });
     return result.count;
   }
@@ -273,7 +270,12 @@ export class FinancialTransactionRepository {
   ): Promise<number> {
     const result = await this.prisma.financialTransaction.updateMany({
       where: { id: { in: transactionIds } },
-      data,
+      data: {
+        category: data.categoryId,
+        isDeductible: data.isTaxDeductible,
+        isReconciled: data.isReconciled,
+        tags: data.tags,
+      },
     });
     return result.count;
   }
@@ -317,10 +319,10 @@ export class FinancialTransactionRepository {
     endDate: Date
   ): Promise<TransactionAggregate> {
     const results = await this.prisma.financialTransaction.groupBy({
-      by: ['transactionType'],
+      by: ['type'],
       where: {
         userId,
-        transactionDate: { gte: startDate, lte: endDate },
+        date: { gte: startDate, lte: endDate },
         status: 'CONFIRMED',
       },
       _sum: { amount: true },
@@ -332,12 +334,12 @@ export class FinancialTransactionRepository {
     let transactionCount = 0;
 
     for (const result of results) {
-      const amount = Number(result._sum.amount) || 0;
-      const count = result._count.id;
+      const amount = Number(result._sum?.amount) || 0;
+      const count = result._count?.id ?? 0;
 
-      if (result.transactionType === 'INCOME') {
+      if (result.type === 'INCOME') {
         totalIncome = amount;
-      } else if (result.transactionType === 'EXPENSE') {
+      } else if (result.type === 'EXPENSE') {
         totalExpenses = amount;
       }
       transactionCount += count;
@@ -369,36 +371,27 @@ export class FinancialTransactionRepository {
   > {
     const where: Prisma.FinancialTransactionWhereInput = {
       userId,
-      transactionDate: { gte: startDate, lte: endDate },
+      date: { gte: startDate, lte: endDate },
       status: 'CONFIRMED',
     };
 
     if (transactionType) {
-      where.transactionType = transactionType;
+      where.type = transactionType;
     }
 
     const results = await this.prisma.financialTransaction.groupBy({
-      by: ['categoryId'],
+      by: ['category'],
       where,
       _sum: { amount: true },
       _count: { id: true },
     });
 
-    // Get category names
-    const categoryIds = results.map((r) => r.categoryId).filter((id): id is string => id !== null);
-
-    const categories = await this.prisma.transactionCategory.findMany({
-      where: { id: { in: categoryIds } },
-      select: { id: true, name: true },
-    });
-
-    const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
-
+    // Get category names - since category is a string field, we use it directly
     return results.map((r) => ({
-      categoryId: r.categoryId,
-      categoryName: r.categoryId ? (categoryMap.get(r.categoryId) ?? null) : null,
-      total: Number(r._sum.amount) || 0,
-      count: r._count.id,
+      categoryId: r.category,
+      categoryName: r.category,
+      total: Number(r._sum?.amount) || 0,
+      count: r._count?.id ?? 0,
     }));
   }
 
@@ -421,8 +414,8 @@ export class FinancialTransactionRepository {
       by: ['clientId'],
       where: {
         userId,
-        transactionDate: { gte: startDate, lte: endDate },
-        transactionType: 'INCOME',
+        date: { gte: startDate, lte: endDate },
+        type: 'INCOME',
         status: 'CONFIRMED',
       },
       _sum: { amount: true },
@@ -444,8 +437,8 @@ export class FinancialTransactionRepository {
     return results.map((r) => ({
       clientId: r.clientId,
       clientName: r.clientId ? (clientMap.get(r.clientId) ?? null) : null,
-      total: Number(r._sum.amount) || 0,
-      count: r._count.id,
+      total: Number(r._sum?.amount) || 0,
+      count: r._count?.id ?? 0,
     }));
   }
 
@@ -471,15 +464,10 @@ export class FinancialTransactionRepository {
     const transactions = await this.prisma.financialTransaction.findMany({
       where: {
         userId,
-        transactionType: 'EXPENSE',
-        isTaxDeductible: true,
-        transactionDate: { gte: startDate, lte: endDate },
+        type: 'EXPENSE',
+        isDeductible: true,
+        date: { gte: startDate, lte: endDate },
         status: 'CONFIRMED',
-      },
-      include: {
-        category: {
-          select: { id: true, name: true, irsCategory: true, scheduleC: true },
-        },
       },
     });
 
@@ -496,20 +484,21 @@ export class FinancialTransactionRepository {
     >();
 
     for (const t of transactions) {
-      const deductibleAmount = Number(t.amount) * ((t.taxDeductiblePercentage ?? 100) / 100);
+      // category is a string field, deductionCategory maps to IRS category
+      const deductibleAmount = Number(t.amount);
       total += deductibleAmount;
 
-      const key = t.categoryId ?? 'uncategorized';
+      const key = t.category ?? 'uncategorized';
       const existing = categoryTotals.get(key);
 
       if (existing) {
         existing.total += deductibleAmount;
       } else {
         categoryTotals.set(key, {
-          categoryId: t.categoryId,
-          categoryName: t.category?.name ?? null,
-          irsCategory: t.category?.irsCategory ?? null,
-          scheduleC: t.category?.scheduleC ?? null,
+          categoryId: t.category,
+          categoryName: t.category,
+          irsCategory: t.deductionCategory ?? null,
+          scheduleC: null,
           total: deductibleAmount,
         });
       }
@@ -534,7 +523,7 @@ export class FinancialTransactionRepository {
     }
 
     if (filters.categoryId) {
-      where.categoryId = filters.categoryId;
+      where.category = filters.categoryId;
     }
 
     if (filters.clientId) {
@@ -546,7 +535,7 @@ export class FinancialTransactionRepository {
     }
 
     if (filters.transactionType) {
-      where.transactionType = filters.transactionType;
+      where.type = filters.transactionType;
     }
 
     if (filters.source) {
@@ -558,12 +547,12 @@ export class FinancialTransactionRepository {
     }
 
     if (filters.startDate || filters.endDate) {
-      where.transactionDate = {};
+      where.date = {};
       if (filters.startDate) {
-        where.transactionDate.gte = filters.startDate;
+        where.date.gte = filters.startDate;
       }
       if (filters.endDate) {
-        where.transactionDate.lte = filters.endDate;
+        where.date.lte = filters.endDate;
       }
     }
 
@@ -578,7 +567,7 @@ export class FinancialTransactionRepository {
     }
 
     if (filters.isTaxDeductible !== undefined) {
-      where.isTaxDeductible = filters.isTaxDeductible;
+      where.isDeductible = filters.isTaxDeductible;
     }
 
     if (filters.isReconciled !== undefined) {

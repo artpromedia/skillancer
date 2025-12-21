@@ -4,7 +4,8 @@
  */
 
 import type { LogActivityParams } from '../types/invoice.types.js';
-import type { Prisma, PrismaClient, InvoiceActivity } from '@skillancer/database';
+import type { InvoiceActivity } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 export class InvoiceActivityRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -143,7 +144,7 @@ export class InvoiceActivityRepository {
   async logPdfGenerated(invoiceId: string): Promise<InvoiceActivity> {
     return this.log({
       invoiceId,
-      activityType: 'PDF_GENERATED',
+      activityType: 'DOWNLOADED',
       description: 'PDF generated',
       actorType: 'system',
     });

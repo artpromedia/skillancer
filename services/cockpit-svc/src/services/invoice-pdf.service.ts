@@ -10,15 +10,24 @@ import {
   InvoiceActivityRepository,
 } from '../repositories/index.js';
 
-import type { PdfGenerationParams, BusinessAddress } from '../types/invoice.types.js';
 import type {
-  PrismaClient,
-  Invoice,
-  InvoiceLineItem,
-  InvoiceTemplate,
-  Client,
-} from '@skillancer/database';
+  PdfGenerationParams,
+  BusinessAddress,
+  InvoiceWithDetails,
+} from '../types/invoice.types.js';
+import type { Invoice, InvoiceLineItem, InvoicePayment, InvoiceTemplate } from '@prisma/client';
+import type { PrismaClient, Client } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
+
+/**
+ * Helper to get client display name
+ */
+function getClientDisplayName(client: Client | null | undefined): string {
+  if (!client) return '';
+  if (client.companyName) return client.companyName;
+  const parts = [client.firstName, client.lastName].filter(Boolean);
+  return parts.join(' ') || '';
+}
 
 // TODO: Import actual libraries when integrated
 // import puppeteer from 'puppeteer';
@@ -42,11 +51,14 @@ export class InvoicePdfService {
    * Generate PDF for an invoice
    */
   async generatePdf(invoiceId: string, userId: string): Promise<string> {
-    const invoice = await this.invoiceRepository.findByIdWithDetails(invoiceId);
+    const invoiceRaw = await this.invoiceRepository.findByIdWithDetails(invoiceId);
 
-    if (!invoice || invoice.freelancerUserId !== userId) {
+    if (!invoiceRaw || invoiceRaw.freelancerUserId !== userId) {
       throw pdfErrors.notFound(invoiceId);
     }
+
+    // Cast to type with relations
+    const invoice = invoiceRaw as InvoiceWithDetails;
 
     try {
       // Get template
@@ -60,7 +72,7 @@ export class InvoicePdfService {
         lineItems: invoice.lineItems ?? [],
         payments: invoice.payments ?? [],
         template,
-        client: invoice.client as Client,
+        client: invoice.client ?? null,
       });
 
       // Generate PDF buffer
@@ -390,7 +402,7 @@ export class InvoicePdfService {
       
       <div class="party to">
         <h3>Bill To</h3>
-        <div class="party-name">${this.escapeHtml(client?.name ?? '')}</div>
+        <div class="party-name">${this.escapeHtml(getClientDisplayName(client))}</div>
         <div class="party-details">
           ${clientAddress?.street ? `${this.escapeHtml(clientAddress.street)}<br>` : ''}
           ${clientAddress?.city ? `${this.escapeHtml(clientAddress.city)}, ` : ''}
@@ -591,6 +603,6 @@ export class InvoicePdfService {
       '"': '&quot;',
       "'": '&#039;',
     };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
+    return text.replace(/[&<>"']/g, (m) => map[m] ?? m);
   }
 }

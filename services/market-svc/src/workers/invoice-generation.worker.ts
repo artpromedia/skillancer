@@ -209,14 +209,14 @@ export function createInvoiceGenerationWorker(
         await tx.invoiceLineItem.create({
           data: {
             invoiceId: newInvoice.id,
-            type: 'TIME_ENTRY',
+            itemType: 'TIME',
             description:
               (entry as { description?: string }).description ||
               `Work on ${(entry as { date: Date }).date.toLocaleDateString()}`,
             quantity: entryHours,
             unitPrice: hourlyRate,
             amount: entryAmount,
-            timeEntryId: (entry as { id: string }).id,
+            timeEntryIds: [(entry as { id: string }).id],
           },
         });
 

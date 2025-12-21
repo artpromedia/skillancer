@@ -7,7 +7,8 @@ import { InvoiceError, InvoiceErrorCode, templateErrors } from '../errors/invoic
 import { InvoiceTemplateRepository } from '../repositories/index.js';
 
 import type { CreateTemplateParams, UpdateTemplateParams } from '../types/invoice.types.js';
-import type { PrismaClient, InvoiceTemplate } from '@skillancer/database';
+import type { InvoiceTemplate } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 export class InvoiceTemplateService {
@@ -119,7 +120,7 @@ export class InvoiceTemplateService {
       throw templateErrors.inUse(templateId, invoiceCount);
     }
 
-    await this.templateRepository.softDelete(templateId);
+    await this.templateRepository.delete(templateId);
 
     this.logger.info({ templateId, userId }, 'Invoice template deleted');
   }

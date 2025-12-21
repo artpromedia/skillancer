@@ -9,13 +9,8 @@ import type {
   GoalFilters,
   GoalWithProgress,
 } from '../types/finance.types.js';
-import type {
-  Prisma,
-  PrismaClient,
-  FinancialGoal,
-  FinancialGoalType,
-  FinancialGoalStatus,
-} from '@skillancer/database';
+import type { FinancialGoal, FinancialGoalType, FinancialGoalStatus } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 export class FinancialGoalRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -33,13 +28,11 @@ export class FinancialGoalRepository {
         currentAmount: 0,
         currency: data.currency ?? 'USD',
         periodType: data.periodType ?? null,
-        startDate: data.startDate,
+        startDate: data.startDate ?? null,
         endDate: data.endDate ?? null,
         description: data.description ?? null,
-        icon: data.icon ?? null,
-        color: data.color ?? null,
-        linkedCategoryIds: data.linkedCategoryIds ?? [],
-        status: 'ACTIVE',
+        categoryFilter: data.linkedCategoryIds ?? [],
+        status: 'IN_PROGRESS',
       },
     });
   }
@@ -113,7 +106,7 @@ export class FinancialGoalRepository {
     const goals = await this.prisma.financialGoal.findMany({
       where: {
         userId,
-        status: 'ACTIVE',
+        status: 'IN_PROGRESS',
       },
     });
 
@@ -138,7 +131,7 @@ export class FinancialGoalRepository {
       // Determine trend
       let trend: 'ON_TRACK' | 'AHEAD' | 'BEHIND' | 'AT_RISK' = 'ON_TRACK';
 
-      if (goal.endDate && daysRemaining !== undefined) {
+      if (goal.endDate && goal.startDate && daysRemaining !== undefined) {
         const totalDays = Math.ceil(
           (goal.endDate.getTime() - goal.startDate.getTime()) / (1000 * 60 * 60 * 24)
         );
@@ -160,7 +153,7 @@ export class FinancialGoalRepository {
 
       // Calculate projected completion
       let projectedCompletion: Date | undefined;
-      if (progressPercentage > 0 && progressPercentage < 100) {
+      if (progressPercentage > 0 && progressPercentage < 100 && goal.startDate) {
         const startTime = goal.startDate.getTime();
         const elapsedTime = now.getTime() - startTime;
         const progressRate = progressPercentage / elapsedTime;
@@ -194,10 +187,8 @@ export class FinancialGoalRepository {
         startDate: data.startDate,
         endDate: data.endDate,
         description: data.description,
-        icon: data.icon,
-        color: data.color,
         status: data.status,
-        linkedCategoryIds: data.linkedCategoryIds,
+        categoryFilter: data.linkedCategoryIds,
       },
     });
   }
@@ -213,8 +204,8 @@ export class FinancialGoalRepository {
 
     // Check if goal is completed
     let status: FinancialGoalStatus = goal.status;
-    if (currentAmount >= targetAmount && goal.status === 'ACTIVE') {
-      status = 'COMPLETED';
+    if (currentAmount >= targetAmount && goal.status === 'IN_PROGRESS') {
+      status = 'ACHIEVED';
     }
 
     return this.prisma.financialGoal.update({
@@ -222,7 +213,7 @@ export class FinancialGoalRepository {
       data: {
         currentAmount,
         status,
-        ...(status === 'COMPLETED' ? { completedAt: new Date() } : {}),
+        ...(status === 'ACHIEVED' ? { achievedAt: new Date() } : {}),
       },
     });
   }
@@ -234,12 +225,12 @@ export class FinancialGoalRepository {
     const goal = await this.findById(goalId);
     if (!goal) throw new Error('Goal not found');
 
-    if (!goal.linkedCategoryIds || goal.linkedCategoryIds.length === 0) {
+    if (!goal.categoryFilter || goal.categoryFilter.length === 0) {
       return goal; // No linked categories to calculate from
     }
 
     // Get period dates
-    let startDate = goal.startDate;
+    let startDate = goal.startDate ?? new Date();
     let endDate = goal.endDate ?? new Date();
 
     // For periodic goals, use current period
@@ -254,8 +245,8 @@ export class FinancialGoalRepository {
     const result = await this.prisma.financialTransaction.aggregate({
       where: {
         userId: goal.userId,
-        categoryId: { in: goal.linkedCategoryIds },
-        transactionDate: { gte: startDate, lte: endDate },
+        category: { in: goal.categoryFilter },
+        date: { gte: startDate, lte: endDate },
         status: 'CONFIRMED',
       },
       _sum: { amount: true },
@@ -273,8 +264,8 @@ export class FinancialGoalRepository {
     return this.prisma.financialGoal.update({
       where: { id },
       data: {
-        status: 'COMPLETED',
-        completedAt: new Date(),
+        status: 'ACHIEVED',
+        achievedAt: new Date(),
       },
     });
   }
@@ -285,7 +276,7 @@ export class FinancialGoalRepository {
   async markAbandoned(id: string): Promise<FinancialGoal> {
     return this.prisma.financialGoal.update({
       where: { id },
-      data: { status: 'ABANDONED' },
+      data: { status: 'CANCELLED' },
     });
   }
 
@@ -303,20 +294,18 @@ export class FinancialGoalRepository {
    */
   private getPeriodDates(
     date: Date,
-    periodType: 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY'
+    periodType: 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'CUSTOM'
   ): { start: Date; end: Date } {
     const year = date.getFullYear();
     const month = date.getMonth();
 
     switch (periodType) {
-      case 'WEEKLY': {
-        const day = date.getDay();
+      case 'CUSTOM': {
+        // For custom period, just return current day
         const start = new Date(date);
-        start.setDate(date.getDate() - day);
         start.setHours(0, 0, 0, 0);
 
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
+        const end = new Date(date);
         end.setHours(23, 59, 59, 999);
 
         return { start, end };

@@ -8,12 +8,8 @@ import type {
   UpdateFinancialAccountParams,
   AccountFilters,
 } from '../types/finance.types.js';
-import type {
-  Prisma,
-  PrismaClient,
-  FinancialAccount,
-  FinancialAccountType,
-} from '@skillancer/database';
+import type { FinancialAccount, FinancialAccountType } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 export class FinancialAccountRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -31,9 +27,7 @@ export class FinancialAccountRepository {
         accountNumber: data.accountNumber ?? null,
         currentBalance: data.currentBalance ?? 0,
         currency: data.currency ?? 'USD',
-        isDefault: data.isDefault ?? false,
-        color: data.color ?? null,
-        icon: data.icon ?? null,
+        isPrimary: data.isPrimary ?? false,
       },
     });
   }
@@ -84,7 +78,7 @@ export class FinancialAccountRepository {
 
     return this.prisma.financialAccount.findMany({
       where,
-      orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+      orderBy: [{ isPrimary: 'desc' }, { name: 'asc' }],
     });
   }
 
@@ -97,7 +91,7 @@ export class FinancialAccountRepository {
         userId,
         ...(includeInactive ? {} : { isActive: true }),
       },
-      orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+      orderBy: [{ isPrimary: 'desc' }, { name: 'asc' }],
     });
   }
 
@@ -108,7 +102,7 @@ export class FinancialAccountRepository {
     return this.prisma.financialAccount.findFirst({
       where: {
         userId,
-        isDefault: true,
+        isPrimary: true,
         isActive: true,
       },
     });
@@ -144,9 +138,7 @@ export class FinancialAccountRepository {
         accountNumber: data.accountNumber,
         currentBalance: data.currentBalance,
         currency: data.currency,
-        isDefault: data.isDefault,
-        color: data.color,
-        icon: data.icon,
+        isPrimary: data.isPrimary,
         isActive: data.isActive,
       },
     });
@@ -169,7 +161,6 @@ export class FinancialAccountRepository {
     id: string,
     data: {
       lastSyncAt?: Date;
-      syncCursor?: string;
       syncStatus?: 'PENDING' | 'SYNCING' | 'SYNCED' | 'ERROR';
       syncError?: string | null;
     }
@@ -178,7 +169,6 @@ export class FinancialAccountRepository {
       where: { id },
       data: {
         lastSyncAt: data.lastSyncAt,
-        syncCursor: data.syncCursor,
         syncStatus: data.syncStatus,
         syncError: data.syncError,
       },
@@ -192,15 +182,22 @@ export class FinancialAccountRepository {
     await this.prisma.$transaction([
       // Unset all other defaults
       this.prisma.financialAccount.updateMany({
-        where: { userId, isDefault: true },
-        data: { isDefault: false },
+        where: { userId, isPrimary: true },
+        data: { isPrimary: false },
       }),
       // Set the new default
       this.prisma.financialAccount.update({
         where: { id: accountId },
-        data: { isDefault: true },
+        data: { isPrimary: true },
       }),
     ]);
+  }
+
+  /**
+   * Set account as primary (alias for setAsDefault)
+   */
+  async setAsPrimary(userId: string, accountId: string): Promise<void> {
+    return this.setAsDefault(userId, accountId);
   }
 
   /**
@@ -227,7 +224,7 @@ export class FinancialAccountRepository {
         accountNumber: data.accountNumber ?? null,
         currentBalance: data.currentBalance ?? 0,
         currency: data.currency ?? 'USD',
-        isPlaidConnected: true,
+        isConnected: true,
         plaidItemId: data.plaidItemId,
         plaidAccountId: data.plaidAccountId,
         plaidAccessToken: data.plaidAccessToken,
@@ -243,12 +240,10 @@ export class FinancialAccountRepository {
     return this.prisma.financialAccount.update({
       where: { id },
       data: {
-        isPlaidConnected: false,
+        isConnected: false,
         plaidItemId: null,
         plaidAccountId: null,
         plaidAccessToken: null,
-        syncCursor: null,
-        syncStatus: null,
         syncError: null,
       },
     });
@@ -294,7 +289,7 @@ export class FinancialAccountRepository {
 
     return this.prisma.financialAccount.findMany({
       where: {
-        isPlaidConnected: true,
+        isConnected: true,
         isActive: true,
         OR: [{ lastSyncAt: null }, { lastSyncAt: { lt: cutoffTime } }],
         syncStatus: { not: 'SYNCING' },

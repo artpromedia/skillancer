@@ -421,7 +421,7 @@ model Tenant {
   members         TenantMember[]
   jobs            Job[]
   sessions        Session[]
-  invoices        Invoice[]
+  tenantBillingInvoices        TenantBillingInvoice[]
   subscriptions   Subscription[]
   hipaaCompliance HipaaCompliance?
   breachIncidents BreachIncident[]
@@ -2711,11 +2711,11 @@ enum PaymentMethodType {
   WIRE
 }
 
-model Invoice {
+model TenantBillingInvoice {
   id       String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   tenantId String?       @map("tenant_id") @db.Uuid
   number   String        @unique @db.VarChar(50)
-  status   InvoiceStatus @default(DRAFT)
+  status   TenantBillingInvoiceStatus @default(DRAFT)
 
   // Amounts
   subtotal Decimal @db.Decimal(12, 2)
@@ -2743,10 +2743,10 @@ model Invoice {
   @@index([tenantId])
   @@index([status])
   @@index([number])
-  @@map("invoices")
+  @@map("tenant_billing_invoices")
 }
 
-enum InvoiceStatus {
+enum TenantBillingInvoiceStatus {
   DRAFT
   ISSUED
   PAID
@@ -6418,7 +6418,7 @@ model ContractInvoice {
   client             User                  @relation("ClientInvoices", fields: [clientUserId], references: [id])
   freelancer         User                  @relation("FreelancerInvoices", fields: [freelancerUserId], references: [id])
   timeEntries        TimeEntryV2[]
-  lineItems          InvoiceLineItem[]
+  lineItems          ContractInvoiceLineItem[]
   escrowTransactions EscrowTransactionV2[]
 
   @@map("contract_invoices")
@@ -6762,7 +6762,7 @@ model EscrowTransactionV2 {
   @@index([stripePaymentIntentId])
 }
 
-model InvoiceLineItem {
+model ContractInvoiceLineItem {
   id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   invoiceId String @map("invoice_id") @db.Uuid
 
@@ -6786,7 +6786,7 @@ model InvoiceLineItem {
 
   invoice ContractInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  @@map("invoice_line_items")
+  @@map("contract_invoice_line_items")
   @@index([invoiceId])
   @@index([type])
 }
@@ -7296,7 +7296,8 @@ model Client {
   calendarEvents CalendarEvent[] @relation("ClientCalendarEvents")
 
   // Financial Tracking
-  transactions FinancialTransaction[] @relation("ClientTransactions")
+  transactions FinancialTransaction[] @relation("ClientFinancialTransactions")
+  mileageLogs  MileageLog[]            @relation("ClientMileageLogs")
 
   // Invoicing
   invoices          Invoice[]          @relation("ClientInvoices")
@@ -7787,7 +7788,8 @@ model CockpitProject {
   calendarEvents CalendarEvent[]     @relation("ProjectCalendarEvents")
 
   // Financial Tracking
-  transactions   FinancialTransaction[] @relation("ProjectTransactions")
+  transactions   FinancialTransaction[] @relation("ProjectFinancialTransactions")
+  mileageLogs    MileageLog[]           @relation("ProjectMileageLogs")
 
   // Invoicing
   invoices       Invoice[]              @relation("ProjectInvoices")

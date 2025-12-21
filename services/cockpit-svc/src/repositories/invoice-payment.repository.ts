@@ -4,12 +4,8 @@
  */
 
 import type { RecordPaymentParams } from '../types/invoice.types.js';
-import type {
-  Prisma,
-  PrismaClient,
-  InvoicePayment,
-  InvoicePaymentStatus,
-} from '@skillancer/database';
+import type { InvoicePayment, InvoicePaymentStatus } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 export class InvoicePaymentRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -96,19 +92,11 @@ export class InvoicePaymentRepository {
   /**
    * Update payment status
    */
-  async updateStatus(
-    id: string,
-    status: InvoicePaymentStatus,
-    metadata?: Record<string, unknown>
-  ): Promise<InvoicePayment> {
+  async updateStatus(id: string, status: InvoicePaymentStatus): Promise<InvoicePayment> {
     const data: Prisma.InvoicePaymentUpdateInput = { status };
 
     if (status === 'COMPLETED') {
       data.paymentDate = new Date();
-    }
-
-    if (metadata) {
-      data.metadata = metadata as Prisma.InputJsonValue;
     }
 
     return this.prisma.invoicePayment.update({
@@ -122,13 +110,13 @@ export class InvoicePaymentRepository {
    */
   async updateStripePaymentIntent(
     id: string,
-    stripePaymentIntentId: string,
+    stripePaymentId: string,
     status: InvoicePaymentStatus
   ): Promise<InvoicePayment> {
     return this.prisma.invoicePayment.update({
       where: { id },
       data: {
-        stripePaymentIntentId,
+        stripePaymentId,
         status,
         ...(status === 'COMPLETED' ? { paymentDate: new Date() } : {}),
       },
@@ -173,7 +161,7 @@ export class InvoicePaymentRepository {
    */
   async findByStripePaymentIntent(paymentIntentId: string): Promise<InvoicePayment | null> {
     return this.prisma.invoicePayment.findFirst({
-      where: { stripePaymentIntentId: paymentIntentId },
+      where: { stripePaymentId: paymentIntentId },
     });
   }
 

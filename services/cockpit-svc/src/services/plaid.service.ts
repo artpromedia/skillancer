@@ -15,7 +15,8 @@ import type {
   PlaidTransactionSync,
   PlaidWebhookPayload,
 } from '../types/finance.types.js';
-import type { PrismaClient, FinancialAccount } from '@skillancer/database';
+import type { FinancialAccount } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 // Plaid API types (would be imported from plaid-node in real implementation)
@@ -179,7 +180,7 @@ export class PlaidService {
       throw new FinanceError(FinanceErrorCode.ACCOUNT_NOT_FOUND);
     }
 
-    if (!account.isPlaidConnected || !account.plaidAccessToken) {
+    if (!account.isConnected || !account.plaidAccessToken) {
       throw new FinanceError(FinanceErrorCode.PLAID_CONNECTION_REQUIRED);
     }
 
@@ -199,7 +200,7 @@ export class PlaidService {
       let modified = 0;
       let removed = 0;
       let hasMore = true;
-      let cursor = account.syncCursor;
+      let cursor: string | null = null;
 
       while (hasMore) {
         const response = await this.plaidClient.transactionsSync({
@@ -249,7 +250,6 @@ export class PlaidService {
       // Update sync status
       await this.accountRepository.updatePlaidSyncStatus(accountId, {
         lastSyncAt: new Date(),
-        syncCursor: cursor ?? undefined,
         syncStatus: 'SYNCED',
         syncError: null,
       });
@@ -350,7 +350,7 @@ export class PlaidService {
       throw new FinanceError(FinanceErrorCode.ACCOUNT_NOT_FOUND);
     }
 
-    if (!account.isPlaidConnected) {
+    if (!account.isConnected) {
       throw new FinanceError(FinanceErrorCode.PLAID_CONNECTION_REQUIRED);
     }
 
@@ -380,7 +380,7 @@ export class PlaidService {
   async getAccountsNeedingReauth(userId: string): Promise<FinancialAccount[]> {
     const accounts = await this.accountRepository.findByUserId(userId, false);
 
-    return accounts.filter((a) => a.isPlaidConnected && a.syncStatus === 'ERROR');
+    return accounts.filter((a) => a.isConnected && a.syncStatus === 'ERROR');
   }
 
   /**

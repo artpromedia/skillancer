@@ -4,7 +4,8 @@
  */
 
 import type { CreateTemplateParams, UpdateTemplateParams } from '../types/invoice.types.js';
-import type { Prisma, PrismaClient, InvoiceTemplate } from '@skillancer/database';
+import type { InvoiceTemplate } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 export class InvoiceTemplateRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -44,7 +45,7 @@ export class InvoiceTemplateRepository {
         defaultTaxRate: data.defaultTaxRate ?? null,
         defaultTaxLabel: data.defaultTaxLabel ?? null,
         defaultCurrency: data.defaultCurrency ?? 'USD',
-        defaultLateFee: (data.defaultLateFee as Prisma.InputJsonValue) ?? null,
+        defaultLateFee: (data.defaultLateFee as unknown as Prisma.InputJsonValue) ?? null,
         acceptedPaymentMethods: data.acceptedPaymentMethods ?? [],
         stripeEnabled: data.stripeEnabled ?? false,
         paypalEnabled: data.paypalEnabled ?? false,
@@ -69,7 +70,6 @@ export class InvoiceTemplateRepository {
     return this.prisma.invoiceTemplate.findMany({
       where: {
         freelancerUserId,
-        isActive: true,
       },
       orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
     });
@@ -83,7 +83,6 @@ export class InvoiceTemplateRepository {
       where: {
         freelancerUserId,
         isDefault: true,
-        isActive: true,
       },
     });
   }
@@ -126,7 +125,7 @@ export class InvoiceTemplateRepository {
         defaultTaxRate: data.defaultTaxRate,
         defaultTaxLabel: data.defaultTaxLabel,
         defaultCurrency: data.defaultCurrency,
-        defaultLateFee: data.defaultLateFee as Prisma.InputJsonValue,
+        defaultLateFee: data.defaultLateFee as unknown as Prisma.InputJsonValue,
         acceptedPaymentMethods: data.acceptedPaymentMethods,
         stripeEnabled: data.stripeEnabled,
         paypalEnabled: data.paypalEnabled,
@@ -161,12 +160,11 @@ export class InvoiceTemplateRepository {
   }
 
   /**
-   * Soft delete template (set inactive)
+   * Delete template
    */
-  async softDelete(id: string): Promise<void> {
-    await this.prisma.invoiceTemplate.update({
+  async delete(id: string): Promise<void> {
+    await this.prisma.invoiceTemplate.delete({
       where: { id },
-      data: { isActive: false },
     });
   }
 

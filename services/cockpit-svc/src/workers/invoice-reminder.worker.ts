@@ -9,7 +9,8 @@ import {
   InvoiceSettingsRepository,
 } from '../repositories/index.js';
 
-import type { PrismaClient, Invoice } from '@skillancer/database';
+import type { Invoice } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 
@@ -170,7 +171,7 @@ export class InvoiceReminderWorker {
     }
 
     // Log activity
-    await this.activityRepo.logReminderSent(invoice.id, invoice.reminderCount + 1);
+    await this.activityRepo.logReminderSent(invoice.id, invoice.remindersSent + 1);
 
     // Record reminder sent
     await this.invoiceRepo.recordReminderSent(invoice.id);

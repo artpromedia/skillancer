@@ -19,7 +19,8 @@ import {
 } from '../repositories/index.js';
 
 import type { ProcessOnlinePaymentParams, OnlinePaymentResult } from '../types/invoice.types.js';
-import type { PrismaClient, Invoice, InvoicePayment } from '@skillancer/database';
+import type { Invoice, InvoicePayment } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 export class InvoicePaymentService {

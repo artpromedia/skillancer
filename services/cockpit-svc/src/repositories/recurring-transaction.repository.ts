@@ -8,12 +8,8 @@ import type {
   UpdateRecurringTransactionParams,
   RecurringTransactionWithDetails,
 } from '../types/finance.types.js';
-import type {
-  Prisma,
-  PrismaClient,
-  RecurringTransaction,
-  RecurrenceFrequency,
-} from '@skillancer/database';
+import type { RecurringTransaction, RecurrenceFrequency } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 export class RecurringTransactionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -25,22 +21,25 @@ export class RecurringTransactionRepository {
     return this.prisma.recurringTransaction.create({
       data: {
         userId: data.userId,
-        categoryId: data.categoryId ?? null,
+        category: data.category,
+        subcategory: data.subcategory ?? null,
         accountId: data.accountId ?? null,
-        transactionType: data.transactionType,
+        type: data.type,
         amount: data.amount,
         currency: data.currency ?? 'USD',
         description: data.description,
         vendor: data.vendor ?? null,
         frequency: data.frequency,
+        interval: data.interval ?? 1,
         startDate: data.startDate,
         endDate: data.endDate ?? null,
         dayOfMonth: data.dayOfMonth ?? null,
         dayOfWeek: data.dayOfWeek ?? null,
-        isTaxDeductible: data.isTaxDeductible ?? false,
-        taxDeductiblePercentage: data.taxDeductiblePercentage ?? 100,
-        autoCreate: data.autoCreate ?? false,
-        reminderDays: data.reminderDays ?? null,
+        isDeductible: data.isDeductible ?? true,
+        autoCreate: data.autoCreate ?? true,
+        requiresConfirmation: data.requiresConfirmation ?? false,
+        clientId: data.clientId ?? null,
+        projectId: data.projectId ?? null,
         nextOccurrence: this.calculateNextOccurrence(
           data.startDate,
           data.frequency,
@@ -67,9 +66,7 @@ export class RecurringTransactionRepository {
     const recurring = await this.prisma.recurringTransaction.findUnique({
       where: { id },
       include: {
-        category: { select: { id: true, name: true, type: true, icon: true } },
-        account: { select: { id: true, name: true } },
-        _count: { select: { generatedTransactions: true } },
+        transactions: { take: 1, orderBy: { createdAt: 'desc' } },
       },
     });
 
@@ -77,8 +74,8 @@ export class RecurringTransactionRepository {
 
     return {
       ...recurring,
-      generatedTransactionCount: recurring._count.generatedTransactions,
-    } as RecurringTransactionWithDetails;
+      generatedTransactionCount: recurring.transactions.length,
+    } as unknown as RecurringTransactionWithDetails;
   }
 
   /**
@@ -96,18 +93,10 @@ export class RecurringTransactionRepository {
 
     const recurrings = await this.prisma.recurringTransaction.findMany({
       where,
-      include: {
-        category: { select: { id: true, name: true, type: true, icon: true } },
-        account: { select: { id: true, name: true } },
-        _count: { select: { generatedTransactions: true } },
-      },
       orderBy: { nextOccurrence: 'asc' },
     });
 
-    return recurrings.map((r) => ({
-      ...r,
-      generatedTransactionCount: r._count.generatedTransactions,
-    })) as RecurringTransactionWithDetails[];
+    return recurrings as unknown as RecurringTransactionWithDetails[];
   }
 
   /**
@@ -124,18 +113,10 @@ export class RecurringTransactionRepository {
         nextOccurrence: { lte: endDate },
         OR: [{ endDate: null }, { endDate: { gte: new Date() } }],
       },
-      include: {
-        category: { select: { id: true, name: true, type: true, icon: true } },
-        account: { select: { id: true, name: true } },
-        _count: { select: { generatedTransactions: true } },
-      },
       orderBy: { nextOccurrence: 'asc' },
     });
 
-    return recurrings.map((r) => ({
-      ...r,
-      generatedTransactionCount: r._count.generatedTransactions,
-    })) as RecurringTransactionWithDetails[];
+    return recurrings as unknown as RecurringTransactionWithDetails[];
   }
 
   /**
@@ -151,36 +132,6 @@ export class RecurringTransactionRepository {
         nextOccurrence: { lte: now },
         OR: [{ endDate: null }, { endDate: { gte: now } }],
       },
-      include: {
-        category: true,
-        account: true,
-      },
-    });
-  }
-
-  /**
-   * Find recurring transactions needing reminder
-   */
-  async findNeedingReminder(): Promise<RecurringTransaction[]> {
-    const now = new Date();
-
-    // Get all active recurring with reminderDays set
-    const recurrings = await this.prisma.recurringTransaction.findMany({
-      where: {
-        isActive: true,
-        reminderDays: { not: null },
-        OR: [{ endDate: null }, { endDate: { gte: now } }],
-      },
-    });
-
-    // Filter to those where reminder is due
-    return recurrings.filter((r) => {
-      if (!r.nextOccurrence || !r.reminderDays) return false;
-
-      const reminderDate = new Date(r.nextOccurrence);
-      reminderDate.setDate(reminderDate.getDate() - r.reminderDays);
-
-      return reminderDate <= now && r.nextOccurrence > now;
     });
   }
 
@@ -204,28 +155,32 @@ export class RecurringTransactionRepository {
     return this.prisma.recurringTransaction.update({
       where: { id },
       data: {
-        categoryId: data.categoryId,
+        category: data.category,
+        subcategory: data.subcategory,
         accountId: data.accountId,
         amount: data.amount,
         currency: data.currency,
         description: data.description,
         vendor: data.vendor,
         frequency: data.frequency,
+        interval: data.interval,
         endDate: data.endDate,
         dayOfMonth: data.dayOfMonth,
         dayOfWeek: data.dayOfWeek,
-        isTaxDeductible: data.isTaxDeductible,
-        taxDeductiblePercentage: data.taxDeductiblePercentage,
+        isDeductible: data.isDeductible,
         isActive: data.isActive,
+        isPaused: data.isPaused,
         autoCreate: data.autoCreate,
-        reminderDays: data.reminderDays,
+        requiresConfirmation: data.requiresConfirmation,
+        clientId: data.clientId,
+        projectId: data.projectId,
         ...(nextOccurrence ? { nextOccurrence } : {}),
       },
     });
   }
 
   /**
-   * Update last processed date and calculate next occurrence
+   * Update last occurrence date and calculate next occurrence
    */
   async markProcessed(id: string): Promise<RecurringTransaction> {
     const recurring = await this.findById(id);
@@ -234,6 +189,7 @@ export class RecurringTransactionRepository {
     const nextOccurrence = this.calculateNextOccurrenceFromDate(
       recurring.nextOccurrence ?? new Date(),
       recurring.frequency,
+      recurring.interval,
       recurring.dayOfMonth ?? undefined,
       recurring.dayOfWeek ?? undefined
     );
@@ -244,8 +200,9 @@ export class RecurringTransactionRepository {
     return this.prisma.recurringTransaction.update({
       where: { id },
       data: {
-        lastProcessedAt: new Date(),
+        lastOccurrence: new Date(),
         nextOccurrence,
+        occurrenceCount: { increment: 1 },
         isActive,
       },
     });
@@ -258,6 +215,26 @@ export class RecurringTransactionRepository {
     return this.prisma.recurringTransaction.update({
       where: { id },
       data: { isActive: false },
+    });
+  }
+
+  /**
+   * Pause a recurring transaction
+   */
+  async pause(id: string): Promise<RecurringTransaction> {
+    return this.prisma.recurringTransaction.update({
+      where: { id },
+      data: { isPaused: true },
+    });
+  }
+
+  /**
+   * Resume a recurring transaction
+   */
+  async resume(id: string): Promise<RecurringTransaction> {
+    return this.prisma.recurringTransaction.update({
+      where: { id },
+      data: { isPaused: false },
     });
   }
 
@@ -286,7 +263,7 @@ export class RecurringTransactionRepository {
     if (next > now) return next;
 
     // Calculate next occurrence from now
-    return this.calculateNextOccurrenceFromDate(next, frequency, dayOfMonth, dayOfWeek);
+    return this.calculateNextOccurrenceFromDate(next, frequency, 1, dayOfMonth, dayOfWeek);
   }
 
   /**
@@ -295,6 +272,7 @@ export class RecurringTransactionRepository {
   private calculateNextOccurrenceFromDate(
     fromDate: Date,
     frequency: RecurrenceFrequency,
+    interval: number,
     dayOfMonth?: number,
     dayOfWeek?: number
   ): Date {
@@ -305,45 +283,45 @@ export class RecurringTransactionRepository {
     while (next <= now) {
       switch (frequency) {
         case 'DAILY':
-          next.setDate(next.getDate() + 1);
+          next.setDate(next.getDate() + interval);
           break;
 
         case 'WEEKLY':
           if (dayOfWeek !== undefined) {
-            next.setDate(next.getDate() + 7);
+            next.setDate(next.getDate() + 7 * interval);
             // Adjust to specific day of week
             const currentDay = next.getDay();
             const diff = dayOfWeek - currentDay;
             next.setDate(next.getDate() + diff);
           } else {
-            next.setDate(next.getDate() + 7);
+            next.setDate(next.getDate() + 7 * interval);
           }
           break;
 
         case 'BIWEEKLY':
-          next.setDate(next.getDate() + 14);
+          next.setDate(next.getDate() + 14 * interval);
           break;
 
         case 'MONTHLY':
-          next.setMonth(next.getMonth() + 1);
+          next.setMonth(next.getMonth() + interval);
           if (dayOfMonth !== undefined) {
             next.setDate(Math.min(dayOfMonth, this.getDaysInMonth(next)));
           }
           break;
 
         case 'QUARTERLY':
-          next.setMonth(next.getMonth() + 3);
+          next.setMonth(next.getMonth() + 3 * interval);
           if (dayOfMonth !== undefined) {
             next.setDate(Math.min(dayOfMonth, this.getDaysInMonth(next)));
           }
           break;
 
         case 'YEARLY':
-          next.setFullYear(next.getFullYear() + 1);
+          next.setFullYear(next.getFullYear() + interval);
           break;
 
         default:
-          next.setMonth(next.getMonth() + 1);
+          next.setMonth(next.getMonth() + interval);
       }
     }
 

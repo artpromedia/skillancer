@@ -3,6 +3,7 @@
  * Type definitions for Professional Invoicing System
  */
 
+// Import from @prisma/client directly until @skillancer/database exports are fixed
 import type {
   InvoiceStatus,
   LineItemType,
@@ -21,7 +22,7 @@ import type {
   InvoiceActivity,
   InvoiceSettings,
   Client,
-} from '@skillancer/database';
+} from '@prisma/client';
 
 // ============================================================================
 // INVOICE CRUD PARAMS
@@ -154,6 +155,11 @@ export interface CreateRecurringInvoiceParams {
   clientId: string;
   name: string;
   lineItems: CreateLineItemParams[];
+  subtotal: number;
+  taxRate?: number;
+  taxAmount?: number;
+  total: number;
+  currency?: string;
   frequency: RecurrenceFrequency;
   interval?: number;
   dayOfMonth?: number;
@@ -165,7 +171,6 @@ export interface CreateRecurringInvoiceParams {
   autoSend?: boolean;
   templateId?: string;
   projectId?: string;
-  taxRate?: number;
 }
 
 export interface UpdateRecurringInvoiceParams {
@@ -443,7 +448,7 @@ export interface InvoiceWithDetails extends Invoice {
   activities?: InvoiceActivity[];
 }
 
-export interface RecurringInvoiceWithDetails extends RecurringInvoice {
+export interface RecurringInvoiceWithDetails extends Omit<RecurringInvoice, 'invoiceCount'> {
   client?: Client | null;
   template?: InvoiceTemplate | null;
   invoiceCount?: number;
@@ -458,7 +463,7 @@ export interface PdfGenerationParams {
   lineItems: InvoiceLineItem[];
   payments: InvoicePayment[];
   template: InvoiceTemplate | null;
-  client: Client;
+  client: Client | null;
 }
 
 // ============================================================================

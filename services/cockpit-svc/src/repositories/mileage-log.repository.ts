@@ -10,14 +10,15 @@ import type {
   MileageLogWithDetails,
   MileageSummary,
 } from '../types/finance.types.js';
-import type { Prisma, PrismaClient, MileageLog, MileagePurpose } from '@skillancer/database';
+import type { MileageLog, MileagePurpose } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 // 2024 IRS standard mileage rates (cents per mile)
 export const MILEAGE_RATES = {
-  BUSINESS: 0.67, // 67 cents per mile
-  MEDICAL: 0.21, // 21 cents per mile
-  CHARITABLE: 0.14, // 14 cents per mile
-  PERSONAL: 0, // Not deductible
+  CLIENT_MEETING: 0.67, // 67 cents per mile
+  BUSINESS_ERRAND: 0.67, // 67 cents per mile
+  TRAVEL: 0.67, // 67 cents per mile
+  OTHER: 0, // Not deductible by default
 } as const;
 
 export class MileageLogRepository {
@@ -29,7 +30,7 @@ export class MileageLogRepository {
   async create(data: CreateMileageLogParams): Promise<MileageLog> {
     // Calculate deduction based on purpose and rate
     const rate = MILEAGE_RATES[data.purpose] ?? 0;
-    const deductibleAmount = data.distance * rate;
+    const deductionAmount = data.miles * rate;
 
     return this.prisma.mileageLog.create({
       data: {
@@ -37,17 +38,15 @@ export class MileageLogRepository {
         projectId: data.projectId ?? null,
         clientId: data.clientId ?? null,
         date: data.date,
-        startLocation: data.startLocation,
-        endLocation: data.endLocation,
-        distance: data.distance,
-        distanceUnit: data.distanceUnit ?? 'MILES',
+        description: data.description ?? '',
+        startLocation: data.startLocation ?? null,
+        endLocation: data.endLocation ?? null,
+        miles: data.miles,
         purpose: data.purpose,
-        notes: data.notes ?? null,
-        vehicleInfo: data.vehicleInfo ?? null,
-        odometerStart: data.odometerStart ?? null,
-        odometerEnd: data.odometerEnd ?? null,
-        mileageRate: rate,
-        deductibleAmount,
+        roundTrip: data.roundTrip ?? false,
+        taxYear: data.taxYear ?? new Date().getFullYear(),
+        ratePerMile: rate,
+        deductionAmount,
       },
     });
   }
@@ -163,46 +162,46 @@ export class MileageLogRepository {
         date: { gte: startDate, lte: endDate },
       },
       select: {
-        distance: true,
+        miles: true,
         purpose: true,
-        deductibleAmount: true,
+        deductionAmount: true,
       },
     });
 
     let totalMiles = 0;
-    let businessMiles = 0;
-    let personalMiles = 0;
-    let charitableMiles = 0;
-    let medicalMiles = 0;
+    let clientMeetingMiles = 0;
+    let businessErrandMiles = 0;
+    let travelMiles = 0;
+    let otherMiles = 0;
     let estimatedDeduction = 0;
 
     for (const log of logs) {
-      const distance = Number(log.distance);
-      totalMiles += distance;
-      estimatedDeduction += Number(log.deductibleAmount) || 0;
+      const miles = Number(log.miles);
+      totalMiles += miles;
+      estimatedDeduction += Number(log.deductionAmount) || 0;
 
       switch (log.purpose) {
-        case 'BUSINESS':
-          businessMiles += distance;
+        case 'CLIENT_MEETING':
+          clientMeetingMiles += miles;
           break;
-        case 'PERSONAL':
-          personalMiles += distance;
+        case 'BUSINESS_ERRAND':
+          businessErrandMiles += miles;
           break;
-        case 'CHARITABLE':
-          charitableMiles += distance;
+        case 'TRAVEL':
+          travelMiles += miles;
           break;
-        case 'MEDICAL':
-          medicalMiles += distance;
+        case 'OTHER':
+          otherMiles += miles;
           break;
       }
     }
 
     return {
       totalMiles,
-      businessMiles,
-      personalMiles,
-      charitableMiles,
-      medicalMiles,
+      clientMeetingMiles,
+      businessErrandMiles,
+      travelMiles,
+      otherMiles,
       estimatedDeduction,
     };
   }
@@ -223,16 +222,16 @@ export class MileageLogRepository {
     const existing = await this.findById(id);
     if (!existing) throw new Error('Mileage log not found');
 
-    // Recalculate deduction if distance or purpose changed
-    let deductibleAmount = existing.deductibleAmount;
-    let mileageRate = existing.mileageRate;
+    // Recalculate deduction if miles or purpose changed
+    let deductionAmount: number | undefined;
+    let ratePerMile: number | undefined;
 
-    const distance = data.distance ?? Number(existing.distance);
+    const miles = data.miles ?? Number(existing.miles);
     const purpose = data.purpose ?? existing.purpose;
 
-    if (data.distance !== undefined || data.purpose !== undefined) {
-      mileageRate = MILEAGE_RATES[purpose] ?? 0;
-      deductibleAmount = distance * mileageRate;
+    if (data.miles !== undefined || data.purpose !== undefined) {
+      ratePerMile = MILEAGE_RATES[purpose] ?? 0;
+      deductionAmount = miles * ratePerMile;
     }
 
     return this.prisma.mileageLog.update({
@@ -241,17 +240,14 @@ export class MileageLogRepository {
         projectId: data.projectId,
         clientId: data.clientId,
         date: data.date,
+        description: data.description,
         startLocation: data.startLocation,
         endLocation: data.endLocation,
-        distance: data.distance,
-        distanceUnit: data.distanceUnit,
+        miles: data.miles,
         purpose: data.purpose,
-        notes: data.notes,
-        vehicleInfo: data.vehicleInfo,
-        odometerStart: data.odometerStart,
-        odometerEnd: data.odometerEnd,
-        mileageRate,
-        deductibleAmount,
+        roundTrip: data.roundTrip,
+        ratePerMile,
+        deductionAmount,
       },
     });
   }
@@ -274,26 +270,22 @@ export class MileageLogRepository {
   ): Promise<Array<{ startLocation: string; endLocation: string; count: number }>> {
     const routes = await this.prisma.mileageLog.groupBy({
       by: ['startLocation', 'endLocation'],
-      where: { userId },
+      where: {
+        userId,
+        startLocation: { not: null },
+        endLocation: { not: null },
+      },
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
       take: limit,
     });
 
-    return routes.map((r) => ({
-      startLocation: r.startLocation,
-      endLocation: r.endLocation,
-      count: r._count.id,
-    }));
-  }
-
-  /**
-   * Calculate distance from odometer readings
-   */
-  calculateDistanceFromOdometer(odometerStart: number, odometerEnd: number): number {
-    if (odometerEnd <= odometerStart) {
-      throw new Error('End odometer must be greater than start odometer');
-    }
-    return odometerEnd - odometerStart;
+    return routes
+      .filter((r) => r.startLocation && r.endLocation)
+      .map((r) => ({
+        startLocation: r.startLocation!,
+        endLocation: r.endLocation!,
+        count: r._count.id,
+      }));
   }
 }

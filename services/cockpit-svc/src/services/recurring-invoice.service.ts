@@ -20,7 +20,8 @@ import type {
   RecurringInvoiceWithDetails,
   CreateLineItemParams,
 } from '../types/invoice.types.js';
-import type { PrismaClient, RecurringInvoice, Invoice } from '@skillancer/database';
+import type { RecurringInvoice, Invoice } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 export class RecurringInvoiceService {
@@ -115,8 +116,8 @@ export class RecurringInvoiceService {
       this.validateRecurrenceConfig({
         ...existing,
         ...params,
-        lineItems: params.lineItems ?? (existing.lineItemsTemplate as CreateLineItemParams[]),
-      } as CreateRecurringInvoiceParams);
+        lineItems: params.lineItems ?? (existing.lineItems as unknown as CreateLineItemParams[]),
+      } as unknown as CreateRecurringInvoiceParams);
     }
 
     const recurring = await this.recurringRepository.update(id, params);
@@ -232,7 +233,7 @@ export class RecurringInvoiceService {
     }
 
     // Parse line items template
-    const lineItems = recurring.lineItemsTemplate as CreateLineItemParams[];
+    const lineItems = recurring.lineItems as unknown as CreateLineItemParams[];
 
     // Calculate amounts
     const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -272,12 +273,6 @@ export class RecurringInvoiceService {
       viewToken,
       taxEnabled: !!recurring.taxRate,
       taxRate: recurring.taxRate ? Number(recurring.taxRate) : undefined,
-    });
-
-    // Link to recurring
-    await this.prisma.invoice.update({
-      where: { id: invoice.id },
-      data: { recurringInvoiceId: recurring.id },
     });
 
     // Update recurring schedule

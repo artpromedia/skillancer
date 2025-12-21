@@ -1075,6 +1075,9 @@ importers:
       '@microsoft/microsoft-graph-client':
         specifier: ^3.0.7
         version: 3.0.7
+      '@sinclair/typebox':
+        specifier: ^0.32.0
+        version: 0.32.35
       '@skillancer/cache':
         specifier: workspace:*
         version: link:../../packages/cache
@@ -1090,9 +1093,15 @@ importers:
       '@skillancer/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      bullmq:
+        specifier: ^5.0.0
+        version: 5.66.0
       fastify:
         specifier: ^4.26.0
         version: 4.29.1
+      google-auth-library:
+        specifier: ^9.0.0
+        version: 9.15.1
       googleapis:
         specifier: ^169.0.0
         version: 169.0.0
@@ -10948,6 +10957,10 @@ packages:
   /@sinclair/typebox@0.27.8:
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
 
+  /@sinclair/typebox@0.32.35:
+    resolution: {integrity: sha512-Ul3YyOTU++to8cgNkttakC0dWvpERr6RYoHO2W47DLbFvrwBDJUY31B1sImH6JZSYc4Kt4PyHtoPNu+vL2r2dA==}
+    dev: false
+
   /@sindresorhus/is@4.6.0:
     resolution: {integrity: sha512-t09vSN3MdfsyCHoFcTRCH/iUtG7OJ0CsjzB8cjAmKc/va/kIgeDI/TxsigdncE/4be734m0cvIYwNaV4i2XqAw==}
     engines: {node: '>=10'}
@@ -17942,7 +17955,6 @@ packages:
       - encoding
       - supports-color
     dev: false
-    optional: true
 
   /google-gax@4.6.1:
     resolution: {integrity: sha512-V6eky/xz2mcKfAd1Ioxyd6nmA61gao3n01C+YeuIwu3vzM9EDR6wcVzMSIbLMDXWeoi9SHYctXuKYC5uJUT3eQ==}
@@ -18071,7 +18083,6 @@ packages:
       - encoding
       - supports-color
     dev: false
-    optional: true
 
   /gtoken@8.0.0:
     resolution: {integrity: sha512-+CqsMbHPiSTdtSO14O51eMNlrp9N79gmeqmXeouJOhfucAedHw9noVe/n5uJk3tbKE6a+6ZCQg3RPhVhHByAIw==}

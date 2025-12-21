@@ -13,7 +13,8 @@ import type {
   MileageLogWithDetails,
   MileageSummary,
 } from '../types/finance.types.js';
-import type { PrismaClient, MileageLog } from '@skillancer/database';
+import type { MileageLog } from '@prisma/client';
+import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 export class MileageService {
@@ -30,27 +31,9 @@ export class MileageService {
    * Create a new mileage log
    */
   async createMileageLog(params: CreateMileageLogParams): Promise<MileageLog> {
-    // Validate distance
-    if (params.distance <= 0) {
+    // Validate miles
+    if (params.miles <= 0) {
       throw new FinanceError(FinanceErrorCode.INVALID_MILEAGE_DISTANCE);
-    }
-
-    // Validate odometer readings if provided
-    if (
-      params.odometerStart !== undefined &&
-      params.odometerEnd !== undefined &&
-      params.odometerEnd <= params.odometerStart
-    ) {
-      throw new FinanceError(FinanceErrorCode.INVALID_ODOMETER_READINGS);
-    }
-
-    // Calculate distance from odometer if both provided and distance not set
-    if (
-      params.odometerStart !== undefined &&
-      params.odometerEnd !== undefined &&
-      !params.distance
-    ) {
-      params.distance = params.odometerEnd - params.odometerStart;
     }
 
     // Validate project if provided
@@ -79,7 +62,7 @@ export class MileageService {
       {
         mileageId: mileageLog.id,
         userId: params.userId,
-        distance: params.distance,
+        miles: params.miles,
         purpose: params.purpose,
       },
       'Mileage log created'
@@ -147,17 +130,9 @@ export class MileageService {
       throw new FinanceError(FinanceErrorCode.MILEAGE_LOG_NOT_FOUND);
     }
 
-    // Validate distance if provided
-    if (params.distance !== undefined && params.distance <= 0) {
+    // Validate miles if provided
+    if (params.miles !== undefined && params.miles <= 0) {
       throw new FinanceError(FinanceErrorCode.INVALID_MILEAGE_DISTANCE);
-    }
-
-    // Validate odometer readings if provided
-    const odometerStart = params.odometerStart ?? existing.odometerStart;
-    const odometerEnd = params.odometerEnd ?? existing.odometerEnd;
-
-    if (odometerStart !== null && odometerEnd !== null && odometerEnd <= odometerStart) {
-      throw new FinanceError(FinanceErrorCode.INVALID_ODOMETER_READINGS);
     }
 
     // Validate project if changed
@@ -237,11 +212,11 @@ export class MileageService {
    * Calculate deduction for a given distance and purpose
    */
   calculateDeduction(
-    distance: number,
-    purpose: 'BUSINESS' | 'MEDICAL' | 'CHARITABLE' | 'PERSONAL'
+    miles: number,
+    purpose: 'CLIENT_MEETING' | 'BUSINESS_ERRAND' | 'TRAVEL' | 'OTHER'
   ): number {
     const rate = MILEAGE_RATES[purpose] ?? 0;
-    return distance * rate;
+    return miles * rate;
   }
 
   /**
@@ -268,9 +243,9 @@ export class MileageService {
       },
       select: {
         date: true,
-        distance: true,
+        miles: true,
         purpose: true,
-        deductibleAmount: true,
+        deductionAmount: true,
       },
     });
 
@@ -287,13 +262,18 @@ export class MileageService {
     for (const log of logs) {
       const month = log.date.getMonth();
       const data = monthlyData.get(month)!;
-      const distance = Number(log.distance);
+      const miles = Number(log.miles);
 
-      data.totalMiles += distance;
-      data.deduction += Number(log.deductibleAmount) || 0;
+      data.totalMiles += miles;
+      data.deduction += Number(log.deductionAmount) || 0;
 
-      if (log.purpose === 'BUSINESS') {
-        data.businessMiles += distance;
+      // Count CLIENT_MEETING, BUSINESS_ERRAND, and TRAVEL as business miles
+      if (
+        log.purpose === 'CLIENT_MEETING' ||
+        log.purpose === 'BUSINESS_ERRAND' ||
+        log.purpose === 'TRAVEL'
+      ) {
+        data.businessMiles += miles;
       }
     }
 

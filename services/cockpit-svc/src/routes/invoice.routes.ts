@@ -27,6 +27,12 @@ import { InvoiceTemplateService } from '../services/invoice-template.service.js'
 import { InvoiceService } from '../services/invoice.service.js';
 import { RecurringInvoiceService } from '../services/recurring-invoice.service.js';
 
+import type {
+  CreateInvoiceParams,
+  UpdateInvoiceParams,
+  CreateRecurringInvoiceParams,
+  UpdateRecurringInvoiceParams,
+} from '../types/invoice.types.js';
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance } from 'fastify';
@@ -307,7 +313,7 @@ export async function registerInvoiceRoutes(
       const invoice = await invoiceService.createInvoice({
         freelancerUserId: userId,
         ...body,
-      });
+      } as CreateInvoiceParams);
 
       return await reply.status(201).send({ data: invoice });
     } catch (error) {
@@ -374,7 +380,7 @@ export async function registerInvoiceRoutes(
       const { id } = request.params as { id: string };
       const body = UpdateInvoiceSchema.parse(request.body);
 
-      const invoice = await invoiceService.updateInvoice(id, userId, body);
+      const invoice = await invoiceService.updateInvoice(id, userId, body as UpdateInvoiceParams);
       return await reply.send({ data: invoice });
     } catch (error) {
       return handleError(error, reply);
@@ -583,10 +589,21 @@ export async function registerInvoiceRoutes(
       const userId = (request as any).userId;
       const body = CreateRecurringInvoiceSchema.parse(request.body);
 
+      // Calculate totals from line items
+      const subtotal = body.lineItems.reduce(
+        (sum, item) => sum + item.quantity * item.unitPrice,
+        0
+      );
+      const taxAmount = body.taxRate ? subtotal * (body.taxRate / 100) : 0;
+      const total = subtotal + taxAmount;
+
       const recurring = await recurringService.createRecurringInvoice({
         freelancerUserId: userId,
         ...body,
-      });
+        subtotal,
+        taxAmount,
+        total,
+      } as CreateRecurringInvoiceParams);
 
       return await reply.status(201).send({ data: recurring });
     } catch (error) {
@@ -625,7 +642,11 @@ export async function registerInvoiceRoutes(
       const { id } = request.params as { id: string };
       const body = UpdateRecurringInvoiceSchema.parse(request.body);
 
-      const recurring = await recurringService.updateRecurringInvoice(id, userId, body);
+      const recurring = await recurringService.updateRecurringInvoice(
+        id,
+        userId,
+        body as UpdateRecurringInvoiceParams
+      );
       return await reply.send({ data: recurring });
     } catch (error) {
       return handleError(error, reply);

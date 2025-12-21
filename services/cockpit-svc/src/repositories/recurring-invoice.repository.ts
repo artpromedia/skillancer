@@ -8,7 +8,8 @@ import type {
   UpdateRecurringInvoiceParams,
   CreateLineItemParams,
 } from '../types/invoice.types.js';
-import type { Prisma, PrismaClient, RecurringInvoice } from '@skillancer/database';
+import type { RecurringInvoice } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@skillancer/database';
 
 export class RecurringInvoiceRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -22,7 +23,12 @@ export class RecurringInvoiceRepository {
         freelancerUserId: data.freelancerUserId,
         clientId: data.clientId,
         name: data.name,
-        lineItemsTemplate: data.lineItems as unknown as Prisma.InputJsonValue,
+        lineItems: data.lineItems as unknown as Prisma.InputJsonValue,
+        subtotal: data.subtotal,
+        taxRate: data.taxRate ?? null,
+        taxAmount: data.taxAmount ?? 0,
+        total: data.total,
+        currency: data.currency ?? 'USD',
         frequency: data.frequency,
         interval: data.interval ?? 1,
         dayOfMonth: data.dayOfMonth ?? null,
@@ -30,12 +36,11 @@ export class RecurringInvoiceRepository {
         startDate: data.startDate,
         endDate: data.endDate ?? null,
         maxInvoices: data.maxInvoices ?? null,
-        nextRunAt: this.calculateNextRun(data),
+        nextInvoiceDate: this.calculateNextRun(data),
         dueDays: data.dueDays ?? 30,
         autoSend: data.autoSend ?? true,
         templateId: data.templateId ?? null,
         projectId: data.projectId ?? null,
-        taxRate: data.taxRate ?? null,
       },
       include: {
         client: true,
@@ -106,7 +111,6 @@ export class RecurringInvoiceRepository {
       include: {
         client: true,
         template: true,
-        project: true,
       },
     });
   }
@@ -122,7 +126,7 @@ export class RecurringInvoiceRepository {
       },
       include: {
         client: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, firstName: true, lastName: true, companyName: true, email: true },
         },
         template: {
           select: { id: true, name: true },
@@ -131,7 +135,7 @@ export class RecurringInvoiceRepository {
           select: { invoices: true },
         },
       },
-      orderBy: { nextRunAt: 'asc' },
+      orderBy: { nextInvoiceDate: 'asc' },
     });
   }
 
@@ -145,13 +149,12 @@ export class RecurringInvoiceRepository {
       where: {
         isActive: true,
         isPaused: false,
-        nextRunAt: { lte: now },
+        nextInvoiceDate: { lte: now },
         OR: [{ endDate: null }, { endDate: { gte: now } }],
       },
       include: {
         client: true,
         template: true,
-        project: true,
       },
     });
   }
@@ -164,7 +167,7 @@ export class RecurringInvoiceRepository {
       where: { id },
       data: {
         name: data.name,
-        lineItemsTemplate: data.lineItems as unknown as Prisma.InputJsonValue,
+        lineItems: data.lineItems as unknown as Prisma.InputJsonValue,
         frequency: data.frequency,
         interval: data.interval,
         dayOfMonth: data.dayOfMonth,
@@ -198,7 +201,7 @@ export class RecurringInvoiceRepository {
 
     // Check if max invoices reached
     const invoiceCount = await this.prisma.invoice.count({
-      where: { recurringInvoiceId: id },
+      where: { recurringScheduleId: id },
     });
 
     const isComplete = recurring.maxInvoices && invoiceCount + 1 >= recurring.maxInvoices;
@@ -206,8 +209,8 @@ export class RecurringInvoiceRepository {
     return this.prisma.recurringInvoice.update({
       where: { id },
       data: {
-        lastRunAt: new Date(),
-        nextRunAt: isComplete ? null : nextRun,
+        lastInvoiceDate: new Date(),
+        nextInvoiceDate: isComplete ? null : nextRun,
         isActive: !isComplete,
       },
     });
@@ -217,7 +220,7 @@ export class RecurringInvoiceRepository {
    * Calculate next run from current recurring invoice
    */
   private calculateNextRunFromCurrent(recurring: RecurringInvoice): Date {
-    const current = recurring.nextRunAt ?? new Date();
+    const current = recurring.nextInvoiceDate ?? new Date();
     const next = new Date(current);
 
     switch (recurring.frequency) {
@@ -281,7 +284,7 @@ export class RecurringInvoiceRepository {
    */
   async getInvoiceCount(id: string): Promise<number> {
     return this.prisma.invoice.count({
-      where: { recurringInvoiceId: id },
+      where: { recurringScheduleId: id },
     });
   }
 }

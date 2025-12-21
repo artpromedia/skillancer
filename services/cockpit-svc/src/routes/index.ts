@@ -169,31 +169,7 @@ export async function registerRoutes(
   // Register invoice routes
   await fastify.register(
     (instance) => {
-      registerInvoiceRoutes(instance, {
-        ...deps,
-        stripeConfig: process.env.STRIPE_SECRET_KEY
-          ? {
-              secretKey: process.env.STRIPE_SECRET_KEY,
-              webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
-            }
-          : undefined,
-        paypalConfig: process.env.PAYPAL_CLIENT_ID
-          ? {
-              clientId: process.env.PAYPAL_CLIENT_ID,
-              clientSecret: process.env.PAYPAL_CLIENT_SECRET ?? '',
-              environment: (process.env.PAYPAL_ENV as 'sandbox' | 'live') ?? 'sandbox',
-            }
-          : undefined,
-        s3Config: process.env.AWS_S3_BUCKET
-
-// Invoice exports (CP-3.2: Professional Invoicing)
-export { registerInvoiceRoutes } from './invoice.routes.js';
-          ? {
-              bucket: process.env.AWS_S3_BUCKET,
-              region: process.env.AWS_REGION ?? 'us-east-1',
-            }
-          : undefined,
-      });
+      registerInvoiceRoutes(instance, deps);
     },
     { prefix: '/invoicing' }
   );
@@ -221,3 +197,5 @@ export { publicBookingRoutes } from './public-booking.routes.js';
 
 // Financial exports (CP-3.1: Income & Expense Tracking)
 export { registerFinanceRoutes } from './finance.routes.js';
+// Invoice exports (CP-3.2: Professional Invoicing)
+export { registerInvoiceRoutes } from './invoice.routes.js';
