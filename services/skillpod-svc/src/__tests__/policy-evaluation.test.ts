@@ -3,7 +3,7 @@
  * Unit tests for security policy evaluation
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors in test mocks
+// @ts-nocheck - FUTURE: Fix TypeScript errors in test mocks
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 

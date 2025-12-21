@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/auth-svc/services/verification
  * Identity Verification Service

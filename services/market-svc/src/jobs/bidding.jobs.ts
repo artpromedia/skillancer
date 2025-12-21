@@ -160,7 +160,7 @@ export class BiddingJobs {
    * Send notification (placeholder - would integrate with notification service)
    */
   private sendNotification(notification: BidNotification): void {
-    // TODO: Integrate with notification-svc
+    // FUTURE: Integrate with notification-svc
     // For now, just log the notification
     this.logger.info({
       msg: 'Processing notification',

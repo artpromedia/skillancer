@@ -4,3 +4,4 @@
  */
 
 export * from './review.types.js';
+export * from './notification.types.js';

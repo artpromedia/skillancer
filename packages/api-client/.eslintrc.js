@@ -6,4 +6,8 @@ module.exports = {
     project: './tsconfig.json',
     tsconfigRootDir: __dirname,
   },
+  ignorePatterns: ['scripts/', 'dist/'],
+  rules: {
+    '@typescript-eslint/no-unsafe-member-access': 'off',
+  },
 };

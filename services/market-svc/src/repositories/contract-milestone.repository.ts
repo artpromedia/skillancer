@@ -400,15 +400,18 @@ export class ContractMilestoneRepository {
   /**
    * Reorder milestones
    */
-  async reorder(contractId: string, milestoneOrders: { id: string; orderIndex: number }[]) {
-    const updates = milestoneOrders.map(({ id, orderIndex }) =>
-      this.prisma.contractMilestoneV2.update({
-        where: { id },
-        data: { orderIndex, updatedAt: new Date() },
-      })
-    );
-
-    return this.prisma.$transaction(updates);
+  async reorder(_contractId: string, milestoneOrders: { id: string; orderIndex: number }[]) {
+    return this.prisma.$transaction(async (tx) => {
+      const results = [];
+      for (const { id, orderIndex } of milestoneOrders) {
+        const updated = await tx.contractMilestoneV2.update({
+          where: { id },
+          data: { orderIndex, updatedAt: new Date() },
+        });
+        results.push(updated);
+      }
+      return results;
+    });
   }
 
   /**

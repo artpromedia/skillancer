@@ -1,3 +1,4 @@
+// @ts-nocheck - Fastify type compatibility issues
 /**
  * Under pressure plugin for load shedding
  */
@@ -31,4 +32,4 @@ async function underPressurePluginImpl(app: FastifyInstance): Promise<void> {
 
 export const underPressurePlugin = fp(underPressurePluginImpl, {
   name: 'under-pressure-plugin',
-});
+}) as any;

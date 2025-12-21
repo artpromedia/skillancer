@@ -319,7 +319,7 @@ export class PersonaService {
     }
 
     // Persona uses HMAC-SHA256 for webhook signatures
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports, @typescript-eslint/consistent-type-imports
     const cryptoModule = require('crypto') as typeof import('crypto');
     const expectedSignature = cryptoModule
       .createHmac('sha256', this.config.webhookSecret)

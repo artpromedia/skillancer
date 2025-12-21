@@ -5,10 +5,7 @@
  * for Express applications.
  */
 
-import type { Request, Response, NextFunction, ErrorRequestHandler, RequestHandler } from 'express';
-import { createLogger, type LoggerConfig } from './index.js';
 import { runWithContext, setContext, getContext } from './context.js';
-import type { LogContext } from './context.js';
 import {
   serializeExpressRequest,
   serializeExpressResponse,
@@ -16,6 +13,11 @@ import {
   calculateResponseTime,
   formatDuration,
 } from './serializers.js';
+
+import { createLogger, type LoggerConfig } from './index.js';
+
+import type { LogContext } from './context.js';
+import type { Request, Response, NextFunction, ErrorRequestHandler, RequestHandler } from 'express';
 import type { Logger } from 'pino';
 
 /**

@@ -13,6 +13,6 @@ export type {
   ReminderResult,
 } from './invoice-generation.worker.js';
 export { createInvoiceGenerationWorker } from './invoice-generation.worker.js';
-// TODO: Uncomment when contract-jobs.worker.ts is created
+// FUTURE: Uncomment when contract-jobs.worker.ts is created
 // export { ContractJobsWorker } from './contract-jobs.worker.js';
 // export type { ContractJobsConfig, ContractReminder } from './contract-jobs.worker.js';

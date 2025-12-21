@@ -715,8 +715,9 @@ export function createKillSwitchService(
             data: {
               userId,
               type: 'ACCESS_REVOKED',
+              category: 'SYSTEM',
               title: 'Access Revoked',
-              message,
+              body: message,
               data: { eventId, reason },
             },
           })
@@ -779,8 +780,9 @@ export function createKillSwitchService(
               data: {
                 userId: admin.userId,
                 type: 'KILL_SWITCH_EXECUTED',
+                category: 'SYSTEM',
                 title: 'Kill Switch Executed',
-                message: `Kill switch executed for ${params.scope.toLowerCase()}: ${params.reason}`,
+                body: `Kill switch executed for ${params.scope.toLowerCase()}: ${params.reason}`,
                 data: {
                   eventId,
                   scope: params.scope,
@@ -855,8 +857,9 @@ export function createKillSwitchService(
       data: {
         userId,
         type: 'ACCESS_REINSTATED',
+        category: 'SYSTEM',
         title: 'Access Reinstated',
-        message: 'Your SkillPod access has been reinstated.',
+        body: 'Your SkillPod access has been reinstated.',
         data: { reinstatedBy, reason },
       },
     });

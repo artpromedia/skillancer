@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Dependencies
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS deps
+FROM node:20.19.4-alpine AS deps
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -21,7 +21,7 @@ RUN pnpm install --frozen-lockfile --prod
 # -----------------------------------------------------------------------------
 # Stage 2: Builder
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:20.19.4-alpine AS builder
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -42,7 +42,7 @@ RUN pnpm build
 # -----------------------------------------------------------------------------
 # Stage 3: Runner (Production)
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS runner
+FROM node:20.19.4-alpine AS runner
 
 # Security: Run as non-root user
 RUN addgroup --system --gid 1001 nodejs && \

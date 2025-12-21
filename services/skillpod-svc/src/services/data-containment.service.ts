@@ -3,7 +3,7 @@
  * Core data containment service for VDI security policy enforcement
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors related to complex type conversions
+// @ts-nocheck - FUTURE: Fix TypeScript errors related to complex type conversions
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */

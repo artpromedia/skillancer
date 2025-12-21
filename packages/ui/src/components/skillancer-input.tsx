@@ -25,7 +25,7 @@ export interface SkillancerInputProps extends InputProps {
 
 /**
  * Form input with integrated label and error handling
- * 
+ *
  * @example
  * <SkillancerInput
  *   label="Email"
@@ -35,61 +35,34 @@ export interface SkillancerInputProps extends InputProps {
  * />
  */
 const SkillancerInput = React.forwardRef<HTMLInputElement, SkillancerInputProps>(
-  (
-    {
-      label,
-      error,
-      helperText,
-      wrapperClassName,
-      className,
-      id,
-      ...props
-    },
-    ref
-  ) => {
-    const inputId = id || React.useId();
+  ({ label, error, helperText, wrapperClassName, className, id, ...props }, ref) => {
+    const generatedId = React.useId();
+    const inputId = id || generatedId;
 
     return (
       <div className={cn('space-y-2', wrapperClassName)}>
         {label && (
-          <Label
-            htmlFor={inputId}
-            className={cn(error && 'text-destructive')}
-          >
+          <Label className={cn(error && 'text-destructive')} htmlFor={inputId}>
             {label}
           </Label>
         )}
         <Input
           ref={ref}
-          id={inputId}
-          className={cn(
-            error && 'border-destructive focus-visible:ring-destructive',
-            className
-          )}
-          aria-invalid={!!error}
           aria-describedby={
-            error
-              ? `${inputId}-error`
-              : helperText
-                ? `${inputId}-helper`
-                : undefined
+            error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined
           }
+          aria-invalid={!!error}
+          className={cn(error && 'border-destructive focus-visible:ring-destructive', className)}
+          id={inputId}
           {...props}
         />
         {error && (
-          <p
-            id={`${inputId}-error`}
-            className="text-sm text-destructive"
-            role="alert"
-          >
+          <p className="text-destructive text-sm" id={`${inputId}-error`} role="alert">
             {error}
           </p>
         )}
         {helperText && !error && (
-          <p
-            id={`${inputId}-helper`}
-            className="text-sm text-muted-foreground"
-          >
+          <p className="text-muted-foreground text-sm" id={`${inputId}-helper`}>
             {helperText}
           </p>
         )}

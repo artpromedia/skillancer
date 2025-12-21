@@ -4,13 +4,14 @@
  */
 
 import { z } from 'zod';
+
+import { jobTypeSchema } from './job';
 import {
   uuidSchema,
   dateSchema,
   currencyCodeSchema,
   timestampsSchema,
 } from '../common/base';
-import { jobTypeSchema } from './job';
 
 // =============================================================================
 // Bid Enums

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
 /**
  * @fileoverview Fastify plugin for automatic HTTP request metrics
  *
@@ -8,10 +9,12 @@
  * - Status code distribution
  */
 
-import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
+
 import { MetricsService } from './index.js';
+
 import type { MetricConfig } from './types.js';
+import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 
 /**
  * Configuration options for the Fastify metrics plugin
@@ -118,83 +121,86 @@ function fastifyMetricsPlugin(
   );
 
   // Record metrics on response
-  fastify.addHook('onResponse', (request: FastifyRequest, reply: FastifyReply, done: () => void) => {
-    const startTime = (request as MetricsRequest).metricsStartTime;
-    if (!startTime) {
-      done();
-      return;
-    }
-
-    // Determine path to use
-    const path: string = useRoutePattern
-      ? (request.routerPath ?? request.url?.split('?')[0] ?? '/')
-      : (request.url?.split('?')[0] ?? '/');
-
-    // Skip ignored paths
-    if (shouldIgnorePath(path, ignorePaths)) {
-      done();
-      return;
-    }
-
-    const responseTime = calculateResponseTime(startTime);
-    const statusCode = reply.statusCode;
-    const method: string = request.method ?? 'UNKNOWN';
-
-    // Build dimensions
-    const dimensions: Record<string, string> = {
-      Method: method,
-      Path: path,
-      StatusCode: String(statusCode),
-      StatusCategory: getStatusCategory(statusCode),
-    };
-
-    // Add custom dimensions
-    if (dimensionExtractor) {
-      try {
-        const customDimensions = dimensionExtractor(request);
-        Object.assign(dimensions, customDimensions);
-      } catch {
-        // Ignore dimension extraction errors
+  fastify.addHook(
+    'onResponse',
+    (request: FastifyRequest, reply: FastifyReply, done: () => void) => {
+      const startTime = (request as MetricsRequest).metricsStartTime;
+      if (!startTime) {
+        done();
+        return;
       }
-    }
 
-    // Record request count
-    metrics.increment('RequestCount', 1, dimensions);
+      // Determine path to use
+      const path: string = useRoutePattern
+        ? (request.routerPath ?? request.url?.split('?')[0] ?? '/')
+        : (request.url?.split('?')[0] ?? '/');
 
-    // Record latency
-    metrics.timing('RequestLatency', responseTime, dimensions);
+      // Skip ignored paths
+      if (shouldIgnorePath(path, ignorePaths)) {
+        done();
+        return;
+      }
 
-    // Record errors
-    if (statusCode >= 400) {
-      metrics.increment('ErrorCount', 1, {
+      const responseTime = calculateResponseTime(startTime);
+      const statusCode = reply.statusCode;
+      const method: string = request.method ?? 'UNKNOWN';
+
+      // Build dimensions
+      const dimensions: Record<string, string> = {
         Method: method,
         Path: path,
-        ErrorType: statusCode >= 500 ? '5xx' : '4xx',
-      });
-    }
+        StatusCode: String(statusCode),
+        StatusCategory: getStatusCategory(statusCode),
+      };
 
-    // Record histogram buckets for detailed latency analysis
-    if (recordHistograms) {
-      const buckets = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
-      for (const bucket of buckets) {
-        if (responseTime <= bucket) {
-          metrics.increment('RequestLatencyBucket', 1, {
-            Method: method,
-            Path: path,
-            Bucket: `le_${bucket}ms`,
-          });
+      // Add custom dimensions
+      if (dimensionExtractor) {
+        try {
+          const customDimensions = dimensionExtractor(request);
+          Object.assign(dimensions, customDimensions);
+        } catch {
+          // Ignore dimension extraction errors
         }
       }
-      // +Inf bucket (all requests)
-      metrics.increment('RequestLatencyBucket', 1, {
-        Method: method,
-        Path: path,
-        Bucket: 'le_inf',
-      });
-    }
 
-    done();
-  });
+      // Record request count
+      metrics.increment('RequestCount', 1, dimensions);
+
+      // Record latency
+      metrics.timing('RequestLatency', responseTime, dimensions);
+
+      // Record errors
+      if (statusCode >= 400) {
+        metrics.increment('ErrorCount', 1, {
+          Method: method,
+          Path: path,
+          ErrorType: statusCode >= 500 ? '5xx' : '4xx',
+        });
+      }
+
+      // Record histogram buckets for detailed latency analysis
+      if (recordHistograms) {
+        const buckets = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
+        for (const bucket of buckets) {
+          if (responseTime <= bucket) {
+            metrics.increment('RequestLatencyBucket', 1, {
+              Method: method,
+              Path: path,
+              Bucket: `le_${bucket}ms`,
+            });
+          }
+        }
+        // +Inf bucket (all requests)
+        metrics.increment('RequestLatencyBucket', 1, {
+          Method: method,
+          Path: path,
+          Bucket: 'le_inf',
+        });
+      }
+
+      done();
+    }
+  );
 
   // Record errors
   fastify.addHook(
@@ -233,7 +239,8 @@ function fastifyMetricsPlugin(
 /**
  * Fastify metrics plugin with type declarations
  */
-export const fastifyMetrics = fp(fastifyMetricsPlugin, {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const fastifyMetrics = fp(fastifyMetricsPlugin as any, {
   fastify: '4.x',
   name: '@skillancer/metrics/fastify',
 });

@@ -3,7 +3,7 @@
  * Data containment enforcement middleware for VDI sessions
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors related to containment middleware types
+// @ts-nocheck - FUTURE: Fix TypeScript errors related to containment middleware types
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */

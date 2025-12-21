@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * @skillancer/types - Market: Contract Types
  * Contract schemas for agreed work between clients and freelancers
  */
 
 import { z } from 'zod';
+
+import { jobTypeSchema } from './job';
 import {
   uuidSchema,
   dateSchema,
@@ -11,7 +14,6 @@ import {
   moneySchema,
   timestampsSchema,
 } from '../common/base';
-import { jobTypeSchema } from './job';
 
 // =============================================================================
 // Contract Enums
@@ -76,21 +78,25 @@ export const contractMilestoneSchema = z.object({
   currency: currencyCodeSchema,
   status: milestoneStatusSchema,
   order: z.number().int().nonnegative(),
-  
+
   // Escrow
   escrowStatus: escrowStatusSchema,
   fundedAt: dateSchema.optional(),
   fundedTransactionId: uuidSchema.optional(),
-  
+
   // Deliverables
   deliverables: z.array(z.string()).optional(),
-  attachments: z.array(z.object({
-    id: uuidSchema,
-    name: z.string(),
-    url: z.string().url(),
-    mimeType: z.string(),
-  })).optional(),
-  
+  attachments: z
+    .array(
+      z.object({
+        id: uuidSchema,
+        name: z.string(),
+        url: z.string().url(),
+        mimeType: z.string(),
+      })
+    )
+    .optional(),
+
   // Timeline
   dueDate: dateSchema.optional(),
   submittedAt: dateSchema.optional(),
@@ -98,11 +104,11 @@ export const contractMilestoneSchema = z.object({
   rejectedAt: dateSchema.optional(),
   rejectionReason: z.string().max(500).optional(),
   revisionRequests: z.number().int().nonnegative().default(0),
-  
+
   // Payment
   paidAt: dateSchema.optional(),
   paymentTransactionId: uuidSchema.optional(),
-  
+
   ...timestampsSchema.shape,
 });
 export type ContractMilestone = z.infer<typeof contractMilestoneSchema>;
@@ -118,16 +124,20 @@ export const timeEntrySchema = z.object({
   date: dateSchema,
   approved: z.boolean().default(false),
   approvedAt: dateSchema.optional(),
-  
+
   // SkillPod tracking
   skillpodSessionId: uuidSchema.optional(),
-  screenshots: z.array(z.object({
-    id: uuidSchema,
-    url: z.string().url(),
-    timestamp: dateSchema,
-    activityLevel: z.number().int().min(0).max(100).optional(),
-  })).optional(),
-  
+  screenshots: z
+    .array(
+      z.object({
+        id: uuidSchema,
+        url: z.string().url(),
+        timestamp: dateSchema,
+        activityLevel: z.number().int().min(0).max(100).optional(),
+      })
+    )
+    .optional(),
+
   ...timestampsSchema.shape,
 });
 export type TimeEntry = z.infer<typeof timeEntrySchema>;
@@ -142,7 +152,7 @@ export type TimeEntry = z.infer<typeof timeEntrySchema>;
 export const contractSchema = z.object({
   id: uuidSchema,
   contractNumber: z.string(), // Human-readable contract number
-  
+
   // Relationships
   jobId: uuidSchema.optional(), // May be from direct hire
   bidId: uuidSchema.optional(),
@@ -150,65 +160,67 @@ export const contractSchema = z.object({
   clientUserId: uuidSchema,
   freelancerUserId: uuidSchema,
   tenantId: uuidSchema.optional(),
-  
+
   // Contract details
   title: z.string().min(1).max(200),
   description: z.string().max(5000),
   type: jobTypeSchema,
   status: contractStatusSchema,
-  
+
   // Terms
   scope: z.string().max(10000).optional(),
   deliverables: z.array(z.string()).optional(),
   terms: z.string().max(10000).optional(),
-  
+
   // Pricing
   totalAmount: z.number().nonnegative(),
   currency: currencyCodeSchema.default('USD'),
   hourlyRate: z.number().positive().optional(),
   maxHours: z.number().positive().optional(),
   maxBudget: z.number().positive().optional(),
-  
+
   // Milestones
   milestones: z.array(contractMilestoneSchema).optional(),
-  
+
   // Time tracking (hourly)
   timeEntries: z.array(timeEntrySchema).optional(),
   totalHoursWorked: z.number().nonnegative().default(0),
   totalHoursApproved: z.number().nonnegative().default(0),
-  
+
   // Financials
   amountPaid: z.number().nonnegative().default(0),
   amountInEscrow: z.number().nonnegative().default(0),
   platformFeePercent: z.number().min(0).max(100).default(10),
-  
+
   // Signatures
   clientSignedAt: dateSchema.optional(),
   freelancerSignedAt: dateSchema.optional(),
-  
+
   // Timeline
   startDate: dateSchema.optional(),
   endDate: dateSchema.optional(),
   actualStartDate: dateSchema.optional(),
   actualEndDate: dateSchema.optional(),
-  
+
   // Communication
   chatChannelId: uuidSchema.optional(),
   lastActivityAt: dateSchema.optional(),
-  
+
   // SkillPod integration
   skillpodEnabled: z.boolean().default(false),
   skillpodPodId: uuidSchema.optional(),
-  skillpodPolicy: z.object({
-    screenshotsEnabled: z.boolean().default(false),
-    screenshotFrequencyMinutes: z.number().int().min(1).max(60).default(10),
-    activityTrackingEnabled: z.boolean().default(false),
-  }).optional(),
-  
+  skillpodPolicy: z
+    .object({
+      screenshotsEnabled: z.boolean().default(false),
+      screenshotFrequencyMinutes: z.number().int().min(1).max(60).default(10),
+      activityTrackingEnabled: z.boolean().default(false),
+    })
+    .optional(),
+
   // Dispute
   hasDispute: z.boolean().default(false),
   disputeId: uuidSchema.optional(),
-  
+
   ...timestampsSchema.shape,
 });
 export type Contract = z.infer<typeof contractSchema>;
@@ -236,29 +248,35 @@ export const createContractSchema = z.object({
   hourlyRate: z.number().positive().optional(),
   maxHours: z.number().positive().optional(),
   maxBudget: z.number().positive().optional(),
-  milestones: z.array(contractMilestoneSchema.omit({
-    id: true,
-    contractId: true,
-    escrowStatus: true,
-    fundedAt: true,
-    fundedTransactionId: true,
-    submittedAt: true,
-    approvedAt: true,
-    rejectedAt: true,
-    rejectionReason: true,
-    paidAt: true,
-    paymentTransactionId: true,
-    createdAt: true,
-    updatedAt: true,
-  })).optional(),
+  milestones: z
+    .array(
+      contractMilestoneSchema.omit({
+        id: true,
+        contractId: true,
+        escrowStatus: true,
+        fundedAt: true,
+        fundedTransactionId: true,
+        submittedAt: true,
+        approvedAt: true,
+        rejectedAt: true,
+        rejectionReason: true,
+        paidAt: true,
+        paymentTransactionId: true,
+        createdAt: true,
+        updatedAt: true,
+      })
+    )
+    .optional(),
   startDate: dateSchema.optional(),
   endDate: dateSchema.optional(),
   skillpodEnabled: z.boolean().default(false),
-  skillpodPolicy: z.object({
-    screenshotsEnabled: z.boolean().default(false),
-    screenshotFrequencyMinutes: z.number().int().min(1).max(60).default(10),
-    activityTrackingEnabled: z.boolean().default(false),
-  }).optional(),
+  skillpodPolicy: z
+    .object({
+      screenshotsEnabled: z.boolean().default(false),
+      screenshotFrequencyMinutes: z.number().int().min(1).max(60).default(10),
+      activityTrackingEnabled: z.boolean().default(false),
+    })
+    .optional(),
 });
 export type CreateContract = z.infer<typeof createContractSchema>;
 
@@ -291,11 +309,15 @@ export type CreateMilestone = z.infer<typeof createMilestoneSchema>;
  */
 export const submitMilestoneSchema = z.object({
   message: z.string().max(2000).optional(),
-  attachments: z.array(z.object({
-    name: z.string(),
-    url: z.string().url(),
-    mimeType: z.string(),
-  })).optional(),
+  attachments: z
+    .array(
+      z.object({
+        name: z.string(),
+        url: z.string().url(),
+        mimeType: z.string(),
+      })
+    )
+    .optional(),
 });
 export type SubmitMilestone = z.infer<typeof submitMilestoneSchema>;
 

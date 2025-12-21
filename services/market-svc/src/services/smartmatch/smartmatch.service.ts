@@ -659,8 +659,8 @@ export class SmartMatchService {
     // Calculate repeat client rate - use clientUserId from V2 or clientId from V1
     const clientIds =
       contractsV2.length > 0
-        ? (contractsV2.map((c: PrismaContractV2) => c.clientUserId).filter(Boolean) as string[])
-        : (contractsV1.map((c: PrismaContract) => c.clientUserId).filter(Boolean) as string[]);
+        ? contractsV2.map((c: PrismaContractV2) => c.clientUserId).filter(Boolean)
+        : contractsV1.map((c: PrismaContract) => c.clientUserId).filter(Boolean);
     const uniqueClients = new Set(clientIds).size;
     const repeatClients = clientIds.length > uniqueClients ? clientIds.length - uniqueClients : 0;
 
@@ -678,6 +678,7 @@ export class SmartMatchService {
   }
 
   private convertWorkPattern(pattern: WorkPatternData): FreelancerWorkPattern {
+    // Build base result with required properties
     const result: Record<string, unknown> = {
       id: pattern.id,
       userId: pattern.userId,
@@ -690,33 +691,29 @@ export class SmartMatchService {
       updatedAt: pattern.updatedAt,
     };
 
-    // Only add optional properties when they're defined (not undefined)
-    if (pattern.weeklyHoursAvailable !== undefined)
-      result.weeklyHoursAvailable = pattern.weeklyHoursAvailable;
-    if (pattern.preferredHoursPerWeek !== undefined)
-      result.preferredHoursPerWeek = pattern.preferredHoursPerWeek;
-    if (pattern.workingHoursStart !== undefined)
-      result.workingHoursStart = pattern.workingHoursStart;
-    if (pattern.workingHoursEnd !== undefined) result.workingHoursEnd = pattern.workingHoursEnd;
-    if (pattern.timezone !== undefined) result.timezone = pattern.timezone;
-    if (pattern.avgResponseTimeMinutes !== undefined)
-      result.avgResponseTimeMinutes = pattern.avgResponseTimeMinutes;
-    if (pattern.avgFirstBidTimeHours !== undefined)
-      result.avgFirstBidTimeHours = pattern.avgFirstBidTimeHours;
-    if (pattern.preferredBudgetMin !== undefined)
-      result.preferredBudgetMin = pattern.preferredBudgetMin
-        ? Number(pattern.preferredBudgetMin)
-        : null;
-    if (pattern.preferredBudgetMax !== undefined)
-      result.preferredBudgetMax = pattern.preferredBudgetMax
-        ? Number(pattern.preferredBudgetMax)
-        : null;
-    if (pattern.unavailablePeriods !== undefined)
-      result.unavailablePeriods = pattern.unavailablePeriods ?? null;
-    if (pattern.lastActiveAt !== undefined) result.lastActiveAt = pattern.lastActiveAt;
-    if (pattern.lastBidAt !== undefined) result.lastBidAt = pattern.lastBidAt;
-    if (pattern.lastProjectCompletedAt !== undefined)
-      result.lastProjectCompletedAt = pattern.lastProjectCompletedAt;
+    // Define optional property mappings (property name -> value transformer)
+    const optionalProps: [keyof WorkPatternData, string, (v: unknown) => unknown][] = [
+      ['weeklyHoursAvailable', 'weeklyHoursAvailable', (v) => v],
+      ['preferredHoursPerWeek', 'preferredHoursPerWeek', (v) => v],
+      ['workingHoursStart', 'workingHoursStart', (v) => v],
+      ['workingHoursEnd', 'workingHoursEnd', (v) => v],
+      ['timezone', 'timezone', (v) => v],
+      ['avgResponseTimeMinutes', 'avgResponseTimeMinutes', (v) => v],
+      ['avgFirstBidTimeHours', 'avgFirstBidTimeHours', (v) => v],
+      ['preferredBudgetMin', 'preferredBudgetMin', (v) => (v ? Number(v) : null)],
+      ['preferredBudgetMax', 'preferredBudgetMax', (v) => (v ? Number(v) : null)],
+      ['unavailablePeriods', 'unavailablePeriods', (v) => v ?? null],
+      ['lastActiveAt', 'lastActiveAt', (v) => v],
+      ['lastBidAt', 'lastBidAt', (v) => v],
+      ['lastProjectCompletedAt', 'lastProjectCompletedAt', (v) => v],
+    ];
+
+    // Add optional properties when defined
+    for (const [sourceKey, targetKey, transform] of optionalProps) {
+      if (pattern[sourceKey] !== undefined) {
+        result[targetKey] = transform(pattern[sourceKey]);
+      }
+    }
 
     return result as unknown as FreelancerWorkPattern;
   }

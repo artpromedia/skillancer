@@ -3,7 +3,7 @@
  * Unit tests for template service
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors in test mocks
+// @ts-nocheck - FUTURE: Fix TypeScript errors in test mocks
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */

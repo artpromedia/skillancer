@@ -401,6 +401,14 @@ export class PayoutService {
       throw new PayoutError('Invalid payout amount', PayoutErrorCodes.INVALID_AMOUNT, 400);
     }
 
+    // Determine reference type
+    let referenceType: 'INVOICE' | 'CONTRACT' | null = null;
+    if (options.invoiceId) {
+      referenceType = 'INVOICE';
+    } else if (options.contractId) {
+      referenceType = 'CONTRACT';
+    }
+
     // Create payout record
     const payout = await this.prisma.payout.create({
       data: {
@@ -408,7 +416,7 @@ export class PayoutService {
         amount: new Prisma.Decimal(options.amount),
         currency: options.currency ?? 'USD',
         status: 'PENDING',
-        referenceType: options.invoiceId ? 'INVOICE' : options.contractId ? 'CONTRACT' : null,
+        referenceType,
         referenceId: options.invoiceId ?? options.contractId ?? null,
         description: options.description ?? null,
       },

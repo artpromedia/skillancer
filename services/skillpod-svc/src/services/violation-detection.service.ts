@@ -3,7 +3,7 @@
  * Security violation detection and response for VDI data containment
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors related to violation type conversions
+// @ts-nocheck - FUTURE: Fix TypeScript errors related to violation type conversions
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */

@@ -25,9 +25,9 @@ interface StripeConfig {
 const getConfig = (): StripeConfig => ({
   secretKey: process.env.STRIPE_SECRET_KEY ?? '',
   webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
-  platformFeePercent: parseFloat(process.env.PLATFORM_FEE_PERCENT ?? '10'),
-  processingFeePercent: parseFloat(process.env.PROCESSING_FEE_PERCENT ?? '2.9'),
-  processingFeeFixed: parseFloat(process.env.PROCESSING_FEE_FIXED ?? '0.30'),
+  platformFeePercent: Number.parseFloat(process.env.PLATFORM_FEE_PERCENT ?? '10'),
+  processingFeePercent: Number.parseFloat(process.env.PROCESSING_FEE_PERCENT ?? '2.9'),
+  processingFeeFixed: Number.parseFloat(process.env.PROCESSING_FEE_FIXED ?? '0.30'),
 });
 
 // =============================================================================
@@ -489,9 +489,7 @@ export class StripeService {
 let stripeServiceInstance: StripeService | null = null;
 
 export function getStripeService(): StripeService {
-  if (!stripeServiceInstance) {
-    stripeServiceInstance = new StripeService();
-  }
+  stripeServiceInstance ??= new StripeService();
   return stripeServiceInstance;
 }
 

@@ -9,6 +9,8 @@
  * SmartMatch data access layer for intelligent matching system
  */
 
+import { Prisma, type PrismaClient } from '@skillancer/database';
+
 import type {
   MatchingEventType,
   MatchingOutcome,
@@ -20,7 +22,6 @@ import type {
   SkillRelationType,
   ExperienceLevel,
 } from '../types/smartmatch.types.js';
-import { Prisma, type PrismaClient } from '@skillancer/database';
 
 // ============================================================================
 // Types for repository operations
@@ -392,7 +393,7 @@ export class SmartMatchRepository {
         skillCategory,
         ...(primarySkill && { primarySkill }),
         ...(prismaExpLevel && {
-          experienceLevel: prismaExpLevel as 'ENTRY' | 'INTERMEDIATE' | 'EXPERT',
+          experienceLevel: prismaExpLevel,
         }),
         ...(region && { region }),
         periodEnd: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Within last 30 days

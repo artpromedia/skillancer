@@ -1,5 +1,5 @@
-import * as React from 'react';
 import { Loader2 } from 'lucide-react';
+import * as React from 'react';
 
 import { cn } from '../lib/utils';
 
@@ -37,13 +37,13 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
     const content = (
       <div
         ref={ref}
+        aria-label={text || 'Loading'}
         className={cn(
           'flex flex-col items-center justify-center gap-2',
           fullscreen && 'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm',
           className
         )}
         role="status"
-        aria-label={text || 'Loading'}
         {...props}
       >
         <Loader2

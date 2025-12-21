@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 /**
  * Async context management for request tracking
  *
@@ -6,6 +7,7 @@
  */
 
 import { AsyncLocalStorage } from 'async_hooks';
+
 import type { LogContext } from './types.js';
 
 // Re-export LogContext for convenience

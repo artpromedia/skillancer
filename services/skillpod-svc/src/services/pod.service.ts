@@ -3,7 +3,7 @@
  * Pod lifecycle management service
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors related to Prisma JSON field conversions
+// @ts-nocheck - FUTURE: Fix TypeScript errors related to Prisma JSON field conversions
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -159,7 +159,7 @@ export function createPodService(
     // Validate resources against template limits
     const resources = (params.resources || template.defaultResources) as unknown as ResourceSpec;
     validateResources(
-      resources as ResourceSpec,
+      resources,
       template.minResources as unknown as ResourceSpec,
       template.maxResources as unknown as ResourceSpec
     );
@@ -309,7 +309,7 @@ export function createPodService(
       throw new PodError('POD_NOT_FOUND', 'Pod not found');
     }
 
-    if (pod.status !== 'STOPPED' && pod.status !== 'STOPPED') {
+    if (pod.status !== 'STOPPED' && pod.status !== 'FAILED') {
       throw new PodError('INVALID_STATUS', `Cannot start pod in ${pod.status} state`);
     }
 

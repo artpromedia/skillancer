@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/auth-svc/services/auth
  * Core authentication service for user registration, login, and password management

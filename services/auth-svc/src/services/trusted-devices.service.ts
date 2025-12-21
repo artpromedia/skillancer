@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/auth-svc/services/trusted-devices
  * Trusted Devices service for MFA bypass

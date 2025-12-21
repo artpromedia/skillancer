@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 /**
  * @module @skillancer/utils/strings
  * String manipulation and formatting utilities
@@ -34,11 +35,7 @@ export function slugify(text: string): string {
  * truncate('Hi', 10) // 'Hi'
  * truncate('Hello World', 8, '…') // 'Hello W…'
  */
-export function truncate(
-  text: string,
-  maxLength: number,
-  suffix: string = '...'
-): string {
+export function truncate(text: string, maxLength: number, suffix: string = '...'): string {
   if (text.length <= maxLength) return text;
   const truncatedLength = maxLength - suffix.length;
   if (truncatedLength <= 0) return suffix.slice(0, maxLength);
@@ -175,11 +172,7 @@ export function stripHtml(html: string): string {
  * pluralize('item', 2) // 'items'
  * pluralize('child', 2, 'children') // 'children'
  */
-export function pluralize(
-  word: string,
-  count: number,
-  plural?: string
-): string {
+export function pluralize(word: string, count: number, plural?: string): string {
   if (count === 1) return word;
   if (plural) return plural;
 

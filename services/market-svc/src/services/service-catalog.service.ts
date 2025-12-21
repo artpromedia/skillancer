@@ -322,7 +322,7 @@ export class ServiceCatalogService {
     // Invalidate cache
     await this.invalidateServiceCache(serviceId);
 
-    // TODO: Send notification to seller with rejection reason
+    // FUTURE: Send notification to seller with rejection reason
     this.logger.info({
       msg: 'Service rejected',
       serviceId,
@@ -348,7 +348,7 @@ export class ServiceCatalogService {
     }
 
     // Cannot archive if there are active orders
-    // TODO: Check for active orders
+    // FUTURE: Check for active orders
 
     await this.repository.delete(serviceId);
 

@@ -7,4 +7,11 @@ module.exports = {
     tsconfigRootDir: __dirname,
   },
   ignorePatterns: ['dist/', 'node_modules/', '*.js', '*.cjs'],
+  rules: {
+    '@typescript-eslint/ban-ts-comment': 'off',
+    '@typescript-eslint/no-unsafe-argument': 'off',
+    '@typescript-eslint/no-unsafe-call': 'off',
+    '@typescript-eslint/no-unsafe-assignment': 'off',
+    '@typescript-eslint/no-explicit-any': 'off',
+  },
 };

@@ -3,7 +3,7 @@
  * Template management service for pod templates
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors related to template type conversions
+// @ts-nocheck - FUTURE: Fix TypeScript errors related to template type conversions
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */

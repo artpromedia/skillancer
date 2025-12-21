@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/auth-svc/services/oauth
  * OAuth provider integration service

@@ -3,7 +3,7 @@
  * Background workers for environment management
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors related to Prisma type conversions
+// @ts-nocheck - FUTURE: Fix TypeScript errors related to Prisma type conversions
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */

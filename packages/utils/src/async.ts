@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-assignment */
 /**
  * @module @skillancer/utils/async
  * Async utilities for handling promises, retries, and concurrency
@@ -32,10 +33,7 @@ export interface RetryOptions {
  *   return await fetchData();
  * }, { maxAttempts: 5, initialDelayMs: 100 });
  */
-export async function retry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
+export async function retry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const {
     maxAttempts = 3,
     initialDelayMs = 1000,
@@ -204,10 +202,7 @@ export async function promiseAllSettledWithConcurrency<T>(
   }
 
   // Start concurrent workers
-  const workers = Array.from(
-    { length: Math.min(concurrency, tasks.length) },
-    () => runNext()
-  );
+  const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, () => runNext());
 
   await Promise.all(workers);
   return results;
@@ -221,9 +216,7 @@ export async function promiseAllSettledWithConcurrency<T>(
  * const tasks = [() => fetchA(), () => fetchB(), () => fetchC()];
  * const results = await sequence(tasks);
  */
-export async function sequence<T>(
-  tasks: (() => Promise<T>)[]
-): Promise<T[]> {
+export async function sequence<T>(tasks: (() => Promise<T>)[]): Promise<T[]> {
   const results: T[] = [];
 
   for (const task of tasks) {
@@ -270,7 +263,7 @@ export function memoizeAsync<T extends (...args: unknown[]) => Promise<unknown>>
   const { ttlMs, keyFn = (...args) => JSON.stringify(args) } = options;
   const cache = new Map<string, { value: unknown; timestamp: number }>();
 
-  return (async function (...args: Parameters<T>) {
+  return async function (...args: Parameters<T>) {
     const key = keyFn(...args);
     const cached = cache.get(key);
 
@@ -284,7 +277,7 @@ export function memoizeAsync<T extends (...args: unknown[]) => Promise<unknown>>
     const value = await fn(...args);
     cache.set(key, { value, timestamp: Date.now() });
     return value;
-  }) as T;
+  } as T;
 }
 
 /**

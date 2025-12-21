@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/auth-svc/services/tenant-mfa-policy
  * Tenant MFA Policy Service

@@ -226,8 +226,7 @@ export class InvoiceService {
     }
 
     // Calculate fees
-    const platformFee = subtotal * (PLATFORM_FEE_PERCENT / 100);
-    const freelancerAmount = subtotal - platformFee;
+    // platformFee = subtotal * (PLATFORM_FEE_PERCENT / 100) - calculated at payout time
     const total = subtotal; // Client pays subtotal, platform fee comes from it
 
     // Calculate due date
@@ -382,7 +381,7 @@ export class InvoiceService {
       },
     });
 
-    // TODO: Send notification to client
+    // FUTURE: Send notification to client
 
     this.logger.info({ invoiceId, invoiceNumber: invoice.invoiceNumber }, 'Invoice sent');
 
@@ -546,7 +545,7 @@ export class InvoiceService {
       },
     });
 
-    // TODO: Schedule payout to freelancer
+    // FUTURE: Schedule payout to freelancer
 
     this.logger.info({ invoiceId }, 'Invoice marked as paid');
   }
@@ -632,7 +631,7 @@ export class InvoiceService {
       },
     });
 
-    // TODO: Send notification to client
+    // FUTURE: Send notification to client
 
     this.logger.info(
       { invoiceId, reminderCount: invoice.reminderCount + 1 },

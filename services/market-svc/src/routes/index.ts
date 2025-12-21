@@ -4,27 +4,19 @@
  */
 
 import { registerAdminReviewRoutes } from './admin-reviews.routes.js';
+import { registerConversationRoutes } from './conversations.routes.js';
 import { registerEnhancedReviewRoutes } from './enhanced-reviews.routes.js';
 import { registerEscrowRoutes } from './escrow.routes.js';
 import { registerInvoiceRoutes } from './invoices.routes.js';
+import { registerMessageRoutes } from './messages.routes.js';
+import { registerNotificationRoutes } from './notifications.routes.js';
 import { registerPayoutRoutes } from './payouts.routes.js';
+import { registerPresenceRoutes } from './presence.routes.js';
 import { rateIntelligenceRoutes } from './rate-intelligence.routes.js';
 import { registerReviewRoutes } from './reviews.routes.js';
 import { registerServiceOrderRoutes } from './service-orders.routes.js';
 import { registerServiceRoutes } from './services.routes.js';
 import { registerStripeWebhookRoutes } from './stripe-webhooks.routes.js';
-
-// Contract routes and services - TODO: Uncomment when implemented
-// import { contractRoutes } from './contract.routes.js';
-// import { contractSubRoutes } from './contract-sub.routes.js';
-// import { ContractService } from '../services/contract.service.js';
-// import { ContractLifecycleService } from '../services/contract-lifecycle.service.js';
-// import { ContractActivityService } from '../services/contract-activity.service.js';
-// import { ContractDocumentService } from '../services/contract-document.service.js';
-// import { ContractSignatureService } from '../services/contract-signature.service.js';
-// import { ContractMilestoneService } from '../services/contract-milestone.service.js';
-// import { ContractTimeEntryService } from '../services/contract-time-entry.service.js';
-// import { ContractAmendmentService } from '../services/contract-amendment.service.js';
 
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
@@ -129,40 +121,39 @@ export async function registerRoutes(
     );
   }
 
-  // TODO: Register contract management routes when implemented
-  // const activityService = new ContractActivityService(deps.prisma, deps.logger);
-  // const signatureService = new ContractSignatureService(deps.prisma, deps.logger, activityService);
-  // const documentService = new ContractDocumentService(deps.prisma, deps.logger);
-  // const contractService = new ContractService(
-  //   deps.prisma,
-  //   deps.logger,
-  //   activityService,
-  //   signatureService
-  // );
-  // const lifecycleService = new ContractLifecycleService(deps.prisma, deps.logger, activityService);
-  // const milestoneService = new ContractMilestoneService(deps.prisma, deps.logger, activityService);
-  // const timeEntryService = new ContractTimeEntryService(deps.prisma, deps.logger, activityService);
-  // const amendmentService = new ContractAmendmentService(deps.prisma, deps.logger, activityService);
+  // Register conversation routes (messaging system)
+  await fastify.register(
+    (instance) => {
+      registerConversationRoutes(instance, deps);
+    },
+    { prefix: '/conversations' }
+  );
 
-  // await fastify.register(
-  //   async (instance) => {
-  //     await contractRoutes(instance, {
-  //       contractService,
-  //       lifecycleService,
-  //       documentService,
-  //       signatureService,
-  //       activityService,
-  //     });
-  //     await contractSubRoutes(instance, {
-  //       milestoneService,
-  //       timeEntryService,
-  //       amendmentService,
-  //       signatureService,
-  //       lifecycleService,
-  //     });
-  //   },
-  //   { prefix: '/contracts' }
-  // );
+  // Register message routes (messaging system)
+  await fastify.register(
+    (instance) => {
+      registerMessageRoutes(instance, deps);
+    },
+    { prefix: '/conversations' }
+  );
+
+  // Register presence routes (messaging system)
+  await fastify.register(
+    (instance) => {
+      registerPresenceRoutes(instance, deps);
+    },
+    { prefix: '/presence' }
+  );
+
+  // Register notification routes
+  await fastify.register(
+    (instance) => {
+      registerNotificationRoutes(instance, deps);
+    },
+    { prefix: '/api' }
+  );
+
+  // FUTURE: Register contract management routes when service implementations are complete
 }
 
 // Re-export route registration functions
@@ -176,6 +167,10 @@ export { registerEscrowRoutes } from './escrow.routes.js';
 export { registerInvoiceRoutes } from './invoices.routes.js';
 export { registerPayoutRoutes } from './payouts.routes.js';
 export { registerStripeWebhookRoutes } from './stripe-webhooks.routes.js';
-// TODO: Export contract routes when implemented
+export { registerConversationRoutes } from './conversations.routes.js';
+export { registerMessageRoutes } from './messages.routes.js';
+export { registerPresenceRoutes } from './presence.routes.js';
+export { registerNotificationRoutes } from './notifications.routes.js';
+// FUTURE: Export contract routes when implemented
 // export { contractRoutes } from './contract.routes.js';
 // export { contractSubRoutes } from './contract-sub.routes.js';

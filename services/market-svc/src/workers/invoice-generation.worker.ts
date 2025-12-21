@@ -68,6 +68,26 @@ export interface ReminderResult {
 }
 
 // =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Get week boundaries for invoice generation
+ */
+function getWeekBoundaries(): { weekStart: Date; weekEnd: Date } {
+  const now = new Date();
+  const weekEnd = new Date(now);
+  weekEnd.setHours(23, 59, 59, 999);
+  weekEnd.setDate(weekEnd.getDate() - 1); // End is yesterday
+
+  const weekStart = new Date(weekEnd);
+  weekStart.setDate(weekStart.getDate() - 6);
+  weekStart.setHours(0, 0, 0, 0);
+
+  return { weekStart, weekEnd };
+}
+
+// =============================================================================
 // WORKER CLASS
 // =============================================================================
 
@@ -93,22 +113,6 @@ export function createInvoiceGenerationWorker(
   let isRunning = false;
 
   const { prisma, logger, sendEmail } = deps;
-
-  // ---------------------------------------------------------------------------
-  // Helper: Get week boundaries
-  // ---------------------------------------------------------------------------
-  function getWeekBoundaries(): { weekStart: Date; weekEnd: Date } {
-    const now = new Date();
-    const weekEnd = new Date(now);
-    weekEnd.setHours(23, 59, 59, 999);
-    weekEnd.setDate(weekEnd.getDate() - 1); // End is yesterday
-
-    const weekStart = new Date(weekEnd);
-    weekStart.setDate(weekStart.getDate() - 6);
-    weekStart.setHours(0, 0, 0, 0);
-
-    return { weekStart, weekEnd };
-  }
 
   // ---------------------------------------------------------------------------
   // Generate invoice for a single contract
@@ -239,6 +243,52 @@ export function createInvoiceGenerationWorker(
   }
 
   // ---------------------------------------------------------------------------
+  // Process single contract for invoice generation
+  // ---------------------------------------------------------------------------
+  async function processContractForGeneration(
+    contract: {
+      id: string;
+      title: string;
+      hourlyRate: { toNumber(): number } | null;
+      freelancerUserId: string;
+      clientUserId: string;
+      freelancer: { id: string; email: string; displayName: string | null };
+      client: { id: string; email: string; displayName: string | null };
+    },
+    weekStart: Date,
+    weekEnd: Date
+  ): Promise<{ generated: boolean; skipped: boolean; error?: string }> {
+    try {
+      const { invoice, skipped } = await generateInvoiceForContract(
+        {
+          id: contract.id,
+          title: contract.title,
+          hourlyRate: contract.hourlyRate ? Number(contract.hourlyRate) : null,
+          freelancerUserId: contract.freelancerUserId,
+          clientUserId: contract.clientUserId,
+          freelancer: contract.freelancer,
+          client: contract.client,
+        },
+        weekStart,
+        weekEnd
+      );
+
+      return { generated: !skipped && !!invoice, skipped };
+    } catch (error) {
+      logger.error({
+        msg: 'Failed to generate invoice for contract',
+        contractId: contract.id,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {
+        generated: false,
+        skipped: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Run generation job
   // ---------------------------------------------------------------------------
   async function runGeneration(): Promise<InvoiceGenerationResult> {
@@ -274,38 +324,16 @@ export function createInvoiceGenerationWorker(
       });
 
       for (const contract of contracts) {
-        try {
-          const { invoice, skipped } = await generateInvoiceForContract(
-            {
-              id: contract.id,
-              title: contract.title,
-              hourlyRate: contract.hourlyRate ? Number(contract.hourlyRate) : null,
-              freelancerUserId: contract.freelancerUserId,
-              clientUserId: contract.clientUserId,
-              freelancer: contract.freelancer,
-              client: contract.client,
-            },
-            weekStart,
-            weekEnd
-          );
+        const outcome = await processContractForGeneration(contract, weekStart, weekEnd);
 
-          if (skipped) {
-            result.skippedCount++;
-          } else if (invoice) {
-            result.generatedCount++;
-            result.contractIds.push(contract.id);
-          }
-        } catch (error) {
+        if (outcome.error) {
           result.failedCount++;
-          result.errors.push({
-            contractId: contract.id,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
-          logger.error({
-            msg: 'Failed to generate invoice for contract',
-            contractId: contract.id,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
+          result.errors.push({ contractId: contract.id, error: outcome.error });
+        } else if (outcome.skipped) {
+          result.skippedCount++;
+        } else if (outcome.generated) {
+          result.generatedCount++;
+          result.contractIds.push(contract.id);
         }
       }
 
@@ -326,6 +354,96 @@ export function createInvoiceGenerationWorker(
   }
 
   // ---------------------------------------------------------------------------
+  // Process single invoice reminder
+  // ---------------------------------------------------------------------------
+  async function processInvoiceReminder(
+    invoice: {
+      id: string;
+      invoiceNumber: string;
+      total: unknown;
+      dueAt: Date | null;
+      contract?: { client?: { email?: string }; title?: string } | null;
+    },
+    daysUntilDue: number
+  ): Promise<{ sent: boolean; error?: string }> {
+    try {
+      // Send reminder email if email service available
+      if (sendEmail && invoice.contract?.client?.email) {
+        await sendEmail({
+          to: invoice.contract.client.email,
+          subject: `Payment Reminder: Invoice ${invoice.invoiceNumber}`,
+          template: 'invoice-reminder',
+          data: {
+            invoiceNumber: invoice.invoiceNumber,
+            amount: Number(invoice.total),
+            dueDate: invoice.dueAt,
+            contractTitle: invoice.contract.title ?? 'Contract',
+            daysUntilDue,
+          },
+        });
+      }
+
+      // Update reminder count
+      await prisma.contractInvoice.update({
+        where: { id: invoice.id },
+        data: {
+          reminderCount: { increment: 1 },
+          lastReminderSentAt: new Date(),
+        },
+      });
+
+      logger.info({
+        msg: 'Invoice reminder sent',
+        invoiceId: invoice.id,
+        daysUntilDue,
+      });
+
+      return { sent: true };
+    } catch (error) {
+      return { sent: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Process reminders for a specific day threshold
+  // ---------------------------------------------------------------------------
+  async function processRemindersForDay(
+    targetDate: Date,
+    daysUntilDue: number,
+    result: ReminderResult
+  ): Promise<void> {
+    const invoices = await prisma.contractInvoice.findMany({
+      where: {
+        status: { in: ['SENT', 'VIEWED'] },
+        dueAt: {
+          gte: targetDate,
+          lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000),
+        },
+        reminderCount: { lt: 3 },
+      },
+      include: {
+        contract: {
+          select: {
+            title: true,
+            client: { select: { email: true, displayName: true } },
+          },
+        },
+      },
+    });
+
+    for (const invoice of invoices) {
+      const outcome = await processInvoiceReminder(invoice, daysUntilDue);
+      if (outcome.sent) {
+        result.sentCount++;
+        result.invoiceIds.push(invoice.id);
+      } else if (outcome.error) {
+        result.failedCount++;
+        result.errors.push({ invoiceId: invoice.id, error: outcome.error });
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Run reminder job
   // ---------------------------------------------------------------------------
   async function runReminders(): Promise<ReminderResult> {
@@ -341,80 +459,11 @@ export function createInvoiceGenerationWorker(
       const now = new Date();
       now.setHours(0, 0, 0, 0);
 
-      // Find invoices needing reminders
-      // Sent invoices with due date approaching
+      // Process reminders for each threshold day
       for (const days of REMINDER_DAYS) {
         const targetDate = new Date(now);
         targetDate.setDate(targetDate.getDate() + days);
-
-        const invoices = await prisma.contractInvoice.findMany({
-          where: {
-            status: { in: ['SENT', 'VIEWED'] },
-            dueAt: {
-              gte: targetDate,
-              lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000),
-            },
-            reminderCount: { lt: 3 }, // Max 3 reminders
-          },
-          include: {
-            contract: {
-              select: {
-                title: true,
-                client: { select: { email: true, displayName: true } },
-              },
-            },
-          },
-        });
-
-        for (const invoice of invoices) {
-          try {
-            // Send reminder email
-            if (
-              sendEmail &&
-              (invoice as { contract?: { client?: { email?: string } } }).contract?.client?.email
-            ) {
-              const invoiceContract = invoice as {
-                contract: { client: { email: string }; title: string };
-              };
-              await sendEmail({
-                to: invoiceContract.contract.client.email,
-                subject: `Payment Reminder: Invoice ${invoice.invoiceNumber}`,
-                template: 'invoice-reminder',
-                data: {
-                  invoiceNumber: invoice.invoiceNumber,
-                  amount: Number(invoice.total),
-                  dueDate: invoice.dueAt,
-                  contractTitle: invoiceContract.contract.title,
-                  daysUntilDue: days,
-                },
-              });
-            }
-
-            // Update reminder count
-            await prisma.contractInvoice.update({
-              where: { id: invoice.id },
-              data: {
-                reminderCount: { increment: 1 },
-                lastReminderSentAt: new Date(),
-              },
-            });
-
-            result.sentCount++;
-            result.invoiceIds.push(invoice.id);
-
-            logger.info({
-              msg: 'Invoice reminder sent',
-              invoiceId: invoice.id,
-              daysUntilDue: days,
-            });
-          } catch (error) {
-            result.failedCount++;
-            result.errors.push({
-              invoiceId: invoice.id,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            });
-          }
-        }
+        await processRemindersForDay(targetDate, days, result);
       }
 
       // Mark overdue invoices

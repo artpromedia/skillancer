@@ -23,8 +23,8 @@ export {
 // ============================================================================
 
 // Button
-export { Button, buttonVariants } from './components/button';
-export type { ButtonProps } from './components/button';
+export { Button, buttonVariants } from './components/Button';
+export type { ButtonProps } from './components/Button';
 
 // Input
 export { Input } from './components/input';

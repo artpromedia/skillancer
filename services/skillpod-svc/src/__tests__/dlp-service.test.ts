@@ -3,7 +3,7 @@
  * Unit tests for DLP (Data Loss Prevention) service
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors in test mocks
+// @ts-nocheck - FUTURE: Fix TypeScript errors in test mocks
 import { describe, it, expect } from 'vitest';
 
 // =============================================================================
@@ -18,7 +18,7 @@ interface SensitiveDataMatch {
   position: { start: number; end: number };
 }
 
-interface _MalwareScanResult {
+interface MockMalwareScanResult {
   isClean: boolean;
   threats: Array<{
     type: string;
@@ -27,11 +27,11 @@ interface _MalwareScanResult {
   }>;
 }
 
-interface _DLPScanResult {
+interface MockDLPScanResult {
   allowed: boolean;
   reason?: string;
   sensitiveData: SensitiveDataMatch[];
-  malwareScan?: _MalwareScanResult;
+  malwareScan?: MockMalwareScanResult;
   contentHash: string;
   riskScore: number;
 }

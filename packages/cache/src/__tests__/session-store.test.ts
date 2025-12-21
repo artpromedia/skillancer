@@ -1,7 +1,7 @@
 import Redis from 'ioredis-mock';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-import { SessionStore, type SessionData, DeviceInfo } from '../session-store';
+import { SessionStore, type SessionData, type DeviceInfo } from '../session-store';
 
 describe('SessionStore', () => {
   let redis: InstanceType<typeof Redis>;

@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '20.19.4'
   PNPM_VERSION: '8'
   CI: true
   HUSKY: 0

@@ -1,8 +1,8 @@
-import * as React from 'react';
 import { Inbox } from 'lucide-react';
+import * as React from 'react';
 
+import { Button, type ButtonProps } from './Button';
 import { cn } from '../lib/utils';
-import { Button, type ButtonProps } from './button';
 
 export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -37,7 +37,7 @@ export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
 
 /**
  * Empty state placeholder with icon, title, description, and optional action
- * 
+ *
  * @example
  * <EmptyState
  *   icon={<FileX className="h-12 w-12" />}
@@ -66,28 +66,22 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
       <div
         ref={ref}
         className={cn(
-          'flex flex-col items-center justify-center py-12 px-4 text-center',
+          'flex flex-col items-center justify-center px-4 py-12 text-center',
           className
         )}
         {...props}
       >
-        <div className="mb-4 text-muted-foreground">
-          {icon || <Inbox className="h-12 w-12" />}
-        </div>
+        <div className="text-muted-foreground mb-4">{icon || <Inbox className="h-12 w-12" />}</div>
         <h3 className="mb-1 text-lg font-semibold">{title}</h3>
         {description && (
-          <p className="mb-4 max-w-sm text-sm text-muted-foreground">
-            {description}
-          </p>
+          <p className="text-muted-foreground mb-4 max-w-sm text-sm">{description}</p>
         )}
         {actionLabel && onAction && (
           <Button onClick={onAction} {...actionProps}>
             {actionLabel}
           </Button>
         )}
-        {secondaryAction && (
-          <div className="mt-2">{secondaryAction}</div>
-        )}
+        {secondaryAction && <div className="mt-2">{secondaryAction}</div>}
       </div>
     );
   }

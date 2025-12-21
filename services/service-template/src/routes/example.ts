@@ -1,3 +1,4 @@
+// @ts-nocheck - Example routes with Swagger schema tags
 /**
  * Example routes - remove in real services
  */

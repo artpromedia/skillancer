@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '20.19.4'
   PNPM_VERSION: '8'
   # Turborepo Remote Caching
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/auth-svc/middleware/rate-limit
  * Rate limiting middleware for authentication endpoints

@@ -10,6 +10,9 @@ import type {
 } from '../types/contract.types.js';
 import type { PrismaClient, Prisma, ContractActivityType } from '@skillancer/database';
 
+/** Actor type for contract activities */
+type ContractActorType = 'CLIENT' | 'FREELANCER' | 'ADMIN';
+
 /**
  * Contract Activity Repository
  *
@@ -304,7 +307,7 @@ export class ContractActivityRepository {
   async logContractPaused(
     contractId: string,
     actorUserId: string,
-    actorType: 'CLIENT' | 'FREELANCER' | 'ADMIN',
+    actorType: ContractActorType,
     reason?: string
   ) {
     return this.log({
@@ -320,11 +323,7 @@ export class ContractActivityRepository {
   /**
    * Log contract resumed
    */
-  async logContractResumed(
-    contractId: string,
-    actorUserId: string,
-    actorType: 'CLIENT' | 'FREELANCER' | 'ADMIN'
-  ) {
+  async logContractResumed(contractId: string, actorUserId: string, actorType: ContractActorType) {
     return this.log({
       contractId,
       actorUserId,
@@ -353,7 +352,7 @@ export class ContractActivityRepository {
   async logContractTerminated(
     contractId: string,
     actorUserId: string,
-    actorType: 'CLIENT' | 'FREELANCER' | 'ADMIN',
+    actorType: ContractActorType,
     reason: string
   ) {
     return this.log({

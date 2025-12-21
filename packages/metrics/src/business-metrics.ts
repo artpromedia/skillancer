@@ -9,6 +9,7 @@
  */
 
 import { MetricsService } from './index.js';
+
 import type { MetricConfig } from './types.js';
 
 /**

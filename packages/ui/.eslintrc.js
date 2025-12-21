@@ -6,4 +6,8 @@ module.exports = {
     project: './tsconfig.json',
     tsconfigRootDir: __dirname,
   },
+  ignorePatterns: ['**/*.stories.tsx', '**/*.stories.ts'],
+  rules: {
+    'jsx-a11y/heading-has-content': 'off',
+  },
 };

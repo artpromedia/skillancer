@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
 /**
  * @module @skillancer/utils/objects
  * Object manipulation utilities
@@ -11,10 +12,7 @@
  * @example
  * pick({ a: 1, b: 2, c: 3 }, ['a', 'c']) // { a: 1, c: 3 }
  */
-export function pick<T extends object, K extends keyof T>(
-  obj: T,
-  keys: K[]
-): Pick<T, K> {
+export function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
   const result = {} as Pick<T, K>;
   for (const key of keys) {
     if (key in obj) {
@@ -32,10 +30,7 @@ export function pick<T extends object, K extends keyof T>(
  * @example
  * omit({ a: 1, b: 2, c: 3 }, ['b']) // { a: 1, c: 3 }
  */
-export function omit<T extends object, K extends keyof T>(
-  obj: T,
-  keys: K[]
-): Omit<T, K> {
+export function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
   const result = { ...obj } as Omit<T, K>;
   for (const key of keys) {
     delete (result as Record<string, unknown>)[key as string];
@@ -51,13 +46,10 @@ export function omit<T extends object, K extends keyof T>(
  * @example
  * deepMerge({ a: { b: 1 } }, { a: { c: 2 } }) // { a: { b: 1, c: 2 } }
  */
-export function deepMerge<T extends object>(
-  target: T,
-  ...sources: Partial<T>[]
-): T {
+export function deepMerge<T extends object>(target: T, ...sources: Partial<T>[]): T {
   if (!sources.length) return target;
 
-  const result = { ...target } as T;
+  const result = { ...target };
 
   for (const source of sources) {
     if (!source) continue;
@@ -67,10 +59,7 @@ export function deepMerge<T extends object>(
       const targetValue = result[key];
 
       if (isPlainObject(sourceValue) && isPlainObject(targetValue)) {
-        result[key] = deepMerge(
-          targetValue as object,
-          sourceValue as object
-        ) as T[keyof T];
+        result[key] = deepMerge(targetValue as object, sourceValue as object) as T[keyof T];
       } else if (sourceValue !== undefined) {
         result[key] = sourceValue as T[keyof T];
       }
@@ -187,11 +176,7 @@ export function deepClone<T>(obj: T): T {
  * get({ a: { b: { c: 1 } } }, 'a.b.c') // 1
  * get({ a: 1 }, 'b.c', 'default') // 'default'
  */
-export function get<T = unknown>(
-  obj: unknown,
-  path: string,
-  defaultValue?: T
-): T | undefined {
+export function get<T = unknown>(obj: unknown, path: string, defaultValue?: T): T | undefined {
   const keys = path.split('.');
   let result: unknown = obj;
 
@@ -214,11 +199,7 @@ export function get<T = unknown>(
  * @example
  * set({}, 'a.b.c', 1) // { a: { b: { c: 1 } } }
  */
-export function set<T extends object>(
-  obj: T,
-  path: string,
-  value: unknown
-): T {
+export function set<T extends object>(obj: T, path: string, value: unknown): T {
   const keys = path.split('.');
   let current: Record<string, unknown> = obj as Record<string, unknown>;
 
@@ -276,7 +257,7 @@ export function flatten(
     const newKey = prefix ? `${prefix}.${key}` : key;
 
     if (isPlainObject(value)) {
-      Object.assign(result, flatten(value as Record<string, unknown>, newKey));
+      Object.assign(result, flatten(value, newKey));
     } else {
       result[newKey] = value;
     }
@@ -292,9 +273,7 @@ export function flatten(
  * @example
  * unflatten({ 'a.b': 1, 'a.c.d': 2 }) // { a: { b: 1, c: { d: 2 } } }
  */
-export function unflatten(
-  obj: Record<string, unknown>
-): Record<string, unknown> {
+export function unflatten(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
@@ -313,12 +292,7 @@ export function unflatten(
 export function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
 
-  if (
-    typeof a !== 'object' ||
-    typeof b !== 'object' ||
-    a === null ||
-    b === null
-  ) {
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
     return false;
   }
 

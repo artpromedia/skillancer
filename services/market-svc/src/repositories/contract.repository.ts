@@ -16,7 +16,13 @@ import type {
   CreateContractInput,
   UpdateContractInput,
 } from '../types/contract.types.js';
-import type { PrismaClient, ContractStatusV2 } from '@skillancer/database';
+import type {
+  PrismaClient,
+  ContractStatusV2,
+  TerminationType,
+  ContractDisputeStatus,
+  AmendmentStatus,
+} from '@skillancer/database';
 
 /**
  * Contract Repository
@@ -96,9 +102,10 @@ export class ContractRepository {
 
     let nextNumber = 1;
     if (lastContract?.contractNumber) {
-      const match = lastContract.contractNumber.match(/-(\d+)$/);
+      const regex = /-(\d+)$/;
+      const match = regex.exec(lastContract.contractNumber);
       if (match?.[1]) {
-        nextNumber = parseInt(match[1], 10) + 1;
+        nextNumber = Number.parseInt(match[1], 10) + 1;
       }
     }
 
@@ -218,7 +225,7 @@ export class ContractRepository {
       pausedAt: Date;
       completedAt: Date;
       terminatedAt: Date;
-      terminationType: import('@skillancer/database').TerminationType;
+      terminationType: TerminationType;
       terminationReason: string;
     }>
   ) {
@@ -283,6 +290,92 @@ export class ContractRepository {
   }
 
   /**
+   * Build date range filter
+   */
+  private buildDateRangeFilter(
+    from: Date | undefined,
+    to: Date | undefined
+  ): { gte?: Date; lte?: Date } | undefined {
+    if (!from && !to) return undefined;
+    const filter: { gte?: Date; lte?: Date } = {};
+    if (from) filter.gte = from;
+    if (to) filter.lte = to;
+    return filter;
+  }
+
+  /**
+   * Build dispute filter
+   */
+  private buildDisputeFilter(
+    hasActiveDispute: boolean | undefined
+  ): Prisma.ContractV2WhereInput['disputes'] {
+    if (hasActiveDispute === undefined) return undefined;
+    const activeStatuses: ContractDisputeStatus[] = ['OPEN', 'UNDER_REVIEW', 'ESCALATED'];
+    return hasActiveDispute
+      ? { some: { status: { in: activeStatuses } } }
+      : { none: { status: { in: activeStatuses } } };
+  }
+
+  /**
+   * Build amendment filter
+   */
+  private buildAmendmentFilter(
+    hasPendingAmendments: boolean | undefined
+  ): Prisma.ContractV2WhereInput['amendments'] {
+    if (hasPendingAmendments === undefined) return undefined;
+    const pendingStatuses: AmendmentStatus[] = ['PROPOSED', 'PENDING_CLIENT', 'PENDING_FREELANCER'];
+    return hasPendingAmendments
+      ? { some: { status: { in: pendingStatuses } } }
+      : { none: { status: { in: pendingStatuses } } };
+  }
+
+  /**
+   * Build basic filters for the where clause
+   */
+  private buildBasicFilters(options: {
+    tenantId: string | undefined;
+    clientId: string | undefined;
+    freelancerId: string | undefined;
+    userId: string | undefined;
+    jobId: string | undefined;
+  }): Prisma.ContractV2WhereInput {
+    const where: Prisma.ContractV2WhereInput = {};
+    if (options.tenantId) where.tenantId = options.tenantId;
+    if (options.clientId) where.clientUserId = options.clientId;
+    if (options.freelancerId) where.freelancerUserId = options.freelancerId;
+    if (options.userId)
+      where.OR = [{ clientUserId: options.userId }, { freelancerUserId: options.userId }];
+    if (options.jobId) where.projectId = options.jobId;
+    return where;
+  }
+
+  /**
+   * Build enum filters for status, contractType, rateType
+   */
+  private applyEnumFilters(
+    where: Prisma.ContractV2WhereInput,
+    options: {
+      status?: ContractListOptions['status'];
+      contractType?: ContractListOptions['contractType'];
+      rateType?: ContractListOptions['rateType'];
+    }
+  ): void {
+    if (options.status) {
+      where.status = Array.isArray(options.status) ? { in: options.status } : options.status;
+    }
+    if (options.contractType) {
+      where.contractType = Array.isArray(options.contractType)
+        ? { in: options.contractType }
+        : options.contractType;
+    }
+    if (options.rateType) {
+      where.rateType = Array.isArray(options.rateType)
+        ? { in: options.rateType }
+        : options.rateType;
+    }
+  }
+
+  /**
    * List contracts with filters and pagination
    */
   async list(options: ContractListOptions): Promise<{
@@ -311,66 +404,23 @@ export class ContractRepository {
       limit = 20,
     } = options;
 
-    const where: Prisma.ContractV2WhereInput = {};
+    // Build where clause
+    const where = this.buildBasicFilters({ tenantId, clientId, freelancerId, userId, jobId });
+    this.applyEnumFilters(where, { status, contractType, rateType });
 
-    if (tenantId) where.tenantId = tenantId;
-    if (clientId) where.clientUserId = clientId;
-    if (freelancerId) where.freelancerUserId = freelancerId;
-    if (userId) {
-      where.OR = [{ clientUserId: userId }, { freelancerUserId: userId }];
-    }
-    if (jobId) where.projectId = jobId;
+    // Apply date range filters
+    const startDateFilter = this.buildDateRangeFilter(startDateFrom, startDateTo);
+    const endDateFilter = this.buildDateRangeFilter(endDateFrom, endDateTo);
+    if (startDateFilter) where.startDate = startDateFilter;
+    if (endDateFilter) where.endDate = endDateFilter;
 
-    if (status) {
-      where.status = Array.isArray(status) ? { in: status } : status;
-    }
-    if (contractType) {
-      where.contractType = Array.isArray(contractType) ? { in: contractType } : contractType;
-    }
-    if (rateType) {
-      where.rateType = Array.isArray(rateType) ? { in: rateType } : rateType;
-    }
+    // Apply relation filters
+    const disputeFilter = this.buildDisputeFilter(hasActiveDispute);
+    const amendmentFilter = this.buildAmendmentFilter(hasPendingAmendments);
+    if (disputeFilter) where.disputes = disputeFilter;
+    if (amendmentFilter) where.amendments = amendmentFilter;
 
-    if (startDateFrom || startDateTo) {
-      where.startDate = {};
-      if (startDateFrom) where.startDate.gte = startDateFrom;
-      if (startDateTo) where.startDate.lte = startDateTo;
-    }
-
-    if (endDateFrom || endDateTo) {
-      where.endDate = {};
-      if (endDateFrom) where.endDate.gte = endDateFrom;
-      if (endDateTo) where.endDate.lte = endDateTo;
-    }
-
-    if (hasActiveDispute !== undefined) {
-      if (hasActiveDispute) {
-        where.disputes = {
-          some: {
-            status: { in: ['OPEN', 'UNDER_REVIEW', 'ESCALATED'] },
-          },
-        };
-      } else {
-        where.disputes = {
-          none: {
-            status: { in: ['OPEN', 'UNDER_REVIEW', 'ESCALATED'] },
-          },
-        };
-      }
-    }
-
-    if (hasPendingAmendments !== undefined) {
-      if (hasPendingAmendments) {
-        where.amendments = {
-          some: { status: { in: ['PROPOSED', 'PENDING_CLIENT', 'PENDING_FREELANCER'] } },
-        };
-      } else {
-        where.amendments = {
-          none: { status: { in: ['PROPOSED', 'PENDING_CLIENT', 'PENDING_FREELANCER'] } },
-        };
-      }
-    }
-
+    // Apply search filter
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
@@ -547,18 +597,20 @@ export class ContractRepository {
     durationWeeks?: number;
   }): number {
     switch (data.rateType) {
-      case 'HOURLY':
+      case 'HOURLY': {
         // Estimate based on weekly hours and duration
         const weeklyHours = data.weeklyHoursMax || 40;
         const weeks = data.durationWeeks || 4;
         return (data.hourlyRate || 0) * weeklyHours * weeks;
+      }
       case 'FIXED':
         return data.fixedAmount || 0;
       case 'MILESTONE':
         return (data.milestones || []).reduce((sum, m) => sum + m.amount, 0);
-      case 'RETAINER':
+      case 'RETAINER': {
         const months = data.durationWeeks ? Math.ceil(data.durationWeeks / 4) : 1;
         return (data.retainerAmount || 0) * months;
+      }
       default:
         return 0;
     }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unused-vars, import/export, import/no-named-as-default */
 /**
  * @skillancer/logger
  *
@@ -22,6 +23,7 @@
  */
 
 import pino, { type Logger, type LoggerOptions, type DestinationStream } from 'pino';
+
 import { asyncLocalStorage, getContext } from './context.js';
 import { SENSITIVE_FIELDS, createRedactPaths } from './redaction.js';
 

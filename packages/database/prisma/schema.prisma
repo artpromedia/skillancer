@@ -66,6 +66,9 @@ model User {
   subscriptions         Subscription[]
   stripeCustomer        StripeCustomer?
   notifications         Notification[]
+  notificationPreferences NotificationPreference[]
+  notificationDigests     NotificationDigest[]
+  emailUnsubscribes       EmailUnsubscribe[]
   refreshTokens         RefreshToken[]
   auditLogs             AuditLog[]                 @relation("UserAuditLogs")
   mfa                   UserMfa?
@@ -126,6 +129,37 @@ model User {
   disputeMessages                   ContractDisputeMessage[]  @relation("DisputeMessageSender")
   invoicesAsClient                  ContractInvoice[]         @relation("ClientInvoices")
   invoicesAsFreelancer              ContractInvoice[]         @relation("FreelancerInvoices")
+
+  // Real-time Messaging
+  conversationParticipants          ConversationParticipant[] @relation("UserConversationParticipants")
+  conversationMessages              ConversationMessage[]     @relation("UserConversationMessages")
+  messageReactions                  ConversationMessageReaction[] @relation("UserMessageReactions")
+  messageReadReceipts               ConversationMessageReadReceipt[] @relation("UserMessageReadReceipts")
+  messageAttachments                MessageAttachment[]       @relation("UserMessageAttachments")
+  presence                          UserPresence?             @relation("UserPresenceInfo")
+  blockedUsers                      UserBlocklist[]           @relation("BlockedByUser")
+  blockedByUsers                    UserBlocklist[]           @relation("BlockedUser")
+
+  // CRM - Client Relationship Management
+  crmClients                        Client[]                  @relation("FreelancerClients")
+  crmPlatformClients                Client[]                  @relation("PlatformClients")
+
+  // Cockpit - Project Management
+  cockpitProjects                   CockpitProject[]          @relation("FreelancerProjects")
+
+  // Time Tracking
+  cockpitTimeEntries                CockpitTimeEntry[]        @relation("FreelancerTimeEntries")
+  timeTrackingSettings              TimeTrackingSettings?     @relation("TimeTrackingSettings")
+  activeTimer                       ActiveTimer?              @relation("ActiveTimer")
+  timesheets                        Timesheet[]               @relation("FreelancerTimesheets")
+  timeCategories                    TimeCategory[]            @relation("FreelancerTimeCategories")
+
+  // Calendar Integration
+  calendarConnections               CalendarConnection[]      @relation("UserCalendarConnections")
+  calendarEvents                    CalendarEvent[]           @relation("UserCalendarEvents")
+  availabilitySchedules             AvailabilitySchedule[]    @relation("UserAvailabilitySchedules")
+  bookingLinks                      BookingLink[]             @relation("UserBookingLinks")
+  bookings                          Booking[]                 @relation("UserBookings")
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -767,15 +801,16 @@ model Job {
   deletedAt   DateTime? @map("deleted_at")
 
   // Relations
-  client      User               @relation("ClientJobs", fields: [clientId], references: [id])
-  tenant      Tenant?            @relation(fields: [tenantId], references: [id])
-  bids        Bid[]
-  contracts   Contract[]
-  contractsV2 ContractV2[]       @relation("JobContractsV2")
-  skills      JobSkill[]
-  messages    Message[]          @relation("JobMessages")
-  invitations ProjectInvitation[]
-  questions   ProjectQuestion[]
+  client        User               @relation("ClientJobs", fields: [clientId], references: [id])
+  tenant        Tenant?            @relation(fields: [tenantId], references: [id])
+  bids          Bid[]
+  contracts     Contract[]
+  contractsV2   ContractV2[]       @relation("JobContractsV2")
+  skills        JobSkill[]
+  messages      Message[]          @relation("JobMessages")
+  invitations   ProjectInvitation[]
+  questions     ProjectQuestion[]
+  conversations Conversation[]     @relation("JobConversations")
 
   @@index([clientId])
   @@index([tenantId])
@@ -888,11 +923,12 @@ model Bid {
   withdrawnAt DateTime? @map("withdrawn_at")
 
   // Relations
-  job         Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  freelancer  User         @relation(fields: [freelancerId], references: [id])
-  contract    Contract?
-  contractsV2 ContractV2[] @relation("BidContractsV2")
-  messages    BidMessage[]
+  job           Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  freelancer    User           @relation(fields: [freelancerId], references: [id])
+  contract      Contract?
+  contractsV2   ContractV2[]   @relation("BidContractsV2")
+  messages      BidMessage[]
+  conversations Conversation[] @relation("BidConversations")
 
   @@unique([jobId, freelancerId])
   @@index([freelancerId])
@@ -1371,6 +1407,7 @@ model ServiceOrder {
   revisionRequests ServiceRevisionRequest[]
   messages         ServiceOrderMessage[]
   review           ServiceReview?
+  conversations    Conversation[]       @relation("ServiceOrderConversations")
 
   @@index([serviceId])
   @@index([buyerId])
@@ -3140,56 +3177,232 @@ enum ThresholdContextType {
 }
 
 // ============================================================================
-// NOTIFICATIONS
+// NOTIFICATIONS - Unified Notification System
 // ============================================================================
 
 model Notification {
-  id      String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId  String              @map("user_id") @db.Uuid
-  type    NotificationType
-  title   String              @db.VarChar(200)
-  message String              @db.Text
-  data    Json                @default("{}")
-  channel NotificationChannel @default(IN_APP)
-
-  readAt    DateTime? @map("read_at")
-  sentAt    DateTime? @map("sent_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-
+  id       String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId   String               @map("user_id") @db.Uuid
+  
+  // Notification details
+  type     String               @db.VarChar(100) // 'NEW_MESSAGE', 'BID_RECEIVED', etc.
+  category NotificationCategory
+  priority NotificationPriority @default(NORMAL)
+  
+  // Content
+  title    String               @db.VarChar(200)
+  body     String               @db.Text
+  iconUrl  String?              @map("icon_url") @db.VarChar(500)
+  imageUrl String?              @map("image_url") @db.VarChar(500)
+  
+  // Action
+  actionUrl   String? @map("action_url") @db.VarChar(500)
+  actionLabel String? @map("action_label") @db.VarChar(100)
+  
+  // Data payload
+  data Json? @default("{}")
+  
+  // Grouping
+  groupKey   String? @map("group_key") @db.VarChar(255)
+  groupCount Int     @default(1) @map("group_count")
+  
+  // Status
+  isRead      Boolean   @default(false) @map("is_read")
+  readAt      DateTime? @map("read_at")
+  isDismissed Boolean   @default(false) @map("is_dismissed")
+  dismissedAt DateTime? @map("dismissed_at")
+  
+  // Delivery tracking
+  channels       String[] // ['IN_APP', 'EMAIL', 'PUSH']
+  deliveryStatus Json?    @map("delivery_status") // {channel: status}
+  
+  // Expiration
+  expiresAt DateTime? @map("expires_at")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([type])
-  @@index([readAt])
-  @@index([createdAt])
+  
   @@map("notifications")
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([userId, category])
+  @@index([type])
+  @@index([createdAt])
+  @@index([groupKey])
+  @@index([expiresAt])
 }
 
-enum NotificationType {
-  JOB_POSTED
-  BID_RECEIVED
-  BID_ACCEPTED
-  BID_REJECTED
-  CONTRACT_STARTED
-  CONTRACT_COMPLETED
-  MILESTONE_COMPLETED
-  PAYMENT_RECEIVED
-  PAYMENT_SENT
-  MESSAGE_RECEIVED
-  REVIEW_RECEIVED
+model NotificationPreference {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String @map("user_id") @db.Uuid
+  notificationType String @map("notification_type") @db.VarChar(100)
+  
+  // Channel preferences
+  inAppEnabled Boolean @default(true) @map("in_app_enabled")
+  emailEnabled Boolean @default(true) @map("email_enabled")
+  pushEnabled  Boolean @default(true) @map("push_enabled")
+  smsEnabled   Boolean @default(false) @map("sms_enabled")
+  
+  // Email preferences
+  emailFrequency EmailFrequency @default(IMMEDIATE) @map("email_frequency")
+  
+  // Quiet hours
+  quietHoursEnabled  Boolean @default(false) @map("quiet_hours_enabled")
+  quietHoursStart    String? @map("quiet_hours_start") @db.VarChar(5) // "22:00"
+  quietHoursEnd      String? @map("quiet_hours_end") @db.VarChar(5)   // "08:00"
+  quietHoursTimezone String? @map("quiet_hours_timezone") @db.VarChar(50)
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("notification_preferences")
+  @@unique([userId, notificationType])
+  @@index([userId])
+}
+
+model NotificationTemplate {
+  id          String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  type        String @unique @db.VarChar(100)
+  name        String @db.VarChar(200)
+  description String? @db.Text
+  
+  // Category
+  category NotificationCategory
+  
+  // Channel templates
+  inAppTitle String  @map("in_app_title") @db.VarChar(200)
+  inAppBody  String  @map("in_app_body") @db.Text
+  
+  emailSubject      String? @map("email_subject") @db.VarChar(200)
+  emailHtmlTemplate String? @map("email_html_template") @db.Text
+  emailTextTemplate String? @map("email_text_template") @db.Text
+  
+  pushTitle String? @map("push_title") @db.VarChar(200)
+  pushBody  String? @map("push_body") @db.VarChar(500)
+  
+  smsTemplate String? @map("sms_template") @db.VarChar(500)
+  
+  // Default settings
+  defaultPriority NotificationPriority @default(NORMAL) @map("default_priority")
+  defaultChannels String[]             @map("default_channels")
+  
+  // Groupable
+  isGroupable      Boolean @default(false) @map("is_groupable")
+  groupKeyTemplate String? @map("group_key_template") @db.VarChar(255) // e.g., "messages:{{conversationId}}"
+  
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@map("notification_templates")
+  @@index([category])
+  @@index([isActive])
+}
+
+model NotificationDigest {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  
+  // Digest type
+  digestType DigestType @map("digest_type")
+  
+  // Period
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+  
+  // Content
+  notificationIds String[] @map("notification_ids")
+  summary         Json     // Aggregated summary
+  
+  // Delivery
+  status       DigestStatus @default(PENDING)
+  scheduledFor DateTime     @map("scheduled_for")
+  sentAt       DateTime?    @map("sent_at")
+  
+  // Email tracking
+  emailId String? @map("email_id") @db.VarChar(255)
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("notification_digests")
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledFor])
+}
+
+model EmailUnsubscribe {
+  id     String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String? @map("user_id") @db.Uuid
+  email  String  @db.VarChar(255)
+  
+  // Unsubscribe type
+  unsubscribeType  UnsubscribeType       @map("unsubscribe_type")
+  category         NotificationCategory?
+  notificationType String?               @map("notification_type") @db.VarChar(100)
+  
+  // Source
+  source String @db.VarChar(50) // 'EMAIL_LINK', 'PREFERENCES', 'ADMIN'
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("email_unsubscribes")
+  @@unique([email, unsubscribeType, category, notificationType])
+  @@index([email])
+  @@index([userId])
+}
+
+// Notification Enums
+enum NotificationCategory {
+  MESSAGES
+  PROJECTS
+  CONTRACTS
+  PAYMENTS
+  ACCOUNT
+  MARKETING
   SYSTEM
-  // Security/Kill Switch notifications
-  ACCESS_REVOKED
-  ACCESS_REINSTATED
-  KILL_SWITCH_EXECUTED
-  SECURITY_ALERT
 }
 
-enum NotificationChannel {
-  IN_APP
-  EMAIL
-  PUSH
-  SMS
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum EmailFrequency {
+  IMMEDIATE
+  HOURLY
+  DAILY
+  WEEKLY
+  NEVER
+}
+
+enum DigestType {
+  HOURLY
+  DAILY
+  WEEKLY
+}
+
+enum DigestStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+enum UnsubscribeType {
+  ALL
+  CATEGORY
+  TYPE
 }
 
 // ============================================================================
@@ -6246,6 +6459,7 @@ model ContractDispute {
   raiser             User                     @relation("DisputeRaiser", fields: [raisedBy], references: [id])
   messages           ContractDisputeMessage[]
   escrowTransactions EscrowTransactionV2[]
+  conversations      Conversation[]           @relation("DisputeConversations")
 
   @@map("contract_disputes")
   @@index([contractId])
@@ -6334,6 +6548,7 @@ enum EvidenceType {
   SCREEN_RECORDING
   SKILLPOD_SESSION
   MANUAL_LOG
+  ACTIVITY_LOG
 }
 
 enum AmendmentStatus {
@@ -6599,4 +6814,1914 @@ enum InvoiceLineItemType {
   ADJUSTMENT
   BONUS
   OTHER
+}
+
+// ============================================================================
+// REAL-TIME MESSAGING SYSTEM
+// ============================================================================
+
+model Conversation {
+  id String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Conversation type
+  type ConversationType
+
+  // Context (optional references)
+  jobId          String? @map("job_id") @db.Uuid
+  contractId     String? @map("contract_id") @db.Uuid
+  bidId          String? @map("bid_id") @db.Uuid
+  serviceOrderId String? @map("service_order_id") @db.Uuid
+  disputeId      String? @map("dispute_id") @db.Uuid
+
+  // For direct messages
+  isDirectMessage Boolean @default(false) @map("is_direct_message")
+
+  // Group conversation details
+  title       String?
+  description String? @db.Text
+  avatarUrl   String? @map("avatar_url") @db.VarChar(500)
+
+  // Creator (for group conversations)
+  createdBy String? @map("created_by") @db.Uuid
+
+  // Settings
+  isArchived Boolean @default(false) @map("is_archived")
+  isMuted    Boolean @default(false) @map("is_muted")
+
+  // Permissions
+  allowFileSharing Boolean @default(true) @map("allow_file_sharing")
+  allowReactions   Boolean @default(true) @map("allow_reactions")
+
+  // Last activity
+  lastMessageId      String?   @map("last_message_id") @db.Uuid
+  lastMessageAt      DateTime? @map("last_message_at")
+  lastMessagePreview String?   @map("last_message_preview") @db.VarChar(200)
+
+  // Metadata
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  participants ConversationParticipant[]
+  messages     ConversationMessage[]
+  job          Job?                      @relation("JobConversations", fields: [jobId], references: [id])
+  bid          Bid?                      @relation("BidConversations", fields: [bidId], references: [id])
+  serviceOrder ServiceOrder?             @relation("ServiceOrderConversations", fields: [serviceOrderId], references: [id])
+  dispute      ContractDispute?          @relation("DisputeConversations", fields: [disputeId], references: [id])
+
+  @@map("conversations")
+  @@index([jobId])
+  @@index([contractId])
+  @@index([bidId])
+  @@index([serviceOrderId])
+  @@index([disputeId])
+  @@index([type])
+  @@index([lastMessageAt])
+  @@index([createdBy])
+}
+
+model ConversationParticipant {
+  id             String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  conversationId String @map("conversation_id") @db.Uuid
+  userId         String @map("user_id") @db.Uuid
+
+  // Role in conversation
+  role ParticipantRole @default(MEMBER)
+
+  // Permissions
+  canSendMessages       Boolean @default(true) @map("can_send_messages")
+  canAddParticipants    Boolean @default(false) @map("can_add_participants")
+  canRemoveParticipants Boolean @default(false) @map("can_remove_participants")
+  canEditSettings       Boolean @default(false) @map("can_edit_settings")
+
+  // Read tracking
+  lastReadMessageId String?   @map("last_read_message_id") @db.Uuid
+  lastReadAt        DateTime? @map("last_read_at")
+  unreadCount       Int       @default(0) @map("unread_count")
+
+  // Notifications
+  notificationsEnabled Boolean   @default(true) @map("notifications_enabled")
+  mutedUntil           DateTime? @map("muted_until")
+
+  // Status
+  isActive  Boolean   @default(true) @map("is_active")
+  leftAt    DateTime? @map("left_at")
+  removedAt DateTime? @map("removed_at")
+  removedBy String?   @map("removed_by") @db.Uuid
+
+  // Pinned
+  isPinned Boolean   @default(false) @map("is_pinned")
+  pinnedAt DateTime? @map("pinned_at")
+
+  // Archive (per-user)
+  isArchivedByUser Boolean @default(false) @map("is_archived_by_user")
+
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation("UserConversationParticipants", fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+  @@index([conversationId])
+  @@index([userId])
+  @@index([unreadCount])
+}
+
+model ConversationMessage {
+  id             String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  conversationId String @map("conversation_id") @db.Uuid
+  senderUserId   String @map("sender_user_id") @db.Uuid
+
+  // Message content
+  content     String?                    @db.Text
+  contentType ConversationContentType @default(TEXT) @map("content_type")
+
+  // For rich content
+  richContent Json? @map("rich_content")
+
+  // Attachments stored as JSON array
+  attachments Json? // [{id, name, url, size, type, thumbnailUrl}]
+
+  // Threading
+  parentMessageId String? @map("parent_message_id") @db.Uuid
+  threadCount     Int     @default(0) @map("thread_count")
+
+  // Mentions
+  mentions         String[] // User IDs
+  mentionsEveryone Boolean  @default(false) @map("mentions_everyone")
+
+  // Message metadata
+  messageType ConversationMessageType @default(USER) @map("message_type")
+
+  // For system messages
+  systemEventType SystemMessageEventType? @map("system_event_type")
+  systemEventData Json?                   @map("system_event_data")
+
+  // Edit tracking
+  isEdited    Boolean   @default(false) @map("is_edited")
+  editedAt    DateTime? @map("edited_at")
+  editHistory Json?     @map("edit_history") // [{content, editedAt}]
+
+  // Deletion
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by") @db.Uuid
+
+  // Delivery status
+  deliveredAt DateTime? @map("delivered_at")
+
+  // Reactions stored as JSON object
+  reactionCounts Json? @map("reaction_counts") // {emoji: count}
+
+  // Pinned
+  isPinned Boolean   @default(false) @map("is_pinned")
+  pinnedAt DateTime? @map("pinned_at")
+  pinnedBy String?   @map("pinned_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  conversation   Conversation                @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User                        @relation("UserConversationMessages", fields: [senderUserId], references: [id])
+  parentMessage  ConversationMessage?        @relation("ConversationMessageThread", fields: [parentMessageId], references: [id])
+  threadMessages ConversationMessage[]       @relation("ConversationMessageThread")
+  reactions      ConversationMessageReaction[]
+  readReceipts   ConversationMessageReadReceipt[]
+
+  @@map("conversation_messages")
+  @@index([conversationId])
+  @@index([senderUserId])
+  @@index([parentMessageId])
+  @@index([createdAt])
+  @@index([conversationId, createdAt])
+}
+
+model ConversationMessageReaction {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  messageId String @map("message_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+
+  emoji String // Unicode emoji or custom emoji code
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message ConversationMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User                @relation("UserMessageReactions", fields: [userId], references: [id])
+
+  @@unique([messageId, userId, emoji])
+  @@map("conversation_message_reactions")
+  @@index([messageId])
+}
+
+model ConversationMessageReadReceipt {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  messageId String @map("message_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+
+  readAt DateTime @map("read_at")
+
+  message ConversationMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User                @relation("UserMessageReadReceipts", fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+  @@map("conversation_message_read_receipts")
+  @@index([messageId])
+  @@index([userId])
+}
+
+model MessageAttachment {
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  messageId  String @map("message_id") @db.Uuid
+  uploadedBy String @map("uploaded_by") @db.Uuid
+
+  // File details
+  fileName String @map("file_name") @db.VarChar(255)
+  fileSize Int    @map("file_size")
+  mimeType String @map("mime_type") @db.VarChar(100)
+
+  // Storage
+  storageKey   String  @map("storage_key") @db.VarChar(500)
+  url          String  @db.VarChar(1000)
+  thumbnailUrl String? @map("thumbnail_url") @db.VarChar(1000)
+
+  // Processing status
+  processingStatus AttachmentProcessingStatus @default(PENDING) @map("processing_status")
+
+  // Virus scan
+  scanStatus ScanStatus @default(PENDING) @map("scan_status")
+  scanResult String?    @map("scan_result") @db.VarChar(255)
+  scannedAt  DateTime?  @map("scanned_at")
+
+  // Metadata (width, height, duration, pages, etc.)
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  uploader User @relation("UserMessageAttachments", fields: [uploadedBy], references: [id])
+
+  @@map("message_attachments")
+  @@index([messageId])
+  @@index([uploadedBy])
+}
+
+model UserPresence {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  // Status
+  status        PresenceStatus @default(OFFLINE)
+  statusMessage String?        @map("status_message") @db.VarChar(100)
+
+  // Activity
+  lastSeenAt   DateTime  @map("last_seen_at")
+  lastActiveAt DateTime? @map("last_active_at")
+
+  // Current activity
+  currentConversationId String?   @map("current_conversation_id") @db.Uuid
+  isTypingIn            String?   @map("is_typing_in") @db.Uuid // Conversation ID
+  typingStartedAt       DateTime? @map("typing_started_at")
+
+  // Device info
+  deviceType String? @map("device_type") @db.VarChar(50)
+  deviceId   String? @map("device_id") @db.VarChar(100)
+
+  // Push tokens stored as JSON array
+  pushTokens Json? @map("push_tokens") // [{token, platform, deviceId}]
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation("UserPresenceInfo", fields: [userId], references: [id])
+
+  @@map("user_presence")
+  @@index([status])
+  @@index([lastSeenAt])
+}
+
+model UserBlocklist {
+  id            String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId        String @map("user_id") @db.Uuid
+  blockedUserId String @map("blocked_user_id") @db.Uuid
+
+  reason String? @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user        User @relation("BlockedByUser", fields: [userId], references: [id])
+  blockedUser User @relation("BlockedUser", fields: [blockedUserId], references: [id])
+
+  @@unique([userId, blockedUserId])
+  @@map("user_blocklist")
+  @@index([userId])
+  @@index([blockedUserId])
+}
+
+// Messaging Enums
+enum ConversationType {
+  DIRECT        // 1:1 conversation
+  PROJECT       // Project-related
+  CONTRACT      // Contract-related
+  BID           // Bid discussion
+  SERVICE_ORDER // Service order related
+  DISPUTE       // Dispute discussion
+  SUPPORT       // Support thread
+  GROUP         // General group chat
+}
+
+enum ParticipantRole {
+  OWNER
+  ADMIN
+  MODERATOR
+  MEMBER
+  READONLY
+}
+
+enum ConversationContentType {
+  TEXT
+  RICH_TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+  CODE
+  LINK_PREVIEW
+}
+
+enum ConversationMessageType {
+  USER         // Regular user message
+  SYSTEM       // System-generated
+  BOT          // Bot message
+  NOTIFICATION // Notification message
+}
+
+enum SystemMessageEventType {
+  PARTICIPANT_JOINED
+  PARTICIPANT_LEFT
+  PARTICIPANT_REMOVED
+  CONVERSATION_CREATED
+  CONVERSATION_RENAMED
+  CONTRACT_SIGNED
+  MILESTONE_COMPLETED
+  PAYMENT_RECEIVED
+  DEADLINE_REMINDER
+}
+
+enum AttachmentProcessingStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum ScanStatus {
+  PENDING
+  SCANNING
+  CLEAN
+  INFECTED
+  ERROR
+}
+
+enum PresenceStatus {
+  ONLINE
+  AWAY
+  BUSY
+  DO_NOT_DISTURB
+  OFFLINE
+}
+
+// ============================================================================
+// CRM - CLIENT RELATIONSHIP MANAGEMENT
+// ============================================================================
+
+model Client {
+  id               String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String       @map("freelancer_user_id") @db.Uuid
+
+  // Client type
+  clientType ClientType   @default(INDIVIDUAL) @map("client_type")
+  source     ClientSource @default(MANUAL)
+
+  // Platform link (if from Skillancer Market)
+  platformUserId String? @map("platform_user_id") @db.Uuid
+
+  // Contact information
+  firstName      String? @map("first_name") @db.VarChar(100)
+  lastName       String? @map("last_name") @db.VarChar(100)
+  email          String? @db.VarChar(255)
+  phone          String? @db.VarChar(50)
+  alternateEmail String? @map("alternate_email") @db.VarChar(255)
+  alternatePhone String? @map("alternate_phone") @db.VarChar(50)
+
+  // Company information
+  companyName    String?      @map("company_name") @db.VarChar(200)
+  companyWebsite String?      @map("company_website") @db.VarChar(500)
+  companySize    CompanySize? @map("company_size")
+  industry       String?      @db.VarChar(100)
+  jobTitle       String?      @map("job_title") @db.VarChar(100)
+  department     String?      @db.VarChar(100)
+
+  // Address
+  address  Json?   // {street, city, state, country, postalCode}
+  timezone String? @db.VarChar(50)
+
+  // Profile
+  avatarUrl String? @map("avatar_url") @db.VarChar(500)
+  bio       String? @db.Text
+
+  // Social profiles
+  linkedinUrl String? @map("linkedin_url") @db.VarChar(500)
+  twitterUrl  String? @map("twitter_url") @db.VarChar(500)
+
+  // Preferences
+  preferredContactMethod   String? @map("preferred_contact_method") @db.VarChar(50)
+  communicationPreferences Json?   @map("communication_preferences")
+
+  // Categorization
+  tags         String[] @default([])
+  customFields Json?    @map("custom_fields")
+
+  // Status
+  status ClientStatus @default(ACTIVE)
+
+  // Relationship metrics
+  lifetimeValue  Decimal @default(0) @map("lifetime_value") @db.Decimal(12, 2)
+  totalProjects  Int     @default(0) @map("total_projects")
+  activeProjects Int     @default(0) @map("active_projects")
+  avgRating      Decimal? @map("avg_rating") @db.Decimal(3, 2)
+
+  // Health score
+  healthScore          Int?      @map("health_score") // 0-100
+  healthScoreUpdatedAt DateTime? @map("health_score_updated_at")
+
+  // Engagement
+  lastContactAt  DateTime? @map("last_contact_at")
+  lastProjectAt  DateTime? @map("last_project_at")
+  nextFollowUpAt DateTime? @map("next_follow_up_at")
+
+  // Notes
+  internalNotes String? @map("internal_notes") @db.Text
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  archivedAt DateTime? @map("archived_at")
+
+  // Relations
+  freelancer   User            @relation("FreelancerClients", fields: [freelancerUserId], references: [id])
+  platformUser User?           @relation("PlatformClients", fields: [platformUserId], references: [id])
+  contacts     ClientContact[]
+  interactions ClientInteraction[]
+  opportunities Opportunity[]
+  documents    ClientDocument[]
+  reminders    ClientReminder[]
+  projects     CockpitProject[] @relation("ProjectClient")
+  timeEntries  CockpitTimeEntry[] @relation("ClientTimeEntries")
+  calendarEvents CalendarEvent[] @relation("ClientCalendarEvents")
+
+  @@unique([freelancerUserId, email])
+  @@index([freelancerUserId])
+  @@index([status])
+  @@index([tags])
+  @@index([healthScore])
+  @@index([lastContactAt])
+  @@map("clients")
+}
+
+model ClientContact {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clientId String @map("client_id") @db.Uuid
+
+  // Contact details
+  firstName  String  @map("first_name") @db.VarChar(100)
+  lastName   String? @map("last_name") @db.VarChar(100)
+  email      String? @db.VarChar(255)
+  phone      String? @db.VarChar(50)
+  jobTitle   String? @map("job_title") @db.VarChar(100)
+  department String? @db.VarChar(100)
+
+  // Role
+  role      ContactRole @default(OTHER)
+  isPrimary Boolean     @default(false) @map("is_primary")
+
+  // Notes
+  notes String? @db.Text
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("client_contacts")
+}
+
+model ClientInteraction {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clientId         String @map("client_id") @db.Uuid
+  freelancerUserId String @map("freelancer_user_id") @db.Uuid
+
+  // Interaction details
+  interactionType InteractionType @map("interaction_type")
+  subject         String?         @db.VarChar(255)
+  description     String          @db.Text
+
+  // Timing
+  occurredAt DateTime @map("occurred_at")
+  duration   Int?     // minutes
+
+  // Related entities
+  opportunityId String? @map("opportunity_id") @db.Uuid
+  projectId     String? @map("project_id") @db.Uuid
+
+  // Outcome
+  outcome   String? @db.VarChar(500)
+  nextSteps String? @map("next_steps") @db.Text
+
+  // Follow-up
+  followUpRequired Boolean   @default(false) @map("follow_up_required")
+  followUpDate     DateTime? @map("follow_up_date")
+
+  // Attachments
+  attachments Json? // [{name, url, type}]
+
+  // Sentiment
+  sentiment Sentiment?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+
+  @@index([clientId])
+  @@index([freelancerUserId])
+  @@index([occurredAt])
+  @@index([interactionType])
+  @@map("client_interactions")
+}
+
+model Opportunity {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String @map("freelancer_user_id") @db.Uuid
+  clientId         String? @map("client_id") @db.Uuid
+
+  // Opportunity details
+  title       String  @db.VarChar(255)
+  description String? @db.Text
+
+  // Source
+  source        OpportunitySource
+  sourceDetails String?           @map("source_details") @db.VarChar(500)
+  externalUrl   String?           @map("external_url") @db.VarChar(500)
+
+  // Value
+  estimatedValue Decimal? @map("estimated_value") @db.Decimal(12, 2)
+  currency       String   @default("USD") @db.VarChar(3)
+
+  // Timeline
+  expectedCloseDate DateTime? @map("expected_close_date")
+  actualCloseDate   DateTime? @map("actual_close_date")
+
+  // Pipeline
+  stage       OpportunityStage @default(LEAD)
+  probability Int              @default(10) // 0-100
+
+  // Categorization
+  tags        String[] @default([])
+  serviceType String?  @map("service_type") @db.VarChar(100)
+
+  // Status
+  status        OpportunityStatus @default(OPEN)
+  lostReason    String?           @map("lost_reason") @db.Text
+  wonContractId String?           @map("won_contract_id") @db.Uuid
+
+  // Priority
+  priority CrmPriority @default(MEDIUM)
+
+  // Notes
+  notes String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client       Client?               @relation(fields: [clientId], references: [id])
+  interactions ClientInteraction[]
+  activities   OpportunityActivity[]
+
+  @@index([freelancerUserId])
+  @@index([clientId])
+  @@index([stage])
+  @@index([status])
+  @@index([expectedCloseDate])
+  @@map("opportunities")
+}
+
+model OpportunityActivity {
+  id            String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  opportunityId String @map("opportunity_id") @db.Uuid
+
+  // Activity details
+  activityType String @map("activity_type") @db.VarChar(50)
+  description  String @db.Text
+
+  // Stage change
+  fromStage OpportunityStage? @map("from_stage")
+  toStage   OpportunityStage? @map("to_stage")
+
+  // Metadata
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([opportunityId])
+  @@index([createdAt])
+  @@map("opportunity_activities")
+}
+
+model ClientDocument {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clientId         String @map("client_id") @db.Uuid
+  freelancerUserId String @map("freelancer_user_id") @db.Uuid
+
+  // Document details
+  name         String            @db.VarChar(255)
+  description  String?           @db.VarChar(500)
+  documentType CrmDocumentType @map("document_type")
+
+  // File
+  fileUrl  String @map("file_url") @db.VarChar(500)
+  fileName String @map("file_name") @db.VarChar(255)
+  fileSize Int    @map("file_size")
+  mimeType String @map("mime_type") @db.VarChar(100)
+
+  // Categorization
+  tags String[] @default([])
+
+  // Related entities
+  projectId  String? @map("project_id") @db.Uuid
+  contractId String? @map("contract_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([documentType])
+  @@map("client_documents")
+}
+
+model ClientReminder {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clientId         String @map("client_id") @db.Uuid
+  freelancerUserId String @map("freelancer_user_id") @db.Uuid
+
+  // Reminder details
+  title        String       @db.VarChar(255)
+  description  String?      @db.Text
+  reminderType ReminderType @map("reminder_type")
+
+  // Timing
+  dueAt DateTime @map("due_at")
+
+  // Recurrence
+  isRecurring    Boolean @default(false) @map("is_recurring")
+  recurrenceRule String? @map("recurrence_rule") @db.VarChar(255) // RRULE format
+
+  // Status
+  status       ReminderStatus @default(PENDING)
+  completedAt  DateTime?      @map("completed_at")
+  snoozedUntil DateTime?      @map("snoozed_until")
+
+  // Notification
+  notifyBefore     Int?    @map("notify_before") // minutes
+  notificationSent Boolean @default(false) @map("notification_sent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([freelancerUserId])
+  @@index([dueAt])
+  @@index([status])
+  @@map("client_reminders")
+}
+
+model CrmCustomField {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String @map("freelancer_user_id") @db.Uuid
+
+  // Field definition
+  entityType CrmEntityType @map("entity_type")
+  fieldName  String        @map("field_name") @db.VarChar(50)
+  fieldLabel String        @map("field_label") @db.VarChar(100)
+  fieldType  CustomFieldType @map("field_type")
+
+  // Options (for SELECT, MULTI_SELECT)
+  options String[] @default([])
+
+  // Validation
+  isRequired   Boolean @default(false) @map("is_required")
+  defaultValue String? @map("default_value") @db.VarChar(500)
+
+  // Display
+  displayOrder Int     @default(0) @map("display_order")
+  isVisible    Boolean @default(true) @map("is_visible")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([freelancerUserId, entityType, fieldName])
+  @@index([freelancerUserId])
+  @@index([entityType])
+  @@map("crm_custom_fields")
+}
+
+// CRM Enums
+
+enum ClientType {
+  INDIVIDUAL
+  COMPANY
+  AGENCY
+}
+
+enum ClientSource {
+  SKILLANCER_MARKET
+  REFERRAL
+  WEBSITE
+  SOCIAL_MEDIA
+  COLD_OUTREACH
+  REPEAT_CLIENT
+  OTHER
+  MANUAL
+}
+
+enum ClientStatus {
+  LEAD
+  PROSPECT
+  ACTIVE
+  INACTIVE
+  CHURNED
+  ARCHIVED
+}
+
+enum CompanySize {
+  SOLO
+  SMALL      // 2-10
+  MEDIUM     // 11-50
+  LARGE      // 51-200
+  ENTERPRISE // 200+
+}
+
+enum ContactRole {
+  DECISION_MAKER
+  INFLUENCER
+  TECHNICAL
+  BILLING
+  PROJECT_MANAGER
+  OTHER
+}
+
+enum InteractionType {
+  EMAIL
+  CALL
+  VIDEO_CALL
+  MEETING
+  MESSAGE
+  NOTE
+  TASK
+  OTHER
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum OpportunitySource {
+  SKILLANCER_PROJECT
+  SKILLANCER_SERVICE
+  REFERRAL
+  INBOUND
+  OUTBOUND
+  REPEAT_CLIENT
+  UPSELL
+  OTHER
+}
+
+enum OpportunityStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum OpportunityStatus {
+  OPEN
+  WON
+  LOST
+  ON_HOLD
+}
+
+enum CrmPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum CrmDocumentType {
+  CONTRACT
+  PROPOSAL
+  INVOICE
+  BRIEF
+  DELIVERABLE
+  REFERENCE
+  OTHER
+}
+
+enum ReminderType {
+  FOLLOW_UP
+  CHECK_IN
+  DEADLINE
+  MEETING
+  BIRTHDAY
+  ANNIVERSARY
+  CUSTOM
+}
+
+enum ReminderStatus {
+  PENDING
+  COMPLETED
+  SNOOZED
+  CANCELLED
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+  SELECT
+  MULTI_SELECT
+  URL
+  EMAIL
+  PHONE
+}
+
+enum CrmEntityType {
+  CLIENT
+  PROJECT
+  OPPORTUNITY
+}
+
+// ============================================================================
+// COCKPIT - PROJECT MANAGEMENT
+// ============================================================================
+
+model CockpitProject {
+  id               String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String        @map("freelancer_user_id") @db.Uuid
+  clientId         String?       @map("client_id") @db.Uuid
+
+  // Source integration
+  source           ProjectSource @default(MANUAL)
+  marketContractId String?       @unique @map("market_contract_id") @db.Uuid
+  externalId       String?       @map("external_id") @db.VarChar(255)
+  externalPlatform String?       @map("external_platform") @db.VarChar(100)
+  externalUrl      String?       @map("external_url") @db.VarChar(500)
+
+  // Project details
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  projectType CockpitProjectType @default(CLIENT_WORK) @map("project_type")
+
+  // Categorization
+  category String?  @db.VarChar(100)
+  tags     String[] @default([])
+
+  // Status
+  status   CockpitProjectStatus @default(NOT_STARTED)
+  priority CrmPriority   @default(MEDIUM)
+
+  // Timeline
+  startDate   DateTime? @map("start_date")
+  dueDate     DateTime? @map("due_date")
+  completedAt DateTime? @map("completed_at")
+
+  // Budget and billing
+  budgetType   CockpitBudgetType? @map("budget_type")
+  budgetAmount Decimal?    @map("budget_amount") @db.Decimal(12, 2)
+  hourlyRate   Decimal?    @map("hourly_rate") @db.Decimal(10, 2)
+  currency     String      @default("USD") @db.VarChar(3)
+
+  // Progress
+  progressPercent Int @default(0) @map("progress_percent")
+
+  // Time tracking
+  estimatedHours Decimal? @map("estimated_hours") @db.Decimal(8, 2)
+  trackedHours   Decimal  @default(0) @map("tracked_hours") @db.Decimal(8, 2)
+  billableHours  Decimal  @default(0) @map("billable_hours") @db.Decimal(8, 2)
+
+  // Financials
+  totalBilled Decimal @default(0) @map("total_billed") @db.Decimal(12, 2)
+  totalPaid   Decimal @default(0) @map("total_paid") @db.Decimal(12, 2)
+
+  // Settings
+  isArchived Boolean @default(false) @map("is_archived")
+  isFavorite Boolean @default(false) @map("is_favorite")
+  color      String? @db.VarChar(20) // For UI display
+
+  // Notes
+  notes String? @db.Text
+
+  // Custom fields
+  customFields Json? @map("custom_fields")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  freelancer     User                @relation("FreelancerProjects", fields: [freelancerUserId], references: [id])
+  client         Client?             @relation("ProjectClient", fields: [clientId], references: [id])
+  tasks          ProjectTask[]
+  milestones     ProjectMilestone[]
+  timeEntries    CockpitTimeEntry[]
+  files          ProjectFile[]
+  activities     ProjectActivity[]
+  activeTimers   ActiveTimer[]       @relation("ActiveTimerProject")
+  calendarEvents CalendarEvent[]     @relation("ProjectCalendarEvents")
+
+  @@map("cockpit_projects")
+  @@index([freelancerUserId])
+  @@index([clientId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([isArchived])
+  @@index([isFavorite])
+  @@index([marketContractId])
+}
+
+model ProjectTask {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String @map("project_id") @db.Uuid
+
+  // Task details
+  title       String  @db.VarChar(255)
+  description String? @db.Text
+
+  // Hierarchy
+  parentTaskId String? @map("parent_task_id") @db.Uuid
+  orderIndex   Int     @default(0) @map("order_index")
+
+  // Status
+  status   CockpitTaskStatus  @default(TODO)
+  priority CrmPriority @default(MEDIUM)
+
+  // Timeline
+  startDate   DateTime? @map("start_date")
+  dueDate     DateTime? @map("due_date")
+  completedAt DateTime? @map("completed_at")
+
+  // Time tracking
+  estimatedMinutes Int @default(0) @map("estimated_minutes")
+  trackedMinutes   Int @default(0) @map("tracked_minutes")
+
+  // Milestone
+  milestoneId String? @map("milestone_id") @db.Uuid
+
+  // Tags
+  tags String[] @default([])
+
+  // Recurring
+  isRecurring    Boolean @default(false) @map("is_recurring")
+  recurrenceRule String? @map("recurrence_rule") @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  project      CockpitProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentTask   ProjectTask?       @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
+  subtasks     ProjectTask[]      @relation("TaskHierarchy")
+  milestone    ProjectMilestone?  @relation(fields: [milestoneId], references: [id])
+  timeEntries  CockpitTimeEntry[]
+  activeTimers ActiveTimer[]      @relation("ActiveTimerTask")
+
+  @@map("project_tasks")
+  @@index([projectId])
+  @@index([parentTaskId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([milestoneId])
+  @@index([orderIndex])
+}
+
+model ProjectMilestone {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String @map("project_id") @db.Uuid
+
+  // Milestone details
+  title       String  @db.VarChar(255)
+  description String? @db.Text
+
+  // Order
+  orderIndex Int @default(0) @map("order_index")
+
+  // Timeline
+  dueDate     DateTime? @map("due_date")
+  completedAt DateTime? @map("completed_at")
+
+  // Status
+  status CockpitMilestoneStatus @default(PENDING)
+
+  // Payment (if linked to Market milestone)
+  marketMilestoneId String?  @map("market_milestone_id") @db.Uuid
+  amount            Decimal? @db.Decimal(12, 2)
+  isPaid            Boolean  @default(false) @map("is_paid")
+
+  // Deliverables
+  deliverables Json? // [{title, description, completed, orderIndex}]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  project CockpitProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   ProjectTask[]
+
+  @@map("project_milestones")
+  @@index([projectId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([marketMilestoneId])
+}
+
+model CockpitTimeEntry {
+  id               String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String  @map("freelancer_user_id") @db.Uuid
+  projectId        String? @map("project_id") @db.Uuid
+  taskId           String? @map("task_id") @db.Uuid
+  clientId         String? @map("client_id") @db.Uuid
+
+  // Market integration
+  marketContractId  String? @map("market_contract_id") @db.Uuid
+  marketTimeEntryId String? @unique @map("market_time_entry_id") @db.Uuid
+
+  // Entry details
+  description String? @db.Text
+  date        DateTime @db.Date
+
+  // Duration
+  startTime       DateTime? @map("start_time")
+  endTime         DateTime? @map("end_time")
+  durationMinutes Int       @map("duration_minutes")
+
+  // Categorization
+  category String?  @db.VarChar(100)
+  tags     String[] @default([])
+
+  // Billing
+  isBillable Boolean  @default(true) @map("is_billable")
+  hourlyRate Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  amount     Decimal? @db.Decimal(12, 2)
+  currency   String   @default("USD") @db.VarChar(3)
+
+  // Invoice status
+  isInvoiced Boolean   @default(false) @map("is_invoiced")
+  invoiceId  String?   @map("invoice_id") @db.Uuid
+  invoicedAt DateTime? @map("invoiced_at")
+
+  // Tracking method
+  trackingMethod TrackingMethod @default(MANUAL) @map("tracking_method")
+
+  // Timer tracking (for TIMER method)
+  timerStartedAt      DateTime? @map("timer_started_at")
+  timerPausedAt       DateTime? @map("timer_paused_at")
+  timerPausedDuration Int       @default(0) @map("timer_paused_duration")
+
+  // Evidence (for SkillPod/screenshots)
+  hasEvidence   Boolean       @default(false) @map("has_evidence")
+  evidenceType  EvidenceType? @map("evidence_type")
+  evidenceUrl   String?       @map("evidence_url") @db.VarChar(500)
+  activityLevel Int?          @map("activity_level")
+
+  // Approval (for Market entries)
+  approvalStatus  TimeApprovalStatus? @map("approval_status")
+  approvedAt      DateTime?           @map("approved_at")
+  approvedBy      String?             @map("approved_by") @db.Uuid
+  rejectedAt      DateTime?           @map("rejected_at")
+  rejectionReason String?             @map("rejection_reason") @db.Text
+
+  // Source
+  source TimeEntrySource @default(COCKPIT)
+
+  // Sync status
+  syncedToMarket Boolean   @default(false) @map("synced_to_market")
+  syncedAt       DateTime? @map("synced_at")
+  syncError      String?   @map("sync_error") @db.Text
+
+  // Locks
+  isLocked     Boolean   @default(false) @map("is_locked")
+  lockedAt     DateTime? @map("locked_at")
+  lockedReason String?   @map("locked_reason") @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  freelancer User            @relation("FreelancerTimeEntries", fields: [freelancerUserId], references: [id])
+  project    CockpitProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  task       ProjectTask?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  client     Client?         @relation("ClientTimeEntries", fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@map("cockpit_time_entries")
+  @@index([freelancerUserId])
+  @@index([projectId])
+  @@index([taskId])
+  @@index([clientId])
+  @@index([date])
+  @@index([marketContractId])
+  @@index([isInvoiced])
+  @@index([isBillable])
+  @@index([source])
+}
+
+model ProjectFile {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String @map("project_id") @db.Uuid
+
+  // File details
+  name        String           @db.VarChar(255)
+  description String?          @db.VarChar(500)
+  fileType    ProjectFileType  @map("file_type")
+
+  // Storage
+  fileUrl  String @map("file_url") @db.VarChar(500)
+  fileName String @map("file_name") @db.VarChar(255)
+  fileSize Int    @map("file_size")
+  mimeType String @map("mime_type") @db.VarChar(100)
+
+  // Organization
+  folder String?  @db.VarChar(255)
+  tags   String[] @default([])
+
+  // Version control
+  version           Int     @default(1)
+  previousVersionId String? @map("previous_version_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  project CockpitProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_files")
+  @@index([projectId])
+  @@index([fileType])
+  @@index([folder])
+}
+
+model ProjectActivity {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String @map("project_id") @db.Uuid
+
+  // Activity details
+  activityType ProjectActivityType @map("activity_type")
+  description  String              @db.Text
+
+  // Related entities
+  taskId      String? @map("task_id") @db.Uuid
+  milestoneId String? @map("milestone_id") @db.Uuid
+
+  // Metadata
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  project CockpitProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_activities")
+  @@index([projectId])
+  @@index([createdAt])
+  @@index([activityType])
+}
+
+model ProjectTemplate {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String @map("freelancer_user_id") @db.Uuid
+
+  // Template details
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  category    String? @db.VarChar(100)
+
+  // Project defaults
+  projectType       CockpitProjectType? @map("project_type")
+  budgetType        CockpitBudgetType?  @map("budget_type")
+  defaultHourlyRate Decimal?            @map("default_hourly_rate") @db.Decimal(10, 2)
+  estimatedHours    Decimal?            @map("estimated_hours") @db.Decimal(8, 2)
+
+  // Structure
+  taskStructure      Json? @map("task_structure") // [{title, description, estimatedMinutes, orderIndex, subtasks}]
+  milestoneStructure Json? @map("milestone_structure") // [{title, description, daysFromStart, orderIndex, deliverables}]
+
+  // Defaults
+  tags String[] @default([])
+
+  // Usage
+  useCount Int @default(0) @map("use_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("project_templates")
+  @@index([freelancerUserId])
+  @@index([category])
+}
+
+// Project Management Enums
+
+enum ProjectSource {
+  MANUAL
+  SKILLANCER_MARKET
+  UPWORK
+  FIVERR
+  TOPTAL
+  OTHER_PLATFORM
+}
+
+enum CockpitProjectType {
+  CLIENT_WORK
+  INTERNAL
+  PERSONAL
+  RETAINER
+  MAINTENANCE
+}
+
+enum CockpitProjectStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum CockpitBudgetType {
+  HOURLY
+  FIXED
+  RETAINER
+  NO_BUDGET
+}
+
+enum CockpitTaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum CockpitMilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ProjectFileType {
+  DELIVERABLE
+  ASSET
+  REFERENCE
+  CONTRACT
+  BRIEF
+  OTHER
+}
+
+enum ProjectActivityType {
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  STATUS_CHANGED
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_COMPLETED
+  TASK_DELETED
+  MILESTONE_CREATED
+  MILESTONE_UPDATED
+  MILESTONE_COMPLETED
+  TIME_LOGGED
+  FILE_UPLOADED
+  FILE_DELETED
+  NOTE_ADDED
+  PROGRESS_UPDATED
+}
+
+enum TimeEntrySource {
+  MANUAL
+  TIMER
+  IMPORT
+  COCKPIT
+  MARKET
+  SKILLPOD
+  CALENDAR
+}
+
+enum TrackingMethod {
+  TIMER
+  MANUAL
+  CALENDAR
+  SKILLPOD
+  IMPORTED
+}
+
+enum TimeApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RoundingMethod {
+  NONE
+  UP
+  DOWN
+  NEAREST
+}
+
+enum TimerStatus {
+  RUNNING
+  PAUSED
+  STOPPED
+}
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+// ============================================================================
+// TIME TRACKING SETTINGS & TIMERS
+// ============================================================================
+
+model TimeTrackingSettings {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  // Default rates
+  defaultHourlyRate Decimal? @map("default_hourly_rate") @db.Decimal(10, 2)
+  defaultCurrency   String   @default("USD") @map("default_currency") @db.VarChar(3)
+
+  // Timer settings
+  autoStopAfterMinutes Int?    @map("auto_stop_after_minutes")
+  idleDetectionMinutes Int     @default(5) @map("idle_detection_minutes")
+  reminderEnabled      Boolean @default(true) @map("reminder_enabled")
+  reminderTime         String? @map("reminder_time") @db.VarChar(5)
+
+  // Rounding
+  roundingMethod  RoundingMethod @default(NONE) @map("rounding_method")
+  roundingMinutes Int            @default(15) @map("rounding_minutes")
+
+  // Work hours
+  workdayStartTime   String  @default("09:00") @map("workday_start_time") @db.VarChar(5)
+  workdayEndTime     String  @default("17:00") @map("workday_end_time") @db.VarChar(5)
+  workDays           Int[]   @default([1, 2, 3, 4, 5]) @map("work_days")
+  targetHoursPerDay  Decimal @default(8) @map("target_hours_per_day") @db.Decimal(4, 2)
+  targetHoursPerWeek Decimal @default(40) @map("target_hours_per_week") @db.Decimal(5, 2)
+
+  // Categories
+  customCategories String[] @map("custom_categories")
+
+  // Auto-sync
+  autoSyncToMarket Boolean @default(true) @map("auto_sync_to_market")
+
+  // Timesheet
+  weekStartDay       Int     @default(1) @map("week_start_day")
+  requireDescription Boolean @default(true) @map("require_description")
+  requireProject     Boolean @default(false) @map("require_project")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation("TimeTrackingSettings", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("time_tracking_settings")
+}
+
+model ActiveTimer {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  // Timer details
+  projectId   String? @map("project_id") @db.Uuid
+  taskId      String? @map("task_id") @db.Uuid
+  description String? @db.Text
+
+  // Timing
+  startedAt          DateTime @map("started_at")
+  pausedAt           DateTime? @map("paused_at")
+  totalPausedMinutes Int      @default(0) @map("total_paused_minutes")
+
+  // Billing
+  isBillable Boolean  @default(true) @map("is_billable")
+  hourlyRate Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+
+  // Status
+  status TimerStatus @default(RUNNING)
+
+  // Metadata
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user    User            @relation("ActiveTimer", fields: [userId], references: [id], onDelete: Cascade)
+  project CockpitProject? @relation("ActiveTimerProject", fields: [projectId], references: [id], onDelete: SetNull)
+  task    ProjectTask?    @relation("ActiveTimerTask", fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@map("active_timers")
+  @@index([userId])
+  @@index([projectId])
+  @@index([status])
+}
+
+model Timesheet {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String @map("freelancer_user_id") @db.Uuid
+
+  // Period
+  weekStartDate DateTime @map("week_start_date") @db.Date
+  weekEndDate   DateTime @map("week_end_date") @db.Date
+
+  // Totals
+  totalMinutes    Int     @map("total_minutes")
+  billableMinutes Int     @map("billable_minutes")
+  totalAmount     Decimal @map("total_amount") @db.Decimal(12, 2)
+
+  // Status
+  status TimesheetStatus @default(DRAFT)
+
+  // Submission
+  submittedAt DateTime? @map("submitted_at")
+
+  // Approval (if needed for some clients)
+  approvedAt      DateTime? @map("approved_at")
+  approvedBy      String?   @map("approved_by") @db.Uuid
+  rejectedAt      DateTime? @map("rejected_at")
+  rejectionReason String?   @map("rejection_reason") @db.Text
+
+  // Lock
+  isLocked Boolean   @default(false) @map("is_locked")
+  lockedAt DateTime? @map("locked_at")
+
+  // Notes
+  notes String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  freelancer User @relation("FreelancerTimesheets", fields: [freelancerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([freelancerUserId, weekStartDate])
+  @@map("timesheets")
+  @@index([freelancerUserId])
+  @@index([status])
+  @@index([weekStartDate])
+}
+
+model TimeCategory {
+  id               String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String? @map("freelancer_user_id") @db.Uuid
+
+  name  String  @db.VarChar(100)
+  color String? @db.VarChar(7)
+  icon  String? @db.VarChar(50)
+
+  // Billing default
+  defaultBillable Boolean @default(true) @map("default_billable")
+
+  // Order
+  orderIndex Int @default(0) @map("order_index")
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+  isSystem Boolean @default(false) @map("is_system")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  freelancer User? @relation("FreelancerTimeCategories", fields: [freelancerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([freelancerUserId, name])
+  @@map("time_categories")
+  @@index([freelancerUserId])
+  @@index([isActive])
+}
+
+// ============================================================================
+// CALENDAR INTEGRATION
+// ============================================================================
+
+model CalendarConnection {
+  id                String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String           @map("user_id") @db.Uuid
+
+  // Provider
+  provider          CalendarProvider
+  providerAccountId String           @map("provider_account_id") @db.VarChar(255)
+
+  // OAuth tokens (encrypted in app layer)
+  accessToken    String    @map("access_token") @db.Text
+  refreshToken   String?   @map("refresh_token") @db.Text
+  tokenExpiresAt DateTime? @map("token_expires_at")
+
+  // Account info
+  email       String  @db.VarChar(255)
+  displayName String? @map("display_name") @db.VarChar(255)
+
+  // Sync settings
+  syncEnabled   Boolean       @default(true) @map("sync_enabled")
+  syncDirection SyncDirection @default(BIDIRECTIONAL) @map("sync_direction")
+  lastSyncAt    DateTime?     @map("last_sync_at")
+  lastSyncError String?       @map("last_sync_error") @db.Text
+  syncStatus    SyncStatus    @default(PENDING) @map("sync_status")
+
+  // Calendar selection
+  selectedCalendarIds String[] @map("selected_calendar_ids")
+  primaryCalendarId   String?  @map("primary_calendar_id") @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user      User               @relation("UserCalendarConnections", fields: [userId], references: [id], onDelete: Cascade)
+  calendars ExternalCalendar[]
+
+  @@unique([userId, provider, providerAccountId])
+  @@map("calendar_connections")
+  @@index([userId])
+  @@index([syncStatus])
+}
+
+model ExternalCalendar {
+  id           String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  connectionId String @map("connection_id") @db.Uuid
+
+  // External reference
+  externalId String @map("external_id") @db.VarChar(255)
+
+  // Calendar info
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  color       String? @db.VarChar(20)
+  timezone    String? @db.VarChar(50)
+
+  // Access level
+  accessRole String? @map("access_role") @db.VarChar(50) // 'owner', 'writer', 'reader'
+
+  // Sync settings
+  syncEnabled      Boolean @default(true) @map("sync_enabled")
+  syncEvents       Boolean @default(true) @map("sync_events")
+  createEventsHere Boolean @default(false) @map("create_events_here")
+
+  // Status
+  isDefault Boolean @default(false) @map("is_default")
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  connection CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  events     CalendarEvent[]
+
+  @@unique([connectionId, externalId])
+  @@map("external_calendars")
+  @@index([connectionId])
+}
+
+model CalendarEvent {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // Source
+  source             EventSource @default(INTERNAL)
+  externalCalendarId String?     @map("external_calendar_id") @db.Uuid
+  externalEventId    String?     @map("external_event_id") @db.VarChar(255)
+
+  // Event details
+  title       String  @db.VarChar(500)
+  description String? @db.Text
+  location    String? @db.VarChar(500)
+
+  // Timing
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  isAllDay  Boolean  @default(false) @map("is_all_day")
+  timezone  String   @default("UTC") @db.VarChar(50)
+
+  // Recurrence
+  isRecurring       Boolean   @default(false) @map("is_recurring")
+  recurrenceRule    String?   @map("recurrence_rule") @db.VarChar(500) // RRULE format
+  recurrenceId      String?   @map("recurrence_id") @db.Uuid // Parent recurring event
+  originalStartTime DateTime? @map("original_start_time") // For exceptions
+
+  // Type and categorization
+  eventType EventType @default(MEETING) @map("event_type")
+  category  String?   @db.VarChar(100)
+  color     String?   @db.VarChar(20)
+
+  // Associations
+  projectId String? @map("project_id") @db.Uuid
+  clientId  String? @map("client_id") @db.Uuid
+  taskId    String? @map("task_id") @db.Uuid
+
+  // Attendees
+  attendees      Json?   // [{email, name, status, organizer}]
+  organizerEmail String? @map("organizer_email") @db.VarChar(255)
+
+  // Meeting links
+  meetingUrl     String? @map("meeting_url") @db.VarChar(1000)
+  conferenceType String? @map("conference_type") @db.VarChar(50) // 'zoom', 'meet', 'teams'
+
+  // Status
+  status     EventStatus     @default(CONFIRMED)
+  visibility EventVisibility @default(DEFAULT)
+
+  // Time tracking
+  trackTime           Boolean @default(false) @map("track_time")
+  timeEntryId         String? @map("time_entry_id") @db.Uuid
+  autoCreateTimeEntry Boolean @default(false) @map("auto_create_time_entry")
+
+  // Reminders
+  reminders Json? // [{minutes, method}]
+
+  // Sync
+  lastSyncAt DateTime?  @map("last_sync_at")
+  syncStatus SyncStatus @default(SYNCED) @map("sync_status")
+  etag       String?    @db.VarChar(255) // For conflict detection
+
+  // Metadata
+  metadata Json?
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  user             User              @relation("UserCalendarEvents", fields: [userId], references: [id], onDelete: Cascade)
+  externalCalendar ExternalCalendar? @relation(fields: [externalCalendarId], references: [id])
+  project          CockpitProject?   @relation("ProjectCalendarEvents", fields: [projectId], references: [id])
+  client           Client?           @relation("ClientCalendarEvents", fields: [clientId], references: [id])
+
+  @@unique([externalCalendarId, externalEventId])
+  @@map("calendar_events")
+  @@index([userId])
+  @@index([startTime])
+  @@index([endTime])
+  @@index([projectId])
+  @@index([clientId])
+  @@index([deletedAt])
+}
+
+model AvailabilitySchedule {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // Schedule name
+  name      String  @db.VarChar(100)
+  isDefault Boolean @default(false) @map("is_default")
+
+  // Timezone
+  timezone String @default("UTC") @db.VarChar(50)
+
+  // Weekly schedule
+  // { 0: [{start: '09:00', end: '17:00'}], 1: [...], ... }
+  weeklyHours Json @map("weekly_hours")
+
+  // Date overrides
+  // { '2025-01-15': [{start: '10:00', end: '14:00'}], '2025-01-16': [] }
+  dateOverrides Json? @map("date_overrides")
+
+  // Buffer time
+  bufferBefore Int @default(0) @map("buffer_before") // minutes
+  bufferAfter  Int @default(0) @map("buffer_after")
+
+  // Minimum notice
+  minNoticeHours Int @default(24) @map("min_notice_hours")
+
+  // Max advance booking
+  maxAdvanceDays Int @default(60) @map("max_advance_days")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user         User          @relation("UserAvailabilitySchedules", fields: [userId], references: [id], onDelete: Cascade)
+  bookingLinks BookingLink[]
+
+  @@map("availability_schedules")
+  @@index([userId])
+}
+
+model BookingLink {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // Link details
+  slug        String  @unique @db.VarChar(100)
+  name        String  @db.VarChar(200)
+  description String? @db.Text
+
+  // Event settings
+  eventTitle    String    @map("event_title") @db.VarChar(200)
+  eventDuration Int       @map("event_duration") // minutes
+  eventType     EventType @default(MEETING) @map("event_type")
+
+  // Location
+  locationType    LocationType @default(VIDEO_CALL) @map("location_type")
+  locationDetails String?      @map("location_details") @db.VarChar(500)
+  conferenceType  String?      @map("conference_type") @db.VarChar(50)
+
+  // Availability
+  scheduleId String @map("schedule_id") @db.Uuid
+
+  // Customization
+  color           String? @db.VarChar(20)
+  customQuestions Json?   @map("custom_questions")
+  // [{id, question, type, required}]
+
+  // Notifications
+  confirmationEmailEnabled Boolean @default(true) @map("confirmation_email_enabled")
+  reminderEmailEnabled     Boolean @default(true) @map("reminder_email_enabled")
+  reminderMinutes          Int[]   @default([1440, 60]) @map("reminder_minutes") // 24h, 1h
+
+  // Limits
+  maxBookingsPerDay Int? @map("max_bookings_per_day")
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  // Analytics
+  viewCount    Int @default(0) @map("view_count")
+  bookingCount Int @default(0) @map("booking_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user     User                 @relation("UserBookingLinks", fields: [userId], references: [id], onDelete: Cascade)
+  schedule AvailabilitySchedule @relation(fields: [scheduleId], references: [id])
+  bookings Booking[]
+
+  @@map("booking_links")
+  @@index([userId])
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Booking {
+  id            String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  bookingLinkId String @map("booking_link_id") @db.Uuid
+  userId        String @map("user_id") @db.Uuid // Freelancer
+
+  // Booker info
+  bookerName     String @map("booker_name") @db.VarChar(200)
+  bookerEmail    String @map("booker_email") @db.VarChar(255)
+  bookerPhone    String? @map("booker_phone") @db.VarChar(50)
+  bookerTimezone String @map("booker_timezone") @db.VarChar(50)
+
+  // Timing
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+
+  // Custom answers
+  customAnswers Json? @map("custom_answers")
+
+  // Notes
+  notes String? @db.Text
+
+  // Status
+  status BookingStatus @default(CONFIRMED)
+
+  // Cancellation
+  cancelledAt        DateTime? @map("cancelled_at")
+  cancelledBy        String?   @map("cancelled_by") @db.VarChar(20) // 'booker' or 'host'
+  cancellationReason String?   @map("cancellation_reason") @db.Text
+
+  // Rescheduling
+  rescheduledFrom String? @map("rescheduled_from") @db.Uuid
+  rescheduledTo   String? @map("rescheduled_to") @db.Uuid
+
+  // Event reference
+  calendarEventId String? @map("calendar_event_id") @db.Uuid
+
+  // Meeting
+  meetingUrl String? @map("meeting_url") @db.VarChar(1000)
+
+  // Client link
+  clientId String? @map("client_id") @db.Uuid
+
+  // Notifications sent
+  confirmationSentAt DateTime?  @map("confirmation_sent_at")
+  remindersSentAt    DateTime[] @map("reminders_sent_at")
+
+  // Cancellation token for guest
+  cancellationToken String? @map("cancellation_token") @db.VarChar(100)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  bookingLink BookingLink @relation(fields: [bookingLinkId], references: [id])
+  user        User        @relation("UserBookings", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+  @@index([bookingLinkId])
+  @@index([userId])
+  @@index([startTime])
+  @@index([status])
+  @@index([cancellationToken])
+}
+
+enum CalendarProvider {
+  GOOGLE
+  MICROSOFT
+  APPLE
+}
+
+enum SyncDirection {
+  INBOUND
+  OUTBOUND
+  BIDIRECTIONAL
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCING
+  SYNCED
+  ERROR
+}
+
+enum EventSource {
+  INTERNAL
+  GOOGLE
+  MICROSOFT
+  APPLE
+  BOOKING
+}
+
+enum EventType {
+  MEETING
+  CALL
+  FOCUS_TIME
+  DEADLINE
+  REMINDER
+  BLOCKED
+  OUT_OF_OFFICE
+  OTHER
+}
+
+enum EventStatus {
+  CONFIRMED
+  TENTATIVE
+  CANCELLED
+}
+
+enum EventVisibility {
+  DEFAULT
+  PUBLIC
+  PRIVATE
+  CONFIDENTIAL
+}
+
+enum LocationType {
+  VIDEO_CALL
+  PHONE
+  IN_PERSON
+  CUSTOM
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
 }

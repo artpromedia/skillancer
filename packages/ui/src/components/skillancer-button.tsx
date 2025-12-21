@@ -1,7 +1,7 @@
-import * as React from 'react';
 import { Loader2 } from 'lucide-react';
+import * as React from 'react';
 
-import { Button, type ButtonProps } from './button';
+import { Button, type ButtonProps } from './Button';
 import { cn } from '../lib/utils';
 
 export interface SkillancerButtonProps extends ButtonProps {
@@ -25,7 +25,7 @@ export interface SkillancerButtonProps extends ButtonProps {
 
 /**
  * Enhanced button component with loading state and icon support
- * 
+ *
  * @example
  * <SkillancerButton isLoading>Submitting...</SkillancerButton>
  * <SkillancerButton leftIcon={<Plus />}>Add Item</SkillancerButton>

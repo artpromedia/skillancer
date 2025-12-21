@@ -40,13 +40,29 @@ export {
 } from '@skillancer/database';
 
 // =============================================
+// Common User Type Aliases
+// =============================================
+
+/** User info with full profile for contracts */
+type UserContractInfo = Pick<User, 'id' | 'email' | 'displayName' | 'avatarUrl'>;
+
+/** User info with basic profile */
+type UserBasicInfo = Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+
+/** User info with email for notifications */
+type UserWithEmail = Pick<User, 'id' | 'email' | 'displayName'>;
+
+/** User info with just name */
+type UserMinimalInfo = Pick<User, 'id' | 'displayName'>;
+
+// =============================================
 // Contract Types (for contract.repository.ts)
 // =============================================
 
 /** Contract with all related entities */
 export interface ContractWithDetails extends ContractV2 {
-  client: Pick<User, 'id' | 'email' | 'displayName' | 'avatarUrl'>;
-  freelancer: Pick<User, 'id' | 'email' | 'displayName' | 'avatarUrl'>;
+  client: UserContractInfo;
+  freelancer: UserContractInfo;
   tenant: Pick<Tenant, 'id' | 'name' | 'slug'> | null;
   job: Pick<Job, 'id' | 'title' | 'status'> | null;
   milestones: ContractMilestoneV2[];
@@ -244,7 +260,7 @@ export interface TimeEntryWithDetails extends TimeEntryV2 {
     clientUserId: string;
     hourlyRate: import('@prisma/client').Prisma.Decimal | null;
   };
-  freelancer: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+  freelancer: UserBasicInfo;
 }
 
 /** Input for creating a time entry */
@@ -313,7 +329,7 @@ export interface TimeEntrySummary {
 
 /** Activity with actor info */
 export interface ActivityWithDetails extends ContractActivity {
-  actor: Pick<User, 'id' | 'displayName' | 'avatarUrl'> | null;
+  actor: UserBasicInfo | null;
 }
 
 /** Input for logging an activity */
@@ -361,7 +377,7 @@ export interface AmendmentWithDetails extends ContractAmendment {
     clientId: string;
     freelancerId: string;
   };
-  proposer: Pick<User, 'id' | 'displayName'>;
+  proposer: UserMinimalInfo;
 }
 
 /** Input for creating an amendment */
@@ -399,7 +415,7 @@ export interface AmendmentListOptions {
 
 /** Signature with user info */
 export interface SignatureWithDetails extends ContractSignature {
-  user: Pick<User, 'id' | 'email' | 'displayName'>;
+  user: UserWithEmail;
 }
 
 /** Input for creating a signature */
@@ -430,7 +446,7 @@ export interface DisputeWithDetails extends ContractDispute {
     clientUserId: string;
     freelancerUserId: string;
   };
-  raiser: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+  raiser: UserBasicInfo;
   messages: ContractDisputeMessage[];
 }
 

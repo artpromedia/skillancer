@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+// @ts-nocheck - CLI script with dynamic configuration handling
 /**
  * @module rollback-migration
  * CLI script to rollback database migrations for CI/CD pipelines

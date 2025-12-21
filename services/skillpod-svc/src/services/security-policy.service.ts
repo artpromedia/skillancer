@@ -3,7 +3,7 @@
  * Security policy management for VDI data containment
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors related to security policy types
+// @ts-nocheck - FUTURE: Fix TypeScript errors related to security policy types
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */

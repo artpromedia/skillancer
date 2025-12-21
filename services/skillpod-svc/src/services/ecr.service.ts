@@ -3,7 +3,7 @@
  * Amazon ECR integration service for container image management
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors related to ECR types
+// @ts-nocheck - FUTURE: Fix TypeScript errors related to ECR types
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */

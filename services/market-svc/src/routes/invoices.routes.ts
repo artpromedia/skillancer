@@ -13,7 +13,7 @@ import { InvoiceService, InvoiceError } from '../services/invoice.service.js';
 
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 
 // ============================================================================
 // Validation Schemas

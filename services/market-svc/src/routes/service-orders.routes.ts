@@ -131,6 +131,32 @@ interface OrderRouteDeps {
 }
 
 // ============================================================================
+// Shared Helpers
+// ============================================================================
+
+// Helper to get authenticated user
+function getUser(request: any): { id: string; email: string; role: string } {
+  if (!request.user) {
+    throw new Error('Authentication required');
+  }
+  return request.user as { id: string; email: string; role: string };
+}
+
+// Error handler
+function handleError(error: unknown, reply: any): unknown {
+  if (error instanceof ServiceCatalogError) {
+    return reply.status(error.statusCode).send({
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+      },
+    });
+  }
+  throw error;
+}
+
+// ============================================================================
 // Route Registration
 // ============================================================================
 
@@ -140,28 +166,6 @@ export function registerServiceOrderRoutes(fastify: FastifyInstance, deps: Order
   // Initialize services
   const orderService = new ServiceOrderService(prisma, redis, logger);
   const reviewService = new ServiceReviewService(prisma, redis, logger);
-
-  // Helper to get authenticated user
-  const getUser = (request: any) => {
-    if (!request.user) {
-      throw new Error('Authentication required');
-    }
-    return request.user as { id: string; email: string; role: string };
-  };
-
-  // Error handler
-  const handleError = (error: unknown, reply: any) => {
-    if (error instanceof ServiceCatalogError) {
-      return reply.status(error.statusCode).send({
-        success: false,
-        error: {
-          code: error.code,
-          message: error.message,
-        },
-      });
-    }
-    throw error;
-  };
 
   // ==========================================================================
   // ORDER MANAGEMENT
@@ -621,28 +625,6 @@ export function registerServiceReviewRoutes(fastify: FastifyInstance, deps: Orde
   const { prisma, redis, logger } = deps;
 
   const reviewService = new ServiceReviewService(prisma, redis, logger);
-
-  // Helper to get authenticated user
-  const getUser = (request: any) => {
-    if (!request.user) {
-      throw new Error('Authentication required');
-    }
-    return request.user as { id: string; email: string; role: string };
-  };
-
-  // Error handler
-  const handleError = (error: unknown, reply: any) => {
-    if (error instanceof ServiceCatalogError) {
-      return reply.status(error.statusCode).send({
-        success: false,
-        error: {
-          code: error.code,
-          message: error.message,
-        },
-      });
-    }
-    throw error;
-  };
 
   // GET /service-reviews/service/:serviceId - Get service reviews
   fastify.get('/service/:serviceId', async (request, reply) => {

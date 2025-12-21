@@ -22,6 +22,7 @@
     "@fastify/swagger": "^8.14.0",
     "@fastify/swagger-ui": "^3.0.0",
     "@skillancer/database": "workspace:*",
+    "@skillancer/logger": "workspace:*",
     "@skillancer/types": "workspace:*",
     "@skillancer/utils": "workspace:*",
     "bullmq": "^5.1.0",

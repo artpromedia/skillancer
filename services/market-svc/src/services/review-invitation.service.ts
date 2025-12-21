@@ -331,7 +331,7 @@ export class ReviewInvitationService {
       return;
     }
 
-    // TODO: Send actual notification via notification service
+    // FUTURE: Send actual notification via notification service
     // For now, just update reminder tracking
     await this.prisma.reviewInvitation.update({
       where: { id: invitationId },

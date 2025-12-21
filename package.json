@@ -5,7 +5,7 @@
   "description": "Skillancer Platform - Monorepo containing SkillPod, Skillancer Market, and Cockpit",
   "packageManager": "pnpm@8.15.6",
   "engines": {
-    "node": ">=20.0.0",
+    "node": "20.19.4",
     "pnpm": ">=8.0.0"
   },
   "scripts": {

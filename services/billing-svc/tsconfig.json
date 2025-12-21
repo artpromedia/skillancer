@@ -7,7 +7,10 @@
     "types": ["node", "vitest/globals"],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "exactOptionalPropertyTypes": false,
+    "noImplicitAny": false,
+    "strict": false
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

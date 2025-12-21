@@ -8,9 +8,10 @@
  * - Status code distribution
  */
 
-import type { Request, Response, NextFunction, RequestHandler, ErrorRequestHandler } from 'express';
 import { MetricsService } from './index.js';
+
 import type { MetricConfig } from './types.js';
+import type { Request, Response, NextFunction, RequestHandler, ErrorRequestHandler } from 'express';
 
 /**
  * Configuration options for the Express metrics middleware

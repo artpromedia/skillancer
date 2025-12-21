@@ -104,7 +104,7 @@ export class EscrowService {
 
     return {
       ...fees,
-      platformFeePercent: 10, // TODO: Make configurable per contract
+      platformFeePercent: 10, // FUTURE: Make configurable per contract
       processingFeePercent: 2.9,
       breakdown: [
         { label: 'Subtotal', amount: fees.grossAmount },
@@ -121,48 +121,86 @@ export class EscrowService {
   // ===========================================================================
 
   /**
-   * Fund escrow for a contract or milestone
+   * Validate contract exists and user is authorized as client
    */
-  async fundEscrow(params: FundEscrowParams): Promise<FundEscrowResult> {
-    this.logger.info({ params }, '[EscrowService] Funding escrow');
-
-    // Validate contract
-    const contract = await this.contractRepository.findById(params.contractId);
+  private async validateContractForFunding(
+    contractId: string,
+    clientUserId: string
+  ): Promise<NonNullable<Awaited<ReturnType<ContractRepository['findById']>>>> {
+    const contract = await this.contractRepository.findById(contractId);
     if (!contract) {
       throw new EscrowError('Contract not found', EscrowErrorCodes.CONTRACT_NOT_FOUND, 404);
     }
-
-    // Verify caller is the client
-    if (contract.clientUserId !== params.clientUserId) {
+    if (contract.clientUserId !== clientUserId) {
       throw new EscrowError(
         'Only the client can fund escrow',
         EscrowErrorCodes.NOT_AUTHORIZED,
         403
       );
     }
+    return contract;
+  }
+
+  /**
+   * Validate milestone for funding if provided
+   */
+  private async validateMilestoneForFunding(
+    milestoneId: string | undefined,
+    contractId: string,
+    amount: number
+  ): Promise<Awaited<ReturnType<ContractMilestoneRepository['findById']>>> {
+    if (!milestoneId) {
+      return null;
+    }
+
+    const milestone = await this.milestoneRepository.findById(milestoneId);
+    if (milestone?.contractId !== contractId) {
+      throw new EscrowError('Milestone not found', EscrowErrorCodes.MILESTONE_NOT_FOUND, 404);
+    }
+    if (milestone.escrowFunded) {
+      throw new EscrowError('Milestone is already funded', EscrowErrorCodes.ALREADY_FUNDED, 400);
+    }
+    if (amount !== Number(milestone.amount)) {
+      throw new EscrowError(
+        `Amount must match milestone amount: ${milestone.amount}`,
+        EscrowErrorCodes.INVALID_AMOUNT,
+        400
+      );
+    }
+    return milestone;
+  }
+
+  /**
+   * Determine transaction status from payment intent
+   */
+  private determineTransactionStatus(paymentIntentStatus: string): {
+    status: 'PENDING' | 'PROCESSING' | 'REQUIRES_CAPTURE';
+    requiresAction: boolean;
+  } {
+    if (paymentIntentStatus === 'requires_capture') {
+      return { status: 'REQUIRES_CAPTURE', requiresAction: false };
+    }
+    if (paymentIntentStatus === 'requires_action') {
+      return { status: 'PROCESSING', requiresAction: true };
+    }
+    return { status: 'PENDING', requiresAction: false };
+  }
+
+  /**
+   * Fund escrow for a contract or milestone
+   */
+  async fundEscrow(params: FundEscrowParams): Promise<FundEscrowResult> {
+    this.logger.info({ params }, '[EscrowService] Funding escrow');
+
+    // Validate contract and authorization
+    const contract = await this.validateContractForFunding(params.contractId, params.clientUserId);
 
     // Validate milestone if provided
-    let milestone = null;
-    if (params.milestoneId) {
-      milestone = await this.milestoneRepository.findById(params.milestoneId);
-      if (!milestone || milestone.contractId !== params.contractId) {
-        throw new EscrowError('Milestone not found', EscrowErrorCodes.MILESTONE_NOT_FOUND, 404);
-      }
-
-      // Check if milestone is already funded
-      if (milestone.escrowFunded) {
-        throw new EscrowError('Milestone is already funded', EscrowErrorCodes.ALREADY_FUNDED, 400);
-      }
-
-      // Verify amount matches milestone amount
-      if (params.amount !== Number(milestone.amount)) {
-        throw new EscrowError(
-          `Amount must match milestone amount: ${milestone.amount}`,
-          EscrowErrorCodes.INVALID_AMOUNT,
-          400
-        );
-      }
-    }
+    const milestone = await this.validateMilestoneForFunding(
+      params.milestoneId,
+      params.contractId,
+      params.amount
+    );
 
     // Calculate fees
     const fees = this.stripeService.calculateFees(params.amount);
@@ -187,7 +225,9 @@ export class EscrowService {
         customerId: stripeCustomerId,
         paymentMethodId: params.paymentMethodId,
         captureMethod: 'manual',
-        description: `Escrow funding for contract: ${contract.title}${milestone ? ` - Milestone: ${milestone.title}` : ''}`,
+        description: milestone
+          ? `Escrow funding for contract: ${contract.title} - Milestone: ${milestone.title}`
+          : `Escrow funding for contract: ${contract.title}`,
         metadata: {
           contract_id: params.contractId,
           milestone_id: params.milestoneId ?? '',
@@ -204,15 +244,9 @@ export class EscrowService {
     }
 
     // Determine transaction status based on payment intent
-    let transactionStatus: 'PENDING' | 'PROCESSING' | 'REQUIRES_CAPTURE' = 'PENDING';
-    let requiresAction = false;
-
-    if (paymentIntent.status === 'requires_capture') {
-      transactionStatus = 'REQUIRES_CAPTURE';
-    } else if (paymentIntent.status === 'requires_action') {
-      transactionStatus = 'PROCESSING';
-      requiresAction = true;
-    }
+    const { status: transactionStatus, requiresAction } = this.determineTransactionStatus(
+      paymentIntent.status
+    );
 
     // Create escrow transaction
     const transaction = await this.escrowRepository.createTransaction({
@@ -226,7 +260,9 @@ export class EscrowService {
       netAmount: fees.netAmount,
       currency: contract.currency,
       stripePaymentIntentId: paymentIntent.id,
-      description: `Escrow funding${milestone ? ` for milestone: ${milestone.title}` : ''}`,
+      description: milestone
+        ? `Escrow funding for milestone: ${milestone.title}`
+        : 'Escrow funding',
       metadata: {
         totalCharge: fees.totalCharge,
         paymentIntentStatus: paymentIntent.status,
@@ -303,7 +339,7 @@ export class EscrowService {
 
     // Update contract status if needed
     const contract = await this.contractRepository.findById(contractId);
-    if (contract && contract.status === 'DRAFT') {
+    if (contract?.status === 'DRAFT') {
       await this.prisma.contractV2.update({
         where: { id: contractId },
         data: { status: 'ACTIVE', updatedAt: new Date() },
@@ -397,7 +433,8 @@ export class EscrowService {
       netAmount: fees.netAmount,
       currency: contract.currency,
       description:
-        params.notes ?? `Escrow release${milestone ? ` for milestone: ${milestone.title}` : ''}`,
+        params.notes ??
+        (milestone ? `Escrow release for milestone: ${milestone.title}` : 'Escrow release'),
     });
 
     // Update escrow balance
@@ -826,7 +863,7 @@ export class EscrowService {
     const transaction =
       await this.escrowRepository.findTransactionByPaymentIntentId(paymentIntentId);
 
-    if (!transaction || transaction.transactionType !== 'FUND') {
+    if (transaction?.transactionType !== 'FUND') {
       this.logger.warn({ paymentIntentId }, 'Payment intent not found or not a fund transaction');
       return;
     }

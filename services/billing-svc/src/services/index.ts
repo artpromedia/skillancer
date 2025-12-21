@@ -2,14 +2,14 @@
  * Services index - exports all billing services
  */
 
-export * from './subscription.service';
-export * from './product.service';
-export * from './proration.service';
-export * from './trial.service';
-export * from './coupon.service';
-export * from './dunning.service';
-export * from './invoice.service';
-export * from './usage.service';
+export * from './subscription.service.js';
+export * from './product.service.js';
+export * from './proration.service.js';
+export * from './trial.service.js';
+export * from './coupon.service.js';
+export * from './dunning.service.js';
+export * from './invoice.service.js';
+export * from './usage.service.js';
 export * from './payout.service.js';
 export * from './transaction.service.js';
 

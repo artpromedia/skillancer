@@ -5,9 +5,9 @@
  * consistent structure and preventing sensitive data from being logged.
  */
 
-import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { Request, Response } from 'express';
 import type { HttpRequestLog, HttpResponseLog, ErrorLog } from './types.js';
+import type { Request, Response } from 'express';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 
 /**
  * Headers that should be included in request logs
@@ -267,10 +267,10 @@ export function sanitizeForLogging(obj: unknown, seen = new WeakSet()): unknown 
   }
 
   // Handle circular references
-  if (seen.has(obj as object)) {
+  if (seen.has(obj)) {
     return '[Circular]';
   }
-  seen.add(obj as object);
+  seen.add(obj);
 
   if (Array.isArray(obj)) {
     return obj.map((item) => sanitizeForLogging(item, seen));

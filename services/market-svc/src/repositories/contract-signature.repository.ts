@@ -3,7 +3,7 @@
  * Contract Signature data access layer
  */
 
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 import type { CreateSignatureInput, SignatureWithDetails } from '../types/contract.types.js';
 import type { PrismaClient } from '@skillancer/database';

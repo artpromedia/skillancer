@@ -13,7 +13,7 @@ import { PayoutService, PayoutError } from '../services/payout.service.js';
 
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 
 // ============================================================================
 // Validation Schemas
@@ -92,6 +92,50 @@ export function registerPayoutRoutes(fastify: FastifyInstance, deps: PayoutRoute
     }
     throw error;
   };
+
+  // Helper to get freelancer user ID from contract or invoice
+  async function getFreelancerUserId(
+    contractId: string | undefined,
+    invoiceId: string | undefined
+  ): Promise<
+    { freelancerUserId: string } | { error: { code: string; message: string; status: number } }
+  > {
+    if (contractId) {
+      const contract = await prisma.contractV2.findUnique({
+        where: { id: contractId },
+        select: { freelancerUserId: true },
+      });
+      if (!contract) {
+        return {
+          error: { code: 'CONTRACT_NOT_FOUND', message: 'Contract not found', status: 404 },
+        };
+      }
+      return { freelancerUserId: contract.freelancerUserId };
+    }
+    if (invoiceId) {
+      const invoice = await prisma.contractInvoice.findFirst({
+        where: { id: invoiceId },
+        select: { freelancerUserId: true },
+      });
+      if (!invoice?.freelancerUserId) {
+        return {
+          error: {
+            code: 'INVOICE_NOT_FOUND',
+            message: 'Invoice not found or missing freelancer',
+            status: 404,
+          },
+        };
+      }
+      return { freelancerUserId: invoice.freelancerUserId };
+    }
+    return {
+      error: {
+        code: 'INVALID_REQUEST',
+        message: 'Either contractId or invoiceId is required',
+        status: 400,
+      },
+    };
+  }
 
   // ==========================================================================
   // CONNECT ACCOUNT MANAGEMENT
@@ -253,58 +297,19 @@ export function registerPayoutRoutes(fastify: FastifyInstance, deps: PayoutRoute
         });
       }
 
-      // For now, require either contractId or invoiceId to identify the freelancer
-      if (!body.contractId && !body.invoiceId) {
-        return await reply.status(400).send({
+      // Get freelancer from contract or invoice
+      const freelancerResult = await getFreelancerUserId(body.contractId, body.invoiceId);
+      if ('error' in freelancerResult) {
+        return await reply.status(freelancerResult.error.status).send({
           success: false,
           error: {
-            code: 'INVALID_REQUEST',
-            message: 'Either contractId or invoiceId is required',
+            code: freelancerResult.error.code,
+            message: freelancerResult.error.message,
           },
         });
       }
 
-      // Get freelancer from contract or invoice
-      let freelancerUserId: string;
-      if (body.contractId) {
-        const contract = await prisma.contractV2.findUnique({
-          where: { id: body.contractId },
-          select: { freelancerUserId: true },
-        });
-        if (!contract) {
-          return await reply.status(404).send({
-            success: false,
-            error: {
-              code: 'CONTRACT_NOT_FOUND',
-              message: 'Contract not found',
-            },
-          });
-        }
-        freelancerUserId = contract.freelancerUserId;
-      } else if (body.invoiceId) {
-        const invoice = await prisma.contractInvoice.findFirst({
-          where: { id: body.invoiceId },
-          select: { freelancerUserId: true },
-        });
-        if (!invoice || !invoice.freelancerUserId) {
-          return await reply.status(404).send({
-            success: false,
-            error: {
-              code: 'INVOICE_NOT_FOUND',
-              message: 'Invoice not found or missing freelancer',
-            },
-          });
-        }
-        freelancerUserId = invoice.freelancerUserId;
-      } else {
-        return await reply.status(400).send({
-          success: false,
-          error: {
-            code: 'INVALID_REQUEST',
-            message: 'Either contractId or invoiceId is required',
-          },
-        });
-      }
+      const { freelancerUserId } = freelancerResult;
 
       const result = await payoutService.createTransfer(freelancerUserId, {
         amount: body.amount,

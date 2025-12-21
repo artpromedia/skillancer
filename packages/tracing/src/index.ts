@@ -1,20 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars, no-console, @typescript-eslint/no-unsafe-member-access */
 /**
  * @skillancer/tracing
  *
  * Distributed tracing with OpenTelemetry and AWS X-Ray
  */
 
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { AWSXRayPropagator } from '@opentelemetry/propagator-aws-xray';
-import { AWSXRayIdGenerator } from '@opentelemetry/id-generator-aws-xray';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { Resource } from '@opentelemetry/resources';
-import {
-  SEMRESATTRS_SERVICE_NAME,
-  SEMRESATTRS_SERVICE_VERSION,
-  SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
-} from '@opentelemetry/semantic-conventions';
 import {
   trace,
   context,
@@ -23,6 +13,17 @@ import {
   SpanKind,
   type Attributes,
 } from '@opentelemetry/api';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { AWSXRayIdGenerator } from '@opentelemetry/id-generator-aws-xray';
+import { AWSXRayPropagator } from '@opentelemetry/propagator-aws-xray';
+import { Resource } from '@opentelemetry/resources';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import {
+  SEMRESATTRS_SERVICE_NAME,
+  SEMRESATTRS_SERVICE_VERSION,
+  SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
+} from '@opentelemetry/semantic-conventions';
 
 export interface TracingConfig {
   serviceName: string;

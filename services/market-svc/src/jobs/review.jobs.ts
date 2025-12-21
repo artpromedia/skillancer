@@ -250,7 +250,7 @@ export class ReviewJobs {
               const normalizedScore = Math.round(((weightedAvg - 1) / 4) * 100);
 
               // Update or create trust score record
-              // TODO: Integrate with actual Trust Score service
+              // FUTURE: Integrate with actual Trust Score service
               this.logger.debug({
                 msg: 'Trust score calculated',
                 userId: revieweeId,

@@ -7,7 +7,7 @@ const server = Fastify({
   logger: true,
 });
 
-server.get('/health', async () => {
+server.get('/health', () => {
   return { status: 'ok' };
 });
 
@@ -16,10 +16,10 @@ const start = async () => {
     await server.listen({ port: 4006, host: '0.0.0.0' });
   } catch (err) {
     server.log.error(err);
-    process.exit(1);
+    throw err;
   }
 };
 
-start();
+void start();
 
 export { server };

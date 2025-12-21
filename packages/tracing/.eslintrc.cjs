@@ -1,6 +1,6 @@
 module.exports = {
   root: true,
-  extends: ['@skillancer/config/eslint'],
+  extends: [require.resolve('@skillancer/config/eslint/base')],
   parserOptions: {
     project: './tsconfig.json',
     tsconfigRootDir: __dirname,

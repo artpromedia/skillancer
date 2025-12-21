@@ -43,7 +43,7 @@ concurrency:
 env:
   AWS_REGION: us-east-1
   ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
-  NODE_VERSION: '20'
+  NODE_VERSION: '20.19.4'
   PNPM_VERSION: '8.15.6'
 
 jobs:

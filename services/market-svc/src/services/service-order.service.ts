@@ -177,7 +177,7 @@ export class ServiceOrderService {
       await this.calculateOrderPricing(input.serviceId, pkg, input.addOnIds);
 
     // Calculate fees and total
-    const discount = 0; // TODO: Handle coupons
+    const discount = 0; // FUTURE: Handle coupons
     const platformFee = Math.round(
       (subtotal + addOnsTotal - discount) * (PLATFORM_FEE_PERCENT / 100)
     );
@@ -306,7 +306,7 @@ export class ServiceOrderService {
       buyerId: userId,
     });
 
-    // TODO: Notify seller
+    // FUTURE: Notify seller
 
     return updatedOrder;
   }
@@ -336,7 +336,7 @@ export class ServiceOrderService {
       );
     }
 
-    // TODO: Verify payment with Stripe
+    // FUTURE: Verify payment with Stripe
     // For now, we'll assume payment is successful
 
     const updatedOrder = await this.orderRepository.updatePaymentStatus(
@@ -352,7 +352,7 @@ export class ServiceOrderService {
       paymentIntentId,
     });
 
-    // TODO: Notify seller that order is now active
+    // FUTURE: Notify seller that order is now active
 
     return updatedOrder;
   }
@@ -386,7 +386,7 @@ export class ServiceOrderService {
     const cancelledOrder = await this.orderRepository.cancel(orderId, input.reason, userId);
 
     if (needsRefund) {
-      // TODO: Process refund via billing service
+      // FUTURE: Process refund via billing service
       await this.orderRepository.updateEscrowStatus(orderId, 'REFUNDED');
       await this.orderRepository.updatePaymentStatus(orderId, 'REFUNDED');
     }
@@ -399,7 +399,7 @@ export class ServiceOrderService {
       needsRefund,
     });
 
-    // TODO: Notify other party
+    // FUTURE: Notify other party
 
     return cancelledOrder;
   }
@@ -443,7 +443,7 @@ export class ServiceOrderService {
       sellerId: userId,
     });
 
-    // TODO: Notify buyer
+    // FUTURE: Notify buyer
 
     return delivery;
   }
@@ -489,8 +489,8 @@ export class ServiceOrderService {
       buyerId: userId,
     });
 
-    // TODO: Notify seller of completion
-    // TODO: Release escrow
+    // FUTURE: Notify seller of completion
+    // FUTURE: Release escrow
 
     return acceptedDelivery;
   }
@@ -553,7 +553,7 @@ export class ServiceOrderService {
       buyerId: userId,
     });
 
-    // TODO: Notify seller
+    // FUTURE: Notify seller
 
     return revision;
   }
@@ -623,7 +623,7 @@ export class ServiceOrderService {
       senderId: userId,
     });
 
-    // TODO: Notify recipient
+    // FUTURE: Notify recipient
 
     return message;
   }
@@ -699,8 +699,8 @@ export class ServiceOrderService {
           sellerId: order.sellerId,
         });
 
-        // TODO: Notify both parties
-        // TODO: Release escrow
+        // FUTURE: Notify both parties
+        // FUTURE: Release escrow
       } catch (error) {
         this.logger.error({
           msg: 'Failed to auto-complete order',

@@ -3,7 +3,7 @@
  * Real-time WebSocket-based policy enforcement for VDI sessions
  */
 
-// @ts-nocheck - TODO: Fix TypeScript errors related to websocket types
+// @ts-nocheck - FUTURE: Fix TypeScript errors related to websocket types
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */

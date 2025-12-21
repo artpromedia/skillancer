@@ -154,9 +154,13 @@ export class ContractDisputeRepository {
         resolution,
         resolutionNotes,
         clientRefundAmount:
-          clientRefundAmount != null ? new Prisma.Decimal(clientRefundAmount) : null,
+          clientRefundAmount === null || clientRefundAmount === undefined
+            ? null
+            : new Prisma.Decimal(clientRefundAmount),
         freelancerPayoutAmount:
-          freelancerPayoutAmount != null ? new Prisma.Decimal(freelancerPayoutAmount) : null,
+          freelancerPayoutAmount === null || freelancerPayoutAmount === undefined
+            ? null
+            : new Prisma.Decimal(freelancerPayoutAmount),
       },
       include: this.defaultInclude,
     });

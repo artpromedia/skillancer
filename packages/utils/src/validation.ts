@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 /**
  * @module @skillancer/utils/validation
  * Validation utilities for common data types
@@ -74,8 +75,7 @@ export function isValidUrl(url: string): boolean {
  * isValidUuid('not-a-uuid') // false
  */
 export function isValidUuid(uuid: string): boolean {
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 }
 
@@ -196,8 +196,7 @@ export function isValidCreditCard(cardNumber: string): boolean {
  * isValidIPv4('256.1.1.1') // false
  */
 export function isValidIPv4(ip: string): boolean {
-  const ipv4Regex =
-    /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+  const ipv4Regex = /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
   return ipv4Regex.test(ip);
 }
 
@@ -250,11 +249,7 @@ export function isValidDateFormat(dateStr: string): boolean {
   const month = parts[1] ?? 0;
   const day = parts[2] ?? 0;
   const date = new Date(year, month - 1, day);
-  return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
-  );
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
 /**

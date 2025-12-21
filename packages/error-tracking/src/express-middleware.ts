@@ -1,11 +1,12 @@
+/* eslint-disable import/order, @typescript-eslint/no-namespace, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 /**
  * Express middleware for Sentry error tracking
  *
  * Automatically captures errors and adds request context
  */
 
-import type { Request, Response, NextFunction, ErrorRequestHandler, RequestHandler } from 'express';
 import * as Sentry from '@sentry/node';
+import type { Request, Response, NextFunction, ErrorRequestHandler, RequestHandler } from 'express';
 
 export interface SentryMiddlewareOptions {
   /** Extract user ID from request */
@@ -54,7 +55,9 @@ export function createSentryRequestHandler(options: SentryMiddlewareOptions = {}
     Sentry.withScope((scope) => {
       // Set request context
       const requestId =
-        (req.headers['x-request-id'] as string) || (req.headers['x-correlation-id'] as string) || '';
+        (req.headers['x-request-id'] as string) ||
+        (req.headers['x-correlation-id'] as string) ||
+        '';
       if (requestId) {
         scope.setTag('request_id', requestId);
       }
@@ -144,7 +147,9 @@ export function createSentryRequestHandler(options: SentryMiddlewareOptions = {}
 /**
  * Create error handler middleware for Sentry
  */
-export function createSentryErrorHandler(options: SentryMiddlewareOptions = {}): ErrorRequestHandler {
+export function createSentryErrorHandler(
+  options: SentryMiddlewareOptions = {}
+): ErrorRequestHandler {
   const ignoreRoutes = options.ignoreRoutes || ['/health', '/ready', '/metrics'];
 
   const shouldIgnoreRoute = (url: string): boolean => {
@@ -180,7 +185,8 @@ export function createSentryErrorHandler(options: SentryMiddlewareOptions = {}):
       });
 
       // Set error level based on status code
-      const statusCode = (error as { statusCode?: number; status?: number }).statusCode ||
+      const statusCode =
+        (error as { statusCode?: number; status?: number }).statusCode ||
         (error as { status?: number }).status ||
         500;
       scope.setLevel(statusCode >= 500 ? 'error' : 'warning');

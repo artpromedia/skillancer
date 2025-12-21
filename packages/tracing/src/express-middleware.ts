@@ -1,10 +1,10 @@
+/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 /**
  * Express tracing middleware
  *
  * Provides request tracing with OpenTelemetry and AWS X-Ray for Express applications
  */
 
-import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import {
   trace,
   SpanStatusCode,
@@ -21,6 +21,8 @@ import {
   SEMATTRS_NET_PEER_IP,
   SEMATTRS_HTTP_USER_AGENT,
 } from '@opentelemetry/semantic-conventions';
+
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 
 export interface TracingMiddlewareOptions {
   serviceName?: string;

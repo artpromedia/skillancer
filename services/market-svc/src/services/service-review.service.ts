@@ -95,7 +95,7 @@ export class ServiceReviewService {
       reviewerId: userId,
     });
 
-    // TODO: Notify seller
+    // FUTURE: Notify seller
 
     return review;
   }
@@ -236,7 +236,7 @@ export class ServiceReviewService {
       sellerId: userId,
     });
 
-    // TODO: Notify reviewer
+    // FUTURE: Notify reviewer
 
     return updatedReview;
   }

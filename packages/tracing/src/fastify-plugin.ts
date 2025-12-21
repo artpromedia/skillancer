@@ -1,11 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 /**
  * Fastify tracing plugin
  *
  * Provides request tracing with OpenTelemetry and AWS X-Ray
  */
 
-import type { FastifyPluginCallback, FastifyRequest, FastifyReply } from 'fastify';
-import fp from 'fastify-plugin';
 import {
   trace,
   SpanStatusCode,
@@ -22,6 +21,9 @@ import {
   SEMATTRS_NET_PEER_IP,
   SEMATTRS_HTTP_USER_AGENT,
 } from '@opentelemetry/semantic-conventions';
+import fp from 'fastify-plugin';
+
+import type { FastifyPluginCallback, FastifyRequest, FastifyReply } from 'fastify';
 
 export interface TracingPluginOptions {
   serviceName?: string;
@@ -148,13 +150,14 @@ const tracingPluginCallback: FastifyPluginCallback<TracingPluginOptions> = (
 
   // Decorate reply with traceId helper
   fastify.decorateReply('getTraceId', function (this: FastifyReply) {
-    return (this.request as FastifyRequest).traceId;
+    return this.request.traceId;
   });
 
   done();
 };
 
-export const tracingPlugin = fp(tracingPluginCallback, {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const tracingPlugin = fp(tracingPluginCallback as any, {
   name: '@skillancer/tracing',
   fastify: '4.x',
 });

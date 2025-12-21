@@ -15,6 +15,7 @@ import {
   PutMetricDataCommand,
   StandardUnit,
 } from '@aws-sdk/client-cloudwatch';
+
 import type {
   MetricConfig,
   MetricData,

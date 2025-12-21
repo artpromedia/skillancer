@@ -1,16 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * @skillancer/types - Market: Service Types
  * Productized service listing schemas for freelancer offerings
  */
 
 import { z } from 'zod';
-import {
-  uuidSchema,
-  dateSchema,
-  currencyCodeSchema,
-  timestampsSchema,
-} from '../common/base';
+
 import { experienceLevelSchema } from './job';
+import { uuidSchema, dateSchema, currencyCodeSchema, timestampsSchema } from '../common/base';
 
 // =============================================================================
 // Service Enums
@@ -78,24 +75,26 @@ export const serviceTierSchema = z.object({
   description: z.string().max(1000),
   price: z.number().positive(),
   currency: currencyCodeSchema.default('USD'),
-  
+
   // Delivery
   deliveryTime: deliveryTimeSchema,
   deliveryDays: z.number().int().positive(),
-  
+
   // Inclusions
-  features: z.array(z.object({
-    name: z.string(),
-    included: z.boolean(),
-    quantity: z.number().int().nonnegative().optional(),
-  })),
-  
+  features: z.array(
+    z.object({
+      name: z.string(),
+      included: z.boolean(),
+      quantity: z.number().int().nonnegative().optional(),
+    })
+  ),
+
   // Revisions
   revisions: z.number().int().nonnegative(), // -1 for unlimited
-  
+
   // Source files
   sourceFilesIncluded: z.boolean().default(false),
-  
+
   // Commercial use
   commercialUseIncluded: z.boolean().default(true),
 });
@@ -149,61 +148,74 @@ export const serviceSchema = z.object({
   id: uuidSchema,
   freelancerUserId: uuidSchema,
   tenantId: uuidSchema.optional(),
-  
+
   // Basic info
   title: z.string().min(10).max(100),
   slug: z.string().min(1).max(150),
   tagline: z.string().max(200).optional(),
   description: z.string().min(100).max(5000),
-  
+
   // Categorization
   category: serviceCategorySchema,
   subcategory: z.string().max(100).optional(),
   tags: z.array(z.string().max(50)).max(10),
-  
+
   // Skills & expertise
-  skills: z.array(z.object({
-    skillId: uuidSchema,
-    skillName: z.string(),
-  })).max(15),
-  
+  skills: z
+    .array(
+      z.object({
+        skillId: uuidSchema,
+        skillName: z.string(),
+      })
+    )
+    .max(15),
+
   experienceLevel: experienceLevelSchema,
-  
+
   // Media
-  images: z.array(z.object({
-    id: uuidSchema,
-    url: z.string().url(),
-    thumbnailUrl: z.string().url().optional(),
-    isPrimary: z.boolean().default(false),
-    order: z.number().int().nonnegative(),
-  })).max(10),
-  
-  videos: z.array(z.object({
-    id: uuidSchema,
-    url: z.string().url(),
-    thumbnailUrl: z.string().url().optional(),
-    durationSeconds: z.number().int().positive().optional(),
-  })).max(3).optional(),
-  
+  images: z
+    .array(
+      z.object({
+        id: uuidSchema,
+        url: z.string().url(),
+        thumbnailUrl: z.string().url().optional(),
+        isPrimary: z.boolean().default(false),
+        order: z.number().int().nonnegative(),
+      })
+    )
+    .max(10),
+
+  videos: z
+    .array(
+      z.object({
+        id: uuidSchema,
+        url: z.string().url(),
+        thumbnailUrl: z.string().url().optional(),
+        durationSeconds: z.number().int().positive().optional(),
+      })
+    )
+    .max(3)
+    .optional(),
+
   // Portfolio samples
   portfolioItems: z.array(uuidSchema).max(20).optional(),
-  
+
   // Packages
   tiers: z.array(serviceTierSchema).min(1).max(4),
-  
+
   // Extras/add-ons
   addons: z.array(serviceAddonSchema).max(10).optional(),
-  
+
   // Requirements
   requirements: z.array(serviceRequirementSchema).max(10).optional(),
-  
+
   // FAQ
   faqs: z.array(serviceFaqSchema).max(10).optional(),
-  
+
   // Status
   status: serviceStatusSchema,
   rejectionReason: z.string().max(500).optional(),
-  
+
   // Stats
   totalOrders: z.number().int().nonnegative().default(0),
   completedOrders: z.number().int().nonnegative().default(0),
@@ -211,16 +223,16 @@ export const serviceSchema = z.object({
   averageRating: z.number().min(0).max(5).optional(),
   totalReviews: z.number().int().nonnegative().default(0),
   responseTimeHours: z.number().nonnegative().optional(),
-  
+
   // Visibility
   isPublic: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   isPausedByAdmin: z.boolean().default(false),
-  
+
   // SkillPod integration
   skillpodAvailable: z.boolean().default(false),
   skillpodRecommended: z.boolean().default(false),
-  
+
   ...timestampsSchema.shape,
 });
 export type Service = z.infer<typeof serviceSchema>;
@@ -239,15 +251,31 @@ export const createServiceSchema = z.object({
   category: serviceCategorySchema,
   subcategory: z.string().max(100).optional(),
   tags: z.array(z.string().max(50)).max(10),
-  skills: z.array(z.object({
-    skillId: uuidSchema,
-    skillName: z.string(),
-  })).max(15),
+  skills: z
+    .array(
+      z.object({
+        skillId: uuidSchema,
+        skillName: z.string(),
+      })
+    )
+    .max(15),
   experienceLevel: experienceLevelSchema,
-  tiers: z.array(serviceTierSchema.omit({ id: true })).min(1).max(4),
-  addons: z.array(serviceAddonSchema.omit({ id: true })).max(10).optional(),
-  requirements: z.array(serviceRequirementSchema.omit({ id: true })).max(10).optional(),
-  faqs: z.array(serviceFaqSchema.omit({ id: true })).max(10).optional(),
+  tiers: z
+    .array(serviceTierSchema.omit({ id: true }))
+    .min(1)
+    .max(4),
+  addons: z
+    .array(serviceAddonSchema.omit({ id: true }))
+    .max(10)
+    .optional(),
+  requirements: z
+    .array(serviceRequirementSchema.omit({ id: true }))
+    .max(10)
+    .optional(),
+  faqs: z
+    .array(serviceFaqSchema.omit({ id: true }))
+    .max(10)
+    .optional(),
   skillpodAvailable: z.boolean().default(false),
   skillpodRecommended: z.boolean().default(false),
   status: z.enum(['DRAFT', 'PENDING_REVIEW']).default('DRAFT'),
@@ -286,16 +314,24 @@ export type ServiceFilter = z.infer<typeof serviceFilterSchema>;
 export const serviceOrderSchema = z.object({
   serviceId: uuidSchema,
   tierId: uuidSchema,
-  addons: z.array(z.object({
-    addonId: uuidSchema,
-    quantity: z.number().int().positive().default(1),
-  })).optional(),
-  requirements: z.array(z.object({
-    requirementId: uuidSchema,
-    answer: z.string().optional(),
-    fileUrl: z.string().url().optional(),
-    selectedOptions: z.array(z.string()).optional(),
-  })).optional(),
+  addons: z
+    .array(
+      z.object({
+        addonId: uuidSchema,
+        quantity: z.number().int().positive().default(1),
+      })
+    )
+    .optional(),
+  requirements: z
+    .array(
+      z.object({
+        requirementId: uuidSchema,
+        answer: z.string().optional(),
+        fileUrl: z.string().url().optional(),
+        selectedOptions: z.array(z.string()).optional(),
+      })
+    )
+    .optional(),
   message: z.string().max(2000).optional(),
   useSkillpod: z.boolean().default(false),
 });
