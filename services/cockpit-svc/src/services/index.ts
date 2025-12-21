@@ -29,3 +29,11 @@ export {
   MicrosoftCalendarService,
   type MicrosoftCalendarConfig,
 } from './microsoft-calendar.service.js';
+
+// Financial Services (CP-3.1: Income & Expense Tracking)
+export { FinancialAccountService } from './financial-account.service.js';
+export { FinancialTransactionService } from './financial-transaction.service.js';
+export { FinancialReportsService } from './financial-reports.service.js';
+export { FinancialGoalService } from './financial-goal.service.js';
+export { MileageService } from './mileage.service.js';
+export { PlaidService } from './plaid.service.js';

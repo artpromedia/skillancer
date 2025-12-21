@@ -16,3 +16,9 @@ export { ProjectProgressWorker } from './project-progress.worker.js';
 export { CalendarSyncWorker } from './calendar-sync.worker.js';
 export { BookingReminderWorker } from './booking-reminder.worker.js';
 export { EventReminderWorker } from './event-reminder.worker.js';
+
+// Financial Workers (CP-3.1: Income & Expense Tracking)
+export {
+  RecurringTransactionWorker,
+  type RecurringTransactionNotification,
+} from './recurring-transaction.worker.js';

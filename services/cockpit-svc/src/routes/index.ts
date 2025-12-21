@@ -5,6 +5,7 @@
 import { calendarRoutes } from './calendar.routes.js';
 import { registerClientRoutes } from './clients.routes.js';
 import { registerDocumentRoutes } from './documents.routes.js';
+import { registerFinanceRoutes } from './finance.routes.js';
 import { registerOpportunityRoutes } from './opportunities.routes.js';
 import {
   registerProjectRoutes,
@@ -137,6 +138,28 @@ export async function registerRoutes(
     prefix: '/public/book',
     calendarService,
   });
+
+  // ============================================================================
+  // Financial Tracking Routes (CP-3.1: Income & Expense Tracking)
+  // ============================================================================
+
+  // Register finance routes
+  await fastify.register(
+    (instance) => {
+      registerFinanceRoutes(instance, {
+        ...deps,
+        plaidConfig: process.env.PLAID_CLIENT_ID
+          ? {
+              clientId: process.env.PLAID_CLIENT_ID,
+              secret: process.env.PLAID_SECRET ?? '',
+              env: (process.env.PLAID_ENV as 'sandbox' | 'development' | 'production') ?? 'sandbox',
+              webhookUrl: process.env.PLAID_WEBHOOK_URL,
+            }
+          : undefined,
+      });
+    },
+    { prefix: '/finance' }
+  );
 }
 
 // CRM exports
@@ -158,3 +181,6 @@ export { timeTrackingRoutes } from './time-tracking.routes.js';
 // Calendar Integration exports
 export { calendarRoutes } from './calendar.routes.js';
 export { publicBookingRoutes } from './public-booking.routes.js';
+
+// Financial exports (CP-3.1: Income & Expense Tracking)
+export { registerFinanceRoutes } from './finance.routes.js';

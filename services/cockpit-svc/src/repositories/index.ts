@@ -36,3 +36,12 @@ export { CalendarEventRepository } from './calendar-event.repository.js';
 export { AvailabilityScheduleRepository } from './availability-schedule.repository.js';
 export { BookingLinkRepository } from './booking-link.repository.js';
 export { BookingRepository } from './booking.repository.js';
+
+// Financial Tracking Repositories
+export { FinancialAccountRepository } from './financial-account.repository.js';
+export { FinancialTransactionRepository } from './financial-transaction.repository.js';
+export { TransactionCategoryRepository } from './transaction-category.repository.js';
+export { RecurringTransactionRepository } from './recurring-transaction.repository.js';
+export { FinancialGoalRepository } from './financial-goal.repository.js';
+export { MileageLogRepository } from './mileage-log.repository.js';
+export { TaxProfileRepository } from './tax-profile.repository.js';

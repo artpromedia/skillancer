@@ -5,3 +5,4 @@
 
 export * from './crm.errors.js';
 export * from './time-tracking.errors.js';
+export * from './finance.errors.js';

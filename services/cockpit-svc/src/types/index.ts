@@ -44,3 +44,6 @@ export type {
   // Invoice types
   MarkAsInvoicedParams,
 } from './time-tracking.types.js';
+
+// Financial types (CP-3.1: Income & Expense Tracking)
+export * from './finance.types.js';

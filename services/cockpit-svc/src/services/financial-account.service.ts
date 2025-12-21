@@ -1,0 +1,314 @@
+/**
+ * @module @skillancer/cockpit-svc/services/financial-account
+ * Financial Account Service - Bank & payment account management
+ */
+
+import { FinanceError, FinanceErrorCode } from '../errors/finance.errors.js';
+import {
+  FinancialAccountRepository,
+  TransactionCategoryRepository,
+} from '../repositories/index.js';
+
+import type {
+  CreateFinancialAccountParams,
+  UpdateFinancialAccountParams,
+  AccountFilters,
+  FinancialAccountWithBalance,
+} from '../types/finance.types.js';
+import type { PrismaClient, FinancialAccount } from '@skillancer/database';
+import type { Logger } from '@skillancer/logger';
+
+export class FinancialAccountService {
+  private readonly accountRepository: FinancialAccountRepository;
+  private readonly categoryRepository: TransactionCategoryRepository;
+
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly logger: Logger
+  ) {
+    this.accountRepository = new FinancialAccountRepository(prisma);
+    this.categoryRepository = new TransactionCategoryRepository(prisma);
+  }
+
+  /**
+   * Create a new financial account
+   */
+  async createAccount(params: CreateFinancialAccountParams): Promise<FinancialAccount> {
+    // Check for duplicate name
+    const existing = await this.prisma.financialAccount.findFirst({
+      where: {
+        userId: params.userId,
+        name: { equals: params.name, mode: 'insensitive' },
+      },
+    });
+
+    if (existing) {
+      throw new FinanceError(FinanceErrorCode.ACCOUNT_ALREADY_EXISTS);
+    }
+
+    // If this is the first account, make it default
+    const accountCount = await this.accountRepository.countByUserId(params.userId);
+    if (accountCount === 0) {
+      params.isDefault = true;
+    }
+
+    // Initialize default categories if user doesn't have any
+    const hasCategories = await this.categoryRepository.userHasCategories(params.userId);
+    if (!hasCategories) {
+      await this.categoryRepository.createDefaultCategories(params.userId);
+      this.logger.info({ userId: params.userId }, 'Default categories created');
+    }
+
+    const account = await this.accountRepository.create(params);
+
+    this.logger.info(
+      { accountId: account.id, userId: params.userId, type: params.accountType },
+      'Financial account created'
+    );
+
+    return account;
+  }
+
+  /**
+   * Get account by ID
+   */
+  async getAccount(accountId: string, userId: string): Promise<FinancialAccountWithBalance> {
+    const account = await this.accountRepository.findByIdWithStats(accountId);
+
+    if (!account || account.userId !== userId) {
+      throw new FinanceError(FinanceErrorCode.ACCOUNT_NOT_FOUND);
+    }
+
+    // Get pending transaction count
+    const pendingCount = await this.prisma.financialTransaction.count({
+      where: {
+        accountId,
+        status: 'PENDING',
+      },
+    });
+
+    return {
+      ...account,
+      pendingTransactionCount: pendingCount,
+      lastSyncDate: account.lastSyncAt,
+    };
+  }
+
+  /**
+   * List accounts for a user
+   */
+  async listAccounts(
+    userId: string,
+    filters?: Partial<AccountFilters>
+  ): Promise<FinancialAccount[]> {
+    return this.accountRepository.findByFilters({
+      userId,
+      ...filters,
+    });
+  }
+
+  /**
+   * Get all active accounts for a user
+   */
+  async getActiveAccounts(userId: string): Promise<FinancialAccount[]> {
+    return this.accountRepository.findByUserId(userId, false);
+  }
+
+  /**
+   * Get default account for a user
+   */
+  async getDefaultAccount(userId: string): Promise<FinancialAccount | null> {
+    return this.accountRepository.findDefault(userId);
+  }
+
+  /**
+   * Update an account
+   */
+  async updateAccount(
+    accountId: string,
+    userId: string,
+    params: UpdateFinancialAccountParams
+  ): Promise<FinancialAccount> {
+    const existing = await this.accountRepository.findById(accountId);
+
+    if (!existing || existing.userId !== userId) {
+      throw new FinanceError(FinanceErrorCode.ACCOUNT_NOT_FOUND);
+    }
+
+    // If setting as default, unset other defaults
+    if (params.isDefault === true) {
+      await this.accountRepository.setAsDefault(userId, accountId);
+    }
+
+    // Don't allow unsetting the only default
+    if (params.isDefault === false && existing.isDefault) {
+      const defaultCount = await this.prisma.financialAccount.count({
+        where: { userId, isDefault: true, isActive: true },
+      });
+
+      if (defaultCount <= 1) {
+        throw new FinanceError(FinanceErrorCode.DEFAULT_ACCOUNT_REQUIRED);
+      }
+    }
+
+    const account = await this.accountRepository.update(accountId, params);
+
+    this.logger.info({ accountId, userId }, 'Financial account updated');
+
+    return account;
+  }
+
+  /**
+   * Set account as default
+   */
+  async setAsDefault(accountId: string, userId: string): Promise<void> {
+    const account = await this.accountRepository.findById(accountId);
+
+    if (!account || account.userId !== userId) {
+      throw new FinanceError(FinanceErrorCode.ACCOUNT_NOT_FOUND);
+    }
+
+    if (!account.isActive) {
+      throw new FinanceError(FinanceErrorCode.ACCOUNT_INACTIVE);
+    }
+
+    await this.accountRepository.setAsDefault(userId, accountId);
+
+    this.logger.info({ accountId, userId }, 'Account set as default');
+  }
+
+  /**
+   * Deactivate an account (soft delete)
+   */
+  async deactivateAccount(accountId: string, userId: string): Promise<FinancialAccount> {
+    const account = await this.accountRepository.findById(accountId);
+
+    if (!account || account.userId !== userId) {
+      throw new FinanceError(FinanceErrorCode.ACCOUNT_NOT_FOUND);
+    }
+
+    // Don't allow deactivating the only default account
+    if (account.isDefault) {
+      const activeCount = await this.accountRepository.countByUserId(userId, true);
+      if (activeCount <= 1) {
+        throw new FinanceError(FinanceErrorCode.CANNOT_DELETE_DEFAULT_ACCOUNT);
+      }
+
+      // Set another account as default
+      const otherAccount = await this.prisma.financialAccount.findFirst({
+        where: { userId, id: { not: accountId }, isActive: true },
+      });
+
+      if (otherAccount) {
+        await this.accountRepository.setAsDefault(userId, otherAccount.id);
+      }
+    }
+
+    const deactivated = await this.accountRepository.softDelete(accountId);
+
+    this.logger.info({ accountId, userId }, 'Financial account deactivated');
+
+    return deactivated;
+  }
+
+  /**
+   * Delete an account permanently
+   */
+  async deleteAccount(accountId: string, userId: string): Promise<void> {
+    const account = await this.accountRepository.findByIdWithStats(accountId);
+
+    if (!account || account.userId !== userId) {
+      throw new FinanceError(FinanceErrorCode.ACCOUNT_NOT_FOUND);
+    }
+
+    // Check for existing transactions
+    if (account._count.transactions > 0) {
+      throw new FinanceError(FinanceErrorCode.ACCOUNT_HAS_TRANSACTIONS);
+    }
+
+    // Don't allow deleting the only default account
+    if (account.isDefault) {
+      throw new FinanceError(FinanceErrorCode.CANNOT_DELETE_DEFAULT_ACCOUNT);
+    }
+
+    await this.accountRepository.delete(accountId);
+
+    this.logger.info({ accountId, userId }, 'Financial account deleted');
+  }
+
+  /**
+   * Get account summary with balances
+   */
+  async getAccountsSummary(userId: string): Promise<{
+    totalBalance: number;
+    accounts: Array<{
+      id: string;
+      name: string;
+      type: string;
+      balance: number;
+      isDefault: boolean;
+      isPlaidConnected: boolean;
+      lastSyncAt: Date | null;
+    }>;
+  }> {
+    const accounts = await this.accountRepository.findByUserId(userId, false);
+
+    let totalBalance = 0;
+    const accountSummaries = accounts.map((account) => {
+      const balance = Number(account.currentBalance) || 0;
+      totalBalance += balance;
+
+      return {
+        id: account.id,
+        name: account.name,
+        type: account.accountType,
+        balance,
+        isDefault: account.isDefault,
+        isPlaidConnected: account.isPlaidConnected,
+        lastSyncAt: account.lastSyncAt,
+      };
+    });
+
+    return {
+      totalBalance,
+      accounts: accountSummaries,
+    };
+  }
+
+  /**
+   * Refresh account balance from transactions
+   */
+  async refreshBalance(accountId: string, userId: string): Promise<FinancialAccount> {
+    const account = await this.accountRepository.findById(accountId);
+
+    if (!account || account.userId !== userId) {
+      throw new FinanceError(FinanceErrorCode.ACCOUNT_NOT_FOUND);
+    }
+
+    // Calculate balance from transactions
+    const result = await this.prisma.financialTransaction.groupBy({
+      by: ['transactionType'],
+      where: {
+        accountId,
+        status: 'CONFIRMED',
+      },
+      _sum: { amount: true },
+    });
+
+    let balance = 0;
+    for (const r of result) {
+      const amount = Number(r._sum.amount) || 0;
+      if (r.transactionType === 'INCOME') {
+        balance += amount;
+      } else if (r.transactionType === 'EXPENSE') {
+        balance -= amount;
+      }
+    }
+
+    const updated = await this.accountRepository.updateBalance(accountId, balance);
+
+    this.logger.info({ accountId, balance }, 'Account balance refreshed');
+
+    return updated;
+  }
+}

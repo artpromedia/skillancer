@@ -161,6 +161,15 @@ model User {
   bookingLinks                      BookingLink[]             @relation("UserBookingLinks")
   bookings                          Booking[]                 @relation("UserBookings")
 
+  // Financial Tracking
+  financialAccounts                 FinancialAccount[]        @relation("UserFinancialAccounts")
+  financialTransactions             FinancialTransaction[]    @relation("UserFinancialTransactions")
+  recurringTransactions             RecurringTransaction[]    @relation("UserRecurringTransactions")
+  transactionCategories             TransactionCategory[]     @relation("UserTransactionCategories")
+  financialGoals                    FinancialGoal[]           @relation("UserFinancialGoals")
+  mileageLogs                       MileageLog[]              @relation("UserMileageLogs")
+  taxProfile                        TaxProfile?               @relation("UserTaxProfile")
+
   @@unique([oauthProvider, oauthId])
   @@index([email])
   @@index([status])
@@ -7280,6 +7289,9 @@ model Client {
   timeEntries  CockpitTimeEntry[] @relation("ClientTimeEntries")
   calendarEvents CalendarEvent[] @relation("ClientCalendarEvents")
 
+  // Financial Tracking
+  transactions FinancialTransaction[] @relation("ClientTransactions")
+
   @@unique([freelancerUserId, email])
   @@index([freelancerUserId])
   @@index([status])
@@ -7763,6 +7775,9 @@ model CockpitProject {
   activities     ProjectActivity[]
   activeTimers   ActiveTimer[]       @relation("ActiveTimerProject")
   calendarEvents CalendarEvent[]     @relation("ProjectCalendarEvents")
+
+  // Financial Tracking
+  transactions   FinancialTransaction[] @relation("ProjectTransactions")
 
   @@map("cockpit_projects")
   @@index([freelancerUserId])
@@ -8724,4 +8739,476 @@ enum BookingStatus {
   CANCELLED
   COMPLETED
   NO_SHOW
+}
+
+// ============================================================================
+// FINANCIAL TRACKING - Income & Expense Management
+// ============================================================================
+
+model FinancialAccount {
+  id               String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String               @map("user_id") @db.Uuid
+
+  // Account details
+  name             String               @db.VarChar(255)
+  accountType      FinancialAccountType @map("account_type")
+
+  // For connected accounts (Plaid)
+  isConnected      Boolean              @default(false) @map("is_connected")
+  plaidItemId      String?              @map("plaid_item_id") @db.VarChar(255)
+  plaidAccountId   String?              @map("plaid_account_id") @db.VarChar(255)
+  plaidAccessToken String?              @map("plaid_access_token") @db.Text
+
+  // Account info
+  institutionName  String?              @map("institution_name") @db.VarChar(255)
+  institutionLogo  String?              @map("institution_logo") @db.VarChar(500)
+  accountNumber    String?              @map("account_number") @db.VarChar(20) // Last 4 digits
+
+  // Balance
+  currentBalance   Decimal?             @map("current_balance") @db.Decimal(14, 2)
+  availableBalance Decimal?             @map("available_balance") @db.Decimal(14, 2)
+  balanceUpdatedAt DateTime?            @map("balance_updated_at")
+
+  // Currency
+  currency         String               @default("USD") @db.VarChar(3)
+
+  // Status
+  isActive         Boolean              @default(true) @map("is_active")
+  isPrimary        Boolean              @default(false) @map("is_primary")
+
+  // Sync
+  lastSyncAt       DateTime?            @map("last_sync_at")
+  syncStatus       SyncStatus           @default(PENDING) @map("sync_status")
+  syncError        String?              @map("sync_error") @db.Text
+
+  // Settings
+  autoImportTransactions Boolean        @default(true) @map("auto_import_transactions")
+  defaultCategory  String?              @map("default_category") @db.VarChar(100)
+
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  // Relations
+  user             User                 @relation("UserFinancialAccounts", fields: [userId], references: [id])
+  transactions     FinancialTransaction[]
+
+  @@map("financial_accounts")
+  @@index([userId])
+  @@index([plaidItemId])
+  @@index([isActive])
+}
+
+model FinancialTransaction {
+  id                  String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId              String             @map("user_id") @db.Uuid
+  accountId           String?            @map("account_id") @db.Uuid
+
+  // Transaction type
+  type                FinancialTransactionType
+
+  // Amount (always positive)
+  amount              Decimal            @db.Decimal(14, 2)
+  currency            String             @default("USD") @db.VarChar(3)
+
+  // Exchange rate (if different from account currency)
+  originalAmount      Decimal?           @map("original_amount") @db.Decimal(14, 2)
+  originalCurrency    String?            @map("original_currency") @db.VarChar(3)
+  exchangeRate        Decimal?           @map("exchange_rate") @db.Decimal(10, 6)
+
+  // Transaction details
+  date                DateTime           @db.Date
+  description         String             @db.VarChar(500)
+  notes               String?            @db.Text
+
+  // Categorization
+  category            String             @db.VarChar(100)
+  subcategory         String?            @db.VarChar(100)
+  tags                String[]           @default([])
+
+  // Source
+  source              FinancialTransactionSource @default(MANUAL)
+
+  // External references
+  marketPaymentId     String?            @unique @map("market_payment_id") @db.Uuid
+  marketInvoiceId     String?            @map("market_invoice_id") @db.Uuid
+  invoiceId           String?            @map("invoice_id") @db.Uuid
+  plaidTransactionId  String?            @unique @map("plaid_transaction_id") @db.VarChar(255)
+
+  // Client/Project association
+  clientId            String?            @map("client_id") @db.Uuid
+  projectId           String?            @map("project_id") @db.Uuid
+
+  // For income
+  paymentMethod       String?            @map("payment_method") @db.VarChar(50)
+
+  // For expenses
+  vendor              String?            @db.VarChar(255)
+  isDeductible        Boolean            @default(true) @map("is_deductible")
+  deductionCategory   String?            @map("deduction_category") @db.VarChar(50) // IRS category
+
+  // Receipt
+  hasReceipt          Boolean            @default(false) @map("has_receipt")
+  receiptUrl          String?            @map("receipt_url") @db.VarChar(500)
+  receiptFileName     String?            @map("receipt_file_name") @db.VarChar(255)
+
+  // Recurring
+  isRecurring         Boolean            @default(false) @map("is_recurring")
+  recurringRuleId     String?            @map("recurring_rule_id") @db.Uuid
+
+  // Reconciliation
+  isReconciled        Boolean            @default(false) @map("is_reconciled")
+  reconciledAt        DateTime?          @map("reconciled_at")
+
+  // Tax
+  taxYear             Int?               @map("tax_year")
+  includedInTaxReport Boolean            @default(false) @map("included_in_tax_report")
+
+  // Status
+  status              FinancialTransactionStatus @default(CONFIRMED)
+  isPending           Boolean            @default(false) @map("is_pending")
+
+  // Splits (for split transactions)
+  isSplit             Boolean            @default(false) @map("is_split")
+  parentTransactionId String?            @map("parent_transaction_id") @db.Uuid
+
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  user                User               @relation("UserFinancialTransactions", fields: [userId], references: [id])
+  account             FinancialAccount?  @relation(fields: [accountId], references: [id])
+  client              Client?            @relation("ClientFinancialTransactions", fields: [clientId], references: [id])
+  project             CockpitProject?    @relation("ProjectFinancialTransactions", fields: [projectId], references: [id])
+  parentTransaction   FinancialTransaction? @relation("TransactionSplits", fields: [parentTransactionId], references: [id])
+  splitTransactions   FinancialTransaction[] @relation("TransactionSplits")
+  recurringRule       RecurringTransaction? @relation(fields: [recurringRuleId], references: [id])
+
+  @@map("financial_transactions")
+  @@index([userId])
+  @@index([accountId])
+  @@index([type])
+  @@index([date])
+  @@index([category])
+  @@index([clientId])
+  @@index([projectId])
+  @@index([taxYear])
+  @@index([status])
+  @@index([isReconciled])
+}
+
+model RecurringTransaction {
+  id                   String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId               String              @map("user_id") @db.Uuid
+
+  // Template
+  type                 FinancialTransactionType
+  amount               Decimal             @db.Decimal(14, 2)
+  currency             String              @default("USD") @db.VarChar(3)
+  description          String              @db.VarChar(500)
+  category             String              @db.VarChar(100)
+  subcategory          String?             @db.VarChar(100)
+  vendor               String?             @db.VarChar(255)
+  isDeductible         Boolean             @default(true) @map("is_deductible")
+
+  // Account
+  accountId            String?             @map("account_id") @db.Uuid
+
+  // Client/Project
+  clientId             String?             @map("client_id") @db.Uuid
+  projectId            String?             @map("project_id") @db.Uuid
+
+  // Recurrence
+  frequency            RecurrenceFrequency
+  interval             Int                 @default(1)
+  dayOfMonth           Int?                @map("day_of_month")
+  dayOfWeek            Int?                @map("day_of_week")
+
+  // Schedule
+  startDate            DateTime            @map("start_date") @db.Date
+  endDate              DateTime?           @map("end_date") @db.Date
+  nextOccurrence       DateTime?           @map("next_occurrence") @db.Date
+
+  // Tracking
+  occurrenceCount      Int                 @default(0) @map("occurrence_count")
+  maxOccurrences       Int?                @map("max_occurrences")
+  lastOccurrence       DateTime?           @map("last_occurrence") @db.Date
+
+  // Status
+  isActive             Boolean             @default(true) @map("is_active")
+  isPaused             Boolean             @default(false) @map("is_paused")
+
+  // Auto-create
+  autoCreate           Boolean             @default(true) @map("auto_create")
+  requiresConfirmation Boolean             @default(false) @map("requires_confirmation")
+
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  user                 User                @relation("UserRecurringTransactions", fields: [userId], references: [id])
+  transactions         FinancialTransaction[]
+
+  @@map("recurring_transactions")
+  @@index([userId])
+  @@index([nextOccurrence])
+  @@index([isActive])
+}
+
+model TransactionCategory {
+  id           String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId       String?                  @map("user_id") @db.Uuid // null = system default
+
+  // Category details
+  name         String                   @db.VarChar(100)
+  type         FinancialTransactionType
+  parentId     String?                  @map("parent_id") @db.Uuid
+
+  // Display
+  icon         String?                  @db.VarChar(50)
+  color        String?                  @db.VarChar(20)
+  orderIndex   Int                      @default(0) @map("order_index")
+
+  // Tax mapping
+  irsCategory  String?                  @map("irs_category") @db.VarChar(50) // Schedule C line
+  isDeductible Boolean                  @default(true) @map("is_deductible")
+
+  // Status
+  isActive     Boolean                  @default(true) @map("is_active")
+  isSystem     Boolean                  @default(false) @map("is_system")
+
+  createdAt    DateTime                 @default(now()) @map("created_at")
+
+  // Relations
+  user         User?                    @relation("UserTransactionCategories", fields: [userId], references: [id])
+  parent       TransactionCategory?     @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children     TransactionCategory[]    @relation("CategoryHierarchy")
+
+  @@map("transaction_categories")
+  @@unique([userId, name, type])
+  @@index([userId])
+  @@index([type])
+}
+
+model FinancialGoal {
+  id               String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String           @map("user_id") @db.Uuid
+
+  // Goal details
+  name             String           @db.VarChar(255)
+  description      String?          @db.Text
+  goalType         FinancialGoalType @map("goal_type")
+
+  // Target
+  targetAmount     Decimal          @map("target_amount") @db.Decimal(14, 2)
+  currentAmount    Decimal          @default(0) @map("current_amount") @db.Decimal(14, 2)
+  currency         String           @default("USD") @db.VarChar(3)
+
+  // Period
+  periodType       FinancialPeriodType? @map("period_type")
+  startDate        DateTime?        @map("start_date") @db.Date
+  endDate          DateTime?        @map("end_date") @db.Date
+
+  // Category filter (for expense goals)
+  categoryFilter   String[]         @default([]) @map("category_filter")
+
+  // Status
+  status           FinancialGoalStatus @default(IN_PROGRESS)
+  achievedAt       DateTime?        @map("achieved_at")
+
+  // Notifications
+  notifyAtPercent  Int[]            @default([50, 75, 90, 100]) @map("notify_at_percent")
+  notifiedPercents Int[]            @default([]) @map("notified_percents")
+
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  user             User             @relation("UserFinancialGoals", fields: [userId], references: [id])
+
+  @@map("financial_goals")
+  @@index([userId])
+  @@index([goalType])
+  @@index([status])
+}
+
+model MileageLog {
+  id              String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String         @map("user_id") @db.Uuid
+
+  // Trip details
+  date            DateTime       @db.Date
+  description     String         @db.VarChar(500)
+  purpose         MileagePurpose
+
+  // Distance
+  miles           Decimal        @db.Decimal(8, 2)
+
+  // Rate
+  ratePerMile     Decimal        @map("rate_per_mile") @db.Decimal(6, 4)
+  deductionAmount Decimal        @map("deduction_amount") @db.Decimal(10, 2)
+
+  // Route
+  startLocation   String?        @map("start_location") @db.VarChar(255)
+  endLocation     String?        @map("end_location") @db.VarChar(255)
+  roundTrip       Boolean        @default(false) @map("round_trip")
+
+  // Association
+  clientId        String?        @map("client_id") @db.Uuid
+  projectId       String?        @map("project_id") @db.Uuid
+
+  // Vehicle
+  vehicleId       String?        @map("vehicle_id") @db.Uuid
+
+  // Tax
+  taxYear         Int            @map("tax_year")
+
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  user            User           @relation("UserMileageLogs", fields: [userId], references: [id])
+  client          Client?        @relation("ClientMileageLogs", fields: [clientId], references: [id])
+  project         CockpitProject? @relation("ProjectMileageLogs", fields: [projectId], references: [id])
+
+  @@map("mileage_logs")
+  @@index([userId])
+  @@index([date])
+  @@index([taxYear])
+  @@index([clientId])
+  @@index([projectId])
+}
+
+model TaxProfile {
+  id                   String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId               String          @unique @map("user_id") @db.Uuid
+
+  // Business info
+  businessType         BusinessType    @map("business_type")
+  businessName         String?         @map("business_name") @db.VarChar(255)
+  ein                  String?         @db.VarChar(255) // Encrypted
+
+  // Filing status
+  filingStatus         FilingStatus    @map("filing_status")
+
+  // Estimated tax
+  estimatedTaxRate     Decimal?        @map("estimated_tax_rate") @db.Decimal(5, 2)
+  quarterlyPayments    Boolean         @default(true) @map("quarterly_payments")
+
+  // State
+  stateOfResidence     String?         @map("state_of_residence") @db.VarChar(2)
+  stateIncomeTaxRate   Decimal?        @map("state_income_tax_rate") @db.Decimal(5, 2)
+
+  // Settings
+  fiscalYearEnd        String          @default("12-31") @map("fiscal_year_end") @db.VarChar(5)
+  accountingMethod     AccountingMethod @default(CASH) @map("accounting_method")
+
+  // Home office
+  hasHomeOffice        Boolean         @default(false) @map("has_home_office")
+  homeOfficeSquareFeet Int?            @map("home_office_square_feet")
+  totalHomeSquareFeet  Int?            @map("total_home_square_feet")
+
+  // Vehicle
+  hasBusinessVehicle   Boolean         @default(false) @map("has_business_vehicle")
+  vehicleInfo          Json?           @map("vehicle_info")
+
+  // IRS mileage rate by year
+  mileageRates         Json            @default("{}") @map("mileage_rates")
+
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  user                 User            @relation("UserTaxProfile", fields: [userId], references: [id])
+
+  @@map("tax_profiles")
+}
+
+// Financial Enums
+enum FinancialAccountType {
+  CHECKING
+  SAVINGS
+  CREDIT_CARD
+  CASH
+  PAYPAL
+  STRIPE
+  OTHER
+}
+
+enum FinancialTransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum FinancialTransactionSource {
+  MANUAL
+  MARKET
+  BANK_IMPORT
+  RECURRING
+  INVOICE
+}
+
+enum FinancialTransactionStatus {
+  PENDING
+  CONFIRMED
+  VOIDED
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum FinancialGoalType {
+  INCOME
+  SAVINGS
+  EXPENSE_LIMIT
+  PROFIT
+}
+
+enum FinancialGoalStatus {
+  IN_PROGRESS
+  ACHIEVED
+  FAILED
+  CANCELLED
+}
+
+enum FinancialPeriodType {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+}
+
+enum MileagePurpose {
+  CLIENT_MEETING
+  BUSINESS_ERRAND
+  TRAVEL
+  OTHER
+}
+
+enum BusinessType {
+  SOLE_PROPRIETOR
+  LLC_SINGLE
+  LLC_MULTI
+  S_CORP
+  C_CORP
+  PARTNERSHIP
+}
+
+enum FilingStatus {
+  SINGLE
+  MARRIED_FILING_JOINTLY
+  MARRIED_FILING_SEPARATELY
+  HEAD_OF_HOUSEHOLD
+  QUALIFYING_WIDOW
+}
+
+enum AccountingMethod {
+  CASH
+  ACCRUAL
 }
