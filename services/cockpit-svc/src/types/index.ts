@@ -111,3 +111,6 @@ export * from './finance.types.js';
 
 // Invoice types (CP-3.2: Professional Invoicing)
 export * from './invoice.types.js';
+
+// Integration Platform types (CP-4.1: Integration Platform Architecture)
+export * from './integration.types.js';

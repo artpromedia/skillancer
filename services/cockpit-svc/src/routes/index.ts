@@ -6,6 +6,7 @@ import { calendarRoutes } from './calendar.routes.js';
 import { registerClientRoutes } from './clients.routes.js';
 import { registerDocumentRoutes } from './documents.routes.js';
 import { registerFinanceRoutes } from './finance.routes.js';
+import { registerIntegrationRoutes } from './integration.routes.js';
 import { registerInvoiceRoutes } from './invoice.routes.js';
 import { registerOpportunityRoutes } from './opportunities.routes.js';
 import {
@@ -17,6 +18,7 @@ import { publicBookingRoutes } from './public-booking.routes.js';
 import { registerReminderRoutes } from './reminders.routes.js';
 import { timeTrackingRoutes } from './time-tracking.routes.js';
 import { CalendarService } from '../services/calendar.service.js';
+import { EncryptionService } from '../services/encryption.service.js';
 
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
@@ -173,6 +175,24 @@ export async function registerRoutes(
     },
     { prefix: '/invoicing' }
   );
+
+  // ============================================================================
+  // Integration Routes (CP-4.1: Integration Platform)
+  // ============================================================================
+
+  // Create encryption service for integrations
+  // NOTE: In production, INTEGRATION_ENCRYPTION_KEY should be loaded from environment
+  const encryptionKey =
+    process.env.INTEGRATION_ENCRYPTION_KEY ?? 'development-key-at-least-32-characters';
+  const encryption = new EncryptionService({ masterKey: encryptionKey }, deps.logger);
+
+  // Register integration routes
+  await fastify.register(
+    (instance) => {
+      registerIntegrationRoutes(instance, { ...deps, encryption });
+    },
+    { prefix: '/platform' }
+  );
 }
 
 // CRM exports
@@ -199,3 +219,5 @@ export { publicBookingRoutes } from './public-booking.routes.js';
 export { registerFinanceRoutes } from './finance.routes.js';
 // Invoice exports (CP-3.2: Professional Invoicing)
 export { registerInvoiceRoutes } from './invoice.routes.js';
+// Integration exports (CP-4.1: Integration Platform)
+export { registerIntegrationRoutes } from './integration.routes.js';

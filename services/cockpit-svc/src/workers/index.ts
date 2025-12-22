@@ -30,3 +30,10 @@ export {
   type InvoiceReminderNotification,
 } from './invoice-reminder.worker.js';
 export { LateFeeWorker, type LateFeeNotification } from './late-fee.worker.js';
+
+// Integration Platform Workers (CP-4.1: Integration Platform Architecture)
+export {
+  IntegrationSyncWorker,
+  type IntegrationSyncWorkerConfig,
+} from './integration-sync.worker.js';
+export { WebhookProcessorWorker, type WebhookProcessorConfig } from './webhook-processor.worker.js';

@@ -53,3 +53,10 @@ export { InvoiceTemplateRepository } from './invoice-template.repository.js';
 export { RecurringInvoiceRepository } from './recurring-invoice.repository.js';
 export { InvoiceActivityRepository } from './invoice-activity.repository.js';
 export { InvoiceSettingsRepository } from './invoice-settings.repository.js';
+
+// Integration Platform Repositories (CP-4.1: Integration Platform Architecture)
+export { IntegrationRepository } from './integration.repository.js';
+export { IntegrationMappingRepository } from './integration-mapping.repository.js';
+export { IntegrationSyncLogRepository } from './integration-sync-log.repository.js';
+export { WebhookEventRepository } from './webhook-event.repository.js';
+export { IntegrationTemplateRepository } from './integration-template.repository.js';

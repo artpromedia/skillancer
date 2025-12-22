@@ -45,3 +45,13 @@ export { RecurringInvoiceService } from './recurring-invoice.service.js';
 export { InvoicePaymentService } from './invoice-payment.service.js';
 export { InvoiceSettingsService } from './invoice-settings.service.js';
 export { InvoicePdfService } from './invoice-pdf.service.js';
+
+// Integration Platform Services (CP-4.1: Integration Platform Architecture)
+export { EncryptionService } from './encryption.service.js';
+export { BaseIntegrationService } from './integrations/base-integration.service.js';
+export type {
+  RateLimitConfig,
+  RateLimitedResponse,
+  RetryConfig,
+} from './integrations/base-integration.service.js';
+export { IntegrationPlatformService } from './integrations/integration-platform.service.js';
