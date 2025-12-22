@@ -20,8 +20,7 @@ import type {
   IntegrationDetails,
   HealthStatus,
 } from '../../types/integration.types.js';
-import type { Integration, IntegrationProvider } from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+import type { Integration, IntegrationProvider, PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 /**

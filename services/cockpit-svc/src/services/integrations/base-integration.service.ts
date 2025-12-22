@@ -24,8 +24,8 @@ import type {
   IntegrationProvider,
   IntegrationMapping,
   MappingEntityType,
-} from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+  PrismaClient,
+} from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 /**

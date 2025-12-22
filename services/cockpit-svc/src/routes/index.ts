@@ -6,6 +6,7 @@ import { calendarRoutes } from './calendar.routes.js';
 import { registerClientRoutes } from './clients.routes.js';
 import { registerDocumentRoutes } from './documents.routes.js';
 import { registerFinanceRoutes } from './finance.routes.js';
+import { registerFreelancePlatformRoutes } from './freelance-platform.routes.js';
 import { registerIntegrationRoutes } from './integration.routes.js';
 import { registerInvoiceRoutes } from './invoice.routes.js';
 import { registerOpportunityRoutes } from './opportunities.routes.js';
@@ -193,6 +194,18 @@ export async function registerRoutes(
     },
     { prefix: '/platform' }
   );
+
+  // ============================================================================
+  // Freelance Platform Routes (CP-4.2: Freelance Platform Integrations)
+  // ============================================================================
+
+  // Register freelance platform routes
+  await fastify.register(
+    (instance) => {
+      registerFreelancePlatformRoutes(instance, { ...deps, encryption });
+    },
+    { prefix: '/api' }
+  );
 }
 
 // CRM exports
@@ -221,3 +234,5 @@ export { registerFinanceRoutes } from './finance.routes.js';
 export { registerInvoiceRoutes } from './invoice.routes.js';
 // Integration exports (CP-4.1: Integration Platform)
 export { registerIntegrationRoutes } from './integration.routes.js';
+// Freelance Platform exports (CP-4.2: Freelance Platform Integrations)
+export { registerFreelancePlatformRoutes } from './freelance-platform.routes.js';

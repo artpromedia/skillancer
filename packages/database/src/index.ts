@@ -215,6 +215,18 @@ export type {
   CockpitProjectType,
   CockpitBudgetType,
   CockpitTaskStatus,
+  // Cockpit Integration types
+  Integration,
+  IntegrationProvider,
+  IntegrationStatus,
+  SyncFrequency,
+  IntegrationSyncStatus,
+  IntegrationMapping,
+  MappingEntityType,
+  IntegrationSyncLog,
+  IntegrationTemplate,
+  WebhookEvent,
+  WebhookEventStatus,
   // Cockpit Financial types
   FinancialAccount,
   FinancialAccountType,
@@ -308,6 +320,13 @@ export {
   CockpitProjectType as CockpitProjectTypeEnum,
   CockpitBudgetType as CockpitBudgetTypeEnum,
   CockpitTaskStatus as CockpitTaskStatusEnum,
+  // Cockpit Integration enums
+  IntegrationProvider as IntegrationProviderEnum,
+  IntegrationStatus as IntegrationStatusEnum,
+  SyncFrequency as SyncFrequencyEnum,
+  IntegrationSyncStatus as IntegrationSyncStatusEnum,
+  MappingEntityType as MappingEntityTypeEnum,
+  WebhookEventStatus as WebhookEventStatusEnum,
   // Cockpit Financial enums
   FinancialAccountType as FinancialAccountTypeEnum,
   FinancialTransactionType as FinancialTransactionTypeEnum,
