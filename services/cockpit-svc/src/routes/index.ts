@@ -8,6 +8,8 @@ import { registerDocumentRoutes } from './documents.routes.js';
 import { registerFinanceRoutes } from './finance.routes.js';
 import { registerFreelancePlatformRoutes } from './freelance-platform.routes.js';
 import { registerIntegrationRoutes } from './integration.routes.js';
+import { registerProductivityToolRoutes } from './productivity-tools.routes.js';
+import { registerCommunicationRoutes } from './communication.routes.js';
 import { registerInvoiceRoutes } from './invoice.routes.js';
 import { registerOpportunityRoutes } from './opportunities.routes.js';
 import {
@@ -20,6 +22,8 @@ import { registerReminderRoutes } from './reminders.routes.js';
 import { timeTrackingRoutes } from './time-tracking.routes.js';
 import { CalendarService } from '../services/calendar.service.js';
 import { EncryptionService } from '../services/encryption.service.js';
+import { SlackIntegrationService } from '../services/integrations/slack-integration.service.js';
+import { DiscordIntegrationService } from '../services/integrations/discord-integration.service.js';
 
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
@@ -206,6 +210,39 @@ export async function registerRoutes(
     },
     { prefix: '/api' }
   );
+
+  // ============================================================================
+  // Productivity Tools Routes (CP-4.3: Productivity Tool Integrations)
+  // ============================================================================
+
+  // Register productivity tool routes
+  await fastify.register(
+    (instance) => {
+      registerProductivityToolRoutes(instance, { ...deps, encryption });
+    },
+    { prefix: '/api' }
+  );
+
+  // ============================================================================
+  // Communication Platform Routes (CP-4.3: Slack & Discord Integrations)
+  // ============================================================================
+
+  // Create Slack and Discord integration services
+  const slackService = new SlackIntegrationService(deps.prisma, deps.logger, encryption);
+  const discordService = new DiscordIntegrationService(deps.prisma, deps.logger, encryption);
+
+  // Register communication platform routes (Slack, Discord)
+  await fastify.register(
+    (instance) => {
+      registerCommunicationRoutes(instance, {
+        prisma: deps.prisma,
+        logger: deps.logger,
+        slackService,
+        discordService,
+      });
+    },
+    { prefix: '/api' }
+  );
 }
 
 // CRM exports
@@ -236,3 +273,7 @@ export { registerInvoiceRoutes } from './invoice.routes.js';
 export { registerIntegrationRoutes } from './integration.routes.js';
 // Freelance Platform exports (CP-4.2: Freelance Platform Integrations)
 export { registerFreelancePlatformRoutes } from './freelance-platform.routes.js';
+// Productivity Tools exports (CP-4.3: Productivity Tool Integrations)
+export { registerProductivityToolRoutes } from './productivity-tools.routes.js';
+// Communication Platform exports (CP-4.3: Slack & Discord Integrations)
+export { registerCommunicationRoutes } from './communication.routes.js';

@@ -2,7 +2,9 @@
  * @module @skillancer/cockpit-svc/services/integrations/fiverr
  * Fiverr Integration Service - Sync orders, gigs, and earnings from Fiverr
  */
-
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import crypto from 'node:crypto';
 
 import { BaseIntegrationService } from './base-integration.service.js';
@@ -18,11 +20,7 @@ import type {
   WebhookPayload,
 } from '../../types/integration.types.js';
 import type { EncryptionService } from '../encryption.service.js';
-import type {
-  Integration,
-  IntegrationProvider,
-  PrismaClient,
-} from '@skillancer/database';
+import type { Integration, IntegrationProvider, PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 
 // ============================================================================

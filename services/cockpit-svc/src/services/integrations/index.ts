@@ -45,3 +45,36 @@ export type {
   FreelancerTimeTrack,
   FreelancerSyncOptions,
 } from './freelancer-integration.service.js';
+
+// Productivity Tool Integrations
+export { NotionIntegrationService } from './notion-integration.service.js';
+export type {
+  NotionDatabase,
+  NotionPage,
+  NotionTask,
+  NotionSyncOptions,
+} from './notion-integration.service.js';
+
+export { TrelloIntegrationService } from './trello-integration.service.js';
+export type {
+  TrelloBoard,
+  TrelloList,
+  TrelloCard,
+  TrelloSyncOptions,
+} from './trello-integration.service.js';
+
+export { AsanaIntegrationService } from './asana-integration.service.js';
+
+// Communication Platform Integrations
+export { SlackIntegrationService } from './slack-integration.service.js';
+export type {
+  SlackSlashCommand,
+  SlackCommandResponse,
+  SlackInteractionPayload,
+} from './slack-integration.service.js';
+
+export { DiscordIntegrationService } from './discord-integration.service.js';
+export type {
+  DiscordInteraction,
+  DiscordInteractionResponse,
+} from './discord-integration.service.js';

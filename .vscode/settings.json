@@ -14,7 +14,22 @@
     "**/.hg/store/**": true,
     "**/.turbo/**": true,
     "**/.next/**": true,
-    "**/coverage/**": true
+    "**/coverage/**": true,
+    "**/.pnpm-store/**": true,
+    "**/generated/**": true,
+    "**/.terraform/**": true,
+    "**/terraform.tfstate*": true,
+    "**/*.log": true
+  },
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.turbo": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.next": true,
+    "**/pnpm-lock.yaml": true
   },
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
