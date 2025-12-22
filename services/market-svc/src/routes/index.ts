@@ -5,6 +5,7 @@
 
 import { registerAdminReviewRoutes } from './admin-reviews.routes.js';
 import { registerConversationRoutes } from './conversations.routes.js';
+import { registerCredentialRoutes } from './credentials.routes.js';
 import { registerEnhancedReviewRoutes } from './enhanced-reviews.routes.js';
 import { registerEscrowRoutes } from './escrow.routes.js';
 import { registerInvoiceRoutes } from './invoices.routes.js';
@@ -153,6 +154,14 @@ export async function registerRoutes(
     { prefix: '/api' }
   );
 
+  // Register credential routes (SkillPod integration)
+  await fastify.register(
+    (instance) => {
+      registerCredentialRoutes(instance, deps);
+    },
+    { prefix: '/credentials' }
+  );
+
   // FUTURE: Register contract management routes when service implementations are complete
 }
 
@@ -171,6 +180,7 @@ export { registerConversationRoutes } from './conversations.routes.js';
 export { registerMessageRoutes } from './messages.routes.js';
 export { registerPresenceRoutes } from './presence.routes.js';
 export { registerNotificationRoutes } from './notifications.routes.js';
+export { registerCredentialRoutes } from './credentials.routes.js';
 // FUTURE: Export contract routes when implemented
 // export { contractRoutes } from './contract.routes.js';
 // export { contractSubRoutes } from './contract-sub.routes.js';

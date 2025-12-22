@@ -13,6 +13,16 @@ export type {
   ReminderResult,
 } from './invoice-generation.worker.js';
 export { createInvoiceGenerationWorker } from './invoice-generation.worker.js';
+
+// Credential Expiration Worker
+export type {
+  CredentialExpirationWorker,
+  CredentialExpirationWorkerDeps,
+  CredentialExpirationWorkerConfig,
+  CredentialExpirationResult,
+} from './credential-expiration.worker.js';
+export { createCredentialExpirationWorker } from './credential-expiration.worker.js';
+
 // FUTURE: Uncomment when contract-jobs.worker.ts is created
 // export { ContractJobsWorker } from './contract-jobs.worker.js';
 // export type { ContractJobsConfig, ContractReminder } from './contract-jobs.worker.js';

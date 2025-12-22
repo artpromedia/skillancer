@@ -179,6 +179,12 @@ model User {
   // Integration Platform
   integrations                      Integration[]             @relation("UserIntegrations")
 
+  // SkillPod Credential Integration
+  verifiedCredentials               VerifiedCredential[]
+  skillVerifications                SkillVerification[]
+  skillConfidences                  SkillConfidence[]
+  learningActivity                  LearningActivity?
+
   @@unique([oauthProvider, oauthId])
   @@index([email])
   @@index([status])
@@ -367,9 +373,14 @@ model Skill {
   isApproved  Boolean  @default(true) @map("is_approved")
   createdAt   DateTime @default(now()) @map("created_at")
 
-  userSkills    UserSkill[]
-  jobSkills     JobSkill[]
-  serviceSkills ServiceSkill[]
+  // External mappings for cross-service integration
+  externalMappings Json? @map("external_mappings") // { skillpod: "skill-id", ... }
+
+  userSkills         UserSkill[]
+  jobSkills          JobSkill[]
+  serviceSkills      ServiceSkill[]
+  skillVerifications SkillVerification[]
+  skillConfidences   SkillConfidence[]
 
   @@index([category])
   @@index([slug])
@@ -10080,5 +10091,236 @@ enum IntegrationAuthType {
   API_KEY
   BASIC
   CUSTOM
+}
+
+// ============================================================================
+// SKILLPOD CREDENTIAL INTEGRATION
+// ============================================================================
+
+model VerifiedCredential {
+  id                  String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId              String           @map("user_id") @db.Uuid
+  freelancerProfileId String?          @map("freelancer_profile_id") @db.Uuid
+
+  // Source reference
+  sourceCredentialId  String           @map("source_credential_id")
+  source              CredentialSource @default(SKILLPOD)
+
+  // Credential info
+  credentialType      CredentialType   @map("credential_type")
+  title               String           @db.VarChar(500)
+  description         String?          @db.Text
+
+  // Skills covered
+  skillIds            String[]         @map("skill_ids")
+
+  // Dates
+  issueDate           DateTime         @map("issue_date")
+  expirationDate      DateTime?        @map("expiration_date")
+  syncedAt            DateTime         @map("synced_at")
+
+  // Scoring
+  score               Decimal?         @db.Decimal(5, 2)
+  percentile          Decimal?         @db.Decimal(5, 2)
+  proficiencyLevel    ProficiencyLevel? @map("proficiency_level")
+
+  // Verification
+  verificationUrl     String           @map("verification_url") @db.VarChar(1000)
+  verificationCode    String           @map("verification_code") @db.VarChar(100)
+  isVerified          Boolean          @default(true) @map("is_verified")
+  lastVerifiedAt      DateTime         @default(now()) @map("last_verified_at")
+
+  // Display
+  isVisible           Boolean          @default(true) @map("is_visible")
+  displayOrder        Int              @default(0) @map("display_order")
+  imageUrl            String?          @map("image_url") @db.VarChar(500)
+  badgeUrl            String?          @map("badge_url") @db.VarChar(500)
+
+  // Metadata
+  metadata            Json?
+
+  // Status
+  status              CredentialStatus @default(ACTIVE)
+  revokedAt           DateTime?        @map("revoked_at")
+  revocationReason    String?          @map("revocation_reason") @db.VarChar(500)
+
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillVerifications  SkillVerification[]
+
+  @@map("verified_credentials")
+  @@unique([userId, sourceCredentialId])
+  @@index([userId])
+  @@index([freelancerProfileId])
+  @@index([status])
+  @@index([credentialType])
+}
+
+model SkillVerification {
+  id                  String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId              String            @map("user_id") @db.Uuid
+  skillId             String            @map("skill_id") @db.Uuid
+
+  // Verification source
+  verificationType    VerificationType  @map("verification_type")
+  credentialId        String?           @map("credential_id") @db.Uuid
+
+  // Score and level
+  score               Decimal           @db.Decimal(5, 2)
+  maxScore            Decimal           @default(100) @map("max_score") @db.Decimal(5, 2)
+  percentile          Decimal?          @db.Decimal(5, 2)
+  proficiencyLevel    ProficiencyLevel  @map("proficiency_level")
+
+  // Confidence
+  confidenceScore     Decimal           @map("confidence_score") @db.Decimal(5, 2)
+  confidenceFactors   Json              @map("confidence_factors")
+
+  // Assessment details
+  proctored           Boolean           @default(false)
+  assessmentDuration  Int?              @map("assessment_duration") // minutes
+  questionBreakdown   Json?             @map("question_breakdown")
+
+  // Validity
+  verifiedAt          DateTime          @map("verified_at")
+  validUntil          DateTime?         @map("valid_until")
+  isActive            Boolean           @default(true) @map("is_active")
+
+  // Visibility
+  showOnProfile       Boolean           @default(true) @map("show_on_profile")
+  showScore           Boolean           @default(true) @map("show_score")
+  showPercentile      Boolean           @default(true) @map("show_percentile")
+
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill               Skill             @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  credential          VerifiedCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+
+  @@map("skill_verifications")
+  @@unique([userId, skillId, verificationType])
+  @@index([userId])
+  @@index([skillId])
+  @@index([proficiencyLevel])
+  @@index([isActive])
+}
+
+model SkillConfidence {
+  id                  String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId              String           @map("user_id") @db.Uuid
+  skillId             String           @map("skill_id") @db.Uuid
+
+  // Aggregated confidence score
+  overallConfidence   Decimal          @map("overall_confidence") @db.Decimal(5, 2)
+
+  // Component scores
+  assessmentScore     Decimal?         @map("assessment_score") @db.Decimal(5, 2)
+  learningScore       Decimal?         @map("learning_score") @db.Decimal(5, 2)
+  experienceScore     Decimal?         @map("experience_score") @db.Decimal(5, 2)
+  endorsementScore    Decimal?         @map("endorsement_score") @db.Decimal(5, 2)
+  projectScore        Decimal?         @map("project_score") @db.Decimal(5, 2)
+
+  // Factors
+  assessmentsPassed   Int              @default(0) @map("assessments_passed")
+  coursesCompleted    Int              @default(0) @map("courses_completed")
+  hoursLearned        Decimal          @default(0) @map("hours_learned") @db.Decimal(8, 2)
+  projectsCompleted   Int              @default(0) @map("projects_completed")
+  endorsementCount    Int              @default(0) @map("endorsement_count")
+  yearsExperience     Decimal?         @map("years_experience") @db.Decimal(4, 1)
+
+  // Derived level
+  calculatedLevel     ProficiencyLevel @map("calculated_level")
+  claimedLevel        ProficiencyLevel? @map("claimed_level")
+  levelMatch          Boolean          @map("level_match")
+
+  // Trend
+  confidenceTrend     Decimal          @default(0) @map("confidence_trend") @db.Decimal(5, 2)
+  lastActivityDate    DateTime?        @map("last_activity_date")
+
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill               Skill            @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@map("skill_confidences")
+  @@unique([userId, skillId])
+  @@index([userId])
+  @@index([overallConfidence])
+  @@index([calculatedLevel])
+}
+
+model LearningActivity {
+  id                  String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId              String           @unique @map("user_id") @db.Uuid
+
+  // Activity summary
+  totalHoursLearned   Decimal          @map("total_hours_learned") @db.Decimal(10, 2)
+  totalCourses        Int              @map("total_courses")
+  completedCourses    Int              @map("completed_courses")
+  totalAssessments    Int              @map("total_assessments")
+  passedAssessments   Int              @map("passed_assessments")
+  totalCredentials    Int              @map("total_credentials")
+  activeCredentials   Int              @map("active_credentials")
+
+  // Streak
+  currentStreak       Int              @default(0) @map("current_streak")
+  longestStreak       Int              @default(0) @map("longest_streak")
+  lastLearningDate    DateTime?        @map("last_learning_date")
+
+  // Activity by period
+  hoursLast30Days     Decimal          @default(0) @map("hours_last_30_days") @db.Decimal(8, 2)
+  hoursLast90Days     Decimal          @default(0) @map("hours_last_90_days") @db.Decimal(8, 2)
+  hoursLast365Days    Decimal          @default(0) @map("hours_last_365_days") @db.Decimal(8, 2)
+
+  // Display settings
+  showOnProfile       Boolean          @default(true) @map("show_on_profile")
+  showHours           Boolean          @default(true) @map("show_hours")
+  showStreak          Boolean          @default(true) @map("show_streak")
+
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("learning_activities")
+}
+
+enum CredentialSource {
+  SKILLPOD
+  EXTERNAL
+  MANUAL
+}
+
+enum CredentialType {
+  COURSE_COMPLETION
+  ASSESSMENT_PASS
+  CERTIFICATION
+  SKILL_BADGE
+  LEARNING_PATH
+  EXTERNAL_CERTIFICATION
+}
+
+enum CredentialStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  PENDING_RENEWAL
+}
+
+enum ProficiencyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum VerificationType {
+  ASSESSMENT
+  COURSE_COMPLETION
+  CERTIFICATION
+  PEER_ENDORSEMENT
+  CLIENT_REVIEW
+  PROJECT_COMPLETION
 }
 

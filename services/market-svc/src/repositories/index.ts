@@ -35,3 +35,9 @@ export * from './contract-signature.repository.js';
 export * from './contract-invoice.repository.js';
 export * from './contract-dispute.repository.js';
 export * from './contract-template.repository.js';
+
+// Credential & Skill Verification System
+export * from './credential.repository.js';
+export * from './skill-verification.repository.js';
+export * from './skill-confidence.repository.js';
+export * from './learning-activity.repository.js';

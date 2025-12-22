@@ -63,3 +63,11 @@ export { createRateDataCollectorService } from './rate-data-collector.service.js
 export type { RateDataCollectorService } from './rate-data-collector.service.js';
 
 // Contract Management System (services TBD)
+
+// SkillPod Credential Integration
+export { CredentialSyncService } from './credential-sync.service.js';
+export type {
+  ConfidenceCalculationInput,
+  ConfidenceCalculationResult,
+  ProfileEnhancementResult,
+} from './credential-sync.service.js';
