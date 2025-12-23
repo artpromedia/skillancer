@@ -141,3 +141,6 @@ export type {
   ReservationToken,
   QuotaTier,
 } from './resource-pool.service.js';
+
+// Learning Recommendation services
+export * from './recommendation/index.js';

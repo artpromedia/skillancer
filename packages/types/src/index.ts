@@ -51,3 +51,6 @@ export * from './billing';
 
 // Credential integration types (SkillPod ↔ Market)
 export * from './credential';
+
+// Recommendation integration types (Market → SkillPod)
+export * from './recommendation';

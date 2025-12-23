@@ -10,6 +10,7 @@ import { Redis } from 'ioredis';
 
 import { ReviewJobs } from './jobs/index.js';
 import { registerRoutes } from './routes/index.js';
+import { createLearningSignalService } from './services/learning-signals.service.js';
 
 // Initialize dependencies
 const prisma = new PrismaClient();
@@ -69,6 +70,12 @@ const start = async () => {
 
     // Start background jobs
     const reviewJobs = new ReviewJobs(prisma, redis, logger as never);
+
+    // Initialize learning signal service for recommendation integration
+    const learningSignalService = createLearningSignalService(prisma, redis, logger as never);
+    server.log.info(
+      `Learning signal service initialized (ready: ${learningSignalService.isReady()})`
+    );
 
     // Run scheduled jobs periodically (every 15 minutes)
     const jobInterval = setInterval(

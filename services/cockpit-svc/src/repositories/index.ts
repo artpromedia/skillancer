@@ -60,3 +60,18 @@ export { IntegrationMappingRepository } from './integration-mapping.repository.j
 export { IntegrationSyncLogRepository } from './integration-sync-log.repository.js';
 export { WebhookEventRepository } from './webhook-event.repository.js';
 export { IntegrationTemplateRepository } from './integration-template.repository.js';
+
+// Market Contract Integration Repositories
+export { MarketContractLinkRepository } from './market-contract-link.repository.js';
+export { MarketMilestoneLinkRepository } from './market-milestone-link.repository.js';
+export { MarketTimeLinkRepository } from './market-time-link.repository.js';
+export { MarketPaymentLinkRepository } from './market-payment-link.repository.js';
+export { MarketClientCacheRepository } from './market-client-cache.repository.js';
+
+// Unified Financial Reporting Repositories
+export { UnifiedTransactionRepository } from './unified-transaction.repository.js';
+export { FinancialSummaryRepository } from './financial-summary.repository.js';
+export { ClientProfitabilityRepository } from './client-profitability.repository.js';
+export { PlatformPerformanceRepository } from './platform-performance.repository.js';
+export { TaxSummaryRepository } from './tax-summary.repository.js';
+export { SavedFinancialReportRepository } from './saved-financial-report.repository.js';

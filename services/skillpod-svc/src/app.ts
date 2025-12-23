@@ -32,6 +32,7 @@ import {
   killSwitchRoutes,
   recordingRoutes,
   watermarkRoutes,
+  recommendationRoutes,
 } from './routes/index.js';
 import {
   createSecurityPolicyService,
@@ -43,7 +44,18 @@ import {
   createKillSwitchService,
   createCdnService,
   createRecordingService,
+  createSignalProcessorService,
+  createRecommendationEngineService,
+  createLearningPathGeneratorService,
 } from './services/index.js';
+import {
+  createLearningProfileRepository,
+  createSkillGapRepository,
+  createMarketActivitySignalRepository,
+  createLearningRecommendationRepository,
+  createLearningPathRepository,
+  createMarketTrendRepository,
+} from './repositories/recommendation/index.js';
 
 import type { ScreenCaptureEvent } from './services/screenshot-detection.service.js';
 import type { Redis as RedisType } from 'ioredis';
@@ -146,6 +158,43 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     thumbnailGenerationEnabled: true,
   });
 
+  // Create recommendation repositories
+  const learningProfileRepo = createLearningProfileRepository(prisma, redis);
+  const skillGapRepo = createSkillGapRepository(prisma, redis);
+  const signalRepo = createMarketActivitySignalRepository(prisma, redis);
+  const recommendationRepo = createLearningRecommendationRepository(prisma, redis);
+  const learningPathRepo = createLearningPathRepository(prisma, redis);
+  const marketTrendRepo = createMarketTrendRepository(prisma, redis);
+
+  // Create recommendation services
+  const signalProcessor = createSignalProcessorService({
+    learningProfileRepo,
+    skillGapRepo,
+    signalRepo,
+    marketTrendRepo,
+    redis,
+    logger: app.log as any,
+  });
+
+  const recommendationEngine = createRecommendationEngineService({
+    learningProfileRepo,
+    skillGapRepo,
+    recommendationRepo,
+    marketTrendRepo,
+    redis,
+    logger: app.log as any,
+  });
+
+  const learningPathGenerator = createLearningPathGeneratorService({
+    learningProfileRepo,
+    skillGapRepo,
+    learningPathRepo,
+    recommendationRepo,
+    marketTrendRepo,
+    redis,
+    logger: app.log as any,
+  });
+
   // ===========================================================================
   // MIDDLEWARE
   // ===========================================================================
@@ -227,6 +276,18 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       // Watermark routes
       const watermarkRepository = createWatermarkRepository(prisma);
       api.register(watermarkRoutes(watermarkRepository));
+
+      // Learning recommendation routes
+      recommendationRoutes(api, {
+        learningProfileRepo,
+        skillGapRepo,
+        recommendationRepo,
+        learningPathRepo,
+        marketTrendRepo,
+        recommendationEngine,
+        learningPathGenerator,
+        redis,
+      });
 
       // Screenshot detection endpoint
       api.post('/screenshot-attempts', async (request) => {

@@ -7,6 +7,7 @@
 export { HealthScoreWorker } from './health-score.worker.js';
 export { ReminderWorker, type ReminderNotification } from './reminder.worker.js';
 export { MarketSyncWorker } from './market-sync.worker.js';
+export { MarketContractSyncWorker } from './market-contract-sync.worker.js';
 
 // Project Management Workers
 export { DeadlineReminderWorker, type DeadlineNotification } from './deadline-reminder.worker.js';

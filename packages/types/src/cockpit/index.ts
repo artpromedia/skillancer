@@ -11,3 +11,6 @@ export * from './calendar';
 
 // Alert/notification types
 export * from './alert';
+
+// Contract-project integration events
+export * from './contract-project.events';

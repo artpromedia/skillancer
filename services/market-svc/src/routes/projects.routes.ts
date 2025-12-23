@@ -12,6 +12,7 @@
 import { z } from 'zod';
 
 import { BiddingError, getStatusCode } from '../errors/bidding.errors.js';
+import { signalJobViewed } from '../hooks/learning-signals.hook.js';
 import { ProjectService } from '../services/project.service.js';
 
 import type { PrismaClient } from '@skillancer/database';
@@ -192,6 +193,19 @@ export function registerProjectRoutes(fastify: FastifyInstance, deps: ProjectRou
     try {
       const { projectId } = request.params;
       const project = await projectService.getProject(projectId);
+
+      // Signal job viewed for learning recommendations (fire and forget)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      const user = (request as any).user as { id: string } | undefined;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      const source = (request.query as any).source as
+        | 'search'
+        | 'recommendation'
+        | 'direct'
+        | 'email'
+        | undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      void signalJobViewed(user?.id, project as any, { source: source || 'direct' });
 
       return await reply.send({
         success: true,

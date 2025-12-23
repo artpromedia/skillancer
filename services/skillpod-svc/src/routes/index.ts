@@ -22,3 +22,7 @@ export { watermarkRoutes } from './watermark.routes.js';
 // Environment management routes
 export { templateRoutes } from './template.routes.js';
 export { environmentPodRoutes } from './environment-pod.routes.js';
+
+// Learning recommendation routes
+export { recommendationRoutes } from './recommendation.routes.js';
+export type { RecommendationRoutesDeps } from './recommendation.routes.js';

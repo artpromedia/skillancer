@@ -170,6 +170,14 @@ model User {
   mileageLogs                       MileageLog[]              @relation("UserMileageLogs")
   taxProfile                        TaxProfile?               @relation("UserTaxProfile")
 
+  // Unified Financial Reporting
+  unifiedTransactions               UnifiedTransaction[]      @relation("UserUnifiedTransactions")
+  financialSummaryReports           FinancialSummaryReport[]  @relation("UserFinancialSummaryReports")
+  clientProfitabilityReports        ClientProfitabilityReport[] @relation("UserClientProfitabilityReports")
+  platformPerformanceReports        PlatformPerformanceReport[] @relation("UserPlatformPerformanceReports")
+  taxSummaryReports                 TaxSummaryReport[]        @relation("UserTaxSummaryReports")
+  savedFinancialReports             SavedFinancialReport[]    @relation("UserSavedFinancialReports")
+
   // Invoicing
   invoices                          Invoice[]                 @relation("FreelancerInvoices")
   invoiceTemplates                  InvoiceTemplate[]         @relation("FreelancerInvoiceTemplates")
@@ -185,7 +193,11 @@ model User {
   skillConfidences                  SkillConfidence[]
   learningActivity                  LearningActivity?
 
+  // Learning Recommendation System
+  learningProfile                   UserLearningProfile?      @relation("UserLearningProfile")
+
   @@unique([oauthProvider, oauthId])
+
   @@index([email])
   @@index([status])
   @@index([deletedAt])
@@ -381,6 +393,11 @@ model Skill {
   serviceSkills      ServiceSkill[]
   skillVerifications SkillVerification[]
   skillConfidences   SkillConfidence[]
+  
+  // Learning Recommendation System
+  skillGaps                    SkillGap[]                @relation("SkillGaps")
+  marketTrends                 MarketTrend[]             @relation("SkillMarketTrends")
+  primaryRecommendations       LearningRecommendation[]  @relation("RecommendationPrimarySkill")
 
   @@index([category])
   @@index([slug])
@@ -7313,9 +7330,16 @@ model Client {
   transactions FinancialTransaction[] @relation("ClientFinancialTransactions")
   mileageLogs  MileageLog[]            @relation("ClientMileageLogs")
 
+  // Unified Financial Reporting
+  unifiedTransactions        UnifiedTransaction[]        @relation("ClientUnifiedTransactions")
+  profitabilityReports       ClientProfitabilityReport[] @relation("ClientProfitabilityReports")
+
   // Invoicing
   invoices          Invoice[]          @relation("ClientInvoices")
   recurringInvoices RecurringInvoice[] @relation("ClientRecurringInvoices")
+
+  // Market Integration
+  marketContractLinks MarketContractLink[] @relation("MarketContractClient")
 
   @@unique([freelancerUserId, email])
   @@index([freelancerUserId])
@@ -7809,8 +7833,14 @@ model CockpitProject {
   transactions   FinancialTransaction[] @relation("ProjectFinancialTransactions")
   mileageLogs    MileageLog[]           @relation("ProjectMileageLogs")
 
+  // Unified Financial Reporting
+  unifiedTransactions UnifiedTransaction[] @relation("ProjectUnifiedTransactions")
+
   // Invoicing
   invoices       Invoice[]              @relation("ProjectInvoices")
+
+  // Market Integration
+  marketContractLinks MarketContractLink[] @relation("MarketContractProject")
 
   @@map("cockpit_projects")
   @@index([freelancerUserId])
@@ -7910,6 +7940,9 @@ model ProjectMilestone {
   project CockpitProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks   ProjectTask[]
 
+  // Market Integration
+  marketMilestoneLinks MarketMilestoneLink[] @relation("MarketMilestoneProjectLink")
+
   @@map("project_milestones")
   @@index([projectId])
   @@index([status])
@@ -7994,6 +8027,9 @@ model CockpitTimeEntry {
   project    CockpitProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   task       ProjectTask?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
   client     Client?         @relation("ClientTimeEntries", fields: [clientId], references: [id], onDelete: SetNull)
+
+  // Market Integration
+  marketTimeLinks MarketTimeLink[] @relation("MarketTimeEntryLink")
 
   @@map("cockpit_time_entries")
   @@index([freelancerUserId])
@@ -8098,6 +8134,258 @@ model ProjectTemplate {
   @@map("project_templates")
   @@index([freelancerUserId])
   @@index([category])
+}
+
+// ============================================================================
+// MARKET CONTRACT INTEGRATION
+// ============================================================================
+
+model MarketContractLink {
+  id               String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  freelancerUserId String @map("freelancer_user_id") @db.Uuid
+
+  // Market references
+  marketContractId String  @unique @map("market_contract_id")
+  marketJobId      String? @map("market_job_id")
+  marketClientId   String  @map("market_client_id")
+
+  // Cockpit references
+  projectId String? @map("project_id") @db.Uuid
+  clientId  String? @map("client_id") @db.Uuid
+
+  // Contract info (cached from Market)
+  contractTitle  String                    @map("contract_title") @db.VarChar(255)
+  contractType   MarketContractType        @map("contract_type")
+  contractStatus MarketContractLinkStatus  @map("contract_status")
+
+  // Financial terms
+  currency   String   @default("USD") @db.VarChar(3)
+  hourlyRate Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  fixedPrice Decimal? @map("fixed_price") @db.Decimal(14, 2)
+  budgetCap  Decimal? @map("budget_cap") @db.Decimal(14, 2)
+
+  // Timeline
+  startDate DateTime  @map("start_date")
+  endDate   DateTime? @map("end_date")
+
+  // Sync state
+  lastSyncedAt DateTime               @map("last_synced_at")
+  syncStatus   MarketContractSyncStatus @default(SYNCED) @map("sync_status")
+  syncError    String?                @map("sync_error") @db.Text
+
+  // Settings
+  autoCreateProject  Boolean @default(true) @map("auto_create_project")
+  autoSyncTime       Boolean @default(true) @map("auto_sync_time")
+  autoRecordPayments Boolean @default(true) @map("auto_record_payments")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  project        CockpitProject?       @relation("MarketContractProject", fields: [projectId], references: [id])
+  client         Client?               @relation("MarketContractClient", fields: [clientId], references: [id])
+  milestoneLinks MarketMilestoneLink[]
+  timeLinks      MarketTimeLink[]
+  paymentLinks   MarketPaymentLink[]
+
+  @@map("market_contract_links")
+  @@index([freelancerUserId])
+  @@index([projectId])
+  @@index([contractStatus])
+}
+
+model MarketMilestoneLink {
+  id             String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractLinkId String @map("contract_link_id") @db.Uuid
+
+  // Market reference
+  marketMilestoneId String @map("market_milestone_id")
+
+  // Cockpit reference
+  projectMilestoneId String? @map("project_milestone_id") @db.Uuid
+
+  // Milestone info (cached)
+  title   String                     @db.VarChar(255)
+  amount  Decimal                    @db.Decimal(14, 2)
+  status  MarketMilestoneLinkStatus
+  dueDate DateTime?                  @map("due_date")
+
+  // Sync
+  lastSyncedAt DateTime @map("last_synced_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  contractLink     MarketContractLink @relation(fields: [contractLinkId], references: [id], onDelete: Cascade)
+  projectMilestone ProjectMilestone?  @relation("MarketMilestoneProjectLink", fields: [projectMilestoneId], references: [id])
+
+  @@unique([contractLinkId, marketMilestoneId])
+  @@map("market_milestone_links")
+}
+
+model MarketTimeLink {
+  id             String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractLinkId String @map("contract_link_id") @db.Uuid
+
+  // Market reference
+  marketTimeLogId String @unique @map("market_time_log_id")
+
+  // Cockpit reference
+  timeEntryId String? @unique @map("time_entry_id") @db.Uuid
+
+  // Direction
+  source MarketTimeSource @default(MARKET)
+
+  // Time info
+  date        DateTime               @db.Date
+  hours       Decimal                @db.Decimal(6, 2)
+  description String?                @db.Text
+  amount      Decimal                @db.Decimal(10, 2)
+  status      MarketTimeLinkStatus
+
+  // Sync
+  lastSyncedAt DateTime @map("last_synced_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  contractLink MarketContractLink @relation(fields: [contractLinkId], references: [id], onDelete: Cascade)
+  timeEntry    CockpitTimeEntry?  @relation("MarketTimeEntryLink", fields: [timeEntryId], references: [id])
+
+  @@map("market_time_links")
+  @@index([contractLinkId])
+  @@index([date])
+}
+
+model MarketPaymentLink {
+  id             String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractLinkId String @map("contract_link_id") @db.Uuid
+
+  // Market reference
+  marketPaymentId String  @unique @map("market_payment_id")
+  marketInvoiceId String? @map("market_invoice_id")
+
+  // Cockpit reference
+  transactionId    String? @unique @map("transaction_id") @db.Uuid
+  invoicePaymentId String? @map("invoice_payment_id") @db.Uuid
+
+  // Payment info
+  paymentType MarketPaymentLinkType @map("payment_type")
+  grossAmount Decimal               @map("gross_amount") @db.Decimal(14, 2)
+  platformFee Decimal               @map("platform_fee") @db.Decimal(14, 2)
+  netAmount   Decimal               @map("net_amount") @db.Decimal(14, 2)
+  currency    String                @db.VarChar(3)
+
+  // Status
+  status MarketPaymentLinkStatus
+  paidAt DateTime? @map("paid_at")
+
+  // Milestone reference
+  milestoneLinkId String? @map("milestone_link_id") @db.Uuid
+
+  // Sync
+  lastSyncedAt DateTime @map("last_synced_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  contractLink MarketContractLink    @relation(fields: [contractLinkId], references: [id], onDelete: Cascade)
+  transaction  FinancialTransaction? @relation("MarketPaymentTransaction", fields: [transactionId], references: [id])
+
+  @@map("market_payment_links")
+  @@index([contractLinkId])
+  @@index([paidAt])
+}
+
+model MarketClientCache {
+  id String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Market reference
+  marketUserId String @unique @map("market_user_id")
+
+  // Client info
+  displayName String  @map("display_name") @db.VarChar(200)
+  companyName String? @map("company_name") @db.VarChar(200)
+  email       String? @db.VarChar(255)
+  avatarUrl   String? @map("avatar_url") @db.VarChar(500)
+  country     String? @db.VarChar(100)
+  timezone    String? @db.VarChar(50)
+
+  // Stats
+  totalContracts Int     @default(0) @map("total_contracts")
+  totalSpent     Decimal @default(0) @map("total_spent") @db.Decimal(14, 2)
+  avgRating      Decimal? @map("avg_rating") @db.Decimal(3, 2)
+
+  // Linked Cockpit client
+  cockpitClientId String? @map("cockpit_client_id") @db.Uuid
+
+  lastSyncedAt DateTime @map("last_synced_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("market_client_cache")
+}
+
+// Market Contract Integration Enums
+
+enum MarketContractType {
+  HOURLY
+  FIXED_PRICE
+  RETAINER
+}
+
+enum MarketContractLinkStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum MarketMilestoneLinkStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  PAID
+  DISPUTED
+}
+
+enum MarketTimeLinkStatus {
+  PENDING
+  APPROVED
+  DISPUTED
+  PAID
+}
+
+enum MarketTimeSource {
+  MARKET
+  COCKPIT
+}
+
+enum MarketPaymentLinkType {
+  MILESTONE
+  HOURLY
+  BONUS
+  RETAINER
+  REFUND
+}
+
+enum MarketPaymentLinkStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum MarketContractSyncStatus {
+  SYNCED
+  PENDING
+  ERROR
+  CONFLICT
 }
 
 // Project Management Enums
@@ -8728,6 +9016,438 @@ enum SyncStatus {
   ERROR
 }
 
+// ============================================================================
+// UNIFIED FINANCIAL REPORTING
+// ============================================================================
+
+model UnifiedTransaction {
+  id                  String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId              String                   @map("user_id") @db.Uuid
+
+  // Source identification
+  source              UnifiedTransactionSource
+  sourceId            String                   @map("source_id") @db.VarChar(255)
+  sourceSystem        String                   @map("source_system") @db.VarChar(50)
+
+  // Deduplication
+  deduplicationKey    String                   @unique @map("deduplication_key") @db.VarChar(64)
+  isDuplicate         Boolean                  @default(false) @map("is_duplicate")
+  duplicateOfId       String?                  @map("duplicate_of_id") @db.Uuid
+  duplicateConfidence Decimal?                 @map("duplicate_confidence") @db.Decimal(5, 2)
+
+  // Transaction details
+  transactionType     UnifiedTransactionType   @map("transaction_type")
+  amount              Decimal                  @db.Decimal(14, 2)
+  originalCurrency    String                   @map("original_currency") @db.VarChar(3)
+  exchangeRate        Decimal?                 @map("exchange_rate") @db.Decimal(12, 6)
+  amountUSD           Decimal                  @map("amount_usd") @db.Decimal(14, 2)
+
+  // Dates
+  transactionDate     DateTime                 @map("transaction_date") @db.Date
+  recordedDate        DateTime                 @map("recorded_date")
+
+  // Categorization
+  category            String                   @db.VarChar(100)
+  subcategory         String?                  @db.VarChar(100)
+  irsCategory         String?                  @map("irs_category") @db.VarChar(100)
+
+  // Description
+  description         String                   @db.Text
+  notes               String?                  @db.Text
+
+  // Associations
+  clientId            String?                  @map("client_id") @db.Uuid
+  clientName          String?                  @map("client_name") @db.VarChar(255)
+  projectId           String?                  @map("project_id") @db.Uuid
+  projectName         String?                  @map("project_name") @db.VarChar(255)
+  platformName        String?                  @map("platform_name") @db.VarChar(100)
+
+  // For income
+  grossAmount         Decimal?                 @map("gross_amount") @db.Decimal(14, 2)
+  platformFee         Decimal?                 @map("platform_fee") @db.Decimal(14, 2)
+  processingFee       Decimal?                 @map("processing_fee") @db.Decimal(14, 2)
+  netAmount           Decimal?                 @map("net_amount") @db.Decimal(14, 2)
+
+  // For expenses
+  vendor              String?                  @db.VarChar(255)
+  isDeductible        Boolean                  @default(false) @map("is_deductible")
+  deductionCategory   String?                  @map("deduction_category") @db.VarChar(50)
+  hasReceipt          Boolean                  @default(false) @map("has_receipt")
+  receiptUrl          String?                  @map("receipt_url") @db.VarChar(500)
+
+  // Tax info
+  taxYear             Int                      @map("tax_year")
+  taxQuarter          Int                      @map("tax_quarter")
+  isReported          Boolean                  @default(false) @map("is_reported")
+
+  // Metadata
+  metadata            Json?
+  tags                String[]                 @default([])
+
+  // Sync tracking
+  lastSyncedAt        DateTime                 @map("last_synced_at")
+  syncStatus          UnifiedSyncStatus        @default(SYNCED) @map("sync_status")
+
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+
+  // Relations
+  user                User                     @relation("UserUnifiedTransactions", fields: [userId], references: [id])
+  duplicateOf         UnifiedTransaction?      @relation("DuplicateRelation", fields: [duplicateOfId], references: [id])
+  duplicates          UnifiedTransaction[]     @relation("DuplicateRelation")
+  client              Client?                  @relation("ClientUnifiedTransactions", fields: [clientId], references: [id])
+  project             CockpitProject?          @relation("ProjectUnifiedTransactions", fields: [projectId], references: [id])
+
+  @@map("unified_transactions")
+  @@index([userId])
+  @@index([transactionDate])
+  @@index([source])
+  @@index([transactionType])
+  @@index([category])
+  @@index([taxYear])
+  @@index([clientId])
+  @@index([projectId])
+}
+
+model FinancialSummaryReport {
+  id                       String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                   String                @map("user_id") @db.Uuid
+
+  // Period
+  periodType               FinancialPeriodType   @map("period_type")
+  periodStart              DateTime              @map("period_start") @db.Date
+  periodEnd                DateTime              @map("period_end") @db.Date
+
+  // Income summary
+  totalGrossIncome         Decimal               @map("total_gross_income") @db.Decimal(14, 2)
+  totalFees                Decimal               @map("total_fees") @db.Decimal(14, 2)
+  totalNetIncome           Decimal               @map("total_net_income") @db.Decimal(14, 2)
+
+  // Income by source
+  incomeBySource           Json                  @map("income_by_source")
+  incomeByPlatform         Json                  @map("income_by_platform")
+  incomeByClient           Json                  @map("income_by_client")
+  incomeByProject          Json                  @map("income_by_project")
+
+  // Expense summary
+  totalExpenses            Decimal               @map("total_expenses") @db.Decimal(14, 2)
+  deductibleExpenses       Decimal               @map("deductible_expenses") @db.Decimal(14, 2)
+  nonDeductibleExpenses    Decimal               @map("non_deductible_expenses") @db.Decimal(14, 2)
+
+  // Expense breakdown
+  expensesByCategory       Json                  @map("expenses_by_category")
+  expensesByVendor         Json                  @map("expenses_by_vendor")
+
+  // Calculated metrics
+  netProfit                Decimal               @map("net_profit") @db.Decimal(14, 2)
+  profitMargin             Decimal               @map("profit_margin") @db.Decimal(5, 2)
+  effectiveTaxRate         Decimal?              @map("effective_tax_rate") @db.Decimal(5, 2)
+
+  // Tax estimates
+  estimatedTaxableIncome   Decimal?              @map("estimated_taxable_income") @db.Decimal(14, 2)
+  estimatedTaxOwed         Decimal?              @map("estimated_tax_owed") @db.Decimal(14, 2)
+
+  // Transaction counts
+  incomeTransactionCount   Int                   @map("income_transaction_count")
+  expenseTransactionCount  Int                   @map("expense_transaction_count")
+
+  // Currency
+  baseCurrency             String                @default("USD") @map("base_currency") @db.VarChar(3)
+
+  // Generation info
+  generatedAt              DateTime              @map("generated_at")
+  isStale                  Boolean               @default(false) @map("is_stale")
+
+  createdAt                DateTime              @default(now()) @map("created_at")
+  updatedAt                DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  user                     User                  @relation("UserFinancialSummaries", fields: [userId], references: [id])
+
+  @@map("financial_summary_reports")
+  @@unique([userId, periodType, periodStart])
+  @@index([userId])
+  @@index([periodType])
+  @@index([periodStart])
+}
+
+model ClientProfitabilityReport {
+  id                   String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId               String                @map("user_id") @db.Uuid
+  clientId             String                @map("client_id") @db.Uuid
+
+  // Period
+  periodType           FinancialPeriodType   @map("period_type")
+  periodStart          DateTime              @map("period_start") @db.Date
+  periodEnd            DateTime              @map("period_end") @db.Date
+
+  // Revenue
+  grossRevenue         Decimal               @map("gross_revenue") @db.Decimal(14, 2)
+  platformFees         Decimal               @map("platform_fees") @db.Decimal(14, 2)
+  netRevenue           Decimal               @map("net_revenue") @db.Decimal(14, 2)
+
+  // Costs
+  directCosts          Decimal               @map("direct_costs") @db.Decimal(14, 2)
+  allocatedOverhead    Decimal               @map("allocated_overhead") @db.Decimal(14, 2)
+  totalCosts           Decimal               @map("total_costs") @db.Decimal(14, 2)
+
+  // Time investment
+  totalHours           Decimal               @map("total_hours") @db.Decimal(10, 2)
+  billableHours        Decimal               @map("billable_hours") @db.Decimal(10, 2)
+  nonBillableHours     Decimal               @map("non_billable_hours") @db.Decimal(10, 2)
+
+  // Profitability metrics
+  grossProfit          Decimal               @map("gross_profit") @db.Decimal(14, 2)
+  netProfit            Decimal               @map("net_profit") @db.Decimal(14, 2)
+  grossMargin          Decimal               @map("gross_margin") @db.Decimal(5, 2)
+  netMargin            Decimal               @map("net_margin") @db.Decimal(5, 2)
+
+  // Hourly metrics
+  effectiveHourlyRate  Decimal               @map("effective_hourly_rate") @db.Decimal(10, 2)
+  revenuePerHour       Decimal               @map("revenue_per_hour") @db.Decimal(10, 2)
+  profitPerHour        Decimal               @map("profit_per_hour") @db.Decimal(10, 2)
+
+  // Project count
+  projectCount         Int                   @map("project_count")
+  activeProjects       Int                   @map("active_projects")
+
+  // Ranking
+  profitabilityRank    Int?                  @map("profitability_rank")
+  revenueRank          Int?                  @map("revenue_rank")
+
+  generatedAt          DateTime              @map("generated_at")
+  createdAt            DateTime              @default(now()) @map("created_at")
+
+  // Relations
+  user                 User                  @relation("UserClientProfitability", fields: [userId], references: [id])
+  client               Client                @relation("ClientProfitabilityReports", fields: [clientId], references: [id])
+
+  @@map("client_profitability_reports")
+  @@unique([userId, clientId, periodType, periodStart])
+  @@index([userId])
+  @@index([clientId])
+  @@index([periodStart])
+}
+
+model PlatformPerformanceReport {
+  id                    String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String                   @map("user_id") @db.Uuid
+
+  // Platform
+  platformName          String                   @map("platform_name") @db.VarChar(100)
+  platformSource        UnifiedTransactionSource @map("platform_source")
+
+  // Period
+  periodType            FinancialPeriodType      @map("period_type")
+  periodStart           DateTime                 @map("period_start") @db.Date
+  periodEnd             DateTime                 @map("period_end") @db.Date
+
+  // Revenue
+  grossRevenue          Decimal                  @map("gross_revenue") @db.Decimal(14, 2)
+  platformFees          Decimal                  @map("platform_fees") @db.Decimal(14, 2)
+  feePercentage         Decimal                  @map("fee_percentage") @db.Decimal(5, 2)
+  netRevenue            Decimal                  @map("net_revenue") @db.Decimal(14, 2)
+
+  // Activity
+  contractCount         Int                      @map("contract_count")
+  activeContracts       Int                      @map("active_contracts")
+  completedContracts    Int                      @map("completed_contracts")
+
+  // Time
+  hoursWorked           Decimal                  @map("hours_worked") @db.Decimal(10, 2)
+  effectiveRate         Decimal                  @map("effective_rate") @db.Decimal(10, 2)
+
+  // Client metrics
+  uniqueClients         Int                      @map("unique_clients")
+  repeatClients         Int                      @map("repeat_clients")
+  newClients            Int                      @map("new_clients")
+
+  // Performance
+  avgProjectValue       Decimal                  @map("avg_project_value") @db.Decimal(14, 2)
+  avgContractDuration   Int?                     @map("avg_contract_duration")
+  clientRetentionRate   Decimal?                 @map("client_retention_rate") @db.Decimal(5, 2)
+
+  // Comparison
+  revenueShare          Decimal                  @map("revenue_share") @db.Decimal(5, 2)
+  growthRate            Decimal?                 @map("growth_rate") @db.Decimal(6, 2)
+
+  generatedAt           DateTime                 @map("generated_at")
+  createdAt             DateTime                 @default(now()) @map("created_at")
+
+  // Relations
+  user                  User                     @relation("UserPlatformPerformance", fields: [userId], references: [id])
+
+  @@map("platform_performance_reports")
+  @@unique([userId, platformName, periodType, periodStart])
+  @@index([userId])
+  @@index([platformName])
+  @@index([periodStart])
+}
+
+model TaxSummaryReport {
+  id                       String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                   String   @map("user_id") @db.Uuid
+
+  // Tax year
+  taxYear                  Int      @map("tax_year")
+
+  // Income
+  grossIncome              Decimal  @map("gross_income") @db.Decimal(14, 2)
+  incomeBySource           Json     @map("income_by_source")
+  form1099Income           Decimal  @map("form_1099_income") @db.Decimal(14, 2)
+
+  // Deductions
+  totalDeductions          Decimal  @map("total_deductions") @db.Decimal(14, 2)
+  deductionsByCategory     Json     @map("deductions_by_category")
+
+  // Specific deductions
+  homeOfficeDeduction      Decimal? @map("home_office_deduction") @db.Decimal(14, 2)
+  mileageDeduction         Decimal? @map("mileage_deduction") @db.Decimal(14, 2)
+  healthInsuranceDeduction Decimal? @map("health_insurance_deduction") @db.Decimal(14, 2)
+  retirementContributions  Decimal? @map("retirement_contributions") @db.Decimal(14, 2)
+
+  // Calculated
+  netProfit                Decimal  @map("net_profit") @db.Decimal(14, 2)
+  selfEmploymentTax        Decimal  @map("self_employment_tax") @db.Decimal(14, 2)
+  estimatedIncomeTax       Decimal  @map("estimated_income_tax") @db.Decimal(14, 2)
+  totalEstimatedTax        Decimal  @map("total_estimated_tax") @db.Decimal(14, 2)
+
+  // Quarterly payments
+  quarterlyPayments        Json     @map("quarterly_payments")
+  totalQuarterlyPaid       Decimal  @map("total_quarterly_paid") @db.Decimal(14, 2)
+  remainingTaxDue          Decimal  @map("remaining_tax_due") @db.Decimal(14, 2)
+
+  // Issues
+  missingReceipts          Int      @map("missing_receipts")
+  uncategorizedExpenses    Decimal  @map("uncategorized_expenses") @db.Decimal(14, 2)
+  warnings                 Json?
+
+  // Status
+  isFinalized              Boolean  @default(false) @map("is_finalized")
+  finalizedAt              DateTime? @map("finalized_at")
+
+  generatedAt              DateTime @map("generated_at")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user                     User     @relation("UserTaxSummaries", fields: [userId], references: [id])
+
+  @@map("tax_summary_reports")
+  @@unique([userId, taxYear])
+  @@index([userId])
+  @@index([taxYear])
+}
+
+model SavedFinancialReport {
+  id                String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String                 @map("user_id") @db.Uuid
+
+  // Report info
+  reportType        FinancialReportType    @map("report_type")
+  name              String                 @db.VarChar(255)
+  description       String?                @db.Text
+
+  // Parameters
+  parameters        Json
+
+  // Generated content
+  reportData        Json?                  @map("report_data")
+  chartData         Json?                  @map("chart_data")
+
+  // Files
+  pdfUrl            String?                @map("pdf_url") @db.VarChar(500)
+  excelUrl          String?                @map("excel_url") @db.VarChar(500)
+  csvUrl            String?                @map("csv_url") @db.VarChar(500)
+
+  // Scheduling
+  isScheduled       Boolean                @default(false) @map("is_scheduled")
+  scheduleFrequency String?                @map("schedule_frequency") @db.VarChar(20)
+  nextRunAt         DateTime?              @map("next_run_at")
+  lastRunAt         DateTime?              @map("last_run_at")
+  emailRecipients   String[]               @map("email_recipients") @default([])
+
+  // Status
+  status            FinancialReportStatus  @default(PENDING)
+  generatedAt       DateTime?              @map("generated_at")
+  expiresAt         DateTime?              @map("expires_at")
+
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+
+  // Relations
+  user              User                   @relation("UserSavedReports", fields: [userId], references: [id])
+
+  @@map("saved_financial_reports")
+  @@index([userId])
+  @@index([reportType])
+  @@index([nextRunAt])
+}
+
+enum UnifiedTransactionSource {
+  MARKET
+  COCKPIT
+  COCKPIT_INVOICE
+  UPWORK
+  FIVERR
+  TOPTAL
+  FREELANCER
+  QUICKBOOKS
+  XERO
+  FRESHBOOKS
+  PLAID
+  STRIPE
+  PAYPAL
+  MANUAL
+  OTHER
+}
+
+enum UnifiedTransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  REFUND
+  FEE
+  TAX_PAYMENT
+}
+
+enum UnifiedSyncStatus {
+  SYNCED
+  PENDING_SYNC
+  SYNC_ERROR
+  DUPLICATE
+}
+
+enum FinancialPeriodType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+}
+
+enum FinancialReportType {
+  PROFIT_LOSS
+  CASH_FLOW
+  TAX_SUMMARY
+  CLIENT_PROFITABILITY
+  PLATFORM_COMPARISON
+  INCOME_BY_SOURCE
+  EXPENSE_ANALYSIS
+  QUARTERLY_ESTIMATE
+  ANNUAL_SUMMARY
+  CUSTOM
+}
+
+enum FinancialReportStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
 enum EventSource {
   INTERNAL
   GOOGLE
@@ -8916,6 +9636,9 @@ model FinancialTransaction {
   parentTransaction   FinancialTransaction? @relation("TransactionSplits", fields: [parentTransactionId], references: [id])
   splitTransactions   FinancialTransaction[] @relation("TransactionSplits")
   recurringRule       RecurringTransaction? @relation(fields: [recurringRuleId], references: [id])
+
+  // Market Integration
+  marketPaymentLinks  MarketPaymentLink[] @relation("MarketPaymentTransaction")
 
   @@map("financial_transactions")
   @@index([userId])
@@ -10322,5 +11045,493 @@ enum VerificationType {
   PEER_ENDORSEMENT
   CLIENT_REVIEW
   PROJECT_COMPLETION
+}
+
+// =============================================================================
+// LEARNING RECOMMENDATION SYSTEM
+// Market Activity to Learning Recommendations Integration
+// =============================================================================
+
+// User's learning profile with career preferences and goals
+model UserLearningProfile {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  userId                  String                   @unique @db.Uuid
+  
+  // Career Information
+  currentRole             String?
+  targetRole              String?
+  experienceLevel         ProficiencyLevel         @default(INTERMEDIATE)
+  yearsOfExperience       Int                      @default(0)
+  primaryIndustry         String?
+  targetIndustries        String[]
+  
+  // Learning Preferences
+  preferredContentTypes   ContentType[]
+  preferredLearningStyle  LearningStyle            @default(SELF_PACED)
+  weeklyLearningHours     Int                      @default(5)
+  preferredSessionLength  Int                      @default(30) // in minutes
+  preferredDifficulty     DifficultyPreference     @default(PROGRESSIVE)
+  
+  // Goals and Focus Areas
+  careerGoals             String[]
+  focusSkillIds           String[]                 @db.Uuid
+  excludedSkillIds        String[]                 @db.Uuid
+  priorityCategories      String[]
+  
+  // ML Model Data
+  learningVelocity        Float                    @default(1.0) // How fast user learns (1.0 = average)
+  engagementScore         Float                    @default(0.5) // 0-1 engagement with content
+  completionRate          Float                    @default(0.0) // Course completion percentage
+  lastActiveAt            DateTime?
+  
+  // Feature Vectors (for ML recommendations)
+  skillVector             Json?                    // User's skill embedding vector
+  interestVector          Json?                    // User's interest embedding vector
+  learningPatternVector   Json?                    // Learning behavior patterns
+  
+  // Metadata
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  
+  // Relations
+  user                    User                     @relation("UserLearningProfile", fields: [userId], references: [id], onDelete: Cascade)
+  skillGaps               SkillGap[]
+  marketActivitySignals   MarketActivitySignal[]
+  learningRecommendations LearningRecommendation[]
+  learningPaths           UserLearningPath[]
+  
+  @@index([userId])
+  @@index([lastActiveAt])
+  @@index([experienceLevel])
+  @@map("user_learning_profiles")
+}
+
+// Detected skill gaps from market activity analysis
+model SkillGap {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  learningProfileId       String                   @db.Uuid
+  skillId                 String                   @db.Uuid
+  
+  // Gap Analysis
+  gapType                 GapType
+  currentLevel            ProficiencyLevel?
+  requiredLevel           ProficiencyLevel
+  gapScore                Float                    // 0-1 normalized gap severity
+  
+  // Market Context
+  marketDemandScore       Float                    @default(0.0) // 0-1 how in-demand is this skill
+  salaryImpact            Float?                   // Estimated salary increase potential
+  competitionLevel        CompetitionLevel         @default(MEDIUM)
+  jobFrequency            Int                      @default(0)   // How often seen in job searches
+  
+  // Priority and Status
+  priority                GapPriority              @default(MEDIUM)
+  priorityScore           Float                    @default(0.5) // Calculated priority score
+  status                  GapStatus                @default(ACTIVE)
+  
+  // Source Tracking
+  sourceEventIds          String[]                 @db.Uuid
+  detectionMethod         String                   // 'job_match_failure', 'application_rejection', 'market_trend', etc.
+  firstDetectedAt         DateTime                 @default(now())
+  lastConfirmedAt         DateTime                 @default(now())
+  
+  // Resolution Tracking
+  resolvedAt              DateTime?
+  resolutionMethod        String?                  // 'course_completed', 'certification_earned', 'user_dismissed'
+  
+  // Metadata
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  
+  // Relations
+  learningProfile         UserLearningProfile      @relation(fields: [learningProfileId], references: [id], onDelete: Cascade)
+  skill                   Skill                    @relation("SkillGaps", fields: [skillId], references: [id], onDelete: Cascade)
+  recommendations         LearningRecommendation[] @relation("GapRecommendations")
+  
+  @@unique([learningProfileId, skillId])
+  @@index([learningProfileId])
+  @@index([skillId])
+  @@index([priority])
+  @@index([status])
+  @@index([marketDemandScore])
+  @@map("skill_gaps")
+}
+
+// Market activity signals from job views, applications, and feedback
+model MarketActivitySignal {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  learningProfileId       String                   @db.Uuid
+  
+  // Signal Details
+  signalType              SignalType
+  signalSource            String                   // 'job_view', 'job_application', 'contract', etc.
+  signalStrength          Float                    @default(1.0) // Weight/importance of signal
+  
+  // Source References
+  sourceId                String?                  @db.Uuid
+  sourceType              String?                  // 'job', 'project', 'contract', 'profile'
+  
+  // Extracted Data
+  skillIds                String[]                 @db.Uuid
+  requiredLevels          Json?                    // Map of skillId -> required level
+  contextData             Json?                    // Additional context from source
+  
+  // Analysis Results
+  skillGapIndicators      Json?                    // Detected gap indicators
+  competitorInsights      Json?                    // Competitor analysis data
+  marketTrendData         Json?                    // Related market trends
+  
+  // Processing Status
+  processed               Boolean                  @default(false)
+  processedAt             DateTime?
+  processingResult        Json?
+  
+  // Decay and Validity
+  expiresAt               DateTime?
+  decayFactor             Float                    @default(1.0) // Signal strength decay over time
+  
+  // Metadata
+  createdAt               DateTime                 @default(now())
+  
+  // Relations
+  learningProfile         UserLearningProfile      @relation(fields: [learningProfileId], references: [id], onDelete: Cascade)
+  
+  @@index([learningProfileId])
+  @@index([signalType])
+  @@index([processed])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@map("market_activity_signals")
+}
+
+// Generated learning recommendations
+model LearningRecommendation {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  learningProfileId       String                   @db.Uuid
+  
+  // Recommendation Details
+  recommendationType      LearningRecommendationType
+  contentType             ContentType
+  title                   String
+  description             String?
+  
+  // Content Reference
+  contentId               String?                  @db.Uuid
+  contentSource           String                   // 'skillpod', 'external', 'ai_generated'
+  contentUrl              String?
+  contentProvider         String?
+  
+  // Target Skills
+  primarySkillId          String?                  @db.Uuid
+  relatedSkillIds         String[]                 @db.Uuid
+  targetLevel             ProficiencyLevel?
+  
+  // Scoring
+  relevanceScore          Float                    @default(0.0) // How relevant to user
+  urgencyScore            Float                    @default(0.0) // Time-sensitive importance
+  impactScore             Float                    @default(0.0) // Potential career impact
+  confidenceScore         Float                    @default(0.0) // ML model confidence
+  overallScore            Float                    @default(0.0) // Combined weighted score
+  
+  // Generation Context
+  generationMethod        String                   // 'ml_model', 'rule_based', 'hybrid'
+  generationModel         String?                  // Model version/name used
+  triggerEventId          String?                  @db.Uuid
+  skillGapId              String?                  @db.Uuid
+  reasoningExplanation    String?                  // Human-readable explanation
+  
+  // Estimated Effort
+  estimatedDuration       Int?                     // In minutes
+  estimatedDifficulty     ProficiencyLevel?
+  prerequisites           String[]                 @db.Uuid
+  
+  // User Interaction
+  status                  LearningRecommendationStatus @default(PENDING)
+  viewedAt                DateTime?
+  startedAt               DateTime?
+  completedAt             DateTime?
+  dismissedAt             DateTime?
+  dismissReason           String?
+  userFeedback            Int?                     // 1-5 rating
+  userFeedbackText        String?
+  
+  // Expiration
+  expiresAt               DateTime?
+  
+  // Metadata
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  
+  // Relations
+  learningProfile         UserLearningProfile      @relation(fields: [learningProfileId], references: [id], onDelete: Cascade)
+  primarySkill            Skill?                   @relation("RecommendationPrimarySkill", fields: [primarySkillId], references: [id], onDelete: SetNull)
+  skillGap                SkillGap?                @relation("GapRecommendations", fields: [skillGapId], references: [id], onDelete: SetNull)
+  
+  @@index([learningProfileId])
+  @@index([status])
+  @@index([recommendationType])
+  @@index([overallScore])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@map("learning_recommendations")
+}
+
+// Personalized learning paths
+model UserLearningPath {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  learningProfileId       String                   @db.Uuid
+  
+  // Path Details
+  title                   String
+  description             String?
+  pathType                LearningPathType
+  
+  // Target Outcome
+  targetRole              String?
+  targetSkillIds          String[]                 @db.Uuid
+  targetLevels            Json?                    // Map of skillId -> target level
+  estimatedCareerImpact   String?
+  
+  // Generation Info
+  generatedBy             LearningPathGenerationSource
+  generationContext       Json?                    // Context used for generation
+  
+  // Path Structure
+  milestones              Json                     // Array of milestone objects
+  totalDuration           Int?                     // Estimated total minutes
+  totalItems              Int                      @default(0)
+  
+  // Progress Tracking
+  status                  LearningPathStatus       @default(ACTIVE)
+  currentMilestoneIndex   Int                      @default(0)
+  completedItems          Int                      @default(0)
+  progressPercentage      Float                    @default(0.0)
+  lastActivityAt          DateTime?
+  
+  // Completion
+  startedAt               DateTime?
+  completedAt             DateTime?
+  abandonedAt             DateTime?
+  
+  // User Interaction
+  isPinned                Boolean                  @default(false)
+  userNotes               String?
+  
+  // Metadata
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  
+  // Relations
+  learningProfile         UserLearningProfile      @relation(fields: [learningProfileId], references: [id], onDelete: Cascade)
+  
+  @@index([learningProfileId])
+  @@index([status])
+  @@index([pathType])
+  @@index([createdAt])
+  @@map("user_learning_paths")
+}
+
+// Market trend analysis for skills
+model MarketTrend {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  skillId                 String                   @db.Uuid
+  
+  // Trend Identification
+  trendPeriod             TrendPeriod
+  periodStart             DateTime
+  periodEnd               DateTime
+  
+  // Demand Metrics
+  demandScore             Float                    // 0-1 overall demand
+  demandDirection         TrendDirection
+  demandChangePercent     Float                    @default(0.0)
+  jobPostingCount         Int                      @default(0)
+  applicationCount        Int                      @default(0)
+  
+  // Rate Metrics
+  averageRate             Float?
+  rateDirection           TrendDirection?
+  rateChangePercent       Float                    @default(0.0)
+  ratePercentile25        Float?
+  ratePercentile50        Float?
+  ratePercentile75        Float?
+  
+  // Competition Metrics
+  competitionLevel        CompetitionLevel         @default(MEDIUM)
+  freelancerSupply        Int                      @default(0)
+  supplyDemandRatio       Float?
+  
+  // Geographic Data
+  region                  String?                  // null = global
+  topLocations            String[]
+  
+  // Industry Data
+  industry                String?                  // null = all industries
+  topIndustries           String[]
+  
+  // Related Skills
+  emergingCombinations    String[]                 @db.Uuid // Skills often paired with this one
+  decliningCombinations   String[]                 @db.Uuid
+  
+  // Predictions
+  predictedDemand6Mo      Float?
+  predictedDemand12Mo     Float?
+  predictionConfidence    Float?
+  
+  // Source Data
+  dataPoints              Int                      @default(0)
+  dataSources             String[]
+  
+  // Metadata
+  calculatedAt            DateTime                 @default(now())
+  createdAt               DateTime                 @default(now())
+  
+  // Relations
+  skill                   Skill                    @relation("SkillMarketTrends", fields: [skillId], references: [id], onDelete: Cascade)
+  
+  @@unique([skillId, trendPeriod, periodStart, region, industry])
+  @@index([skillId])
+  @@index([trendPeriod])
+  @@index([periodStart])
+  @@index([demandScore])
+  @@index([demandDirection])
+  @@map("market_trends")
+}
+
+// =============================================================================
+// LEARNING RECOMMENDATION ENUMS
+// =============================================================================
+
+enum ContentType {
+  COURSE
+  TUTORIAL
+  VIDEO
+  ARTICLE
+  BOOK
+  PODCAST
+  PROJECT
+  CERTIFICATION
+  ASSESSMENT
+  WORKSHOP
+  BOOTCAMP
+  MENTORSHIP
+}
+
+enum LearningStyle {
+  SELF_PACED
+  INSTRUCTOR_LED
+  PROJECT_BASED
+  INTERACTIVE
+  MIXED
+}
+
+enum DifficultyPreference {
+  EASY
+  PROGRESSIVE
+  CHALLENGING
+}
+
+enum GapType {
+  MISSING_SKILL
+  LEVEL_GAP
+  OUTDATED_SKILL
+  TRENDING_SKILL
+  COMPETITIVE_ADVANTAGE
+}
+
+enum GapPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  OPTIONAL
+}
+
+enum GapStatus {
+  ACTIVE
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+  EXPIRED
+}
+
+enum SignalType {
+  JOB_VIEW
+  JOB_APPLICATION
+  JOB_REJECTION
+  JOB_ACCEPTANCE
+  CONTRACT_STARTED
+  CONTRACT_COMPLETED
+  CLIENT_FEEDBACK
+  SKILL_SEARCH
+  PROFILE_GAP
+  COMPETITOR_ANALYSIS
+  MARKET_TREND
+  CERTIFICATION_REQUIRED
+}
+
+enum LearningRecommendationType {
+  SKILL_GAP_FILL
+  CAREER_ADVANCEMENT
+  MARKET_DEMAND
+  TRENDING_SKILL
+  CERTIFICATION
+  REFRESH_KNOWLEDGE
+  COMPETITIVE_EDGE
+  PREREQUISITE
+  QUICK_WIN
+  DEEP_DIVE
+}
+
+enum LearningRecommendationStatus {
+  PENDING
+  VIEWED
+  STARTED
+  IN_PROGRESS
+  COMPLETED
+  DISMISSED
+  EXPIRED
+}
+
+enum LearningPathType {
+  SKILL_MASTERY
+  ROLE_TRANSITION
+  CERTIFICATION_TRACK
+  MARKET_ALIGNMENT
+  CUSTOM
+}
+
+enum LearningPathGenerationSource {
+  SYSTEM_RECOMMENDED
+  USER_CREATED
+  ML_GENERATED
+  CURATOR_CREATED
+}
+
+enum LearningPathStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ABANDONED
+}
+
+enum TrendDirection {
+  RISING
+  STABLE
+  DECLINING
+}
+
+enum TrendPeriod {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum CompetitionLevel {
+  LOW
+  MEDIUM
+  HIGH
+  VERY_HIGH
 }
 

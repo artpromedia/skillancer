@@ -1,0 +1,41 @@
+"""Schemas module initialization."""
+
+from app.schemas.recommendation import (
+    RecommendationType,
+    ContentType,
+    TrendDirection,
+    GapPriority,
+    UserContext,
+    SkillProfile,
+    MarketSignal,
+    GenerateRecommendationsRequest,
+    GenerateRecommendationsResponse,
+    RecommendationItem,
+    AnalyzeSkillGapsRequest,
+    AnalyzeSkillGapsResponse,
+    SkillGapItem,
+    ForecastTrendRequest,
+    ForecastTrendResponse,
+    TrendForecast,
+    HealthResponse,
+)
+
+__all__ = [
+    "RecommendationType",
+    "ContentType",
+    "TrendDirection",
+    "GapPriority",
+    "UserContext",
+    "SkillProfile",
+    "MarketSignal",
+    "GenerateRecommendationsRequest",
+    "GenerateRecommendationsResponse",
+    "RecommendationItem",
+    "AnalyzeSkillGapsRequest",
+    "AnalyzeSkillGapsResponse",
+    "SkillGapItem",
+    "ForecastTrendRequest",
+    "ForecastTrendResponse",
+    "TrendForecast",
+    "HealthResponse",
+]

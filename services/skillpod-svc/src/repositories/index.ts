@@ -83,3 +83,6 @@ export {
   type UpdateQuotaInput,
   type ResourcePoolListFilter,
 } from './resource-pool.repository.js';
+
+// Learning Recommendation repositories
+export * from './recommendation/index.js';

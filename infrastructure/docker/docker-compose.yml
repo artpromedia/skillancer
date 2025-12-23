@@ -104,6 +104,33 @@ services:
   # Optional Tools (use --profile tools)
   # ===========================================
 
+  # ML Recommendation Service
+  ml-recommendation:
+    build:
+      context: ../../services/ml-recommendation-svc
+      dockerfile: Dockerfile
+    container_name: skillancer-ml-recommendation
+    environment:
+      DATABASE_URL: postgresql+asyncpg://skillancer:skillancer_dev@postgres:5432/skillancer_dev
+      REDIS_URL: redis://redis:6379
+      MODEL_PATH: /app/models
+      DEBUG: "true"
+    ports:
+      - '8082:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - ml
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # pgAdmin - Database Management
   pgadmin:
     image: dpage/pgadmin4:latest

@@ -8,6 +8,7 @@ import { registerDocumentRoutes } from './documents.routes.js';
 import { registerFinanceRoutes } from './finance.routes.js';
 import { registerFreelancePlatformRoutes } from './freelance-platform.routes.js';
 import { registerIntegrationRoutes } from './integration.routes.js';
+import { registerMarketContractRoutes } from './market-contracts.routes.js';
 import { registerProductivityToolRoutes } from './productivity-tools.routes.js';
 import { registerCommunicationRoutes } from './communication.routes.js';
 import { registerInvoiceRoutes } from './invoice.routes.js';
@@ -243,6 +244,18 @@ export async function registerRoutes(
     },
     { prefix: '/api' }
   );
+
+  // ============================================================================
+  // Market Integration Routes (Market Contract to Cockpit Project)
+  // ============================================================================
+
+  // Register Market contract integration routes
+  await fastify.register(
+    async (instance) => {
+      await registerMarketContractRoutes(instance, deps.prisma, deps.redis, deps.logger);
+    },
+    { prefix: '/market' }
+  );
 }
 
 // CRM exports
@@ -277,3 +290,5 @@ export { registerFreelancePlatformRoutes } from './freelance-platform.routes.js'
 export { registerProductivityToolRoutes } from './productivity-tools.routes.js';
 // Communication Platform exports (CP-4.3: Slack & Discord Integrations)
 export { registerCommunicationRoutes } from './communication.routes.js';
+// Market Integration exports (Market Contract to Cockpit Project)
+export { registerMarketContractRoutes } from './market-contracts.routes.js';

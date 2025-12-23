@@ -12,6 +12,7 @@
 import { z } from 'zod';
 
 import { BiddingError, getStatusCode } from '../errors/bidding.errors.js';
+import { signalBidSubmitted, signalBidOutcome } from '../hooks/learning-signals.hook.js';
 import { BidService } from '../services/bid.service.js';
 
 import type { PrismaClient } from '@skillancer/database';
@@ -143,6 +144,20 @@ export function registerBidRoutes(fastify: FastifyInstance, deps: BidRouteDeps):
       const body = SubmitBidSchema.parse(request.body);
 
       const bid = await bidService.submitBid(user.id, body);
+
+      // Signal bid submitted for learning recommendations (fire and forget)
+      const bidWithJob = bid as any;
+      if (bidWithJob.job) {
+        void signalBidSubmitted(
+          { id: user.id, skills: [] }, // User skills would ideally be fetched
+          bidWithJob.job,
+          {
+            proposedRate: body.proposedRate,
+            coverLetter: body.coverLetter,
+            attachments: body.attachments,
+          }
+        );
+      }
 
       logger.info({
         msg: 'Bid submitted',
@@ -304,7 +319,15 @@ export function registerBidRoutes(fastify: FastifyInstance, deps: BidRouteDeps):
       const { bidId } = request.params;
       const body = RejectBidSchema.parse(request.body || {});
 
+      // Get bid details before rejecting for signaling
+      const bidBefore = await bidService.getBid(bidId, user.id);
+
       await bidService.rejectBid({ bidId, ...body }, user.id);
+
+      // Signal bid rejection for learning recommendations
+      void signalBidOutcome(bidBefore.freelancerId, bidBefore.jobId, 'REJECTED', {
+        rejectionReason: body.reason,
+      });
 
       logger.info({
         msg: 'Bid rejected',
@@ -384,6 +407,9 @@ export function registerBidRoutes(fastify: FastifyInstance, deps: BidRouteDeps):
       const body = AcceptBidSchema.parse(request.body || {});
 
       const bid = await bidService.acceptBid({ bidId, ...body }, user.id);
+
+      // Signal bid acceptance for learning recommendations
+      void signalBidOutcome(bid.freelancerId, bid.jobId, 'HIRED');
 
       logger.info({
         msg: 'Bid accepted',
