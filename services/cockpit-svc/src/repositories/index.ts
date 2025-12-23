@@ -75,3 +75,15 @@ export { ClientProfitabilityRepository } from './client-profitability.repository
 export { PlatformPerformanceRepository } from './platform-performance.repository.js';
 export { TaxSummaryRepository } from './tax-summary.repository.js';
 export { SavedFinancialReportRepository } from './saved-financial-report.repository.js';
+
+// Learning Time Tracking Repositories
+export { LearningTimeEntryRepository } from './learning-time-entry.repository.js';
+export { LearningGoalRepository } from './learning-goal.repository.js';
+export { SkillLearningProgressRepository } from './skill-learning-progress.repository.js';
+
+// Skill-Based Pricing Recommendation Repositories
+export { SkillRateRepository } from './skill-rate.repository.js';
+export { MarketRateBenchmarkRepository } from './market-benchmark.repository.js';
+export { PricingRecommendationRepository } from './pricing-recommendation.repository.js';
+export { RateHistoryRepository } from './rate-history.repository.js';
+export { RevenueProjectionRepository } from './revenue-projection.repository.js';

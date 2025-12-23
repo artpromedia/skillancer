@@ -55,3 +55,17 @@ export type {
   RetryConfig,
 } from './integrations/base-integration.service.js';
 export { IntegrationPlatformService } from './integrations/integration-platform.service.js';
+
+// Unified Financial Reporting Services
+export { CurrencyService } from './currency.service.js';
+export { UnifiedFinancialService } from './unified-financial.service.js';
+export { ReportGeneratorService } from './report-generator.service.js';
+export { TransactionDeduplicationService } from './transaction-deduplication.service.js';
+
+// Learning Time Tracking Services
+export { LearningTimeSyncService } from './learning-time-sync.service.js';
+
+// Skill-Based Pricing Services
+export { PricingRecommendationService } from './pricing-recommendation.service.js';
+export { MLPricingService } from './ml-pricing.service.js';
+export { ExternalRatesService } from './external-rates.service.js';

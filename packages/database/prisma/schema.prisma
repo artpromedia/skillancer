@@ -203,7 +203,14 @@ model User {
   // Learning Recommendation System
   learningProfile                   UserLearningProfile?      @relation("UserLearningProfile")
 
+  // Skill-Based Pricing Recommendations
+  skillRates                        SkillRate[]
+  pricingRecommendations            PricingRecommendation[]
+  rateHistoryEntries                RateHistory[]
+  revenueProjections                RevenueProjection[]
+
   @@unique([oauthProvider, oauthId])
+
 
   @@index([email])
   @@index([status])
@@ -11862,5 +11869,291 @@ enum CompetitionLevel {
   MEDIUM
   HIGH
   VERY_HIGH
+}
+
+// ============================================================================
+// SKILL-BASED PRICING RECOMMENDATIONS
+// ============================================================================
+
+model SkillRate {
+  id                   String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId               String           @map("user_id") @db.Uuid
+  skillId              String           @map("skill_id")
+  skillName            String           @map("skill_name")
+
+  // Current rate
+  currentHourlyRate    Decimal?         @map("current_hourly_rate") @db.Decimal(10, 2)
+  currentProjectRate   Decimal?         @map("current_project_rate") @db.Decimal(14, 2)
+  currency             String           @default("USD")
+
+  // Recommended rates
+  recommendedMinRate     Decimal?       @map("recommended_min_rate") @db.Decimal(10, 2)
+  recommendedOptimalRate Decimal?       @map("recommended_optimal_rate") @db.Decimal(10, 2)
+  recommendedMaxRate     Decimal?       @map("recommended_max_rate") @db.Decimal(10, 2)
+
+  // Confidence
+  confidenceScore      Decimal          @map("confidence_score") @db.Decimal(5, 2) // 0-100
+
+  // Factors
+  skillLevel           String?          @map("skill_level")
+  verificationScore    Decimal?         @map("verification_score") @db.Decimal(5, 2)
+  experienceYears      Decimal?         @map("experience_years") @db.Decimal(4, 1)
+  projectsCompleted    Int?             @map("projects_completed")
+  avgClientRating      Decimal?         @map("avg_client_rating") @db.Decimal(3, 2)
+
+  // Market context
+  marketPosition       MarketPosition   @default(AVERAGE) @map("market_position")
+  marketDemand         MarketDemand     @default(MODERATE) @map("market_demand")
+  competitionLevel     CompetitionLevel @default(MEDIUM) @map("competition_level")
+
+  // Last calculation
+  calculatedAt         DateTime         @map("calculated_at")
+  validUntil           DateTime         @map("valid_until")
+
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  user                 User             @relation(fields: [userId], references: [id])
+
+  @@unique([userId, skillId])
+  @@index([userId])
+  @@index([skillId])
+  @@map("skill_rates")
+}
+
+model MarketRateBenchmark {
+  id                String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Scope
+  skillId           String         @map("skill_id")
+  skillName         String         @map("skill_name")
+  category          String?
+  region            String?        // 'GLOBAL', 'US', 'EU', etc.
+
+  // Rate distribution
+  rateP10           Decimal        @map("rate_p10") @db.Decimal(10, 2) // 10th percentile
+  rateP25           Decimal        @map("rate_p25") @db.Decimal(10, 2)
+  rateP50           Decimal        @map("rate_p50") @db.Decimal(10, 2) // Median
+  rateP75           Decimal        @map("rate_p75") @db.Decimal(10, 2)
+  rateP90           Decimal        @map("rate_p90") @db.Decimal(10, 2)
+  rateMean          Decimal        @map("rate_mean") @db.Decimal(10, 2)
+
+  // By experience level
+  beginnerRate      Decimal?       @map("beginner_rate") @db.Decimal(10, 2)
+  intermediateRate  Decimal?       @map("intermediate_rate") @db.Decimal(10, 2)
+  advancedRate      Decimal?       @map("advanced_rate") @db.Decimal(10, 2)
+  expertRate        Decimal?       @map("expert_rate") @db.Decimal(10, 2)
+
+  // Market metrics
+  sampleSize        Int            @map("sample_size")
+  jobCount          Int            @map("job_count")
+  freelancerCount   Int            @map("freelancer_count")
+  demandScore       Decimal        @map("demand_score") @db.Decimal(5, 2)
+
+  // Trends
+  rateChangeMonthly Decimal?       @map("rate_change_monthly") @db.Decimal(6, 2)
+  rateChangeYearly  Decimal?       @map("rate_change_yearly") @db.Decimal(6, 2)
+  trendDirection    TrendDirection @default(STABLE) @map("trend_direction")
+
+  // Data sources
+  sources           String[]       // ['market', 'upwork', 'fiverr', 'glassdoor']
+
+  // Period
+  periodStart       DateTime       @map("period_start") @db.Date
+  periodEnd         DateTime       @map("period_end") @db.Date
+
+  generatedAt       DateTime       @map("generated_at")
+
+  @@unique([skillId, region, periodStart])
+  @@index([skillId])
+  @@index([category])
+  @@index([periodStart])
+  @@map("market_rate_benchmarks")
+}
+
+model PricingRecommendation {
+  id                     String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                 String                    @map("user_id") @db.Uuid
+
+  // Recommendation type
+  recommendationType     PricingRecommendationType @map("recommendation_type")
+
+  // Scope
+  scope                  RecommendationScope
+  skillId                String?                   @map("skill_id")
+  skillName              String?                   @map("skill_name")
+  projectType            String?                   @map("project_type")
+
+  // Current vs Recommended
+  currentRate            Decimal?                  @map("current_rate") @db.Decimal(10, 2)
+  recommendedRate        Decimal                   @map("recommended_rate") @db.Decimal(10, 2)
+  rateChange             Decimal                   @map("rate_change") @db.Decimal(10, 2)
+  rateChangePercent      Decimal                   @map("rate_change_percent") @db.Decimal(6, 2)
+
+  // Impact projection
+  projectedMonthlyImpact Decimal?                  @map("projected_monthly_impact") @db.Decimal(14, 2)
+  projectedYearlyImpact  Decimal?                  @map("projected_yearly_impact") @db.Decimal(14, 2)
+
+  // Confidence and reasoning
+  confidenceScore        Decimal                   @map("confidence_score") @db.Decimal(5, 2)
+  reasoning              Json                      // Factors that led to this recommendation
+
+  // Supporting data
+  marketPosition         MarketPosition            @map("market_position")
+  competitorAnalysis     Json?                     @map("competitor_analysis")
+
+  // Status
+  status                 RecommendationStatus      @default(PENDING)
+  viewedAt               DateTime?                 @map("viewed_at")
+  appliedAt              DateTime?                 @map("applied_at")
+  dismissedAt            DateTime?                 @map("dismissed_at")
+  dismissReason          String?                   @map("dismiss_reason")
+
+  // Validity
+  validFrom              DateTime                  @map("valid_from")
+  validUntil             DateTime                  @map("valid_until")
+
+  createdAt              DateTime                  @default(now()) @map("created_at")
+
+  user                   User                      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([validUntil])
+  @@map("pricing_recommendations")
+}
+
+model RateHistory {
+  id             String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId         String     @map("user_id") @db.Uuid
+
+  // Scope
+  skillId        String?    @map("skill_id")
+  skillName      String?    @map("skill_name")
+
+  // Rate
+  hourlyRate     Decimal    @map("hourly_rate") @db.Decimal(10, 2)
+  currency       String     @default("USD")
+
+  // Context
+  source         RateSource @default(MANUAL)
+  projectId      String?    @map("project_id") @db.Uuid
+  contractId     String?    @map("contract_id")
+
+  // Outcome (if from completed project)
+  clientRating   Decimal?   @map("client_rating") @db.Decimal(3, 2)
+  projectSuccess Boolean?   @map("project_success")
+  repeatClient   Boolean?   @map("repeat_client")
+
+  effectiveDate  DateTime   @map("effective_date") @db.Date
+
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  user           User       @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([skillId])
+  @@index([effectiveDate])
+  @@map("rate_history")
+}
+
+model RevenueProjection {
+  id               String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String       @map("user_id") @db.Uuid
+
+  // Scenario
+  scenarioName     String       @map("scenario_name")
+  scenarioType     ScenarioType @map("scenario_type")
+
+  // Rate assumptions
+  hourlyRate       Decimal      @map("hourly_rate") @db.Decimal(10, 2)
+  hoursPerWeek     Decimal      @map("hours_per_week") @db.Decimal(5, 2)
+  weeksPerYear     Decimal      @default(48) @map("weeks_per_year") @db.Decimal(5, 2)
+  utilizationRate  Decimal      @default(75) @map("utilization_rate") @db.Decimal(5, 2) // % of hours that are billable
+
+  // Projections
+  weeklyRevenue    Decimal      @map("weekly_revenue") @db.Decimal(14, 2)
+  monthlyRevenue   Decimal      @map("monthly_revenue") @db.Decimal(14, 2)
+  yearlyRevenue    Decimal      @map("yearly_revenue") @db.Decimal(14, 2)
+
+  // Expenses (optional)
+  monthlyExpenses  Decimal?     @map("monthly_expenses") @db.Decimal(14, 2)
+  yearlyExpenses   Decimal?     @map("yearly_expenses") @db.Decimal(14, 2)
+
+  // Net
+  monthlyNetIncome Decimal?     @map("monthly_net_income") @db.Decimal(14, 2)
+  yearlyNetIncome  Decimal?     @map("yearly_net_income") @db.Decimal(14, 2)
+
+  // Comparison to current
+  vsCurrentMonthly Decimal?     @map("vs_current_monthly") @db.Decimal(14, 2)
+  vsCurrentYearly  Decimal?     @map("vs_current_yearly") @db.Decimal(14, 2)
+
+  isActive         Boolean      @default(false) @map("is_active")
+
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  user             User         @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("revenue_projections")
+}
+
+// Pricing Enums
+enum MarketPosition {
+  BUDGET
+  BELOW_AVERAGE
+  AVERAGE
+  ABOVE_AVERAGE
+  PREMIUM
+  TOP_TIER
+}
+
+enum MarketDemand {
+  LOW
+  MODERATE
+  HIGH
+  VERY_HIGH
+}
+
+enum PricingRecommendationType {
+  RATE_INCREASE
+  RATE_DECREASE
+  SKILL_PREMIUM
+  MARKET_ADJUSTMENT
+  EXPERIENCE_UPGRADE
+  CERTIFICATION_PREMIUM
+  DEMAND_BASED
+}
+
+enum RecommendationScope {
+  GLOBAL       // Overall rate
+  SKILL        // Specific skill
+  PROJECT_TYPE // Type of project
+  CLIENT_TIER  // Client segment
+}
+
+enum RecommendationStatus {
+  PENDING
+  VIEWED
+  APPLIED
+  DISMISSED
+  EXPIRED
+}
+
+enum RateSource {
+  MANUAL
+  PROJECT
+  CONTRACT
+  PROFILE
+  RECOMMENDATION
+}
+
+enum ScenarioType {
+  CURRENT
+  CONSERVATIVE
+  MODERATE
+  AGGRESSIVE
+  CUSTOM
 }
 

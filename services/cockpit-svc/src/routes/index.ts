@@ -292,3 +292,10 @@ export { registerProductivityToolRoutes } from './productivity-tools.routes.js';
 export { registerCommunicationRoutes } from './communication.routes.js';
 // Market Integration exports (Market Contract to Cockpit Project)
 export { registerMarketContractRoutes } from './market-contracts.routes.js';
+
+// Pricing Recommendations exports (CP-X: Skill-Based Pricing)
+export { default as pricingRoutes } from './pricing.routes.js';
+// Unified Financial exports (Unified Financial Reporting)
+export { default as unifiedFinancialRoutes } from './unified-financial.routes.js';
+// Learning Time exports (Learning Time Tracking)
+export { default as learningTimeRoutes } from './learning-time.routes.js';
