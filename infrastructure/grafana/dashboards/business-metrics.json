@@ -1,0 +1,500 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "business-metrics",
+    "title": "Business Metrics Dashboard",
+    "description": "Key business metrics and KPIs for the Skillancer platform",
+    "tags": ["business", "kpi", "skillancer"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "5m",
+    "editable": true,
+    "graphTooltip": 1,
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(up, environment)",
+          "current": { "text": "production", "value": "production" },
+          "refresh": 1
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Revenue & Transactions",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+        "collapsed": false
+      },
+      {
+        "id": 2,
+        "title": "Total Revenue (24h)",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(payment_amount_total{environment=\"$environment\"}[24h]))",
+            "legendFormat": "Revenue",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 0
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Transactions (24h)",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(payment_transactions_total{environment=\"$environment\", status=\"success\"}[24h]))",
+            "legendFormat": "Transactions",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "decimals": 0
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Payment Success Rate",
+        "type": "gauge",
+        "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(payment_transactions_total{environment=\"$environment\", status=\"success\"}[1h])) / sum(rate(payment_transactions_total{environment=\"$environment\"}[1h])) * 100",
+            "legendFormat": "Success Rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 95 },
+                { "color": "green", "value": 99 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "showThresholdLabels": true
+        }
+      },
+      {
+        "id": 5,
+        "title": "Avg Transaction Value",
+        "type": "stat",
+        "gridPos": { "h": 5, "w": 6, "x": 18, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(payment_amount_total{environment=\"$environment\"}[24h])) / sum(increase(payment_transactions_total{environment=\"$environment\", status=\"success\"}[24h]))",
+            "legendFormat": "Avg Value",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Users",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+        "collapsed": false
+      },
+      {
+        "id": 7,
+        "title": "Active Users",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(active_users_total{environment=\"$environment\"}) by (service)",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 20
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max", "last"] }
+        }
+      },
+      {
+        "id": 8,
+        "title": "New Registrations (Hourly)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(user_registrations_total{environment=\"$environment\"}[1h]))",
+            "legendFormat": "Registrations",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "SkillPod Metrics",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+        "collapsed": false
+      },
+      {
+        "id": 10,
+        "title": "Course Enrollments (24h)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(course_enrollments_total{environment=\"$environment\"}[24h]))",
+            "legendFormat": "Enrollments",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 11,
+        "title": "Course Completions (24h)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 16 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(course_completions_total{environment=\"$environment\"}[24h]))",
+            "legendFormat": "Completions",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 12,
+        "title": "Video Streams (24h)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 16 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(video_stream_starts_total{environment=\"$environment\"}[24h]))",
+            "legendFormat": "Streams",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 13,
+        "title": "Assessments Passed (24h)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 16 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(assessment_completions_total{environment=\"$environment\", result=\"passed\"}[24h]))",
+            "legendFormat": "Passed",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 14,
+        "title": "Learning Time (Hours Today)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(learning_time_seconds_total{environment=\"$environment\"}[1h])) / 3600",
+            "legendFormat": "Learning Hours",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "h",
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80,
+              "gradientMode": "scheme"
+            }
+          }
+        }
+      },
+      {
+        "id": 15,
+        "title": "Market Metrics",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },
+        "collapsed": false
+      },
+      {
+        "id": 16,
+        "title": "Jobs Posted (24h)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 29 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(jobs_posted_total{environment=\"$environment\"}[24h]))",
+            "legendFormat": "Jobs",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 17,
+        "title": "Proposals Submitted (24h)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 29 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(proposals_submitted_total{environment=\"$environment\"}[24h]))",
+            "legendFormat": "Proposals",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 18,
+        "title": "Contracts Started (24h)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 29 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(contracts_started_total{environment=\"$environment\"}[24h]))",
+            "legendFormat": "Contracts",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 19,
+        "title": "GMV (24h)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 29 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(contract_value_total{environment=\"$environment\"}[24h]))",
+            "legendFormat": "GMV",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 20,
+        "title": "Revenue Trends",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+        "collapsed": false
+      },
+      {
+        "id": 21,
+        "title": "Daily Revenue Trend",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 34 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(payment_amount_total{environment=\"$environment\"}[24h]))",
+            "legendFormat": "Revenue",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80,
+              "gradientMode": "scheme"
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" }
+        }
+      },
+      {
+        "id": 22,
+        "title": "Revenue by Service",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 42 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(payment_amount_total{environment=\"$environment\"}[24h])) by (service)",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
+          "pieType": "donut"
+        }
+      },
+      {
+        "id": 23,
+        "title": "Transaction Volume by Hour",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 42 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(increase(payment_transactions_total{environment=\"$environment\", status=\"success\"}[1h]))",
+            "legendFormat": "Transactions",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 60
+            }
+          }
+        }
+      }
+    ]
+  }
+}

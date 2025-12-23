@@ -344,3 +344,6 @@ export * from './prometheus.js';
 
 // Export Health service
 export * from './health.js';
+
+// Export SLO service
+export * from './slo/index.js';

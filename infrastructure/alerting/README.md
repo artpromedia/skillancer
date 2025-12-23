@@ -5,9 +5,10 @@ This directory contains configuration files for the Skillancer platform's alerti
 ## Files
 
 ### alertmanager.yml
+
 Alertmanager configuration for routing, grouping, and delivering alerts to various notification channels:
 
-- **Slack Channels**: 
+- **Slack Channels**:
   - `#alerts` - General alerts
   - `#alerts-critical` - Critical issues requiring immediate attention
   - `#alerts-warnings` - Non-critical warnings
@@ -19,18 +20,19 @@ Alertmanager configuration for routing, grouping, and delivering alerts to vario
   - Security incidents
 
 ### prometheus-rules.yml
+
 Prometheus alerting rules organized by category:
 
-| Category | Alert Examples |
-|----------|---------------|
-| **Availability** | ServiceDown, HighErrorRate, HealthCheckFailing |
-| **Performance** | HighLatency, SlowDatabaseQueries, RequestQueueSaturated |
-| **Resources** | HighCPUUsage, HighMemoryUsage, DiskSpaceLow |
-| **Database** | ConnectionPoolExhausted, ReplicationLag, HighDeadTuples |
-| **Cache** | RedisDown, LowCacheHitRate, RedisMemoryHigh |
-| **Business** | PaymentFailures, SignupAnomaly, RevenueDropDetected |
-| **Security** | BruteForce, RateLimitExceeded, SSLCertificateExpiring |
-| **Queues** | BacklogGrowing, DeadLetterQueueNotEmpty, ConsumerLag |
+| Category         | Alert Examples                                          |
+| ---------------- | ------------------------------------------------------- |
+| **Availability** | ServiceDown, HighErrorRate, HealthCheckFailing          |
+| **Performance**  | HighLatency, SlowDatabaseQueries, RequestQueueSaturated |
+| **Resources**    | HighCPUUsage, HighMemoryUsage, DiskSpaceLow             |
+| **Database**     | ConnectionPoolExhausted, ReplicationLag, HighDeadTuples |
+| **Cache**        | RedisDown, LowCacheHitRate, RedisMemoryHigh             |
+| **Business**     | PaymentFailures, SignupAnomaly, RevenueDropDetected     |
+| **Security**     | BruteForce, RateLimitExceeded, SSLCertificateExpiring   |
+| **Queues**       | BacklogGrowing, DeadLetterQueueNotEmpty, ConsumerLag    |
 
 ## Environment Variables
 
@@ -78,7 +80,7 @@ services:
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
     ports:
-      - "9093:9093"
+      - '9093:9093'
 
   prometheus:
     image: prom/prometheus:v2.48.0
@@ -122,8 +124,8 @@ Each alert includes a `runbook_url` annotation linking to detailed troubleshooti
 
 ## Severity Levels
 
-| Severity | Response Time | Examples |
-|----------|--------------|----------|
+| Severity     | Response Time         | Examples                                           |
+| ------------ | --------------------- | -------------------------------------------------- |
 | **critical** | Immediate (PagerDuty) | Service down, payment failures, security incidents |
-| **warning** | Within hours | High latency, elevated error rates, resource usage |
-| **info** | Business hours | Anomaly detection, trend analysis |
+| **warning**  | Within hours          | High latency, elevated error rates, resource usage |
+| **info**     | Business hours        | Anomaly detection, trend analysis                  |

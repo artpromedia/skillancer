@@ -5,6 +5,7 @@
 
 import { dashboardRoutes, marketOverviewRoutes } from './bff/index.js';
 import { healthRoutes } from './health.js';
+import { observabilityRoutes } from './observability.js';
 
 import type { FastifyInstance } from 'fastify';
 
@@ -19,6 +20,9 @@ export async function registerRoutes(
 ): Promise<void> {
   // Health check routes (no auth required)
   await app.register(healthRoutes);
+
+  // Observability routes (SLO, metrics, dashboards)
+  await app.register(observabilityRoutes);
 
   // BFF routes (require authentication)
   await app.register(dashboardRoutes, { prefix: '/bff' });

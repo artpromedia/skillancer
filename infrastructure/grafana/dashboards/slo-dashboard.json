@@ -1,0 +1,523 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "slo-dashboard",
+    "title": "SLO Dashboard",
+    "description": "Service Level Objectives tracking with error budgets and burn rates",
+    "tags": ["slo", "sre", "skillancer"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "1m",
+    "editable": true,
+    "graphTooltip": 1,
+    "links": [
+      {
+        "title": "Platform Overview",
+        "url": "/d/platform-overview",
+        "type": "link",
+        "icon": "dashboard"
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "slo",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(slo_target, slo_id)",
+          "multi": false,
+          "current": { "text": "skillpod-availability", "value": "skillpod-availability" },
+          "refresh": 1,
+          "sort": 1
+        },
+        {
+          "name": "environment",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(up, environment)",
+          "current": { "text": "production", "value": "production" },
+          "refresh": 1
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "SLO Overview",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+        "collapsed": false
+      },
+      {
+        "id": 2,
+        "title": "Current SLI",
+        "type": "gauge",
+        "gridPos": { "h": 6, "w": 6, "x": 0, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_current_sli{slo_id=\"$slo\"}",
+            "legendFormat": "Current",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 90,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 99 },
+                { "color": "green", "value": 99.5 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true,
+          "text": { "titleSize": 16, "valueSize": 32 }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Target",
+        "type": "stat",
+        "gridPos": { "h": 3, "w": 3, "x": 6, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_target{slo_id=\"$slo\"}",
+            "legendFormat": "Target",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "colorMode": "none",
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Service",
+        "type": "stat",
+        "gridPos": { "h": 3, "w": 3, "x": 6, "y": 4 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_target{slo_id=\"$slo\"}",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              { "type": "special", "options": { "match": "null", "result": { "text": "N/A" } } }
+            ]
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "colorMode": "none",
+          "textMode": "name"
+        }
+      },
+      {
+        "id": 5,
+        "title": "Error Budget Remaining",
+        "type": "gauge",
+        "gridPos": { "h": 6, "w": 6, "x": 9, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_error_budget_remaining{slo_id=\"$slo\"}",
+            "legendFormat": "Budget",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "orange", "value": 10 },
+                { "color": "yellow", "value": 25 },
+                { "color": "green", "value": 50 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "showThresholdLabels": true
+        }
+      },
+      {
+        "id": 6,
+        "title": "Burn Rate",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 5, "x": 15, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_burn_rate{slo_id=\"$slo\"}",
+            "legendFormat": "Burn Rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "x",
+            "decimals": 2,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "orange", "value": 5 },
+                { "color": "red", "value": 10 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "colorMode": "value",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 7,
+        "title": "Status",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 4, "x": 20, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_error_budget_remaining{slo_id=\"$slo\"}",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              { "type": "range", "options": { "from": 50, "to": 100, "result": { "text": "HEALTHY", "color": "green" } } },
+              { "type": "range", "options": { "from": 25, "to": 50, "result": { "text": "WARNING", "color": "yellow" } } },
+              { "type": "range", "options": { "from": 10, "to": 25, "result": { "text": "AT RISK", "color": "orange" } } },
+              { "type": "range", "options": { "from": 0, "to": 10, "result": { "text": "CRITICAL", "color": "red" } } }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "orange", "value": 10 },
+                { "color": "yellow", "value": 25 },
+                { "color": "green", "value": 50 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "colorMode": "background",
+          "textMode": "value"
+        }
+      },
+      {
+        "id": 8,
+        "title": "SLI Trends",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+        "collapsed": false
+      },
+      {
+        "id": 9,
+        "title": "SLI Over Time",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_current_sli{slo_id=\"$slo\"}",
+            "legendFormat": "SLI",
+            "refId": "A"
+          },
+          {
+            "expr": "slo_target{slo_id=\"$slo\"}",
+            "legendFormat": "Target",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 95,
+            "max": 100,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Target" },
+              "properties": [
+                { "id": "custom.lineStyle", "value": { "dash": [10, 10], "fill": "dash" } },
+                { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } },
+                { "id": "custom.fillOpacity", "value": 0 }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Error Budget Burn Down",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_error_budget_remaining{slo_id=\"$slo\"}",
+            "legendFormat": "Remaining Budget",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 20,
+              "gradientMode": "scheme"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "orange", "value": 10 },
+                { "color": "yellow", "value": 25 },
+                { "color": "green", "value": 50 }
+              ]
+            },
+            "color": { "mode": "thresholds" }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" }
+        }
+      },
+      {
+        "id": 11,
+        "title": "Burn Rate Analysis",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+        "collapsed": false
+      },
+      {
+        "id": 12,
+        "title": "Multi-Window Burn Rate",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_burn_rate{slo_id=\"$slo\"}",
+            "legendFormat": "Current Burn Rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "x",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "orange", "value": 5 },
+                { "color": "red", "value": 10 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max", "last"] }
+        }
+      },
+      {
+        "id": 13,
+        "title": "All SLOs Summary",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+        "collapsed": false
+      },
+      {
+        "id": 14,
+        "title": "All SLOs Status",
+        "type": "table",
+        "gridPos": { "h": 10, "w": 24, "x": 0, "y": 26 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_current_sli",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          },
+          {
+            "expr": "slo_target",
+            "format": "table",
+            "instant": true,
+            "refId": "B"
+          },
+          {
+            "expr": "slo_error_budget_remaining",
+            "format": "table",
+            "instant": true,
+            "refId": "C"
+          },
+          {
+            "expr": "slo_burn_rate",
+            "format": "table",
+            "instant": true,
+            "refId": "D"
+          }
+        ],
+        "transformations": [
+          { "id": "merge" },
+          {
+            "id": "filterFieldsByName",
+            "options": {
+              "include": {
+                "names": ["slo_id", "service", "Value #A", "Value #B", "Value #C", "Value #D"]
+              }
+            }
+          },
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "slo_id": "SLO",
+                "service": "Service",
+                "Value #A": "Current SLI",
+                "Value #B": "Target",
+                "Value #C": "Budget %",
+                "Value #D": "Burn Rate"
+              }
+            }
+          },
+          {
+            "id": "sortBy",
+            "options": { "fields": {}, "sort": [{ "field": "Budget %", "desc": false }] }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Current SLI" },
+              "properties": [
+                { "id": "unit", "value": "percent" },
+                { "id": "decimals", "value": 3 }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Target" },
+              "properties": [
+                { "id": "unit", "value": "percent" },
+                { "id": "decimals", "value": 2 }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Budget %" },
+              "properties": [
+                { "id": "unit", "value": "percent" },
+                { "id": "decimals", "value": 1 },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      { "color": "red", "value": null },
+                      { "color": "orange", "value": 10 },
+                      { "color": "yellow", "value": 25 },
+                      { "color": "green", "value": 50 }
+                    ]
+                  }
+                },
+                { "id": "custom.displayMode", "value": "color-background-solid" }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Burn Rate" },
+              "properties": [
+                { "id": "unit", "value": "x" },
+                { "id": "decimals", "value": 2 },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      { "color": "green", "value": null },
+                      { "color": "yellow", "value": 1 },
+                      { "color": "red", "value": 5 }
+                    ]
+                  }
+                },
+                { "id": "custom.displayMode", "value": "color-text" }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "SLO" },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "View SLO Details",
+                      "url": "/d/slo-dashboard?var-slo=${__value.text}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "footer": { "enablePagination": true }
+        }
+      }
+    ]
+  }
+}

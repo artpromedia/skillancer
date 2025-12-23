@@ -16,9 +16,9 @@ groups:
           severity: critical
           category: availability
         annotations:
-          summary: "Service {{ $labels.service }} is down"
-          description: "{{ $labels.service }} has been down for more than 1 minute"
-          runbook_url: "https://docs.skillancer.io/runbooks/service-down"
+          summary: 'Service {{ $labels.service }} is down'
+          description: '{{ $labels.service }} has been down for more than 1 minute'
+          runbook_url: 'https://docs.skillancer.io/runbooks/service-down'
 
       # High error rate (>1% of requests)
       - alert: HighErrorRate
@@ -32,9 +32,9 @@ groups:
           severity: critical
           category: availability
         annotations:
-          summary: "High error rate on {{ $labels.service }}"
-          description: "Error rate is {{ $value | humanizePercentage }} on {{ $labels.service }}"
-          runbook_url: "https://docs.skillancer.io/runbooks/high-error-rate"
+          summary: 'High error rate on {{ $labels.service }}'
+          description: 'Error rate is {{ $value | humanizePercentage }} on {{ $labels.service }}'
+          runbook_url: 'https://docs.skillancer.io/runbooks/high-error-rate'
 
       # Elevated error rate (>0.5% of requests)
       - alert: ElevatedErrorRate
@@ -48,8 +48,8 @@ groups:
           severity: warning
           category: availability
         annotations:
-          summary: "Elevated error rate on {{ $labels.service }}"
-          description: "Error rate is {{ $value | humanizePercentage }} on {{ $labels.service }}"
+          summary: 'Elevated error rate on {{ $labels.service }}'
+          description: 'Error rate is {{ $value | humanizePercentage }} on {{ $labels.service }}'
 
       # Health check failing
       - alert: HealthCheckFailing
@@ -59,8 +59,8 @@ groups:
           severity: critical
           category: availability
         annotations:
-          summary: "Health check failing for {{ $labels.instance }}"
-          description: "Endpoint {{ $labels.instance }} has been failing health checks for 2 minutes"
+          summary: 'Health check failing for {{ $labels.instance }}'
+          description: 'Endpoint {{ $labels.instance }} has been failing health checks for 2 minutes'
 
   # ============================================================================
   # PERFORMANCE ALERTS
@@ -79,9 +79,9 @@ groups:
           severity: warning
           category: performance
         annotations:
-          summary: "High latency on {{ $labels.service }}"
-          description: "95th percentile latency is {{ $value | humanizeDuration }} on {{ $labels.service }}"
-          runbook_url: "https://docs.skillancer.io/runbooks/high-latency"
+          summary: 'High latency on {{ $labels.service }}'
+          description: '95th percentile latency is {{ $value | humanizeDuration }} on {{ $labels.service }}'
+          runbook_url: 'https://docs.skillancer.io/runbooks/high-latency'
 
       # Very high latency (p95 > 5s)
       - alert: CriticalLatency
@@ -94,8 +94,8 @@ groups:
           severity: critical
           category: performance
         annotations:
-          summary: "Critical latency on {{ $labels.service }}"
-          description: "95th percentile latency is {{ $value | humanizeDuration }} on {{ $labels.service }}"
+          summary: 'Critical latency on {{ $labels.service }}'
+          description: '95th percentile latency is {{ $value | humanizeDuration }} on {{ $labels.service }}'
 
       # Slow database queries (p95 > 1s)
       - alert: SlowDatabaseQueries
@@ -108,8 +108,8 @@ groups:
           severity: warning
           category: database
         annotations:
-          summary: "Slow database queries in {{ $labels.service }}"
-          description: "{{ $labels.operation }} queries taking {{ $value | humanizeDuration }} (p95)"
+          summary: 'Slow database queries in {{ $labels.service }}'
+          description: '{{ $labels.operation }} queries taking {{ $value | humanizeDuration }} (p95)'
 
       # Request queue saturation
       - alert: RequestQueueSaturated
@@ -123,8 +123,8 @@ groups:
           severity: warning
           category: performance
         annotations:
-          summary: "Request queue saturated on {{ $labels.service }}"
-          description: "Service {{ $labels.service }} is using {{ $value | humanizePercentage }} of connection capacity"
+          summary: 'Request queue saturated on {{ $labels.service }}'
+          description: 'Service {{ $labels.service }} is using {{ $value | humanizePercentage }} of connection capacity'
 
   # ============================================================================
   # RESOURCE ALERTS
@@ -141,9 +141,9 @@ groups:
           severity: warning
           category: resources
         annotations:
-          summary: "High CPU usage on {{ $labels.service }}"
-          description: "CPU usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
-          runbook_url: "https://docs.skillancer.io/runbooks/high-cpu"
+          summary: 'High CPU usage on {{ $labels.service }}'
+          description: 'CPU usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}'
+          runbook_url: 'https://docs.skillancer.io/runbooks/high-cpu'
 
       # Critical CPU usage
       - alert: CriticalCPUUsage
@@ -154,8 +154,8 @@ groups:
           severity: critical
           category: resources
         annotations:
-          summary: "Critical CPU usage on {{ $labels.service }}"
-          description: "CPU usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+          summary: 'Critical CPU usage on {{ $labels.service }}'
+          description: 'CPU usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}'
 
       # High memory usage
       - alert: HighMemoryUsage
@@ -166,9 +166,9 @@ groups:
           severity: warning
           category: resources
         annotations:
-          summary: "High memory usage on {{ $labels.instance }}"
-          description: "Memory usage is {{ $value | humanizePercentage }}"
-          runbook_url: "https://docs.skillancer.io/runbooks/high-memory"
+          summary: 'High memory usage on {{ $labels.instance }}'
+          description: 'Memory usage is {{ $value | humanizePercentage }}'
+          runbook_url: 'https://docs.skillancer.io/runbooks/high-memory'
 
       # Critical memory usage
       - alert: CriticalMemoryUsage
@@ -179,8 +179,8 @@ groups:
           severity: critical
           category: resources
         annotations:
-          summary: "Critical memory usage on {{ $labels.instance }}"
-          description: "Memory usage is {{ $value | humanizePercentage }}"
+          summary: 'Critical memory usage on {{ $labels.instance }}'
+          description: 'Memory usage is {{ $value | humanizePercentage }}'
 
       # Disk space running low
       - alert: DiskSpaceLow
@@ -191,8 +191,8 @@ groups:
           severity: warning
           category: resources
         annotations:
-          summary: "Disk space low on {{ $labels.instance }}"
-          description: "Disk usage is {{ $value | humanizePercentage }}"
+          summary: 'Disk space low on {{ $labels.instance }}'
+          description: 'Disk usage is {{ $value | humanizePercentage }}'
 
       # Container restarts
       - alert: ContainerRestarting
@@ -203,8 +203,8 @@ groups:
           severity: warning
           category: resources
         annotations:
-          summary: "Container {{ $labels.container }} restarting frequently"
-          description: "Container has restarted {{ $value }} times in the last hour"
+          summary: 'Container {{ $labels.container }} restarting frequently'
+          description: 'Container has restarted {{ $value }} times in the last hour'
 
   # ============================================================================
   # DATABASE ALERTS
@@ -221,9 +221,9 @@ groups:
           severity: warning
           category: database
         annotations:
-          summary: "Database connection pool near exhaustion"
-          description: "{{ $value | humanizePercentage }} of database connections in use"
-          runbook_url: "https://docs.skillancer.io/runbooks/db-connections"
+          summary: 'Database connection pool near exhaustion'
+          description: '{{ $value | humanizePercentage }} of database connections in use'
+          runbook_url: 'https://docs.skillancer.io/runbooks/db-connections'
 
       # Database connection pool critical
       - alert: DatabaseConnectionPoolCritical
@@ -234,8 +234,8 @@ groups:
           severity: critical
           category: database
         annotations:
-          summary: "Database connection pool critically low"
-          description: "{{ $value | humanizePercentage }} of database connections in use"
+          summary: 'Database connection pool critically low'
+          description: '{{ $value | humanizePercentage }} of database connections in use'
 
       # High database lock contention
       - alert: HighDatabaseLockContention
@@ -246,8 +246,8 @@ groups:
           severity: warning
           category: database
         annotations:
-          summary: "High lock contention in database"
-          description: "Exclusive locks are being acquired at {{ $value }} per second"
+          summary: 'High lock contention in database'
+          description: 'Exclusive locks are being acquired at {{ $value }} per second'
 
       # Replication lag
       - alert: DatabaseReplicationLag
@@ -258,8 +258,8 @@ groups:
           severity: warning
           category: database
         annotations:
-          summary: "Database replication lag detected"
-          description: "Replication lag is {{ $value | humanizeDuration }}"
+          summary: 'Database replication lag detected'
+          description: 'Replication lag is {{ $value | humanizeDuration }}'
 
       # Dead tuples accumulating
       - alert: HighDeadTuples
@@ -270,8 +270,8 @@ groups:
           severity: warning
           category: database
         annotations:
-          summary: "High dead tuple count in {{ $labels.relname }}"
-          description: "Table {{ $labels.relname }} has {{ $value }} dead tuples. Consider running VACUUM."
+          summary: 'High dead tuple count in {{ $labels.relname }}'
+          description: 'Table {{ $labels.relname }} has {{ $value }} dead tuples. Consider running VACUUM.'
 
   # ============================================================================
   # CACHE ALERTS
@@ -287,9 +287,9 @@ groups:
           severity: critical
           category: cache
         annotations:
-          summary: "Redis instance is down"
-          description: "Redis at {{ $labels.instance }} is not responding"
-          runbook_url: "https://docs.skillancer.io/runbooks/redis-down"
+          summary: 'Redis instance is down'
+          description: 'Redis at {{ $labels.instance }} is not responding'
+          runbook_url: 'https://docs.skillancer.io/runbooks/redis-down'
 
       # Low cache hit rate
       - alert: LowCacheHitRate
@@ -303,8 +303,8 @@ groups:
           severity: warning
           category: cache
         annotations:
-          summary: "Low cache hit rate on {{ $labels.service }}"
-          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+          summary: 'Low cache hit rate on {{ $labels.service }}'
+          description: 'Cache hit rate is {{ $value | humanizePercentage }}'
 
       # Redis memory usage high
       - alert: RedisMemoryHigh
@@ -315,8 +315,8 @@ groups:
           severity: warning
           category: cache
         annotations:
-          summary: "Redis memory usage high"
-          description: "Redis is using {{ $value | humanizePercentage }} of max memory"
+          summary: 'Redis memory usage high'
+          description: 'Redis is using {{ $value | humanizePercentage }} of max memory'
 
   # ============================================================================
   # BUSINESS METRIC ALERTS
@@ -336,9 +336,9 @@ groups:
           severity: critical
           category: business
         annotations:
-          summary: "High payment failure rate"
-          description: "Payment failure rate is {{ $value | humanizePercentage }}"
-          runbook_url: "https://docs.skillancer.io/runbooks/payment-failures"
+          summary: 'High payment failure rate'
+          description: 'Payment failure rate is {{ $value | humanizePercentage }}'
+          runbook_url: 'https://docs.skillancer.io/runbooks/payment-failures'
 
       # Authentication failures spike
       - alert: AuthenticationFailureSpike
@@ -349,9 +349,9 @@ groups:
           severity: warning
           category: security
         annotations:
-          summary: "Spike in authentication failures"
-          description: "{{ $value }} failed auth attempts per second on {{ $labels.service }}"
-          runbook_url: "https://docs.skillancer.io/runbooks/auth-failures"
+          summary: 'Spike in authentication failures'
+          description: '{{ $value }} failed auth attempts per second on {{ $labels.service }}'
+          runbook_url: 'https://docs.skillancer.io/runbooks/auth-failures'
 
       # User signup anomaly
       - alert: SignupAnomalyLow
@@ -364,8 +364,8 @@ groups:
           severity: info
           category: business
         annotations:
-          summary: "User signups significantly below average"
-          description: "Signups in the last hour are 50% below the 7-day average"
+          summary: 'User signups significantly below average'
+          description: 'Signups in the last hour are 50% below the 7-day average'
 
       # Order processing delays
       - alert: OrderProcessingDelayed
@@ -378,8 +378,8 @@ groups:
           severity: warning
           category: business
         annotations:
-          summary: "Order processing delays detected"
-          description: "95th percentile order processing time is {{ $value | humanizeDuration }}"
+          summary: 'Order processing delays detected'
+          description: '95th percentile order processing time is {{ $value | humanizeDuration }}'
 
       # Revenue anomaly detection
       - alert: RevenueDropDetected
@@ -392,8 +392,8 @@ groups:
           severity: critical
           category: business
         annotations:
-          summary: "Significant revenue drop detected"
-          description: "Revenue in the last hour is 70% below the 7-day hourly average"
+          summary: 'Significant revenue drop detected'
+          description: 'Revenue in the last hour is 70% below the 7-day hourly average'
 
   # ============================================================================
   # SECURITY ALERTS
@@ -410,9 +410,9 @@ groups:
           severity: critical
           category: security
         annotations:
-          summary: "Possible brute force attack detected"
-          description: "{{ $value }} failed auth attempts per second from {{ $labels.source_ip }}"
-          runbook_url: "https://docs.skillancer.io/runbooks/brute-force"
+          summary: 'Possible brute force attack detected'
+          description: '{{ $value }} failed auth attempts per second from {{ $labels.source_ip }}'
+          runbook_url: 'https://docs.skillancer.io/runbooks/brute-force'
 
       # Rate limiting triggered excessively
       - alert: RateLimitingExcessive
@@ -423,8 +423,8 @@ groups:
           severity: warning
           category: security
         annotations:
-          summary: "Excessive rate limiting on {{ $labels.endpoint }}"
-          description: "Rate limits exceeded {{ $value }} times per second"
+          summary: 'Excessive rate limiting on {{ $labels.endpoint }}'
+          description: 'Rate limits exceeded {{ $value }} times per second'
 
       # SSL certificate expiring
       - alert: SSLCertificateExpiring
@@ -435,9 +435,9 @@ groups:
           severity: warning
           category: security
         annotations:
-          summary: "SSL certificate expiring soon"
-          description: "Certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
-          runbook_url: "https://docs.skillancer.io/runbooks/ssl-renewal"
+          summary: 'SSL certificate expiring soon'
+          description: 'Certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}'
+          runbook_url: 'https://docs.skillancer.io/runbooks/ssl-renewal'
 
       # Certificate about to expire (critical)
       - alert: SSLCertificateExpiryCritical
@@ -448,8 +448,8 @@ groups:
           severity: critical
           category: security
         annotations:
-          summary: "SSL certificate expiring imminently"
-          description: "Certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+          summary: 'SSL certificate expiring imminently'
+          description: 'Certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}'
 
   # ============================================================================
   # QUEUE ALERTS
@@ -466,8 +466,8 @@ groups:
           severity: warning
           category: queues
         annotations:
-          summary: "Queue {{ $labels.queue_name }} backlog growing"
-          description: "Queue size increased by {{ $value }} in the last 5 minutes"
+          summary: 'Queue {{ $labels.queue_name }} backlog growing'
+          description: 'Queue size increased by {{ $value }} in the last 5 minutes'
 
       # Dead letter queue not empty
       - alert: DeadLetterQueueNotEmpty
@@ -478,9 +478,9 @@ groups:
           severity: warning
           category: queues
         annotations:
-          summary: "Dead letter queue has messages"
-          description: "DLQ {{ $labels.queue_name }} has {{ $value }} messages"
-          runbook_url: "https://docs.skillancer.io/runbooks/dlq-processing"
+          summary: 'Dead letter queue has messages'
+          description: 'DLQ {{ $labels.queue_name }} has {{ $value }} messages'
+          runbook_url: 'https://docs.skillancer.io/runbooks/dlq-processing'
 
       # Consumer lag
       - alert: QueueConsumerLag
@@ -491,5 +491,5 @@ groups:
           severity: warning
           category: queues
         annotations:
-          summary: "Queue consumer lag detected"
-          description: "Consumer for {{ $labels.queue_name }} is {{ $value | humanizeDuration }} behind"
+          summary: 'Queue consumer lag detected'
+          description: 'Consumer for {{ $labels.queue_name }} is {{ $value | humanizeDuration }} behind'

@@ -1,0 +1,489 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "platform-overview",
+    "title": "Skillancer Platform Overview",
+    "description": "Real-time overview of all Skillancer platform services",
+    "tags": ["overview", "platform", "skillancer"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "links": [
+      {
+        "title": "SLO Dashboard",
+        "url": "/d/slo-dashboard",
+        "type": "link",
+        "icon": "dashboard"
+      },
+      {
+        "title": "Service Details",
+        "url": "/d/service-detail?var-service=${service}",
+        "type": "link",
+        "icon": "dashboard"
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(up, environment)",
+          "current": { "text": "production", "value": "production" },
+          "options": [],
+          "refresh": 1,
+          "sort": 1
+        },
+        {
+          "name": "service",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(up{environment=\"$environment\"}, service)",
+          "multi": true,
+          "includeAll": true,
+          "current": { "text": "All", "value": "$__all" },
+          "options": [],
+          "refresh": 1,
+          "sort": 1
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "enable": true,
+          "iconColor": "blue",
+          "expr": "changes(deployment_timestamp{environment=\"$environment\"}[5m]) > 0",
+          "titleFormat": "Deployment: {{service}}",
+          "textFormat": "Version: {{version}}"
+        },
+        {
+          "name": "Incidents",
+          "datasource": "Prometheus",
+          "enable": true,
+          "iconColor": "red",
+          "expr": "ALERTS{alertstate=\"firing\", severity=\"critical\", environment=\"$environment\"}",
+          "titleFormat": "Alert: {{alertname}}",
+          "textFormat": "Service: {{service}}"
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Platform Health",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+        "collapsed": false
+      },
+      {
+        "id": 2,
+        "title": "Services Up",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "count(up{environment=\"$environment\"} == 1)",
+            "legendFormat": "Healthy",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 3 },
+                { "color": "green", "value": 5 }
+              ]
+            },
+            "mappings": [],
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "value",
+          "graphMode": "none"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Request Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{environment=\"$environment\", service=~\"$service\"}[5m]))",
+            "legendFormat": "Requests/sec",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "decimals": 1,
+            "color": { "mode": "palette-classic" }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "value",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{environment=\"$environment\", service=~\"$service\", status_code=~\"5..\"}[5m])) / sum(rate(http_requests_total{environment=\"$environment\", service=~\"$service\"}[5m])) * 100",
+            "legendFormat": "Error %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1 },
+                { "color": "red", "value": 5 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "value",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 5,
+        "title": "P95 Latency",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{environment=\"$environment\", service=~\"$service\"}[5m])) by (le))",
+            "legendFormat": "P95",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 3,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.5 },
+                { "color": "red", "value": 1 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "colorMode": "value",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 6,
+        "title": "SLO Status",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "slo_current_sli",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          },
+          {
+            "expr": "slo_target",
+            "format": "table",
+            "instant": true,
+            "refId": "B"
+          },
+          {
+            "expr": "slo_error_budget_remaining",
+            "format": "table",
+            "instant": true,
+            "refId": "C"
+          }
+        ],
+        "transformations": [
+          { "id": "merge" },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": { "Time": true, "__name__": true },
+              "renameByName": {
+                "slo_id": "SLO",
+                "service": "Service",
+                "Value #A": "Current",
+                "Value #B": "Target",
+                "Value #C": "Budget %"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Current" },
+              "properties": [
+                { "id": "unit", "value": "percent" },
+                { "id": "decimals", "value": 3 }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Target" },
+              "properties": [
+                { "id": "unit", "value": "percent" },
+                { "id": "decimals", "value": 2 }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "Budget %" },
+              "properties": [
+                { "id": "unit", "value": "percent" },
+                { "id": "decimals", "value": 1 },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      { "color": "red", "value": null },
+                      { "color": "yellow", "value": 25 },
+                      { "color": "green", "value": 50 }
+                    ]
+                  }
+                },
+                { "id": "custom.displayMode", "value": "color-background" }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "footer": { "enablePagination": true }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Request Rate by Service",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{environment=\"$environment\", service=~\"$service\"}[5m])) by (service)",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "showPoints": "never",
+              "spanNulls": true
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] },
+          "tooltip": { "mode": "multi", "sort": "desc" }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Error Rate by Service",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{environment=\"$environment\", service=~\"$service\", status_code=~\"5..\"}[5m])) by (service) / sum(rate(http_requests_total{environment=\"$environment\", service=~\"$service\"}[5m])) by (service) * 100",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "showPoints": "never"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "red", "value": 1 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Latency by Service (P50, P95, P99)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{environment=\"$environment\", service=~\"$service\"}[5m])) by (service, le))",
+            "legendFormat": "{{service}} P50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{environment=\"$environment\", service=~\"$service\"}[5m])) by (service, le))",
+            "legendFormat": "{{service}} P95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{environment=\"$environment\", service=~\"$service\"}[5m])) by (service, le))",
+            "legendFormat": "{{service}} P99",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 0
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Infrastructure",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
+        "collapsed": false
+      },
+      {
+        "id": 11,
+        "title": "Active Users",
+        "type": "timeseries",
+        "gridPos": { "h": 6, "w": 8, "x": 0, "y": 22 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(active_users_total{environment=\"$environment\"}) by (service)",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 20
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "Database Connections",
+        "type": "timeseries",
+        "gridPos": { "h": 6, "w": 8, "x": 8, "y": 22 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(db_pool_connections{environment=\"$environment\"}) by (service, state)",
+            "legendFormat": "{{service}} - {{state}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80,
+              "stacking": { "mode": "normal" }
+            }
+          }
+        }
+      },
+      {
+        "id": 13,
+        "title": "Cache Hit Rate",
+        "type": "gauge",
+        "gridPos": { "h": 6, "w": 8, "x": 16, "y": 22 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(cache_operations_total{environment=\"$environment\", result=\"hit\"}[5m])) / sum(rate(cache_operations_total{environment=\"$environment\"}[5m])) * 100",
+            "legendFormat": "Hit Rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 70 },
+                { "color": "green", "value": 90 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        }
+      }
+    ]
+  }
+}

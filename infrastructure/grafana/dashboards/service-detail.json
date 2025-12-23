@@ -1,0 +1,570 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "service-detail",
+    "title": "Service Detail Dashboard",
+    "description": "Detailed metrics for a specific service",
+    "tags": ["service", "detail", "skillancer"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "editable": true,
+    "graphTooltip": 1,
+    "links": [
+      {
+        "title": "Platform Overview",
+        "url": "/d/platform-overview",
+        "type": "link",
+        "icon": "dashboard"
+      },
+      {
+        "title": "View Logs",
+        "url": "/explore?left={\"datasource\":\"Loki\",\"queries\":[{\"expr\":\"{service=\\\"$service\\\"}\"}]}",
+        "type": "link",
+        "icon": "gf-logs"
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(up, service)",
+          "current": { "text": "skillpod", "value": "skillpod" },
+          "refresh": 1,
+          "sort": 1
+        },
+        {
+          "name": "environment",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(up{service=\"$service\"}, environment)",
+          "current": { "text": "production", "value": "production" },
+          "refresh": 1
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Health - $service",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+        "collapsed": false
+      },
+      {
+        "id": 2,
+        "title": "Uptime (24h)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "avg_over_time(up{service=\"$service\", environment=\"$environment\"}[24h]) * 100",
+            "legendFormat": "Uptime",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 99 },
+                { "color": "green", "value": 99.9 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Request Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{service=\"$service\", environment=\"$environment\"}[5m]))",
+            "legendFormat": "Requests/s",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "decimals": 1
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{service=\"$service\", environment=\"$environment\", status_code=~\"5..\"}[5m])) / sum(rate(http_requests_total{service=\"$service\", environment=\"$environment\"}[5m])) * 100",
+            "legendFormat": "Error %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.5 },
+                { "color": "red", "value": 1 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 5,
+        "title": "P50 Latency",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{service=\"$service\", environment=\"$environment\"}[5m])) by (le))",
+            "legendFormat": "P50",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 3
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] }
+        }
+      },
+      {
+        "id": 6,
+        "title": "P95 Latency",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"$service\", environment=\"$environment\"}[5m])) by (le))",
+            "legendFormat": "P95",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 3,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.3 },
+                { "color": "red", "value": 0.5 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 7,
+        "title": "P99 Latency",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=\"$service\", environment=\"$environment\"}[5m])) by (le))",
+            "legendFormat": "P99",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 3,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.5 },
+                { "color": "red", "value": 1 }
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": { "calcs": ["lastNotNull"] },
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 8,
+        "title": "Traffic",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+        "collapsed": false
+      },
+      {
+        "id": 9,
+        "title": "Request Rate by Endpoint",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "topk(10, sum(rate(http_requests_total{service=\"$service\", environment=\"$environment\"}[5m])) by (path))",
+            "legendFormat": "{{path}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10,
+              "stacking": { "mode": "none" }
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Response Status Codes",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{service=\"$service\", environment=\"$environment\"}[5m])) by (status_code)",
+            "legendFormat": "{{status_code}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80,
+              "stacking": { "mode": "normal" }
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byRegexp", "options": "/^2..*/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/^3..*/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/^4..*/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/^5..*/" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+            }
+          ]
+        }
+      },
+      {
+        "id": 11,
+        "title": "Latency",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+        "collapsed": false
+      },
+      {
+        "id": 12,
+        "title": "Latency Distribution",
+        "type": "heatmap",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(http_request_duration_seconds_bucket{service=\"$service\", environment=\"$environment\"}[5m])) by (le)",
+            "format": "heatmap",
+            "legendFormat": "{{le}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "calculate": false,
+          "yAxis": { "axisPlacement": "left", "unit": "s" },
+          "cellGap": 1,
+          "color": { "scheme": "Spectral", "fill": "dark-orange", "reverse": true },
+          "showValue": "never"
+        }
+      },
+      {
+        "id": 13,
+        "title": "Latency by Endpoint (P95)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "topk(10, histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"$service\", environment=\"$environment\"}[5m])) by (path, le)))",
+            "legendFormat": "{{path}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth"
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }
+        }
+      },
+      {
+        "id": 14,
+        "title": "Resources",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+        "collapsed": false
+      },
+      {
+        "id": 15,
+        "title": "CPU Usage",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total{service=\"$service\", environment=\"$environment\"}[5m]) * 100",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 20
+            }
+          }
+        }
+      },
+      {
+        "id": 16,
+        "title": "Memory Usage",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes{service=\"$service\", environment=\"$environment\"}",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes",
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 20
+            }
+          }
+        }
+      },
+      {
+        "id": 17,
+        "title": "Event Loop Lag",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "nodejs_eventloop_lag_seconds{service=\"$service\", environment=\"$environment\"}",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 10
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 0.1 },
+                { "color": "red", "value": 0.5 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 18,
+        "title": "Dependencies",
+        "type": "row",
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+        "collapsed": false
+      },
+      {
+        "id": 19,
+        "title": "Database Query Duration (P95)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 33 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket{service=\"$service\", environment=\"$environment\"}[5m])) by (operation, le))",
+            "legendFormat": "{{operation}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line"
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }
+        }
+      },
+      {
+        "id": 20,
+        "title": "Database Connection Pool",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 33 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "db_pool_connections{service=\"$service\", environment=\"$environment\"}",
+            "legendFormat": "{{state}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {
+              "drawStyle": "line",
+              "fillOpacity": 30,
+              "stacking": { "mode": "normal" }
+            }
+          }
+        }
+      },
+      {
+        "id": 21,
+        "title": "Cache Operations",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 41 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(rate(cache_operations_total{service=\"$service\", environment=\"$environment\"}[5m])) by (result)",
+            "legendFormat": "{{result}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80,
+              "stacking": { "mode": "normal" }
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "hit" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "miss" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+            },
+            {
+              "matcher": { "id": "byName", "options": "error" },
+              "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+            }
+          ]
+        }
+      },
+      {
+        "id": 22,
+        "title": "External API Latency (P95)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 41 },
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(external_api_duration_seconds_bucket{service=\"$service\", environment=\"$environment\"}[5m])) by (external_service, le))",
+            "legendFormat": "{{external_service}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line"
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }
+        }
+      }
+    ]
+  }
+}
