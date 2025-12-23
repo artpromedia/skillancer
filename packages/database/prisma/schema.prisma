@@ -178,6 +178,13 @@ model User {
   taxSummaryReports                 TaxSummaryReport[]        @relation("UserTaxSummaryReports")
   savedFinancialReports             SavedFinancialReport[]    @relation("UserSavedFinancialReports")
 
+  // Learning Time Tracking
+  learningTimeEntries               LearningTimeEntry[]       @relation("UserLearningTimeEntries")
+  learningGoals                     LearningGoal[]            @relation("UserLearningGoals")
+  learningInvestments               LearningInvestment[]      @relation("UserLearningInvestments")
+  learningTimeSummaries             LearningTimeSummary[]     @relation("UserLearningSummaries")
+  skillLearningProgress             SkillLearningProgress[]   @relation("UserSkillProgress")
+
   // Invoicing
   invoices                          Invoice[]                 @relation("FreelancerInvoices")
   invoiceTemplates                  InvoiceTemplate[]         @relation("FreelancerInvoiceTemplates")
@@ -9384,6 +9391,325 @@ model SavedFinancialReport {
   @@index([nextRunAt])
 }
 
+// ============================================================================
+// LEARNING TIME TRACKING - SkillPod Integration
+// ============================================================================
+
+model LearningTimeEntry {
+  id                String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String              @map("user_id") @db.Uuid
+  skillPodSessionId String              @unique @map("skillpod_session_id")
+
+  // Content info
+  contentType       LearningContentType @map("content_type")
+  contentId         String              @map("content_id")
+  contentTitle      String              @map("content_title")
+  courseId          String?             @map("course_id")
+  courseTitle       String?             @map("course_title")
+
+  // Time tracking
+  date              DateTime            @db.Date
+  startTime         DateTime            @map("start_time")
+  endTime           DateTime            @map("end_time")
+  totalMinutes      Int                 @map("total_minutes")
+  activeMinutes     Int                 @map("active_minutes")
+
+  // Skills
+  skillIds          String[]            @map("skill_ids")
+  skillNames        String[]            @map("skill_names")
+  primarySkillId    String?             @map("primary_skill_id")
+  primarySkillName  String?             @map("primary_skill_name")
+
+  // Categorization
+  category          String              @default("Professional Development")
+  subcategory       String?
+  difficulty        String?
+
+  // Progress
+  progressGained    Decimal             @default(0) @map("progress_gained") @db.Decimal(5, 2)
+  isCompleted       Boolean             @default(false) @map("is_completed")
+
+  // Tax/deduction info
+  isDeductible      Boolean             @default(true) @map("is_deductible")
+  deductionCategory String?             @map("deduction_category")
+
+  // Associated financial transaction
+  transactionId     String?             @map("transaction_id") @db.Uuid
+
+  // Notes
+  notes             String?             @db.Text
+
+  // Sync
+  syncedAt          DateTime            @map("synced_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+
+  user              User                @relation("UserLearningTimeEntries", fields: [userId], references: [id])
+
+  @@map("learning_time_entries")
+  @@index([userId])
+  @@index([date])
+  @@index([contentType])
+  @@index([primarySkillId])
+}
+
+model LearningGoal {
+  id                    String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String           @map("user_id") @db.Uuid
+
+  // Goal definition
+  goalType              LearningGoalType @map("goal_type")
+  title                 String
+  description           String?
+
+  // Target
+  targetValue           Decimal          @map("target_value") @db.Decimal(10, 2)
+  targetUnit            String           @map("target_unit")
+  targetSkillId         String?          @map("target_skill_id")
+  targetSkillName       String?          @map("target_skill_name")
+  targetCourseId        String?          @map("target_course_id")
+  targetCertificationId String?          @map("target_certification_id")
+
+  // Period
+  periodType            GoalPeriodType   @map("period_type")
+  periodStart           DateTime         @map("period_start") @db.Date
+  periodEnd             DateTime         @map("period_end") @db.Date
+
+  // Progress
+  currentValue          Decimal          @default(0) @map("current_value") @db.Decimal(10, 2)
+  progressPercent       Decimal          @default(0) @map("progress_percent") @db.Decimal(5, 2)
+
+  // Status
+  status                GoalStatus       @default(ACTIVE)
+  achievedAt            DateTime?        @map("achieved_at")
+
+  // Linked to Market opportunity
+  linkedJobCategoryId   String?          @map("linked_job_category_id")
+  linkedRateTarget      Decimal?         @map("linked_rate_target") @db.Decimal(10, 2)
+
+  // Notifications
+  reminderEnabled       Boolean          @default(true) @map("reminder_enabled")
+  reminderFrequency     String?          @map("reminder_frequency")
+  lastReminderAt        DateTime?        @map("last_reminder_at")
+
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  user                  User             @relation("UserLearningGoals", fields: [userId], references: [id])
+
+  @@map("learning_goals")
+  @@index([userId])
+  @@index([status])
+  @@index([periodEnd])
+}
+
+model LearningInvestment {
+  id                 String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId             String                 @map("user_id") @db.Uuid
+
+  // Investment type
+  investmentType     LearningInvestmentType @map("investment_type")
+
+  // Reference
+  referenceId        String                 @map("reference_id")
+  referenceTitle     String                 @map("reference_title")
+
+  // Financial
+  amount             Decimal                @db.Decimal(10, 2)
+  currency           String                 @default("USD")
+  purchaseDate       DateTime               @map("purchase_date") @db.Date
+
+  // Linked transaction
+  transactionId      String?                @unique @map("transaction_id") @db.Uuid
+
+  // Skills gained
+  skillIds           String[]               @map("skill_ids")
+  skillNames         String[]               @map("skill_names")
+
+  // Time investment
+  estimatedHours     Decimal?               @map("estimated_hours") @db.Decimal(8, 2)
+  actualHours        Decimal                @default(0) @map("actual_hours") @db.Decimal(8, 2)
+
+  // Completion
+  isCompleted        Boolean                @default(false) @map("is_completed")
+  completedAt        DateTime?              @map("completed_at")
+
+  // ROI tracking
+  credentialsEarned  String[]               @map("credentials_earned")
+  rateBeforeLearning Decimal?               @map("rate_before_learning") @db.Decimal(10, 2)
+  rateAfterLearning  Decimal?               @map("rate_after_learning") @db.Decimal(10, 2)
+
+  // Tax
+  isDeductible       Boolean                @default(true) @map("is_deductible")
+  taxYear            Int                    @map("tax_year")
+
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+
+  user               User                   @relation("UserLearningInvestments", fields: [userId], references: [id])
+  transaction        FinancialTransaction?  @relation("LearningInvestmentTransaction", fields: [transactionId], references: [id])
+
+  @@map("learning_investments")
+  @@index([userId])
+  @@index([investmentType])
+  @@index([taxYear])
+}
+
+model LearningTimeSummary {
+  id                   String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId               String     @map("user_id") @db.Uuid
+
+  // Period
+  periodType           PeriodType @map("period_type")
+  periodStart          DateTime   @map("period_start") @db.Date
+  periodEnd            DateTime   @map("period_end") @db.Date
+
+  // Time totals
+  totalMinutes         Int        @map("total_minutes")
+  activeMinutes        Int        @map("active_minutes")
+
+  // By content type
+  courseMinutes        Int        @default(0) @map("course_minutes")
+  assessmentMinutes    Int        @default(0) @map("assessment_minutes")
+  practiceMinutes      Int        @default(0) @map("practice_minutes")
+  readingMinutes       Int        @default(0) @map("reading_minutes")
+
+  // Achievements
+  lessonsCompleted     Int        @default(0) @map("lessons_completed")
+  coursesCompleted     Int        @default(0) @map("courses_completed")
+  assessmentsPassed    Int        @default(0) @map("assessments_passed")
+  certificationsEarned Int        @default(0) @map("certifications_earned")
+
+  // Skills breakdown
+  skillBreakdown       Json       @map("skill_breakdown")
+
+  // Financial value
+  estimatedValue       Decimal?   @map("estimated_value") @db.Decimal(10, 2)
+  investmentMade       Decimal    @default(0) @map("investment_made") @db.Decimal(10, 2)
+
+  // Streak
+  learningDays         Int        @default(0) @map("learning_days")
+  longestStreak        Int        @default(0) @map("longest_streak")
+
+  // Goals
+  goalsAchieved        Int        @default(0) @map("goals_achieved")
+  goalsInProgress      Int        @default(0) @map("goals_in_progress")
+
+  generatedAt          DateTime   @map("generated_at")
+  isStale              Boolean    @default(false) @map("is_stale")
+
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
+
+  user                 User       @relation("UserLearningSummaries", fields: [userId], references: [id])
+
+  @@unique([userId, periodType, periodStart])
+  @@map("learning_time_summaries")
+  @@index([userId])
+  @@index([periodStart])
+}
+
+model SkillLearningProgress {
+  id                    String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String    @map("user_id") @db.Uuid
+  skillId               String    @map("skill_id")
+  skillName             String    @map("skill_name")
+
+  // Time invested
+  totalMinutes          Int       @default(0) @map("total_minutes")
+  courseMinutes         Int       @default(0) @map("course_minutes")
+  assessmentMinutes     Int       @default(0) @map("assessment_minutes")
+  practiceMinutes       Int       @default(0) @map("practice_minutes")
+
+  // Progress
+  currentLevel          String?   @map("current_level")
+  progressToNextLevel   Decimal   @default(0) @map("progress_to_next_level") @db.Decimal(5, 2)
+
+  // Courses
+  coursesStarted        Int       @default(0) @map("courses_started")
+  coursesCompleted      Int       @default(0) @map("courses_completed")
+
+  // Assessments
+  assessmentsTaken      Int       @default(0) @map("assessments_taken")
+  assessmentsPassed     Int       @default(0) @map("assessments_passed")
+  highestScore          Decimal?  @map("highest_score") @db.Decimal(5, 2)
+
+  // Credentials
+  credentialsEarned     String[]  @map("credentials_earned")
+
+  // Last activity
+  lastLearningDate      DateTime? @map("last_learning_date")
+
+  // ROI tracking
+  rateWhenStarted       Decimal?  @map("rate_when_started") @db.Decimal(10, 2)
+  currentRate           Decimal?  @map("current_rate") @db.Decimal(10, 2)
+  rateIncrease          Decimal?  @map("rate_increase") @db.Decimal(6, 2)
+
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user                  User      @relation("UserSkillProgress", fields: [userId], references: [id])
+
+  @@unique([userId, skillId])
+  @@map("skill_learning_progress")
+  @@index([userId])
+  @@index([totalMinutes])
+}
+
+enum LearningContentType {
+  COURSE
+  LESSON
+  ASSESSMENT
+  PROJECT
+  ARTICLE
+  PRACTICE
+  CERTIFICATION
+  LEARNING_PATH
+}
+
+enum LearningGoalType {
+  WEEKLY_HOURS
+  MONTHLY_HOURS
+  COURSE_COMPLETION
+  SKILL_LEVEL
+  CERTIFICATION
+  LEARNING_PATH
+  CUSTOM
+}
+
+enum GoalPeriodType {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+}
+
+enum GoalStatus {
+  ACTIVE
+  ACHIEVED
+  MISSED
+  CANCELLED
+}
+
+enum LearningInvestmentType {
+  COURSE_PURCHASE
+  SUBSCRIPTION
+  CERTIFICATION_FEE
+  BOOK
+  CONFERENCE
+  WORKSHOP
+  TOOL_LICENSE
+  OTHER
+}
+
+enum PeriodType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
 enum UnifiedTransactionSource {
   MARKET
   COCKPIT
@@ -9639,6 +9965,9 @@ model FinancialTransaction {
 
   // Market Integration
   marketPaymentLinks  MarketPaymentLink[] @relation("MarketPaymentTransaction")
+
+  // Learning Investment
+  learningInvestment  LearningInvestment? @relation("LearningInvestmentTransaction")
 
   @@map("financial_transactions")
   @@index([userId])
