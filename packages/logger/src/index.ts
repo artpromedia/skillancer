@@ -32,6 +32,7 @@ export { asyncLocalStorage, getContext, setContext, runWithContext } from './con
 export type { LogContext } from './context.js';
 export * from './serializers.js';
 export * from './types.js';
+export * from './audit.js';
 
 /**
  * Configuration for creating a logger instance

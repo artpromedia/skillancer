@@ -10,18 +10,9 @@
  * - Default dimensions for service identification
  */
 
-import {
-  CloudWatchClient,
-  PutMetricDataCommand,
-  StandardUnit,
-} from '@aws-sdk/client-cloudwatch';
+import { CloudWatchClient, PutMetricDataCommand, StandardUnit } from '@aws-sdk/client-cloudwatch';
 
-import type {
-  MetricConfig,
-  MetricData,
-  MetricDimension,
-  BufferedMetric,
-} from './types.js';
+import type { MetricConfig, MetricData, MetricDimension, BufferedMetric } from './types.js';
 
 /**
  * Maximum number of metrics per CloudWatch PutMetricData call
@@ -202,9 +193,7 @@ export class MetricsService {
     }
 
     // Send batches in parallel with retry logic
-    const results = await Promise.allSettled(
-      batches.map((batch) => this.sendBatch(batch))
-    );
+    const results = await Promise.allSettled(batches.map((batch) => this.sendBatch(batch)));
 
     // Log any failures
     results.forEach((result, index) => {
@@ -349,3 +338,9 @@ export function createMetricsService(config: MetricConfig): MetricsService {
 // Re-export types
 export type { MetricConfig, MetricData, MetricDimension, BufferedMetric } from './types.js';
 export { StandardUnit } from '@aws-sdk/client-cloudwatch';
+
+// Export Prometheus metrics
+export * from './prometheus.js';
+
+// Export Health service
+export * from './health.js';
