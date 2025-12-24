@@ -1,0 +1,214 @@
+# Docker Compose Configuration for Testing
+# This file provides isolated test infrastructure for integration and E2E tests.
+
+services:
+  # ==================== PostgreSQL Test Database ====================
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: skillancer-postgres-test
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: skillancer_test
+      POSTGRES_PASSWORD: skillancer_test_password
+      POSTGRES_DB: skillancer_test
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./scripts/init-test-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U skillancer_test -d skillancer_test']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - skillancer-test-network
+    tmpfs:
+      - /var/lib/postgresql/data # Use tmpfs for faster tests
+
+  # ==================== Redis Test Cache ====================
+  redis-test:
+    image: redis:7-alpine
+    container_name: skillancer-redis-test
+    ports:
+      - '6380:6379'
+    command: redis-server --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skillancer-test-network
+
+  # ==================== LocalStack for AWS Services ====================
+  localstack-test:
+    image: localstack/localstack:3.0
+    container_name: skillancer-localstack-test
+    ports:
+      - '4567:4566'
+      - '4511-4559:4511-4559'
+    environment:
+      SERVICES: s3,sqs,ses,dynamodb
+      DEBUG: 0
+      DATA_DIR: /tmp/localstack/data
+      LAMBDA_EXECUTOR: docker
+      DOCKER_HOST: unix:///var/run/docker.sock
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    volumes:
+      - './scripts/localstack-test-init.sh:/etc/localstack/init/ready.d/init-aws.sh:ro'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - localstack_test_data:/tmp/localstack
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:4566/_localstack/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - skillancer-test-network
+
+  # ==================== MailHog for Email Testing ====================
+  mailhog-test:
+    image: mailhog/mailhog:latest
+    container_name: skillancer-mailhog-test
+    ports:
+      - '1026:1025' # SMTP
+      - '8026:8025' # Web UI
+    networks:
+      - skillancer-test-network
+
+  # ==================== Minio for S3-compatible Storage ====================
+  minio-test:
+    image: minio/minio:latest
+    container_name: skillancer-minio-test
+    ports:
+      - '9001:9000'
+      - '9002:9001'
+    environment:
+      MINIO_ROOT_USER: skillancer_test
+      MINIO_ROOT_PASSWORD: skillancer_test_password
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_test_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skillancer-test-network
+
+  # ==================== Elasticsearch for Search Testing ====================
+  elasticsearch-test:
+    image: elasticsearch:8.11.3
+    container_name: skillancer-elasticsearch-test
+    ports:
+      - '9201:9200'
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - 'ES_JAVA_OPTS=-Xms256m -Xmx256m'
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:9200/_cluster/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - skillancer-test-network
+    tmpfs:
+      - /usr/share/elasticsearch/data
+
+  # ==================== Jaeger for Tracing ====================
+  jaeger-test:
+    image: jaegertracing/all-in-one:1.53
+    container_name: skillancer-jaeger-test
+    ports:
+      - '16687:16686' # Web UI
+      - '6832:6831/udp' # Thrift compact
+      - '14269:14268' # Thrift HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    networks:
+      - skillancer-test-network
+
+  # ==================== Prometheus for Metrics ====================
+  prometheus-test:
+    image: prom/prometheus:v2.48.0
+    container_name: skillancer-prometheus-test
+    ports:
+      - '9091:9090'
+    volumes:
+      - ./config/prometheus-test.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=1d'
+    networks:
+      - skillancer-test-network
+
+  # ==================== Mock OAuth Provider ====================
+  mock-oauth:
+    image: ghcr.io/navikt/mock-oauth2-server:2.0.0
+    container_name: skillancer-mock-oauth
+    ports:
+      - '8088:8080'
+    environment:
+      JSON_CONFIG: |
+        {
+          "interactiveLogin": false,
+          "tokenCallbacks": [
+            {
+              "issuerId": "google",
+              "tokenExpiry": 3600,
+              "requestMappings": [
+                {
+                  "requestParam": "scope",
+                  "match": "openid profile email",
+                  "claims": {
+                    "sub": "12345",
+                    "email": "testuser@gmail.com",
+                    "name": "Test User"
+                  }
+                }
+              ]
+            },
+            {
+              "issuerId": "github",
+              "tokenExpiry": 3600,
+              "requestMappings": [
+                {
+                  "requestParam": "scope",
+                  "match": "user:email",
+                  "claims": {
+                    "sub": "67890",
+                    "email": "testuser@github.com",
+                    "login": "testuser"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+    networks:
+      - skillancer-test-network
+
+# ==================== Networks ====================
+networks:
+  skillancer-test-network:
+    driver: bridge
+    name: skillancer-test-network
+
+# ==================== Volumes ====================
+volumes:
+  postgres_test_data:
+    name: skillancer-postgres-test-data
+  localstack_test_data:
+    name: skillancer-localstack-test-data
+  minio_test_data:
+    name: skillancer-minio-test-data

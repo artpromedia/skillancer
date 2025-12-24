@@ -1,0 +1,64 @@
+# Prometheus Test Configuration
+# Minimal configuration for testing environment
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: test
+    platform: skillancer
+
+# Alerting configuration (disabled for tests)
+alerting:
+  alertmanagers: []
+
+# Rule files (none for testing)
+rule_files: []
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: prometheus
+
+  # API Gateway metrics
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['host.docker.internal:4000']
+        labels:
+          service: api-gateway
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # Auth service metrics
+  - job_name: 'auth-svc'
+    static_configs:
+      - targets: ['host.docker.internal:4001']
+        labels:
+          service: auth-svc
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # Other services (add as needed)
+  - job_name: 'services'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:4002' # billing-svc
+          - 'host.docker.internal:4003' # notification-svc
+          - 'host.docker.internal:4004' # skillpod-svc
+          - 'host.docker.internal:4005' # market-svc
+          - 'host.docker.internal:4006' # cockpit-svc
+          - 'host.docker.internal:4007' # audit-svc
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # Node exporter (if available)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+        labels:
+          service: node-exporter
+    scrape_interval: 30s
