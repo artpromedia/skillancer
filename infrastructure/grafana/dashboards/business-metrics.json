@@ -166,7 +166,11 @@
           }
         },
         "options": {
-          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max", "last"] }
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "calcs": ["mean", "max", "last"]
+          }
         }
       },
       {
@@ -468,7 +472,11 @@
         },
         "options": {
           "reduceOptions": { "calcs": ["lastNotNull"] },
-          "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
           "pieType": "donut"
         }
       },

@@ -8,7 +8,8 @@
  * - Historical tracking and reporting
  */
 
-import type { Logger } from 'pino';
+import { defaultSLODefinitions } from './definitions.js';
+
 import type {
   SLODefinition,
   SLOStatusResult,
@@ -23,7 +24,7 @@ import type {
   SLOStatus,
   ReportStatus,
 } from './types.js';
-import { defaultSLODefinitions } from './definitions.js';
+import type { Logger } from 'pino';
 
 /**
  * SLO Service for tracking and calculating Service Level Objectives
@@ -211,13 +212,8 @@ export class SLOService {
 
     for (const [id, definition] of this.sloDefinitions) {
       try {
-        const achieved = await this.calculateSLIForPeriod(
-          definition,
-          startDate,
-          endDate
-        );
-        const errorBudgetUsed =
-          ((definition.target - achieved) / (100 - definition.target)) * 100;
+        const achieved = await this.calculateSLIForPeriod(definition, startDate, endDate);
+        const errorBudgetUsed = ((definition.target - achieved) / (100 - definition.target)) * 100;
 
         let status: ReportStatus;
         if (achieved >= definition.target) {
@@ -231,11 +227,7 @@ export class SLOService {
           missed++;
         }
 
-        const incidents = await this.getIncidentCount(
-          definition.service,
-          startDate,
-          endDate
-        );
+        const incidents = await this.getIncidentCount(definition.service, startDate, endDate);
         const downtimeMinutes = await this.getDowntimeMinutes(
           definition.service,
           startDate,
@@ -283,14 +275,8 @@ export class SLOService {
 
     try {
       if (definition.sli.goodQuery && definition.sli.totalQuery) {
-        const goodQuery = this.replaceWindow(
-          definition.sli.goodQuery,
-          windowDuration
-        );
-        const totalQuery = this.replaceWindow(
-          definition.sli.totalQuery,
-          windowDuration
-        );
+        const goodQuery = this.replaceWindow(definition.sli.goodQuery, windowDuration);
+        const totalQuery = this.replaceWindow(definition.sli.totalQuery, windowDuration);
 
         const [goodResult, totalResult] = await Promise.all([
           this.prometheusClient.query(`sum(increase(${goodQuery}))`),
@@ -365,10 +351,7 @@ export class SLOService {
   /**
    * Calculate SLI for a specific window (e.g., '1h', '6h')
    */
-  private async calculateSLIForWindow(
-    definition: SLODefinition,
-    window: string
-  ): Promise<number> {
+  private async calculateSLIForWindow(definition: SLODefinition, window: string): Promise<number> {
     if (!definition.sli.goodQuery || !definition.sli.totalQuery) return 100;
 
     try {
@@ -395,16 +378,11 @@ export class SLOService {
   /**
    * Calculate error budget values
    */
-  private calculateErrorBudget(
-    target: number,
-    currentSLI: number
-  ): ErrorBudgetValues {
+  private calculateErrorBudget(target: number, currentSLI: number): ErrorBudgetValues {
     // Error budget is the allowed failure rate
     const errorBudgetTotal = 100 - target; // e.g., 0.1% for 99.9% target
     const errorBudgetUsed = Math.max(0, target - currentSLI);
-    const consumed = errorBudgetTotal > 0 
-      ? (errorBudgetUsed / errorBudgetTotal) * 100 
-      : 0;
+    const consumed = errorBudgetTotal > 0 ? (errorBudgetUsed / errorBudgetTotal) * 100 : 0;
     const remaining = 100 - consumed;
 
     // Calculate remaining minutes (assuming 30-day window)
@@ -424,22 +402,18 @@ export class SLOService {
   /**
    * Calculate current burn rate and trend
    */
-  private async calculateBurnRate(
-    definition: SLODefinition
-  ): Promise<BurnRateResult> {
+  private async calculateBurnRate(definition: SLODefinition): Promise<BurnRateResult> {
     try {
       // Calculate burn rate over last hour
       const hourSLI = await this.calculateSLIForWindow(definition, '1h');
       const errorRate = 100 - hourSLI;
       const targetErrorRate = 100 - definition.target;
-      const currentBurnRate =
-        targetErrorRate > 0 ? errorRate / targetErrorRate : 0;
+      const currentBurnRate = targetErrorRate > 0 ? errorRate / targetErrorRate : 0;
 
       // Calculate 6-hour burn rate for trend analysis
       const sixHourSLI = await this.calculateSLIForWindow(definition, '6h');
       const sixHourErrorRate = 100 - sixHourSLI;
-      const sixHourBurnRate =
-        targetErrorRate > 0 ? sixHourErrorRate / targetErrorRate : 0;
+      const sixHourBurnRate = targetErrorRate > 0 ? sixHourErrorRate / targetErrorRate : 0;
 
       // Determine trend
       let trend: 'improving' | 'stable' | 'degrading';
@@ -466,10 +440,7 @@ export class SLOService {
   /**
    * Determine SLO status based on error budget and burn rate
    */
-  private determineStatus(
-    errorBudgetRemaining: number,
-    burnRate: number
-  ): SLOStatus {
+  private determineStatus(errorBudgetRemaining: number, burnRate: number): SLOStatus {
     if (errorBudgetRemaining <= 0) return 'exhausted';
     if (burnRate > 10 || errorBudgetRemaining < 10) return 'critical';
     if (burnRate > 5 || errorBudgetRemaining < 25) return 'warning';
@@ -506,10 +477,7 @@ export class SLOService {
   /**
    * Get SLI history for the past N days
    */
-  private async getSLIHistory(
-    definition: SLODefinition,
-    days: number
-  ): Promise<SLIHistoryPoint[]> {
+  private async getSLIHistory(definition: SLODefinition, days: number): Promise<SLIHistoryPoint[]> {
     const history: SLIHistoryPoint[] = [];
     const now = new Date();
 
@@ -543,11 +511,7 @@ export class SLOService {
   /**
    * Get incident count for a service in a time period
    */
-  private async getIncidentCount(
-    service: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<number> {
+  private async getIncidentCount(service: string, startDate: Date, endDate: Date): Promise<number> {
     try {
       const query = `sum(increase(alerts_total{service="${service}",severity=~"critical|high"}[${this.getDurationString(startDate, endDate)}]))`;
       const result = await this.prometheusClient.query(query);
@@ -589,9 +553,7 @@ export class SLOService {
     for (const [sloId, value] of this.sloGauge) {
       const definition = this.sloDefinitions.get(sloId);
       if (definition) {
-        lines.push(
-          `slo_current_sli{slo_id="${sloId}",service="${definition.service}"} ${value}`
-        );
+        lines.push(`slo_current_sli{slo_id="${sloId}",service="${definition.service}"} ${value}`);
       }
     }
 
@@ -622,9 +584,7 @@ export class SLOService {
     for (const [sloId, value] of this.burnRateGauge) {
       const definition = this.sloDefinitions.get(sloId);
       if (definition) {
-        lines.push(
-          `slo_burn_rate{slo_id="${sloId}",service="${definition.service}"} ${value}`
-        );
+        lines.push(`slo_burn_rate{slo_id="${sloId}",service="${definition.service}"} ${value}`);
       }
     }
 
@@ -692,13 +652,10 @@ export class SLOService {
 
   private sumRangeValues(result: PrometheusQueryResult): number {
     if (!result?.data?.result?.[0]?.values) return 0;
-    return result.data.result[0].values.reduce(
-      (sum: number, [, value]: [number, string]) => {
-        const parsed = parseFloat(value);
-        return sum + (isNaN(parsed) ? 0 : parsed);
-      },
-      0
-    );
+    return result.data.result[0].values.reduce((sum: number, [, value]: [number, string]) => {
+      const parsed = parseFloat(value);
+      return sum + (isNaN(parsed) ? 0 : parsed);
+    }, 0);
   }
 }
 
@@ -709,20 +666,14 @@ let sloServiceInstance: SLOService | null = null;
 /**
  * Create a new SLO service instance
  */
-export function createSLOService(
-  prometheusClient: PrometheusClient,
-  logger: Logger
-): SLOService {
+export function createSLOService(prometheusClient: PrometheusClient, logger: Logger): SLOService {
   return new SLOService(prometheusClient, logger);
 }
 
 /**
  * Get or create singleton SLO service instance
  */
-export function getSLOService(
-  prometheusClient: PrometheusClient,
-  logger: Logger
-): SLOService {
+export function getSLOService(prometheusClient: PrometheusClient, logger: Logger): SLOService {
   if (!sloServiceInstance) {
     sloServiceInstance = new SLOService(prometheusClient, logger);
   }

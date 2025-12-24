@@ -7,6 +7,7 @@ This directory contains pre-built Grafana dashboards for monitoring the Skillanc
 ### Platform Overview (`platform-overview.json`)
 
 Real-time overview of all platform services with:
+
 - Service health status and uptime
 - Request rates and error rates across services
 - P95 latency trends
@@ -14,6 +15,7 @@ Real-time overview of all platform services with:
 - Infrastructure metrics (CPU, memory)
 
 **Use Cases:**
+
 - Daily operational monitoring
 - Quick health checks
 - Executive summaries
@@ -21,6 +23,7 @@ Real-time overview of all platform services with:
 ### SLO Dashboard (`slo-dashboard.json`)
 
 Service Level Objectives tracking with:
+
 - Current SLI gauges
 - Error budget consumption
 - Burn rate analysis (multi-window)
@@ -29,6 +32,7 @@ Service Level Objectives tracking with:
 - All SLOs summary table
 
 **Use Cases:**
+
 - SRE reliability monitoring
 - Incident response
 - Capacity planning
@@ -37,6 +41,7 @@ Service Level Objectives tracking with:
 ### Service Detail (`service-detail.json`)
 
 Deep-dive metrics for individual services:
+
 - Health metrics (uptime, request rate, error rate)
 - Latency distribution (P50, P95, P99)
 - Latency heatmap
@@ -46,6 +51,7 @@ Deep-dive metrics for individual services:
 - Dependency health (database, cache, external APIs)
 
 **Use Cases:**
+
 - Debugging performance issues
 - Capacity planning
 - Root cause analysis
@@ -54,6 +60,7 @@ Deep-dive metrics for individual services:
 ### Business Metrics (`business-metrics.json`)
 
 Key business KPIs:
+
 - Revenue and transactions
 - Payment success rates
 - User activity and registrations
@@ -62,6 +69,7 @@ Key business KPIs:
 - Revenue trends and distribution
 
 **Use Cases:**
+
 - Business reporting
 - Product analytics
 - Executive dashboards
@@ -70,11 +78,11 @@ Key business KPIs:
 
 All dashboards support the following template variables:
 
-| Variable | Description | Used In |
-|----------|-------------|---------|
-| `$environment` | Environment filter (production, staging) | All dashboards |
-| `$service` | Service selector | Service Detail, SLO |
-| `$slo` | SLO selector | SLO Dashboard |
+| Variable       | Description                              | Used In             |
+| -------------- | ---------------------------------------- | ------------------- |
+| `$environment` | Environment filter (production, staging) | All dashboards      |
+| `$service`     | Service selector                         | Service Detail, SLO |
+| `$slo`         | SLO selector                             | SLO Dashboard       |
 
 ## Data Sources
 
@@ -128,20 +136,20 @@ services:
 
 The platform defines the following SLOs:
 
-| Service | SLO | Target | Window |
-|---------|-----|--------|--------|
-| SkillPod | Availability | 99.9% | 30d |
-| SkillPod | Video Latency | 95% < 2s | 30d |
-| SkillPod | Content Delivery | 99.5% | 30d |
-| Market | Availability | 99.9% | 30d |
-| Market | Search Latency | 95% < 500ms | 30d |
-| Market | Matching Success | 95% | 30d |
-| Cockpit | Availability | 99.9% | 30d |
-| Cockpit | Report Generation | 95% < 5s | 30d |
-| Payment | Transaction Success | 99.95% | 30d |
-| Payment | Payout Latency | 99% < 1s | 30d |
-| Auth | Availability | 99.99% | 30d |
-| Auth | Login Latency | 99% < 500ms | 30d |
+| Service  | SLO                 | Target      | Window |
+| -------- | ------------------- | ----------- | ------ |
+| SkillPod | Availability        | 99.9%       | 30d    |
+| SkillPod | Video Latency       | 95% < 2s    | 30d    |
+| SkillPod | Content Delivery    | 99.5%       | 30d    |
+| Market   | Availability        | 99.9%       | 30d    |
+| Market   | Search Latency      | 95% < 500ms | 30d    |
+| Market   | Matching Success    | 95%         | 30d    |
+| Cockpit  | Availability        | 99.9%       | 30d    |
+| Cockpit  | Report Generation   | 95% < 5s    | 30d    |
+| Payment  | Transaction Success | 99.95%      | 30d    |
+| Payment  | Payout Latency      | 99% < 1s    | 30d    |
+| Auth     | Availability        | 99.99%      | 30d    |
+| Auth     | Login Latency       | 99% < 500ms | 30d    |
 
 ## API Endpoints
 
@@ -168,10 +176,10 @@ GET /api/observability/metrics
 
 Each SLO is configured with multi-window burn rate alerting:
 
-| Alert | Fast Window | Slow Window | Burn Rate |
-|-------|-------------|-------------|-----------|
-| Page | 1 hour | 6 hours | 14.4x / 6x |
-| Ticket | 6 hours | 3 days | 6x / 1x |
+| Alert  | Fast Window | Slow Window | Burn Rate  |
+| ------ | ----------- | ----------- | ---------- |
+| Page   | 1 hour      | 6 hours     | 14.4x / 6x |
+| Ticket | 6 hours     | 3 days      | 6x / 1x    |
 
 ## Customization
 

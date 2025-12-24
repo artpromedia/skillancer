@@ -21,8 +21,7 @@ export const skillpodSLOs: SLODefinition[] = [
     sli: {
       type: 'availability',
       query: '',
-      goodQuery:
-        'sum(rate(http_requests_total{service="skillpod",status_code!~"5.."}[5m]))',
+      goodQuery: 'sum(rate(http_requests_total{service="skillpod",status_code!~"5.."}[5m]))',
       totalQuery: 'sum(rate(http_requests_total{service="skillpod"}[5m]))',
     },
     target: 99.9,
@@ -44,10 +43,8 @@ export const skillpodSLOs: SLODefinition[] = [
     sli: {
       type: 'latency',
       query: '',
-      goodQuery:
-        'sum(rate(http_request_duration_seconds_bucket{service="skillpod",le="0.5"}[5m]))',
-      totalQuery:
-        'sum(rate(http_request_duration_seconds_count{service="skillpod"}[5m]))',
+      goodQuery: 'sum(rate(http_request_duration_seconds_bucket{service="skillpod",le="0.5"}[5m]))',
+      totalQuery: 'sum(rate(http_request_duration_seconds_count{service="skillpod"}[5m]))',
     },
     target: 95,
     window: { type: 'rolling', duration: '30d' },
@@ -96,8 +93,7 @@ export const marketSLOs: SLODefinition[] = [
     sli: {
       type: 'availability',
       query: '',
-      goodQuery:
-        'sum(rate(http_requests_total{service="market",status_code!~"5.."}[5m]))',
+      goodQuery: 'sum(rate(http_requests_total{service="market",status_code!~"5.."}[5m]))',
       totalQuery: 'sum(rate(http_requests_total{service="market"}[5m]))',
     },
     target: 99.9,
@@ -119,10 +115,8 @@ export const marketSLOs: SLODefinition[] = [
     sli: {
       type: 'latency',
       query: '',
-      goodQuery:
-        'sum(rate(http_request_duration_seconds_bucket{service="market",le="0.5"}[5m]))',
-      totalQuery:
-        'sum(rate(http_request_duration_seconds_count{service="market"}[5m]))',
+      goodQuery: 'sum(rate(http_request_duration_seconds_bucket{service="market",le="0.5"}[5m]))',
+      totalQuery: 'sum(rate(http_request_duration_seconds_count{service="market"}[5m]))',
     },
     target: 95,
     window: { type: 'rolling', duration: '30d' },
@@ -173,8 +167,7 @@ export const cockpitSLOs: SLODefinition[] = [
     sli: {
       type: 'availability',
       query: '',
-      goodQuery:
-        'sum(rate(http_requests_total{service="cockpit",status_code!~"5.."}[5m]))',
+      goodQuery: 'sum(rate(http_requests_total{service="cockpit",status_code!~"5.."}[5m]))',
       totalQuery: 'sum(rate(http_requests_total{service="cockpit"}[5m]))',
     },
     target: 99.9,
@@ -196,10 +189,8 @@ export const cockpitSLOs: SLODefinition[] = [
     sli: {
       type: 'latency',
       query: '',
-      goodQuery:
-        'sum(rate(http_request_duration_seconds_bucket{service="cockpit",le="0.5"}[5m]))',
-      totalQuery:
-        'sum(rate(http_request_duration_seconds_count{service="cockpit"}[5m]))',
+      goodQuery: 'sum(rate(http_request_duration_seconds_bucket{service="cockpit",le="0.5"}[5m]))',
+      totalQuery: 'sum(rate(http_request_duration_seconds_count{service="cockpit"}[5m]))',
     },
     target: 95,
     window: { type: 'rolling', duration: '30d' },
@@ -228,8 +219,7 @@ export const paymentSLOs: SLODefinition[] = [
       query: '',
       goodQuery:
         'sum(rate(business_events_total{event_type="payment_process",status="success"}[5m]))',
-      totalQuery:
-        'sum(rate(business_events_total{event_type="payment_process"}[5m]))',
+      totalQuery: 'sum(rate(business_events_total{event_type="payment_process"}[5m]))',
     },
     target: 99.5,
     window: { type: 'rolling', duration: '30d' },
@@ -252,8 +242,7 @@ export const paymentSLOs: SLODefinition[] = [
       query: '',
       goodQuery:
         'sum(rate(business_events_total{event_type="payout_process",status="success"}[5m]))',
-      totalQuery:
-        'sum(rate(business_events_total{event_type="payout_process"}[5m]))',
+      totalQuery: 'sum(rate(business_events_total{event_type="payout_process"}[5m]))',
     },
     target: 99.5,
     window: { type: 'rolling', duration: '30d' },
@@ -280,8 +269,7 @@ export const authSLOs: SLODefinition[] = [
     sli: {
       type: 'availability',
       query: '',
-      goodQuery:
-        'sum(rate(http_requests_total{service="auth",status_code!~"5.."}[5m]))',
+      goodQuery: 'sum(rate(http_requests_total{service="auth",status_code!~"5.."}[5m]))',
       totalQuery: 'sum(rate(http_requests_total{service="auth"}[5m]))',
     },
     target: 99.95,
@@ -303,10 +291,8 @@ export const authSLOs: SLODefinition[] = [
     sli: {
       type: 'latency',
       query: '',
-      goodQuery:
-        'sum(rate(http_request_duration_seconds_bucket{service="auth",le="0.2"}[5m]))',
-      totalQuery:
-        'sum(rate(http_request_duration_seconds_count{service="auth"}[5m]))',
+      goodQuery: 'sum(rate(http_request_duration_seconds_bucket{service="auth",le="0.2"}[5m]))',
+      totalQuery: 'sum(rate(http_request_duration_seconds_count{service="auth"}[5m]))',
     },
     target: 99,
     window: { type: 'rolling', duration: '30d' },

@@ -10,6 +10,7 @@ import {
   type SLOStatusResult,
   type SLOReport,
 } from '@skillancer/metrics';
+
 import { getConfig } from '../config/index.js';
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
@@ -130,9 +131,9 @@ export function observabilityRoutes(
     },
     async (request, reply): Promise<SLOStatusResponse> => {
       const { service } = request.query;
-      
+
       let statuses = await sloService.getAllSLOStatuses();
-      
+
       // Filter by service if specified
       if (service) {
         statuses = statuses.filter((s) => s.service === service);
@@ -145,9 +146,7 @@ export function observabilityRoutes(
         breached: statuses.filter((s) => s.status === 'breached').length,
         healthRate: 0,
       };
-      summary.healthRate = summary.total > 0 
-        ? (summary.healthy / summary.total) * 100 
-        : 100;
+      summary.healthRate = summary.total > 0 ? (summary.healthy / summary.total) * 100 : 100;
 
       return {
         timestamp: new Date().toISOString(),
@@ -198,9 +197,9 @@ export function observabilityRoutes(
     },
     async (request, reply): Promise<SLOStatusResult | { error: string; message: string }> => {
       const { sloId } = request.params;
-      
+
       const status = await sloService.getSLOStatus(sloId);
-      
+
       if (!status) {
         reply.status(404);
         return {
@@ -286,9 +285,7 @@ export function observabilityRoutes(
       // Filter by services if specified
       if (services) {
         const serviceList = services.split(',').map((s) => s.trim());
-        report.sloDetails = report.sloDetails.filter((d) =>
-          serviceList.includes(d.service)
-        );
+        report.sloDetails = report.sloDetails.filter((d) => serviceList.includes(d.service));
       }
 
       // Filter by tags if specified
@@ -305,14 +302,17 @@ export function observabilityRoutes(
         healthySLOs: report.sloDetails.filter((d) => d.status === 'healthy').length,
         warningSLOs: report.sloDetails.filter((d) => d.status === 'warning').length,
         breachedSLOs: report.sloDetails.filter((d) => d.status === 'breached').length,
-        overallHealthRate: report.sloDetails.length > 0
-          ? (report.sloDetails.filter((d) => d.status === 'healthy').length /
-              report.sloDetails.length) * 100
-          : 100,
-        avgErrorBudgetRemaining: report.sloDetails.length > 0
-          ? report.sloDetails.reduce((sum, d) => sum + d.errorBudget.remainingPercent, 0) /
-            report.sloDetails.length
-          : 100,
+        overallHealthRate:
+          report.sloDetails.length > 0
+            ? (report.sloDetails.filter((d) => d.status === 'healthy').length /
+                report.sloDetails.length) *
+              100
+            : 100,
+        avgErrorBudgetRemaining:
+          report.sloDetails.length > 0
+            ? report.sloDetails.reduce((sum, d) => sum + d.errorBudget.remainingPercent, 0) /
+              report.sloDetails.length
+            : 100,
       };
 
       return report;
@@ -360,7 +360,8 @@ export function observabilityRoutes(
           uid: 'platform-overview',
           title: 'Platform Overview',
           url: `${grafanaUrl}/d/platform-overview`,
-          description: 'Real-time overview of all platform services, health status, and key metrics',
+          description:
+            'Real-time overview of all platform services, health status, and key metrics',
           tags: ['overview', 'platform', 'health'],
         },
         {
@@ -374,7 +375,8 @@ export function observabilityRoutes(
           uid: 'service-detail',
           title: 'Service Detail',
           url: `${grafanaUrl}/d/service-detail`,
-          description: 'Detailed metrics for a specific service including latency, errors, and resources',
+          description:
+            'Detailed metrics for a specific service including latency, errors, and resources',
           tags: ['service', 'detail', 'debugging'],
         },
         {

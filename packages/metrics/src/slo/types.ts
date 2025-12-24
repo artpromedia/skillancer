@@ -224,10 +224,5 @@ export interface PrometheusQueryResult {
  */
 export interface PrometheusClient {
   query(query: string): Promise<PrometheusQueryResult>;
-  queryRange(
-    query: string,
-    start: Date,
-    end: Date,
-    step: string
-  ): Promise<PrometheusQueryResult>;
+  queryRange(query: string, start: Date, end: Date, step: string): Promise<PrometheusQueryResult>;
 }

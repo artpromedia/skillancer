@@ -297,7 +297,9 @@
             },
             {
               "matcher": { "id": "byRegexp", "options": "/^4..*/" },
-              "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+              "properties": [
+                { "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }
+              ]
             },
             {
               "matcher": { "id": "byRegexp", "options": "/^5..*/" },
@@ -531,7 +533,9 @@
             },
             {
               "matcher": { "id": "byName", "options": "miss" },
-              "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+              "properties": [
+                { "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }
+              ]
             },
             {
               "matcher": { "id": "byName", "options": "error" },

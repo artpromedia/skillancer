@@ -11,13 +11,11 @@ import type { FastifyInstance } from 'fastify';
 
 /**
  * Register all API Gateway routes
- * 
+ *
  * Note: Proxy routes are registered by the proxy plugin, not here.
  * This module registers health check and BFF aggregation routes.
  */
-export async function registerRoutes(
-  app: FastifyInstance
-): Promise<void> {
+export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // Health check routes (no auth required)
   await app.register(healthRoutes);
 

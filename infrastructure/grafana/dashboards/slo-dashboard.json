@@ -219,10 +219,34 @@
         "fieldConfig": {
           "defaults": {
             "mappings": [
-              { "type": "range", "options": { "from": 50, "to": 100, "result": { "text": "HEALTHY", "color": "green" } } },
-              { "type": "range", "options": { "from": 25, "to": 50, "result": { "text": "WARNING", "color": "yellow" } } },
-              { "type": "range", "options": { "from": 10, "to": 25, "result": { "text": "AT RISK", "color": "orange" } } },
-              { "type": "range", "options": { "from": 0, "to": 10, "result": { "text": "CRITICAL", "color": "red" } } }
+              {
+                "type": "range",
+                "options": {
+                  "from": 50,
+                  "to": 100,
+                  "result": { "text": "HEALTHY", "color": "green" }
+                }
+              },
+              {
+                "type": "range",
+                "options": {
+                  "from": 25,
+                  "to": 50,
+                  "result": { "text": "WARNING", "color": "yellow" }
+                }
+              },
+              {
+                "type": "range",
+                "options": {
+                  "from": 10,
+                  "to": 25,
+                  "result": { "text": "AT RISK", "color": "orange" }
+                }
+              },
+              {
+                "type": "range",
+                "options": { "from": 0, "to": 10, "result": { "text": "CRITICAL", "color": "red" } }
+              }
             ],
             "thresholds": {
               "mode": "absolute",
@@ -371,7 +395,11 @@
           }
         },
         "options": {
-          "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max", "last"] }
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "calcs": ["mean", "max", "last"]
+          }
         }
       },
       {
