@@ -136,6 +136,20 @@ export type { LoadingSpinnerProps } from './components/loading-spinner';
 export { EmptyState } from './components/empty-state';
 export type { EmptyStateProps } from './components/empty-state';
 
+// Tooltip
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/tooltip';
+
+// Progress
+export { Progress } from './components/progress';
+
+// Rating Stars
+export { RatingStars } from './components/rating-stars';
+export type { RatingStarsProps } from './components/rating-stars';
+
+// Progress Ring
+export { ProgressRing } from './components/progress-ring';
+export type { ProgressRingProps } from './components/progress-ring';
+
 // ============================================================================
 // Theme Provider
 // ============================================================================
