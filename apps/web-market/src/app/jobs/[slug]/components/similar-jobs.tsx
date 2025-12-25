@@ -78,8 +78,8 @@ function formatBudgetShort(job: Job): string {
   };
 
   if (budgetType === 'HOURLY') {
-    return budgetMax ? `${format(budgetMax)}/hr` : `${format(budgetMin!)}/hr`;
+    return budgetMax ? `${format(budgetMax)}/hr` : budgetMin ? `${format(budgetMin)}/hr` : 'TBD';
   }
 
-  return budgetMax ? format(budgetMax) : format(budgetMin!);
+  return budgetMax ? format(budgetMax) : budgetMin ? format(budgetMin) : 'TBD';
 }

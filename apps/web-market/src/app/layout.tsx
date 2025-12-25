@@ -1,12 +1,13 @@
-import type { Metadata, Viewport } from 'next';
+import { ThemeProvider, Toaster } from '@skillancer/ui';
 import { Inter } from 'next/font/google';
 import { Suspense } from 'react';
 
-import { ThemeProvider, Toaster } from '@skillancer/ui';
+import type { Metadata, Viewport } from 'next';
 
-import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { Header } from '@/components/layout/header';
 import { QueryProvider } from '@/lib/providers/query-provider';
+
 import '@/styles/globals.css';
 
 const inter = Inter({
@@ -92,13 +93,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
+    <html suppressHydrationWarning className={inter.variable} lang="en">
       <body className="bg-background min-h-screen font-sans antialiased">
         <ThemeProvider
+          disableTransitionOnChange
+          enableSystem
           attribute="class"
           defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
         >
           <QueryProvider>
             <div className="relative flex min-h-screen flex-col">
@@ -108,7 +109,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <main className="flex-1">{children}</main>
               <Footer />
             </div>
-            <Toaster position="bottom-right" richColors closeButton />
+            <Toaster closeButton richColors position="bottom-right" />
           </QueryProvider>
         </ThemeProvider>
       </body>

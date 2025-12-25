@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Button, Badge, Card, CardContent } from '@skillancer/ui';
 import {
   ArrowRight,
   Briefcase,
@@ -12,8 +12,7 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-
-import { Button, Badge, Card, CardContent } from '@skillancer/ui';
+import Link from 'next/link';
 
 import { SearchBar } from '@/components/search/search-bar';
 import { getFeaturedJobs, getTopCategories, type Job, type Category } from '@/lib/api/jobs';
@@ -44,7 +43,7 @@ export default async function Home() {
       <section className="from-primary/5 via-background to-background relative overflow-hidden bg-gradient-to-b py-20 sm:py-28">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-4xl text-center">
-            <Badge variant="secondary" className="mb-4">
+            <Badge className="mb-4" variant="secondary">
               <Sparkles className="mr-1 h-3 w-3" />
               AI-Powered Matching
             </Badge>
@@ -53,15 +52,15 @@ export default async function Home() {
               <span className="text-primary"> your next project</span>
             </h1>
             <p className="text-muted-foreground mx-auto mt-6 max-w-2xl text-lg">
-              Skillancer's SmartMatch algorithm connects you with top talent or the right
+              Skillancer&apos;s SmartMatch algorithm connects you with top talent or the right
               opportunities. Secure payments, verified professionals, and AI-powered matching.
             </p>
 
             {/* Search Bar */}
             <div className="mx-auto mt-10 max-w-2xl">
               <SearchBar
-                placeholder="Search for jobs, skills, or keywords..."
                 className="shadow-lg"
+                placeholder="Search for jobs, skills, or keywords..."
               />
             </div>
 
@@ -71,8 +70,8 @@ export default async function Home() {
               {['React', 'Web Design', 'Mobile App', 'Data Science', 'AI/ML'].map((term) => (
                 <Link
                   key={term}
-                  href={`/jobs?q=${encodeURIComponent(term)}`}
                   className="text-primary hover:underline"
+                  href={`/jobs?q=${encodeURIComponent(term)}`}
                 >
                   {term}
                 </Link>
@@ -91,10 +90,10 @@ export default async function Home() {
       <section className="bg-muted/30 border-y py-12">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-            <StatItem icon={Users} value="500K+" label="Freelancers" />
-            <StatItem icon={Briefcase} value="100K+" label="Jobs Posted" />
-            <StatItem icon={DollarSign} value="$50M+" label="Paid Out" />
-            <StatItem icon={Star} value="4.9" label="Average Rating" />
+            <StatItem icon={Users} label="Freelancers" value="500K+" />
+            <StatItem icon={Briefcase} label="Jobs Posted" value="100K+" />
+            <StatItem icon={DollarSign} label="Paid Out" value="$50M+" />
+            <StatItem icon={Star} label="Average Rating" value="4.9" />
           </div>
         </div>
       </section>
@@ -110,7 +109,7 @@ export default async function Home() {
                 </h2>
                 <p className="text-muted-foreground mt-2">Find work in your area of expertise</p>
               </div>
-              <Button variant="ghost" asChild className="hidden sm:inline-flex">
+              <Button asChild className="hidden sm:inline-flex" variant="ghost">
                 <Link href="/categories">
                   View all categories
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -144,7 +143,7 @@ export default async function Home() {
             </div>
 
             <div className="mt-6 text-center sm:hidden">
-              <Button variant="outline" asChild>
+              <Button asChild variant="outline">
                 <Link href="/categories">View all categories</Link>
               </Button>
             </div>
@@ -163,7 +162,7 @@ export default async function Home() {
                 </h2>
                 <p className="text-muted-foreground mt-2">Fresh jobs posted by verified clients</p>
               </div>
-              <Button variant="ghost" asChild className="hidden sm:inline-flex">
+              <Button asChild className="hidden sm:inline-flex" variant="ghost">
                 <Link href="/jobs">
                   View all jobs
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -178,7 +177,7 @@ export default async function Home() {
             </div>
 
             <div className="mt-8 text-center">
-              <Button size="lg" asChild>
+              <Button asChild size="lg">
                 <Link href="/jobs">
                   Browse All Jobs
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -201,22 +200,22 @@ export default async function Home() {
 
           <div className="grid gap-8 md:grid-cols-3">
             <StepCard
-              step={1}
-              icon={Search}
-              title="Find the Right Match"
               description="Search for jobs or talent. Our SmartMatch algorithm shows you the most relevant opportunities based on your skills."
+              icon={Search}
+              step={1}
+              title="Find the Right Match"
             />
             <StepCard
-              step={2}
-              icon={Briefcase}
-              title="Submit Proposals"
               description="Send personalized proposals to clients. Include your portfolio, rates, and why you're the perfect fit."
+              icon={Briefcase}
+              step={2}
+              title="Submit Proposals"
             />
             <StepCard
-              step={3}
-              icon={DollarSign}
-              title="Get Paid Securely"
               description="Work with confidence using our escrow system. Funds are released only when both parties are satisfied."
+              icon={DollarSign}
+              step={3}
+              title="Get Paid Securely"
             />
           </div>
         </div>
@@ -237,24 +236,24 @@ export default async function Home() {
 
               <ul className="mt-8 space-y-4">
                 <FeatureItem
+                  description="Our proprietary algorithm matches you with opportunities that fit your skills and preferences."
                   icon={Sparkles}
                   title="SmartMatch AI"
-                  description="Our proprietary algorithm matches you with opportunities that fit your skills and preferences."
                 />
                 <FeatureItem
+                  description="All payments are protected by escrow. Every freelancer is verified for quality assurance."
                   icon={Shield}
                   title="Verified & Secure"
-                  description="All payments are protected by escrow. Every freelancer is verified for quality assurance."
                 />
                 <FeatureItem
+                  description="Average time to first proposal: 4 hours. Get started on projects quickly."
                   icon={Zap}
                   title="Fast & Efficient"
-                  description="Average time to first proposal: 4 hours. Get started on projects quickly."
                 />
                 <FeatureItem
+                  description="Build your reputation with ratings and reviews. Unlock higher-tier opportunities."
                   icon={TrendingUp}
                   title="Career Growth"
-                  description="Build your reputation with ratings and reviews. Unlock higher-tier opportunities."
                 />
               </ul>
             </div>
@@ -262,10 +261,10 @@ export default async function Home() {
             <div className="relative">
               <div className="from-primary/20 via-primary/10 flex aspect-square items-center justify-center rounded-2xl bg-gradient-to-br to-transparent p-8">
                 <div className="grid w-full max-w-sm grid-cols-2 gap-4">
-                  <MiniStatCard value="95%" label="Success Rate" />
-                  <MiniStatCard value="24hr" label="Avg Response" />
-                  <MiniStatCard value="150+" label="Countries" />
-                  <MiniStatCard value="4.9★" label="Rating" />
+                  <MiniStatCard label="Success Rate" value="95%" />
+                  <MiniStatCard label="Avg Response" value="24hr" />
+                  <MiniStatCard label="Countries" value="150+" />
+                  <MiniStatCard label="Rating" value="4.9★" />
                 </div>
               </div>
             </div>
@@ -289,7 +288,7 @@ export default async function Home() {
                     Access thousands of jobs from verified clients. Set your own rates and work on
                     your terms.
                   </p>
-                  <Button variant="secondary" size="lg" asChild>
+                  <Button asChild size="lg" variant="secondary">
                     <Link href="/jobs">
                       Browse Jobs
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -311,7 +310,7 @@ export default async function Home() {
                     Post your job and receive proposals from skilled freelancers within hours. Pay
                     only when satisfied.
                   </p>
-                  <Button variant="secondary" size="lg" asChild>
+                  <Button asChild size="lg" variant="secondary">
                     <Link href="/jobs/post">
                       Post a Job
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -334,21 +333,21 @@ export default async function Home() {
 
           <div className="grid gap-6 md:grid-cols-3">
             <TestimonialCard
-              quote="Skillancer's SmartMatch saved me hours of searching. I found the perfect developer for my project within a day."
               author="Sarah Chen"
-              role="Startup Founder"
+              position="Startup Founder"
+              quote="Skillancer's SmartMatch saved me hours of searching. I found the perfect developer for my project within a day."
               rating={5}
             />
             <TestimonialCard
-              quote="The quality of clients on this platform is exceptional. I've grown my freelance business by 3x since joining."
               author="Marcus Johnson"
-              role="Full Stack Developer"
+              position="Full Stack Developer"
+              quote="The quality of clients on this platform is exceptional. I've grown my freelance business by 3x since joining."
               rating={5}
             />
             <TestimonialCard
-              quote="Secure payments and great support. I feel confident hiring through Skillancer for all my design needs."
               author="Emily Rodriguez"
-              role="Marketing Director"
+              position="Marketing Director"
+              quote="Secure payments and great support. I feel confident hiring through Skillancer for all my design needs."
               rating={5}
             />
           </div>
@@ -363,14 +362,14 @@ export default async function Home() {
             Join over 500,000 professionals finding work and hiring talent on Skillancer.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Button size="lg" variant="secondary" asChild>
+            <Button asChild size="lg" variant="secondary">
               <Link href="/signup">Create Free Account</Link>
             </Button>
             <Button
+              asChild
+              className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
               size="lg"
               variant="outline"
-              className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
-              asChild
             >
               <Link href="/how-it-works">Learn More</Link>
             </Button>
@@ -469,7 +468,7 @@ function FeaturedJobCard({ job }: Readonly<{ job: Job }>) {
       <Card className="hover:border-primary/50 group h-full transition-all hover:shadow-md">
         <CardContent className="p-5">
           <div className="mb-3 flex items-start justify-between gap-2">
-            <Badge variant="outline" className="text-xs">
+            <Badge className="text-xs" variant="outline">
               {job.budgetType === 'HOURLY' ? 'Hourly' : 'Fixed'}
             </Badge>
             <span className="text-muted-foreground flex items-center gap-1 text-xs">
@@ -488,7 +487,7 @@ function FeaturedJobCard({ job }: Readonly<{ job: Job }>) {
 
           <div className="mb-4 flex flex-wrap gap-1">
             {job.skills.slice(0, 3).map((skill) => (
-              <Badge key={skill.id} variant="secondary" className="text-xs">
+              <Badge key={skill.id} className="text-xs" variant="secondary">
                 {skill.name}
               </Badge>
             ))}
@@ -513,12 +512,12 @@ function FeaturedJobCard({ job }: Readonly<{ job: Job }>) {
 function TestimonialCard({
   quote,
   author,
-  role,
+  position,
   rating,
 }: Readonly<{
   quote: string;
   author: string;
-  role: string;
+  position: string;
   rating: number;
 }>) {
   return (
@@ -532,7 +531,7 @@ function TestimonialCard({
         <p className="text-muted-foreground mb-4">&ldquo;{quote}&rdquo;</p>
         <div>
           <div className="font-semibold">{author}</div>
-          <div className="text-muted-foreground text-sm">{role}</div>
+          <div className="text-muted-foreground text-sm">{position}</div>
         </div>
       </CardContent>
     </Card>
@@ -599,9 +598,9 @@ function formatBudgetShort(job: Job): string {
 
   if (budgetType === 'HOURLY') {
     if (budgetMax) return `${format(budgetMax)}/hr`;
-    return `${format(budgetMin!)}/hr`;
+    return budgetMin ? `${format(budgetMin)}/hr` : 'TBD';
   }
 
   if (budgetMax) return format(budgetMax);
-  return format(budgetMin!);
+  return budgetMin ? format(budgetMin) : 'TBD';
 }

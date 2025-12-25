@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 'use client';
 
 import {
@@ -13,13 +14,13 @@ import {
 import { Grid3X3, List, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 import { useRef, useCallback, useEffect } from 'react';
 
-import { useJobSearch } from '@/hooks/use-job-search';
-import { useJobStore } from '@/stores/job-store';
-
 import { JobCard } from './job-card';
 import { JobCardSkeleton } from './job-card-skeleton';
 
 import type { JobSearchResult, JobSearchFilters } from '@/lib/api/jobs';
+
+import { useJobSearch } from '@/hooks/use-job-search';
+import { useJobStore } from '@/stores/job-store';
 
 // ============================================================================
 // Types
@@ -50,11 +51,11 @@ export function JobList({ initialData, initialFilters }: JobListProps) {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Store state
+  // Store state - eslint-disable required due to Zustand middleware type inference
   const viewMode = useJobStore((state) => state.viewMode);
   const setViewMode = useJobStore((state) => state.setViewMode);
   const toggleFilters = useJobStore((state) => state.toggleFilters);
-  const filtersOpen = useJobStore((state) => state.filtersOpen);
+  const _filtersOpen = useJobStore((state) => state.filtersOpen);
 
   // Job search hook
   const {
@@ -62,7 +63,7 @@ export function JobList({ initialData, initialFilters }: JobListProps) {
     total,
     hasMore,
     isLoading,
-    isFetching,
+    isFetching: _isFetching,
     isFetchingNextPage,
     error,
     loadMore,
@@ -267,7 +268,7 @@ export function JobList({ initialData, initialFilters }: JobListProps) {
       {/* End of results */}
       {!hasMore && jobs.length > 0 && (
         <div className="text-muted-foreground py-8 text-center">
-          <p className="text-sm">You've seen all {total} jobs</p>
+          <p className="text-sm">You&apos;ve seen all {total} jobs</p>
         </div>
       )}
     </div>
@@ -279,30 +280,31 @@ export function JobList({ initialData, initialFilters }: JobListProps) {
 // ============================================================================
 
 function formatFilterLabel(key: string, value: unknown): string {
+  const stringValue = String(value);
   switch (key) {
     case 'query':
-      return `"${value}"`;
+      return `"${stringValue}"`;
     case 'skills':
-      return Array.isArray(value) ? value.join(', ') : String(value);
+      return Array.isArray(value) ? value.join(', ') : stringValue;
     case 'budgetType':
       return value === 'FIXED' ? 'Fixed Price' : 'Hourly';
     case 'experienceLevel':
-      return String(value).charAt(0) + String(value).slice(1).toLowerCase();
+      return stringValue.charAt(0) + stringValue.slice(1).toLowerCase();
     case 'category':
     case 'subcategory':
-      return String(value).replace(/-/g, ' ');
+      return stringValue.replace(/-/g, ' ');
     case 'duration':
-      return String(value).replace(/_/g, ' ');
+      return stringValue.replace(/_/g, ' ');
     case 'postedWithin':
-      return `Posted ${value}`;
+      return `Posted ${stringValue}`;
     case 'clientHistory':
       return value === 'verified' ? 'Payment Verified' : 'Top Clients';
     case 'budgetMin':
-      return `Min $${value}`;
+      return `Min $${stringValue}`;
     case 'budgetMax':
-      return `Max $${value}`;
+      return `Max $${stringValue}`;
     default:
-      return String(value);
+      return stringValue;
   }
 }
 

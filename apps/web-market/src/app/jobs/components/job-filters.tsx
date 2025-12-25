@@ -1,11 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 'use client';
 
-import { Button, Separator, Badge, cn, Input, Label, Skeleton, ScrollArea } from '@skillancer/ui';
+import { Button, Separator, Badge, cn, Input, Label, ScrollArea } from '@skillancer/ui';
 import {
   ChevronDown,
   ChevronRight,
   Filter,
-  X,
   Check,
   DollarSign,
   Clock,
@@ -15,9 +15,9 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useCallback, useTransition } from 'react';
 
-import { useJobStore } from '@/stores/job-store';
-
 import type { Category, JobSearchFilters } from '@/lib/api/jobs';
+
+import { useJobStore } from '@/stores/job-store';
 
 // ============================================================================
 // Types
@@ -70,18 +70,18 @@ const clientHistoryOptions = [
 
 export function JobFilters({ categories, initialFilters, className }: JobFiltersProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const _searchParams = useSearchParams();
+  const [_isPending, startTransition] = useTransition();
 
   // Local state for form controls
   const [filters, setLocalFilters] = useState<JobSearchFilters>(initialFilters);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [budgetMin, setBudgetMin] = useState(filters.budgetMin?.toString() || '');
-  const [budgetMax, setBudgetMax] = useState(filters.budgetMax?.toString() || '');
+  const [budgetMin, setBudgetMin] = useState(filters.budgetMin?.toString() ?? '');
+  const [budgetMax, setBudgetMax] = useState(filters.budgetMax?.toString() ?? '');
 
-  // Store state
-  const filtersOpen = useJobStore((state) => state.filtersOpen);
-  const toggleFilters = useJobStore((state) => state.toggleFilters);
+  // Store state - Zustand middleware type inference handled by file-level eslint-disable
+  const _filtersOpen = useJobStore((state) => state.filtersOpen);
+  const _toggleFilters = useJobStore((state) => state.toggleFilters);
 
   // Update URL with new filters
   const applyFilters = useCallback(

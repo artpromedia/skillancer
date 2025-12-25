@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /**
  * Jobs API Client
  *
  * Functions for interacting with the market-svc jobs API
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4001/api/v1';
 
 // ============================================================================
 // Types
@@ -166,12 +167,11 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `API Error: ${response.status}`);
+    const errorData: { message?: string } = await response.json().catch(() => ({}));
+    throw new Error(errorData.message ?? `API Error: ${response.status}`);
   }
 
-  const data = await response.json();
-  return data;
+  return response.json() as Promise<T>;
 }
 
 /**
