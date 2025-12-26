@@ -150,6 +150,67 @@ export type { RatingStarsProps } from './components/rating-stars';
 export { ProgressRing } from './components/progress-ring';
 export type { ProgressRingProps } from './components/progress-ring';
 
+// Step Indicator - Multi-step progress component
+export { StepIndicator } from './components/step-indicator';
+export type { Step, StepIndicatorProps } from './components/step-indicator';
+
+// Timeline - Activity/event timeline component
+export { Timeline, TimelineItemComponent } from './components/timeline';
+export type { TimelineItem, TimelineProps, TimelineItemProps } from './components/timeline';
+
+// Status Badge - Configurable status badges
+export {
+  StatusBadge,
+  // Proposal status presets
+  ProposalDraftBadge,
+  ProposalSubmittedBadge,
+  ProposalViewedBadge,
+  ProposalShortlistedBadge,
+  ProposalRejectedBadge,
+  ProposalWithdrawnBadge,
+  ProposalHiredBadge,
+  // Job status presets
+  JobOpenBadge,
+  JobClosedBadge,
+  JobInProgressBadge,
+  JobCompletedBadge,
+  // Contract status presets
+  ContractPendingBadge,
+  ContractActiveBadge,
+  ContractCompletedBadge,
+  ContractDisputedBadge,
+  ContractCancelledBadge,
+  // Payment status presets
+  PaymentPendingBadge,
+  PaymentProcessingBadge,
+  PaymentCompletedBadge,
+  PaymentFailedBadge,
+  PaymentRefundedBadge,
+  // Verification status presets
+  VerifiedBadge,
+  UnverifiedBadge,
+  PendingVerificationBadge,
+  // Factory functions
+  getProposalStatusBadge,
+  getJobStatusBadge,
+  getContractStatusBadge,
+  getPaymentStatusBadge,
+} from './components/status-badge';
+export type {
+  StatusBadgeStatus,
+  StatusBadgeSize,
+  StatusBadgeProps,
+  PresetBadgeProps,
+  ProposalStatus,
+  JobStatus,
+  ContractStatus,
+  PaymentStatus,
+} from './components/status-badge';
+
+// File Upload - Drag & drop file upload
+export { FileUpload } from './components/file-upload';
+export type { UploadedFile, FileUploadProps } from './components/file-upload';
+
 // ============================================================================
 // Theme Provider
 // ============================================================================

@@ -138,7 +138,7 @@ export function useJobSearch(options: UseJobSearchOptions = {}): UseJobSearchRet
   const [, startTransition] = useTransition();
 
   // Get store state and actions - Zustand middleware type inference handled by file-level eslint-disable
-  const storeFilters = useJobStore((state) => state.filters) as JobSearchFilters;
+  const storeFilters = useJobStore((state) => state.filters);
   const storeSortBy = useJobStore((state) => state.sortBy) as SortByOption;
   const setStoreFilters = useJobStore((state) => state.setFilters) as (
     filters: Partial<JobSearchFilters>

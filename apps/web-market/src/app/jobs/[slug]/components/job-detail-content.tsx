@@ -31,7 +31,9 @@ import {
   Users,
   CheckCircle,
   XCircle,
+  Zap,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
 import type { Job } from '@/lib/api/jobs';
@@ -125,19 +127,45 @@ export function JobDetailContent({ job }: JobDetailContentProps) {
 
           {/* Actions */}
           <div className="mt-6 flex flex-wrap gap-3 border-t pt-6">
-            <Button className="flex-1 sm:flex-none" disabled={applied} size="lg">
-              {applied ? (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Applied
-                </>
-              ) : (
-                <>
+            {applied ? (
+              <Button disabled className="flex-1 sm:flex-none" size="lg">
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Applied
+              </Button>
+            ) : job.status === 'OPEN' ? (
+              <Button asChild className="flex-1 sm:flex-none" size="lg">
+                <Link href={`/jobs/${job.slug}/apply`}>
                   <MessageSquare className="mr-2 h-4 w-4" />
                   Submit Proposal
-                </>
-              )}
-            </Button>
+                </Link>
+              </Button>
+            ) : (
+              <Button disabled className="flex-1 sm:flex-none" size="lg" variant="secondary">
+                <XCircle className="mr-2 h-4 w-4" />
+                Job Closed
+              </Button>
+            )}
+
+            {/* Show proposal count badge */}
+            {job.proposalCount > 0 && !applied && job.status === 'OPEN' && (
+              <div className="flex items-center gap-2 self-center">
+                <span className="text-muted-foreground text-sm">
+                  {job.proposalCount} proposal{job.proposalCount !== 1 ? 's' : ''} submitted
+                </span>
+                {job.proposalCount >= 10 && job.proposalCount < 20 && (
+                  <Badge className="text-xs" variant="secondary">
+                    <Zap className="mr-1 h-3 w-3" />
+                    Competitive
+                  </Badge>
+                )}
+                {job.proposalCount >= 20 && (
+                  <Badge className="text-xs" variant="destructive">
+                    <Zap className="mr-1 h-3 w-3" />
+                    Highly Competitive
+                  </Badge>
+                )}
+              </div>
+            )}
             <Button size="lg" variant="outline" onClick={() => toggleSaveJob(job.id)}>
               {isSaved ? (
                 <>
