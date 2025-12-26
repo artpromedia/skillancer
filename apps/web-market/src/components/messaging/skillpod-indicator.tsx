@@ -22,6 +22,8 @@ import {
   GraduationCap,
   HelpCircle,
   Lightbulb,
+  Monitor,
+  Play,
   Sparkles,
   Star,
   Target,
@@ -50,6 +52,9 @@ interface SkillPodIndicatorProps {
   skills?: SkillPodProgress[];
   size?: 'sm' | 'md' | 'lg';
   showDetails?: boolean;
+  sessionId?: string;
+  sessionStatus?: 'active' | 'inactive' | 'pending';
+  onLaunchVdi?: () => void;
 }
 
 // ============================================================================
@@ -260,7 +265,7 @@ function SkillPodInfoModal({ open, onOpenChange, skills }: SkillPodInfoModalProp
           </div>
 
           {/* View Full Profile */}
-          <div className="flex justify-end">
+          <div className="flex justify-between gap-2">
             <Button asChild variant="outline">
               <a href="/dashboard/skillpod" target="_blank">
                 View Full SkillPod Profile
@@ -275,6 +280,95 @@ function SkillPodInfoModal({ open, onOpenChange, skills }: SkillPodInfoModalProp
 }
 
 // ============================================================================
+// VDI Session Button
+// ============================================================================
+
+interface VdiSessionButtonProps {
+  sessionId?: string;
+  sessionStatus?: 'active' | 'inactive' | 'pending';
+  onLaunch?: () => void;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+function VdiSessionButton({
+  sessionId,
+  sessionStatus,
+  onLaunch,
+  size = 'md',
+}: VdiSessionButtonProps) {
+  const sizeClasses = {
+    sm: 'h-6 text-xs px-2',
+    md: 'h-8 text-sm px-3',
+    lg: 'h-10 px-4',
+  };
+
+  const iconSizes = {
+    sm: 'h-3 w-3',
+    md: 'h-4 w-4',
+    lg: 'h-5 w-5',
+  };
+
+  if (!sessionId && !onLaunch) return null;
+
+  const statusColors = {
+    active: 'bg-green-500',
+    pending: 'bg-yellow-500 animate-pulse',
+    inactive: 'bg-gray-400',
+  };
+
+  const handleClick = () => {
+    if (sessionId && sessionStatus === 'active') {
+      // Navigate to VDI viewer
+      window.open(`/viewer/${sessionId}`, '_blank');
+    } else if (onLaunch) {
+      onLaunch();
+    }
+  };
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            className={cn(
+              'gap-1.5 rounded-full',
+              sessionStatus === 'active'
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80',
+              sizeClasses[size]
+            )}
+            onClick={handleClick}
+          >
+            <div className="relative">
+              <Monitor className={iconSizes[size]} />
+              {sessionStatus && (
+                <div
+                  className={cn(
+                    'absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full',
+                    statusColors[sessionStatus]
+                  )}
+                />
+              )}
+            </div>
+            <span className="font-medium">
+              {sessionStatus === 'active' ? 'Join Session' : 'Launch VDI'}
+            </span>
+            {sessionStatus === 'active' && <Play className={cn(iconSizes[size], 'ml-0.5')} />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {sessionStatus === 'active'
+            ? 'Click to join the active secure workspace'
+            : sessionStatus === 'pending'
+              ? 'Workspace is starting up...'
+              : 'Launch a secure development environment'}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -283,6 +377,9 @@ export function SkillPodIndicator({
   skills = [],
   size = 'md',
   showDetails = true,
+  sessionId,
+  sessionStatus,
+  onLaunchVdi,
 }: SkillPodIndicatorProps) {
   const [showModal, setShowModal] = useState(false);
 
@@ -302,57 +399,73 @@ export function SkillPodIndicator({
 
   if (!showDetails) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div
-              className={cn(
-                'inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white',
-                sizeClasses[size]
-              )}
-            >
-              <Sparkles className={iconSizes[size]} />
-              <span className="font-medium">SkillPod</span>
-              {activeSkills.length > 0 && (
-                <Badge className="ml-1 h-4 min-w-[16px] bg-white/20 px-1 text-[10px]">
-                  {activeSkills.length}
-                </Badge>
-              )}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>
-              {activeSkills.length > 0
-                ? `${activeSkills.length} skills being tracked`
-                : 'SkillPod: Track your professional growth'}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <div className="flex items-center gap-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white',
+                  sizeClasses[size]
+                )}
+              >
+                <Sparkles className={iconSizes[size]} />
+                <span className="font-medium">SkillPod</span>
+                {activeSkills.length > 0 && (
+                  <Badge className="ml-1 h-4 min-w-[16px] bg-white/20 px-1 text-[10px]">
+                    {activeSkills.length}
+                  </Badge>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                {activeSkills.length > 0
+                  ? `${activeSkills.length} skills being tracked`
+                  : 'SkillPod: Track your professional growth'}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <VdiSessionButton
+          sessionId={sessionId}
+          sessionStatus={sessionStatus}
+          size={size}
+          onLaunch={onLaunchVdi}
+        />
+      </div>
     );
   }
 
   return (
     <>
-      <Button
-        className={cn(
-          'gap-1 rounded-full bg-gradient-to-r from-purple-500/10 to-blue-500/10 hover:from-purple-500/20 hover:to-blue-500/20',
-          sizeClasses[size]
-        )}
-        variant="ghost"
-        onClick={() => setShowModal(true)}
-      >
-        <Sparkles className={cn(iconSizes[size], 'text-purple-500')} />
-        <span className="font-medium">SkillPod</span>
-        {activeSkills.length > 0 && (
-          <Badge
-            className="ml-1 h-4 min-w-[16px] bg-purple-100 px-1 text-[10px] text-purple-600 dark:bg-purple-950 dark:text-purple-300"
-            variant="secondary"
-          >
-            {activeSkills.length}
-          </Badge>
-        )}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          className={cn(
+            'gap-1 rounded-full bg-gradient-to-r from-purple-500/10 to-blue-500/10 hover:from-purple-500/20 hover:to-blue-500/20',
+            sizeClasses[size]
+          )}
+          variant="ghost"
+          onClick={() => setShowModal(true)}
+        >
+          <Sparkles className={cn(iconSizes[size], 'text-purple-500')} />
+          <span className="font-medium">SkillPod</span>
+          {activeSkills.length > 0 && (
+            <Badge
+              className="ml-1 h-4 min-w-[16px] bg-purple-100 px-1 text-[10px] text-purple-600 dark:bg-purple-950 dark:text-purple-300"
+              variant="secondary"
+            >
+              {activeSkills.length}
+            </Badge>
+          )}
+        </Button>
+        <VdiSessionButton
+          sessionId={sessionId}
+          sessionStatus={sessionStatus}
+          size={size}
+          onLaunch={onLaunchVdi}
+        />
+      </div>
 
       <SkillPodInfoModal open={showModal} skills={skills} onOpenChange={setShowModal} />
     </>
