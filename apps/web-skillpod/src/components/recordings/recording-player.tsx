@@ -71,7 +71,7 @@ export function RecordingPlayer({
   thumbnailUrl,
   autoPlay = false,
   className,
-}: RecordingPlayerProps) {
+}: Readonly<RecordingPlayerProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -295,8 +295,8 @@ export function RecordingPlayer({
       seek(e.detail.time);
     };
 
-    window.addEventListener('seek-to-time', handleSeekEvent as EventListener);
-    return () => window.removeEventListener('seek-to-time', handleSeekEvent as EventListener);
+    globalThis.addEventListener('seek-to-time', handleSeekEvent as EventListener);
+    return () => globalThis.removeEventListener('seek-to-time', handleSeekEvent as EventListener);
   }, [seek]);
 
   // ==========================================================================
@@ -334,17 +334,11 @@ export function RecordingPlayer({
           togglePlay();
           break;
         case 'ArrowLeft':
-          e.preventDefault();
-          seekRelative(-10);
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          seekRelative(10);
-          break;
         case 'j':
           e.preventDefault();
           seekRelative(-10);
           break;
+        case 'ArrowRight':
         case 'l':
           e.preventDefault();
           seekRelative(10);
@@ -382,7 +376,7 @@ export function RecordingPlayer({
         case '8':
         case '9':
           e.preventDefault();
-          seek((parseInt(e.key) / 10) * duration);
+          seek((Number.parseInt(e.key, 10) / 10) * duration);
           break;
         case ',':
           e.preventDefault();
@@ -395,8 +389,8 @@ export function RecordingPlayer({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [
     state.volume,
     state.playbackRate,
@@ -489,9 +483,9 @@ export function RecordingPlayer({
             style={{ width: `${progress}%` }}
           />
           {/* Chapters markers */}
-          {chapters.map((chapter, index) => (
+          {chapters.map((chapter) => (
             <div
-              key={index}
+              key={`chapter-${chapter.startTime}`}
               className="absolute top-1/2 h-3 w-1 -translate-y-1/2 rounded-full bg-white"
               style={{ left: `${(chapter.startTime / duration) * 100}%` }}
               title={chapter.title}
@@ -543,7 +537,7 @@ export function RecordingPlayer({
                 step="0.1"
                 type="range"
                 value={state.isMuted ? 0 : state.volume}
-                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                onChange={(e) => setVolume(Number.parseFloat(e.target.value))}
               />
             </div>
 

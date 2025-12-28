@@ -72,7 +72,7 @@ interface KeyProps {
   children: React.ReactNode;
 }
 
-function Key({ children }: KeyProps) {
+function Key({ children }: Readonly<KeyProps>) {
   return (
     <kbd
       className={cn(
@@ -96,15 +96,15 @@ interface ShortcutRowProps {
   shortcut: KeyboardShortcut;
 }
 
-function ShortcutRow({ shortcut }: ShortcutRowProps) {
+function ShortcutRow({ shortcut }: Readonly<ShortcutRowProps>) {
   return (
     <div className="flex items-center justify-between py-2">
       <span className="text-muted-foreground text-sm">{shortcut.description}</span>
       <div className="flex items-center gap-1">
-        {shortcut.keys.map((key, index) => (
-          <span key={index} className="flex items-center gap-1">
+        {shortcut.keys.map((key, keyIndex) => (
+          <span key={`${shortcut.description}-${key}`} className="flex items-center gap-1">
             <Key>{key}</Key>
-            {index < shortcut.keys.length - 1 && (
+            {keyIndex < shortcut.keys.length - 1 && (
               <span className="text-muted-foreground text-xs">+</span>
             )}
           </span>
@@ -122,7 +122,7 @@ export function KeyboardShortcuts({
   isOpen,
   onClose,
   customShortcuts = [],
-}: KeyboardShortcutsProps) {
+}: Readonly<KeyboardShortcutsProps>) {
   const allShortcuts = [...DEFAULT_SHORTCUTS, ...customShortcuts];
 
   const groupedShortcuts = allShortcuts.reduce(
@@ -137,7 +137,7 @@ export function KeyboardShortcuts({
   );
 
   const handlePrint = () => {
-    window.print();
+    globalThis.print();
   };
 
   return (
@@ -157,8 +157,8 @@ export function KeyboardShortcuts({
                 {CATEGORY_LABELS[category as KeyboardShortcut['category']]}
               </h3>
               <div className="divide-y">
-                {shortcuts.map((shortcut, index) => (
-                  <ShortcutRow key={index} shortcut={shortcut} />
+                {shortcuts.map((shortcut) => (
+                  <ShortcutRow key={shortcut.description} shortcut={shortcut} />
                 ))}
               </div>
             </div>
@@ -199,7 +199,10 @@ interface KeyboardShortcutsButtonProps {
   className?: string;
 }
 
-export function KeyboardShortcutsButton({ onClick, className }: KeyboardShortcutsButtonProps) {
+export function KeyboardShortcutsButton({
+  onClick,
+  className,
+}: Readonly<KeyboardShortcutsButtonProps>) {
   return (
     <button
       aria-label="Keyboard shortcuts"

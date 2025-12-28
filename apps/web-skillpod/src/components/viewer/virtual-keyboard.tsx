@@ -225,7 +225,7 @@ export function VirtualKeyboard({
   isVisible = true,
   onVisibilityChange,
   className,
-}: VirtualKeyboardProps) {
+}: Readonly<VirtualKeyboardProps>) {
   const [currentLayout, setCurrentLayout] = useState<KeyboardLayout>(layout);
   const [modifiers, setModifiers] = useState<KeyModifiers>({
     shift: false,
@@ -436,7 +436,7 @@ export function VirtualKeyboard({
       {/* Keyboard rows */}
       <div className="flex flex-col items-center gap-1">
         {getKeyRows().map((row, rowIndex) => (
-          <div key={rowIndex} className="flex gap-1">
+          <div key={`keyboard-row-${currentLayout}-${rowIndex}`} className="flex gap-1">
             {row.map((keyDef, keyIndex) => renderKey(keyDef, keyIndex))}
           </div>
         ))}

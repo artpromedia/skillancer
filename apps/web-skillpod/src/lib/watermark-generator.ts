@@ -89,7 +89,7 @@ class WatermarkGenerator {
   // CANVAS MANAGEMENT
   // ==========================================================================
 
-  private handleResize = (): void => {
+  private readonly handleResize = (): void => {
     this.resizeCanvas();
     this.generatePositions();
     this.render();

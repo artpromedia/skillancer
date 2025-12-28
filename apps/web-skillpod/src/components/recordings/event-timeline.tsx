@@ -55,7 +55,7 @@ interface EventTimelineProps {
   zoom: number;
   onSeek: (time: number) => void;
   onEventClick: (event: RecordingEvent) => void;
-  selectedEventId?: string;
+  selectedEventId?: string | undefined;
 }
 
 // ============================================================================
@@ -180,7 +180,7 @@ function EventMarker({
   );
 }
 
-function TimeRuler({ duration, zoom }: { duration: number; zoom: number }) {
+function TimeRuler({ duration, zoom }: Readonly<{ duration: number; zoom: number }>) {
   // Calculate tick marks based on duration and zoom
   const tickInterval = useMemo(() => {
     const baseInterval = duration / 10;

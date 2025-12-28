@@ -138,7 +138,7 @@ export async function generateMetadata({
 // Components
 // ============================================================================
 
-function JobSummaryCard({ job }: { job: JobDetails }) {
+function JobSummaryCard({ job }: Readonly<{ job: JobDetails }>) {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', {
@@ -197,17 +197,25 @@ function JobSummaryCard({ job }: { job: JobDetails }) {
             </span>
           </div>
 
-          {job.isRemote ? (
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="text-muted-foreground h-4 w-4" />
-              <span>Remote</span>
-            </div>
-          ) : job.location ? (
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="text-muted-foreground h-4 w-4" />
-              <span>{job.location}</span>
-            </div>
-          ) : null}
+          {(() => {
+            if (job.isRemote) {
+              return (
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="text-muted-foreground h-4 w-4" />
+                  <span>Remote</span>
+                </div>
+              );
+            }
+            if (job.location) {
+              return (
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="text-muted-foreground h-4 w-4" />
+                  <span>{job.location}</span>
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="text-muted-foreground h-4 w-4" />
@@ -292,7 +300,7 @@ function JobSummaryCard({ job }: { job: JobDetails }) {
 // Page
 // ============================================================================
 
-export default async function ApplyPage({ params }: { params: { slug: string } }) {
+export default async function ApplyPage({ params }: Readonly<{ params: { slug: string } }>) {
   const job = await getJobDetails(params.slug);
 
   if (!job) {

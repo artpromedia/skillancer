@@ -248,7 +248,7 @@ export interface LateFeeConfig {
 // SETTINGS
 // ============================================================================
 
-export interface UpdateSettingsParams {
+export interface UpdateInvoiceSettingsParams {
   invoicePrefix?: string;
   numberPadding?: number;
   numberFormat?: string;

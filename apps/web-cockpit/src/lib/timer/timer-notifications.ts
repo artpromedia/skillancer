@@ -88,7 +88,7 @@ export class TimerNotifications {
 
   constructor(config?: Partial<TimerNotificationConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.init();
+    void this.init();
   }
 
   private async init(): Promise<void> {
@@ -110,9 +110,12 @@ export class TimerNotifications {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
-        this.config = { ...DEFAULT_CONFIG, ...JSON.parse(stored) };
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const parsed: NotificationConfig = JSON.parse(stored);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        this.config = { ...DEFAULT_CONFIG, ...parsed };
       } catch (e) {
-        console.error('Failed to parse notification config:', e);
+        // Failed to parse notification config - using defaults
       }
     }
   }
@@ -177,7 +180,7 @@ export class TimerNotifications {
 
     const elapsedMinutes = Math.floor((Date.now() - this.timerStartTime) / 60000);
 
-    this.showNotification('idle_reminder', {
+    void this.showNotification('idle_reminder', {
       title: 'Timer Still Running',
       body: `Your timer has been running for ${formatDuration(elapsedMinutes)}. Are you still working?`,
       tag: 'idle-reminder',
@@ -194,7 +197,7 @@ export class TimerNotifications {
 
     const elapsedMinutes = Math.floor((Date.now() - this.timerStartTime) / 60000);
 
-    this.showNotification('long_running', {
+    void this.showNotification('long_running', {
       title: 'Long Running Timer',
       body: `Your timer has been running for ${formatDuration(elapsedMinutes)}. Consider taking a break!`,
       tag: 'long-running',
@@ -209,10 +212,10 @@ export class TimerNotifications {
   /**
    * Show a notification
    */
-  private async showNotification(
+  private showNotification(
     type: NotificationEventType,
     payload: NotificationPayload
-  ): Promise<Notification | null> {
+  ): Notification | null {
     if (!this.config.enabled || !this.permissionGranted) {
       return null;
     }
@@ -250,7 +253,10 @@ export class TimerNotifications {
   private playNotificationSound(): void {
     // Create and play a simple notification sound
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const audioContext = new AudioContextClass();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -266,7 +272,7 @@ export class TimerNotifications {
 
       // Cleanup
       setTimeout(() => {
-        audioContext.close();
+        void audioContext.close();
       }, 200);
     } catch (e) {
       console.error('Failed to play notification sound:', e);
@@ -296,7 +302,7 @@ export class TimerNotifications {
     }
 
     // Show start notification
-    this.showNotification('timer_started', {
+    void this.showNotification('timer_started', {
       title: 'Timer Started',
       body: `Started tracking time for ${projectName}`,
       tag: 'timer-started',
@@ -320,7 +326,7 @@ export class TimerNotifications {
     }
 
     // Show stop notification
-    this.showNotification('timer_stopped', {
+    void this.showNotification('timer_stopped', {
       title: 'Timer Stopped',
       body: `Tracked ${formatDuration(duration)} for ${projectName}`,
       tag: 'timer-stopped',
@@ -337,7 +343,7 @@ export class TimerNotifications {
       this.idleTimer = null;
     }
 
-    this.showNotification('timer_paused', {
+    void this.showNotification('timer_paused', {
       title: 'Timer Paused',
       body: "Your timer is paused. Don't forget to resume!",
       tag: 'timer-paused',
@@ -353,7 +359,7 @@ export class TimerNotifications {
       currency: 'USD',
     }).format(earnings);
 
-    this.showNotification('daily_summary', {
+    void this.showNotification('daily_summary', {
       title: 'Daily Summary',
       body: `You tracked ${formatDuration(totalHours * 60)} across ${projectCount} project${
         projectCount > 1 ? 's' : ''

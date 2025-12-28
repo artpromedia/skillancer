@@ -13,6 +13,7 @@
 export type MessageStatus = 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
 export type MessageType = 'TEXT' | 'FILE' | 'IMAGE' | 'VOICE' | 'SYSTEM' | 'CONTRACT_EVENT';
 export type ConversationStatus = 'ACTIVE' | 'ARCHIVED' | 'BLOCKED';
+export type ConversationType = 'JOB' | 'CONTRACT' | 'PROPOSAL';
 
 export interface MessageAttachment {
   id: string;
@@ -88,7 +89,7 @@ export interface Conversation {
   isMuted: boolean;
   status: ConversationStatus;
   context?: {
-    type: 'JOB' | 'CONTRACT' | 'PROPOSAL';
+    type: ConversationType;
     id: string;
     title: string;
   };
@@ -104,7 +105,7 @@ export interface ConversationFilters {
   status?: ConversationStatus;
   unreadOnly?: boolean;
   search?: string;
-  contextType?: 'JOB' | 'CONTRACT' | 'PROPOSAL';
+  contextType?: ConversationType;
   contextId?: string;
 }
 
@@ -400,7 +401,7 @@ export async function uploadAttachment(
  */
 export async function startConversation(
   userId: string,
-  context?: { type: 'JOB' | 'CONTRACT' | 'PROPOSAL'; id: string; title: string }
+  context?: { type: ConversationType; id: string; title: string }
 ): Promise<Conversation> {
   await new Promise((r) => setTimeout(r, 300));
 
@@ -492,9 +493,8 @@ export async function getTotalUnreadCount(): Promise<number> {
 /**
  * Send typing indicator
  */
-export function sendTypingIndicator(conversationId: string, isTyping: boolean): void {
-  // This would be sent via WebSocket
-  console.log(`Typing indicator: ${conversationId} - ${isTyping}`);
+export function sendTypingIndicator(_conversationId: string, _isTyping: boolean): void {
+  // Feature: Send typing indicator via WebSocket - not yet implemented
 }
 
 // ============================================================================

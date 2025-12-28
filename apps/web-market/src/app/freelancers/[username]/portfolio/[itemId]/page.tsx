@@ -5,9 +5,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { getFreelancerByUsername, getPortfolioItem } from '@/lib/api/freelancers';
+
 import type { Metadata } from 'next';
 
-import { getFreelancerByUsername, getPortfolioItem } from '@/lib/api/freelancers';
 
 // ============================================================================
 // Types

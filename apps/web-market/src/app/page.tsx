@@ -48,8 +48,7 @@ export default async function Home() {
               AI-Powered Matching
             </Badge>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-              Find the perfect match for
-              <span className="text-primary"> your next project</span>
+              Find the perfect match for <span className="text-primary">your next project</span>
             </h1>
             <p className="text-muted-foreground mx-auto mt-6 max-w-2xl text-lg">
               Skillancer&apos;s SmartMatch algorithm connects you with top talent or the right
@@ -524,8 +523,8 @@ function TestimonialCard({
     <Card>
       <CardContent className="p-6">
         <div className="mb-4 flex gap-0.5">
-          {Array.from({ length: rating }).map((_, i) => (
-            <Star key={`star-${i}`} className="h-4 w-4 fill-current text-yellow-500" />
+          {Array.from({ length: rating }, (_, i) => i + 1).map((starNum) => (
+            <Star key={`star-${starNum}`} className="h-4 w-4 fill-current text-yellow-500" />
           ))}
         </div>
         <p className="text-muted-foreground mb-4">&ldquo;{quote}&rdquo;</p>

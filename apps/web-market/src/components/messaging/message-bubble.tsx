@@ -21,8 +21,6 @@ import {
   Edit,
   ExternalLink,
   File,
-  Forward,
-  Image,
   Mic,
   MoreVertical,
   Play,
@@ -48,11 +46,11 @@ import type {
 interface MessageBubbleProps {
   message: Message;
   isOwn: boolean;
-  isGrouped?: boolean;
-  onEdit?: (messageId: string, content: string) => Promise<void>;
-  onDelete?: (messageId: string) => Promise<void>;
-  onReact?: (messageId: string, emoji: string) => Promise<void>;
-  onReply?: () => void;
+  isGrouped?: boolean | undefined;
+  onEdit?: ((messageId: string, content: string) => Promise<void>) | undefined;
+  onDelete?: ((messageId: string) => Promise<void>) | undefined;
+  onReact?: ((messageId: string, emoji: string) => Promise<void>) | undefined;
+  onReply?: (() => void) | undefined;
 }
 
 // ============================================================================
@@ -66,10 +64,13 @@ interface QuickReactionsProps {
   onClose: () => void;
 }
 
-function QuickReactions({ onReact, onClose }: QuickReactionsProps) {
+function QuickReactions({ onReact, onClose }: Readonly<QuickReactionsProps>) {
   return (
     <div
+      aria-label="Quick reactions"
       className="flex items-center gap-0.5 rounded-full border bg-white px-1 py-0.5 shadow-lg dark:bg-gray-900"
+      role="toolbar"
+      onBlur={onClose}
       onMouseLeave={onClose}
     >
       {QUICK_REACTIONS.map((emoji) => (
@@ -94,7 +95,7 @@ interface StatusIconProps {
   status: MessageStatus;
 }
 
-function StatusIcon({ status }: StatusIconProps) {
+function StatusIcon({ status }: Readonly<StatusIconProps>) {
   switch (status) {
     case 'SENDING':
       return <Clock className="text-muted-foreground h-3 w-3" />;
@@ -120,7 +121,7 @@ interface AttachmentRendererProps {
   isOwn: boolean;
 }
 
-function AttachmentRenderer({ attachment, isOwn }: AttachmentRendererProps) {
+function AttachmentRenderer({ attachment, isOwn }: Readonly<AttachmentRendererProps>) {
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -207,7 +208,7 @@ interface LinkPreviewCardProps {
   isOwn: boolean;
 }
 
-function LinkPreviewCard({ preview, isOwn }: LinkPreviewCardProps) {
+function LinkPreviewCard({ preview, isOwn }: Readonly<LinkPreviewCardProps>) {
   return (
     <a
       className={cn(
@@ -246,7 +247,7 @@ interface ReactionsDisplayProps {
   isOwn: boolean;
 }
 
-function ReactionsDisplay({ reactions, isOwn }: ReactionsDisplayProps) {
+function ReactionsDisplay({ reactions, isOwn }: Readonly<ReactionsDisplayProps>) {
   if (reactions.length === 0) return null;
 
   // Group reactions by emoji
@@ -294,7 +295,7 @@ interface ReplyPreviewProps {
   isOwn: boolean;
 }
 
-function ReplyPreviewInBubble({ replyTo, isOwn }: ReplyPreviewProps) {
+function ReplyPreviewInBubble({ replyTo, isOwn }: Readonly<ReplyPreviewProps>) {
   return (
     <div
       className={cn(
@@ -320,7 +321,7 @@ export function MessageBubble({
   onDelete,
   onReact,
   onReply,
-}: MessageBubbleProps) {
+}: Readonly<MessageBubbleProps>) {
   const [showReactions, setShowReactions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);

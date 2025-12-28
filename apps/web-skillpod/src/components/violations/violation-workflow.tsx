@@ -25,10 +25,8 @@ import {
   MessageSquare,
   Shield,
   Clock,
-  User,
   Lock,
   Check,
-  X,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
@@ -255,11 +253,11 @@ function ActionCard({
   action,
   isSelected,
   onSelect,
-}: {
+}: Readonly<{
   action: ResolutionAction;
   isSelected: boolean;
   onSelect: () => void;
-}) {
+}>) {
   const Icon = action.icon;
 
   return (
@@ -298,13 +296,13 @@ function ActionCard({
   );
 }
 
-function ConsequencesPanel({ action }: { action: ResolutionAction }) {
+function ConsequencesPanel({ action }: Readonly<{ action: ResolutionAction }>) {
   return (
     <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
       <h4 className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Consequences</h4>
       <ul className="space-y-2">
-        {action.consequences.map((consequence, index) => (
-          <li key={index} className="flex items-start gap-2 text-sm">
+        {action.consequences.map((consequence) => (
+          <li key={consequence} className="flex items-start gap-2 text-sm">
             <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${action.color}`} />
             <span className="text-gray-600 dark:text-gray-400">{consequence}</span>
           </li>
@@ -318,11 +316,11 @@ function NotificationPreview({
   action,
   violation,
   reason,
-}: {
+}: Readonly<{
   action: ResolutionAction;
   violation: Violation;
   reason: string;
-}) {
+}>) {
   const [expanded, setExpanded] = useState(false);
 
   if (action.notificationTypes.length === 0) {
@@ -372,14 +370,14 @@ function NotificationPreview({
               {action.id === 'warned' && (
                 <>
                   We have detected a policy violation on your account regarding:{' '}
-                  <strong>{violation.type.replace(/_/g, ' ')}</strong>. This is a formal warning
+                  <strong>{violation.type.replaceAll('_', ' ')}</strong>. This is a formal warning
                   that has been recorded in your account history.
                 </>
               )}
               {action.id === 'suspended' && (
                 <>
                   Your session has been suspended due to a security policy violation:{' '}
-                  <strong>{violation.type.replace(/_/g, ' ')}</strong>. Please contact support for
+                  <strong>{violation.type.replaceAll('_', ' ')}</strong>. Please contact support for
                   more information.
                 </>
               )}
@@ -393,7 +391,7 @@ function NotificationPreview({
               {action.id === 'acknowledged' && (
                 <>
                   We have noticed some activity on your account that requires attention:{' '}
-                  <strong>{violation.type.replace(/_/g, ' ')}</strong>. Please review our security
+                  <strong>{violation.type.replaceAll('_', ' ')}</strong>. Please review our security
                   policies.
                 </>
               )}
@@ -415,7 +413,7 @@ function NotificationPreview({
   );
 }
 
-function ApprovalChain({ action }: { action: ResolutionAction }) {
+function ApprovalChain({ action }: Readonly<{ action: ResolutionAction }>) {
   if (!action.requiresApproval) {
     return null;
   }
@@ -441,8 +439,8 @@ function ApprovalChain({ action }: { action: ResolutionAction }) {
         This action requires approval from the following:
       </p>
       <div className="space-y-2">
-        {approvers.map((approver, index) => (
-          <div key={index} className="flex items-center gap-2">
+        {approvers.map((approver) => (
+          <div key={approver.id} className="flex items-center gap-2">
             <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-orange-300">
               <Clock className="h-3 w-3 text-orange-400" />
             </div>
@@ -458,12 +456,13 @@ function ApprovalChain({ action }: { action: ResolutionAction }) {
 function AuditConfirmation({
   confirmed,
   onChange,
-}: {
+}: Readonly<{
   confirmed: boolean;
   onChange: (confirmed: boolean) => void;
-}) {
+}>) {
   return (
     <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
+      <span className="sr-only">Confirm audit log recording</span>
       <input
         checked={confirmed}
         className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -487,7 +486,7 @@ function AuditConfirmation({
 // Main Component
 // ============================================================================
 
-export function ViolationWorkflow({ violation, onResolve }: ViolationWorkflowProps) {
+export function ViolationWorkflow({ violation, onResolve }: Readonly<ViolationWorkflowProps>) {
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [auditConfirmed, setAuditConfirmed] = useState(false);
@@ -600,11 +599,15 @@ export function ViolationWorkflow({ violation, onResolve }: ViolationWorkflowPro
 
           {/* Reason */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              htmlFor="violation-reason"
+            >
               Reason / Notes *
             </label>
             <textarea
               className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              id="violation-reason"
               placeholder="Provide a reason for this action..."
               rows={3}
               value={reason}
@@ -612,9 +615,9 @@ export function ViolationWorkflow({ violation, onResolve }: ViolationWorkflowPro
             />
             {reasonTemplates.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
-                {reasonTemplates.map((template, index) => (
+                {reasonTemplates.map((template) => (
                   <button
-                    key={index}
+                    key={template}
                     className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
                     onClick={() => setReason(template)}
                   >
@@ -643,32 +646,38 @@ export function ViolationWorkflow({ violation, onResolve }: ViolationWorkflowPro
               Cancel
             </button>
             <button
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-white disabled:opacity-50 ${
-                currentAction.id === 'banned'
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : currentAction.id === 'suspended'
-                    ? 'bg-orange-600 hover:bg-orange-700'
-                    : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-white disabled:opacity-50 ${(() => {
+                if (currentAction.id === 'banned') return 'bg-red-600 hover:bg-red-700';
+                if (currentAction.id === 'suspended') return 'bg-orange-600 hover:bg-orange-700';
+                return 'bg-blue-600 hover:bg-blue-700';
+              })()}`}
               disabled={!canSubmit}
               onClick={handleSubmit}
             >
-              {isSubmitting ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Processing...
-                </>
-              ) : currentAction.requiresApproval ? (
-                <>
-                  <Send className="h-4 w-4" />
-                  Submit for Approval
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4" />
-                  {currentAction.label}
-                </>
-              )}
+              {(() => {
+                if (isSubmitting) {
+                  return (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Processing...
+                    </>
+                  );
+                }
+                if (currentAction.requiresApproval) {
+                  return (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Submit for Approval
+                    </>
+                  );
+                }
+                return (
+                  <>
+                    <Check className="h-4 w-4" />
+                    {currentAction.label}
+                  </>
+                );
+              })()}
             </button>
           </div>
         </>

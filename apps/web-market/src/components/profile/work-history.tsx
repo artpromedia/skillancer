@@ -60,6 +60,12 @@ function formatEarnings(amount: number): string {
   return `$${amount.toLocaleString()}`;
 }
 
+function formatEndDate(isCurrent: boolean, endDate: string | undefined | null): string {
+  if (isCurrent) return 'Present';
+  if (endDate) return formatDate(endDate);
+  return '';
+}
+
 // ============================================================================
 // Work History Item Component
 // ============================================================================
@@ -69,7 +75,7 @@ interface WorkHistoryItemCardProps {
   isLast: boolean;
 }
 
-function WorkHistoryItemCard({ item, isLast }: WorkHistoryItemCardProps) {
+function WorkHistoryItemCard({ item, isLast }: Readonly<WorkHistoryItemCardProps>) {
   const [expanded, setExpanded] = useState(false);
   const isPlatformWork = item.type === 'PLATFORM';
 
@@ -124,8 +130,7 @@ function WorkHistoryItemCard({ item, isLast }: WorkHistoryItemCardProps) {
         <div className="text-muted-foreground mt-1 flex items-center gap-2 text-sm">
           <Calendar className="h-3.5 w-3.5" />
           <span>
-            {formatDate(item.startDate)} –{' '}
-            {item.isCurrent ? 'Present' : item.endDate ? formatDate(item.endDate) : ''}
+            {formatDate(item.startDate)} – {formatEndDate(item.isCurrent, item.endDate)}
           </span>
           <span className="text-muted-foreground/50">•</span>
           <span>{formatDuration(item.startDate, item.endDate, item.isCurrent)}</span>
@@ -188,7 +193,7 @@ export function WorkHistory({
   isOwnProfile = false,
   maxItems = 5,
   className,
-}: WorkHistoryProps) {
+}: Readonly<WorkHistoryProps>) {
   const [showAll, setShowAll] = useState(false);
 
   // Sort by date (most recent first)

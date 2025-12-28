@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { Job } from '@/lib/api/jobs';
 
 interface SimilarJobsProps {
-  jobs: Job[];
+  readonly jobs: Job[];
 }
 
 export function SimilarJobs({ jobs }: SimilarJobsProps) {
@@ -67,6 +67,22 @@ export function SimilarJobs({ jobs }: SimilarJobsProps) {
   );
 }
 
+function formatBudgetDisplay(
+  budgetMin: number | undefined,
+  budgetMax: number | undefined,
+  isHourly: boolean,
+  format: (n: number) => string
+): string {
+  if (isHourly) {
+    if (budgetMax) return `${format(budgetMax)}/hr`;
+    if (budgetMin) return `${format(budgetMin)}/hr`;
+    return 'TBD';
+  }
+  if (budgetMax) return format(budgetMax);
+  if (budgetMin) return format(budgetMin);
+  return 'TBD';
+}
+
 function formatBudgetShort(job: Job): string {
   const { budgetType, budgetMin, budgetMax } = job;
 
@@ -77,9 +93,5 @@ function formatBudgetShort(job: Job): string {
     return `$${n}`;
   };
 
-  if (budgetType === 'HOURLY') {
-    return budgetMax ? `${format(budgetMax)}/hr` : budgetMin ? `${format(budgetMin)}/hr` : 'TBD';
-  }
-
-  return budgetMax ? format(budgetMax) : budgetMin ? format(budgetMin) : 'TBD';
+  return formatBudgetDisplay(budgetMin, budgetMax, budgetType === 'HOURLY', format);
 }

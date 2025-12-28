@@ -854,7 +854,7 @@ export class PricingRecommendationService {
         changePercent: Number(r.rateChangePercent),
         yearlyImpact: Number(r.projectedYearlyImpact),
         confidence: Number(r.confidenceScore),
-        reasoning: r.reasoning as RecommendationReason[],
+        reasoning: r.reasoning,
       })),
       projections: {
         current: currentProjection

@@ -159,7 +159,10 @@ const STEPS = [
 // Sub-Components
 // ============================================================================
 
-function StepIndicator({ steps, currentStep }: { steps: typeof STEPS; currentStep: number }) {
+function StepIndicator({
+  steps,
+  currentStep,
+}: Readonly<{ steps: typeof STEPS; currentStep: number }>) {
   return (
     <div className="mb-8 flex items-center justify-between">
       {steps.map((step, index) => (
@@ -331,11 +334,15 @@ function PeriodStep({
 
       {/* Report Name */}
       <div className="mb-6">
-        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label
+          className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          htmlFor="report-name"
+        >
           Report Name
         </label>
         <input
           className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          id="report-name"
           placeholder="e.g., Q4 2024 SOC 2 Compliance Report"
           type="text"
           value={reportName}
@@ -345,9 +352,9 @@ function PeriodStep({
 
       {/* Quick Presets */}
       <div className="mb-6">
-        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
           Quick Select
-        </label>
+        </span>
         <div className="flex flex-wrap gap-2">
           {presets.map((preset) => (
             <button
@@ -364,22 +371,30 @@ function PeriodStep({
       {/* Date Range */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            htmlFor="report-start-date"
+          >
             Start Date
           </label>
           <input
             className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            id="report-start-date"
             type="date"
             value={dateRange.start}
             onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
           />
         </div>
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            htmlFor="report-end-date"
+          >
             End Date
           </label>
           <input
             className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            id="report-end-date"
             type="date"
             value={dateRange.end}
             onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
@@ -478,9 +493,9 @@ function OptionsStep({
       <div className="space-y-6">
         {/* Format */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Output Format
-          </label>
+          </span>
           <div className="flex gap-4">
             {(['pdf', 'excel', 'json'] as const).map((format) => (
               <label key={format} className="flex cursor-pointer items-center gap-2">
@@ -499,9 +514,9 @@ function OptionsStep({
 
         {/* Include Options */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Include
-          </label>
+          </span>
           <div className="space-y-2">
             <label className="flex cursor-pointer items-center gap-3">
               <input
@@ -549,11 +564,15 @@ function OptionsStep({
           {config.schedule.enabled && (
             <div className="space-y-4 pl-7">
               <div>
-                <label className="mb-2 block text-sm text-gray-600 dark:text-gray-400">
+                <label
+                  className="mb-2 block text-sm text-gray-600 dark:text-gray-400"
+                  htmlFor="schedule-frequency"
+                >
                   Frequency
                 </label>
                 <select
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
+                  id="schedule-frequency"
                   value={config.schedule.frequency}
                   onChange={(e) =>
                     onConfigChange({
@@ -573,12 +592,16 @@ function OptionsStep({
 
         {/* Recipients */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            htmlFor="report-recipient-email"
+          >
             Email Recipients
           </label>
           <div className="mb-2 flex gap-2">
             <input
               className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
+              id="report-recipient-email"
               placeholder="email@example.com"
               type="email"
               value={newRecipient}
@@ -615,7 +638,7 @@ function OptionsStep({
   );
 }
 
-function ReviewStep({ config }: { config: ReportConfig }) {
+function ReviewStep({ config }: Readonly<{ config: ReportConfig }>) {
   const framework = FRAMEWORKS.find((f) => f.id === config.framework);
 
   return (

@@ -15,9 +15,10 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useCallback, useTransition } from 'react';
 
+import { useJobStore } from '@/stores/job-store';
+
 import type { Category, JobSearchFilters } from '@/lib/api/jobs';
 
-import { useJobStore } from '@/stores/job-store';
 
 // ============================================================================
 // Types
@@ -68,13 +69,13 @@ const clientHistoryOptions = [
 // Component
 // ============================================================================
 
-export function JobFilters({ categories, initialFilters, className }: JobFiltersProps) {
+export function JobFilters({ categories, initialFilters, className }: Readonly<JobFiltersProps>) {
   const router = useRouter();
   const _searchParams = useSearchParams();
-  const [_isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // Local state for form controls
-  const [filters, setLocalFilters] = useState<JobSearchFilters>(initialFilters);
+  const [filters, setFilters] = useState<JobSearchFilters>(initialFilters);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [budgetMin, setBudgetMin] = useState(filters.budgetMin?.toString() ?? '');
   const [budgetMax, setBudgetMax] = useState(filters.budgetMax?.toString() ?? '');
@@ -99,7 +100,9 @@ export function JobFilters({ categories, initialFilters, className }: JobFilters
       });
 
       startTransition(() => {
-        router.push(`/jobs${params.toString() ? `?${params.toString()}` : ''}`, {
+        const queryString = params.toString();
+        const url = queryString ? `/jobs?${queryString}` : '/jobs';
+        router.push(url, {
           scroll: false,
         });
       });
@@ -114,7 +117,7 @@ export function JobFilters({ categories, initialFilters, className }: JobFilters
       if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
         delete newFilters[key];
       }
-      setLocalFilters(newFilters);
+      setFilters(newFilters);
       applyFilters(newFilters);
     },
     [filters, applyFilters]
@@ -122,7 +125,7 @@ export function JobFilters({ categories, initialFilters, className }: JobFilters
 
   // Clear all filters
   const clearAllFilters = useCallback(() => {
-    setLocalFilters({});
+    setFilters({});
     setBudgetMin('');
     setBudgetMax('');
     applyFilters({});
@@ -152,7 +155,7 @@ export function JobFilters({ categories, initialFilters, className }: JobFilters
     const min = budgetMin ? Number(budgetMin) : undefined;
     const max = budgetMax ? Number(budgetMax) : undefined;
     const newFilters = { ...filters, budgetMin: min, budgetMax: max };
-    setLocalFilters(newFilters);
+    setFilters(newFilters);
     applyFilters(newFilters);
   }, [budgetMin, budgetMax, filters, applyFilters]);
 
@@ -207,15 +210,12 @@ export function JobFilters({ categories, initialFilters, className }: JobFilters
                     }}
                   >
                     <span className="flex items-center gap-2">
-                      {category.children?.length ? (
-                        expandedCategories.has(category.id) ? (
-                          <ChevronDown className="h-3 w-3" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3" />
-                        )
-                      ) : (
-                        <span className="w-3" />
-                      )}
+                      {(() => {
+                        if (!category.children?.length) return <span className="w-3" />;
+                        if (expandedCategories.has(category.id))
+                          return <ChevronDown className="h-3 w-3" />;
+                        return <ChevronRight className="h-3 w-3" />;
+                      })()}
                       {category.name}
                     </span>
                     <span className="text-muted-foreground text-xs">{category.jobCount}</span>
@@ -475,7 +475,10 @@ export function JobFilters({ categories, initialFilters, className }: JobFilters
 // Filter Section Component
 // ============================================================================
 
-function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+function FilterSection({
+  title,
+  children,
+}: Readonly<{ title: string; children: React.ReactNode }>) {
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium">{title}</h3>

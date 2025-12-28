@@ -4,15 +4,15 @@
 
 import { calendarRoutes } from './calendar.routes.js';
 import { registerClientRoutes } from './clients.routes.js';
+import { registerCommunicationRoutes } from './communication.routes.js';
 import { registerDocumentRoutes } from './documents.routes.js';
 import { registerFinanceRoutes } from './finance.routes.js';
 import { registerFreelancePlatformRoutes } from './freelance-platform.routes.js';
 import { registerIntegrationRoutes } from './integration.routes.js';
-import { registerMarketContractRoutes } from './market-contracts.routes.js';
-import { registerProductivityToolRoutes } from './productivity-tools.routes.js';
-import { registerCommunicationRoutes } from './communication.routes.js';
 import { registerInvoiceRoutes } from './invoice.routes.js';
+import { registerMarketContractRoutes } from './market-contracts.routes.js';
 import { registerOpportunityRoutes } from './opportunities.routes.js';
+import { registerProductivityToolRoutes } from './productivity-tools.routes.js';
 import {
   registerProjectRoutes,
   registerTemplateRoutes,
@@ -23,8 +23,8 @@ import { registerReminderRoutes } from './reminders.routes.js';
 import { timeTrackingRoutes } from './time-tracking.routes.js';
 import { CalendarService } from '../services/calendar.service.js';
 import { EncryptionService } from '../services/encryption.service.js';
-import { SlackIntegrationService } from '../services/integrations/slack-integration.service.js';
 import { DiscordIntegrationService } from '../services/integrations/discord-integration.service.js';
+import { SlackIntegrationService } from '../services/integrations/slack-integration.service.js';
 
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';

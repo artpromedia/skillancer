@@ -10,7 +10,6 @@
  * @module components/time/time-entry-row
  */
 
-import { useState, useRef, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -25,6 +24,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 
 // ============================================================================
 // Types
@@ -158,11 +158,11 @@ export function TimeEntryRow({
         <div className="min-w-0 flex-1">
           <input
             ref={descriptionRef}
+            className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
+            placeholder="What did you work on?"
             type="text"
             value={editedEntry.description}
             onChange={(e) => setEditedEntry({ ...editedEntry, description: e.target.value })}
-            placeholder="What did you work on?"
-            className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
           />
           <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
             <Briefcase className="h-3 w-3" />
@@ -173,17 +173,17 @@ export function TimeEntryRow({
         {/* Time Inputs */}
         <div className="flex items-center gap-2">
           <input
+            className="rounded border border-gray-200 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
             type="time"
             value={editedEntry.startTime}
             onChange={(e) => handleTimeChange('startTime', e.target.value)}
-            className="rounded border border-gray-200 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
           />
           <span className="text-gray-400">-</span>
           <input
+            className="rounded border border-gray-200 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
             type="time"
             value={editedEntry.endTime}
             onChange={(e) => handleTimeChange('endTime', e.target.value)}
-            className="rounded border border-gray-200 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
           />
         </div>
 
@@ -196,13 +196,13 @@ export function TimeEntryRow({
 
         {/* Billable Toggle */}
         <button
-          onClick={() => setEditedEntry({ ...editedEntry, billable: !editedEntry.billable })}
           className={`rounded p-1.5 ${
             editedEntry.billable
               ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
               : 'bg-gray-100 text-gray-400 dark:bg-gray-700'
           }`}
           title={editedEntry.billable ? 'Billable' : 'Non-billable'}
+          onClick={() => setEditedEntry({ ...editedEntry, billable: !editedEntry.billable })}
         >
           <DollarSign className="h-4 w-4" />
         </button>
@@ -210,16 +210,16 @@ export function TimeEntryRow({
         {/* Save/Cancel Actions */}
         <div className="flex items-center gap-1">
           <button
-            onClick={() => onSave?.(editedEntry)}
             className="rounded p-1.5 text-green-600 hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-900/30"
             title="Save"
+            onClick={() => onSave?.(editedEntry)}
           >
             <Check className="h-5 w-5" />
           </button>
           <button
-            onClick={onCancel}
             className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
             title="Cancel"
+            onClick={onCancel}
           >
             <X className="h-5 w-5" />
           </button>
@@ -300,16 +300,16 @@ export function TimeEntryRow({
       {/* Actions (visible on hover) */}
       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         <button
-          onClick={() => onStartTimer?.(entry)}
           className="rounded p-1.5 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/30"
           title="Start timer with this entry"
+          onClick={() => onStartTimer?.(entry)}
         >
           <Play className="h-4 w-4" />
         </button>
         <button
-          onClick={() => onEdit?.(entry.id)}
           className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
           title="Edit"
+          onClick={() => onEdit?.(entry.id)}
         >
           <Edit3 className="h-4 w-4" />
         </button>
@@ -317,8 +317,8 @@ export function TimeEntryRow({
         {/* More Actions Menu */}
         <div ref={menuRef} className="relative">
           <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
@@ -326,21 +326,21 @@ export function TimeEntryRow({
           {isMenuOpen && (
             <div className="absolute right-0 z-10 mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
               <button
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                 onClick={() => {
                   onDuplicate?.(entry);
                   setIsMenuOpen(false);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 <Copy className="h-4 w-4" />
                 Duplicate
               </button>
               <button
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                 onClick={() => {
                   onDelete?.(entry.id);
                   setIsMenuOpen(false);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete

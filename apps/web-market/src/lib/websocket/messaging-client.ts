@@ -110,16 +110,16 @@ export class MessagingClient {
   private ws: WebSocket | null = null;
   private status: WebSocketStatus = 'DISCONNECTED';
   private eventHandlers: EventHandlers = {};
-  private statusHandlers: Array<(status: WebSocketStatus) => void> = [];
+  private readonly statusHandlers: Array<(status: WebSocketStatus) => void> = [];
   private reconnectAttempts = 0;
-  private maxReconnectAttempts: number;
-  private reconnectInterval: number;
-  private heartbeatInterval: number;
+  private readonly maxReconnectAttempts: number;
+  private readonly reconnectInterval: number;
+  private readonly heartbeatInterval: number;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private url: string;
-  private debug: boolean;
-  private subscribedConversations: Set<string> = new Set();
+  private readonly url: string;
+  private readonly debug: boolean;
+  private readonly subscribedConversations: Set<string> = new Set();
 
   constructor(options: MessagingClientOptions = {}) {
     this.url = options.url || this.getDefaultUrl();
@@ -130,9 +130,8 @@ export class MessagingClient {
   }
 
   private getDefaultUrl(): string {
-    const protocol =
-      typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = typeof window !== 'undefined' ? window.location.host : 'localhost:3000';
+    const protocol = globalThis.window?.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = globalThis.window?.location.host ?? 'localhost:3000';
     return `${protocol}//${host}/ws/messages`;
   }
 
@@ -185,17 +184,17 @@ export class MessagingClient {
         this.ws.onerror = (error) => {
           this.log('Error:', error);
           this.setStatus('ERROR');
-          reject(error);
+          reject(new Error('WebSocket connection failed'));
         };
 
         this.ws.onclose = (event) => {
           this.log('Disconnected:', event.code, event.reason);
           this.stopHeartbeat();
 
-          if (event.code !== 1000) {
-            this.attemptReconnect();
-          } else {
+          if (event.code === 1000) {
             this.setStatus('DISCONNECTED');
+          } else {
+            this.attemptReconnect();
           }
         };
       } catch (error) {
@@ -389,9 +388,7 @@ export class MessagingClient {
 let clientInstance: MessagingClient | null = null;
 
 export function getMessagingClient(options?: MessagingClientOptions): MessagingClient {
-  if (!clientInstance) {
-    clientInstance = new MessagingClient(options);
-  }
+  clientInstance ??= new MessagingClient(options);
   return clientInstance;
 }
 
@@ -409,7 +406,7 @@ export function destroyMessagingClient(): void {
 export function simulateMockEvents(client: MessagingClient): () => void {
   const intervals: ReturnType<typeof setInterval>[] = [];
 
-  // Simulate incoming messages every 30 seconds
+  // Simulate incoming messages every 30 seconds and typing indicators
   intervals.push(
     setInterval(() => {
       const mockMessage: NewMessageEvent = {
@@ -428,11 +425,7 @@ export function simulateMockEvents(client: MessagingClient): () => void {
       if (handlers['message.new']) {
         handlers['message.new'](mockMessage);
       }
-    }, 30000)
-  );
-
-  // Simulate typing indicators
-  intervals.push(
+    }, 30000),
     setInterval(() => {
       const handlers = (client as unknown as { eventHandlers: EventHandlers }).eventHandlers;
       if (handlers['typing.start']) {

@@ -2,7 +2,7 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage, Button, cn, Skeleton } from '@skillancer/ui';
-import { ArrowDown, CheckCheck, Loader2, MoreVertical, Phone, Video } from 'lucide-react';
+import { ArrowDown, Loader2, MoreVertical, Phone, Video } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { MessageBubble } from './message-bubble';
@@ -10,26 +10,26 @@ import { MessageInput } from './message-input';
 import { SkillPodIndicator } from './skillpod-indicator';
 
 import type { TypingUser } from '@/hooks/use-messaging';
-import type { Message, Conversation, Participant } from '@/lib/api/messages';
+import type { Message, Conversation } from '@/lib/api/messages';
 
 // ============================================================================
 // Types
 // ============================================================================
 
 interface MessageThreadProps {
-  conversation: Conversation;
-  messages: Message[];
-  currentUserId: string;
-  loading?: boolean;
-  hasMore?: boolean;
-  typingUsers?: TypingUser[];
-  onLoadMore?: () => Promise<void>;
-  onSendMessage: (content: string, attachments?: File[]) => Promise<void>;
-  onEditMessage?: (messageId: string, content: string) => Promise<void>;
-  onDeleteMessage?: (messageId: string) => Promise<void>;
-  onReactToMessage?: (messageId: string, emoji: string) => Promise<void>;
-  onReplyToMessage?: (message: Message) => void;
-  onTypingChange?: (isTyping: boolean) => void;
+  readonly conversation: Conversation;
+  readonly messages: Message[];
+  readonly currentUserId: string;
+  readonly loading?: boolean;
+  readonly hasMore?: boolean;
+  readonly typingUsers?: TypingUser[];
+  readonly onLoadMore?: () => Promise<void>;
+  readonly onSendMessage: (content: string, attachments?: File[]) => Promise<void>;
+  readonly onEditMessage?: (messageId: string, content: string) => Promise<void>;
+  readonly onDeleteMessage?: (messageId: string) => Promise<void>;
+  readonly onReactToMessage?: (messageId: string, emoji: string) => Promise<void>;
+  readonly onReplyToMessage?: (message: Message) => void;
+  readonly onTypingChange?: (isTyping: boolean) => void;
 }
 
 // ============================================================================
@@ -94,19 +94,26 @@ function shouldGroupMessages(
 // Typing Indicator
 // ============================================================================
 
+function getTypingText(users: TypingUser[]): string {
+  if (users.length === 0) return 'Unknown';
+  const firstUser = users[0];
+  if (!firstUser) return 'Unknown';
+  if (users.length === 1) return firstUser.userName;
+  const secondUser = users[1];
+  if (users.length === 2 && secondUser) {
+    return `${firstUser.userName} and ${secondUser.userName}`;
+  }
+  return `${firstUser.userName} and ${users.length - 1} others`;
+}
+
 interface TypingIndicatorProps {
-  users: TypingUser[];
+  readonly users: TypingUser[];
 }
 
 function TypingIndicator({ users }: TypingIndicatorProps) {
   if (users.length === 0) return null;
 
-  const names =
-    users.length === 1
-      ? users[0].userName
-      : users.length === 2
-        ? `${users[0].userName} and ${users[1].userName}`
-        : `${users[0].userName} and ${users.length - 1} others`;
+  const names = getTypingText(users);
 
   return (
     <div className="flex items-center gap-2 px-4 py-2">
@@ -133,9 +140,19 @@ function TypingIndicator({ users }: TypingIndicatorProps) {
 // Thread Header
 // ============================================================================
 
+function getOnlineStatus(isOnline: boolean, lastSeenAt: string | undefined): React.ReactNode {
+  if (isOnline) {
+    return <span className="text-green-600">Active now</span>;
+  }
+  if (lastSeenAt) {
+    return `Last seen ${new Date(lastSeenAt).toLocaleString()}`;
+  }
+  return 'Offline';
+}
+
 interface ThreadHeaderProps {
-  conversation: Conversation;
-  currentUserId: string;
+  readonly conversation: Conversation;
+  readonly currentUserId: string;
 }
 
 function ThreadHeader({ conversation, currentUserId }: ThreadHeaderProps) {
@@ -168,13 +185,7 @@ function ThreadHeader({ conversation, currentUserId }: ThreadHeaderProps) {
             )}
           </div>
           <p className="text-muted-foreground text-sm">
-            {isOnline ? (
-              <span className="text-green-600">Active now</span>
-            ) : otherParticipant?.lastSeenAt ? (
-              `Last seen ${new Date(otherParticipant.lastSeenAt).toLocaleString()}`
-            ) : (
-              'Offline'
-            )}
+            {getOnlineStatus(isOnline, otherParticipant?.lastSeenAt)}
           </p>
         </div>
       </div>
@@ -204,15 +215,15 @@ function ThreadHeader({ conversation, currentUserId }: ThreadHeaderProps) {
 // ============================================================================
 
 interface MessageListProps {
-  messages: Message[];
-  currentUserId: string;
-  loading?: boolean;
-  hasMore?: boolean;
-  onLoadMore?: () => Promise<void>;
-  onEdit?: (messageId: string, content: string) => Promise<void>;
-  onDelete?: (messageId: string) => Promise<void>;
-  onReact?: (messageId: string, emoji: string) => Promise<void>;
-  onReply?: (message: Message) => void;
+  readonly messages: Message[];
+  readonly currentUserId: string;
+  readonly loading?: boolean | undefined;
+  readonly hasMore?: boolean | undefined;
+  readonly onLoadMore?: (() => Promise<void>) | undefined;
+  readonly onEdit?: ((messageId: string, content: string) => Promise<void>) | undefined;
+  readonly onDelete?: ((messageId: string) => Promise<void>) | undefined;
+  readonly onReact?: ((messageId: string, emoji: string) => Promise<void>) | undefined;
+  readonly onReply?: ((message: Message) => void) | undefined;
 }
 
 function MessageList({
@@ -302,62 +313,15 @@ function MessageList({
         )}
 
         {/* Messages */}
-        {loading ? (
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className={cn('flex gap-2', i % 2 === 0 ? 'justify-end' : '')}>
-                {i % 2 !== 0 && <Skeleton className="h-8 w-8 rounded-full" />}
-                <div className="space-y-1">
-                  <Skeleton
-                    className={cn(
-                      'h-16 w-64 rounded-2xl',
-                      i % 2 === 0 ? 'rounded-br-sm' : 'rounded-bl-sm'
-                    )}
-                  />
-                  <Skeleton className="h-3 w-16" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="text-muted-foreground mb-2 text-4xl">💬</div>
-            <p className="text-muted-foreground">No messages yet</p>
-            <p className="text-muted-foreground text-sm">Start the conversation!</p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {messages.map((message, index) => {
-              const previousMessage = index > 0 ? messages[index - 1] : undefined;
-              const showDivider = shouldShowDateDivider(message, previousMessage);
-              const isGrouped = shouldGroupMessages(message, previousMessage);
-              const isOwn = message.senderId === currentUserId;
-
-              return (
-                <div key={message.id}>
-                  {showDivider && (
-                    <div className="my-4 flex items-center gap-4">
-                      <div className="bg-border h-px flex-1" />
-                      <span className="text-muted-foreground text-xs">
-                        {formatMessageDate(message.createdAt)}
-                      </span>
-                      <div className="bg-border h-px flex-1" />
-                    </div>
-                  )}
-                  <MessageBubble
-                    isGrouped={isGrouped}
-                    isOwn={isOwn}
-                    message={message}
-                    onDelete={onDelete}
-                    onEdit={onEdit}
-                    onReact={onReact}
-                    onReply={onReply ? () => onReply(message) : undefined}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {getMessagesContent({
+          loading,
+          messages,
+          currentUserId,
+          onEdit,
+          onDelete,
+          onReact,
+          onReply,
+        })}
 
         <div ref={bottomRef} />
       </div>
@@ -373,6 +337,100 @@ function MessageList({
           <ArrowDown className="h-4 w-4" />
         </Button>
       )}
+    </div>
+  );
+}
+
+function getMessagesContent({
+  loading,
+  messages,
+  currentUserId,
+  onEdit,
+  onDelete,
+  onReact,
+  onReply,
+}: {
+  loading?: boolean | undefined;
+  messages: Message[];
+  currentUserId: string;
+  onEdit?: ((messageId: string, content: string) => Promise<void>) | undefined;
+  onDelete?: ((messageId: string) => Promise<void>) | undefined;
+  onReact?: ((messageId: string, emoji: string) => Promise<void>) | undefined;
+  onReply?: ((message: Message) => void) | undefined;
+}): React.ReactNode {
+  if (loading) {
+    const skeletonItems = [
+      { id: 'skeleton-1', align: 'end' },
+      { id: 'skeleton-2', align: 'start' },
+      { id: 'skeleton-3', align: 'end' },
+      { id: 'skeleton-4', align: 'start' },
+      { id: 'skeleton-5', align: 'end' },
+    ] as const;
+
+    return (
+      <div className="space-y-4">
+        {skeletonItems.map((item) => (
+          <div
+            key={item.id}
+            className={cn('flex gap-2', item.align === 'end' ? 'justify-end' : '')}
+          >
+            {item.align !== 'end' && <Skeleton className="h-8 w-8 rounded-full" />}
+            <div className="space-y-1">
+              <Skeleton
+                className={cn(
+                  'h-16 w-64 rounded-2xl',
+                  item.align === 'end' ? 'rounded-br-sm' : 'rounded-bl-sm'
+                )}
+              />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (messages.length === 0) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center text-center">
+        <div className="text-muted-foreground mb-2 text-4xl">💬</div>
+        <p className="text-muted-foreground">No messages yet</p>
+        <p className="text-muted-foreground text-sm">Start the conversation!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {messages.map((message, index) => {
+        const previousMessage = index > 0 ? messages[index - 1] : undefined;
+        const showDivider = shouldShowDateDivider(message, previousMessage);
+        const isGrouped = shouldGroupMessages(message, previousMessage);
+        const isOwn = message.senderId === currentUserId;
+
+        return (
+          <div key={message.id}>
+            {showDivider && (
+              <div className="my-4 flex items-center gap-4">
+                <div className="bg-border h-px flex-1" />
+                <span className="text-muted-foreground text-xs">
+                  {formatMessageDate(message.createdAt)}
+                </span>
+                <div className="bg-border h-px flex-1" />
+              </div>
+            )}
+            <MessageBubble
+              isGrouped={isGrouped}
+              isOwn={isOwn}
+              message={message}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onReact={onReact}
+              onReply={onReply ? () => onReply(message) : undefined}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

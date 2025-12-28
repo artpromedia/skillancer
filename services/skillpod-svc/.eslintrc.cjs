@@ -12,5 +12,7 @@ module.exports = {
     '@typescript-eslint/ban-ts-comment': 'off',
     // Relax unused vars for placeholder implementations
     '@typescript-eslint/no-unused-vars': 'warn',
+    // Allow async functions without await (common in stub implementations)
+    '@typescript-eslint/require-await': 'warn',
   },
 };

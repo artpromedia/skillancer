@@ -130,7 +130,6 @@ function ProjectSelector({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
-                autoFocus
                 className="w-full rounded-md border-0 bg-gray-50 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 placeholder="Search projects..."
                 type="text"
@@ -307,12 +306,16 @@ export function TimerStartModal({
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      <div aria-hidden="true" className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-element-interactions */}
         <div
+          aria-modal="true"
           className="w-full max-w-md rounded-xl bg-white shadow-2xl dark:bg-gray-800"
+          role="dialog"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -333,12 +336,16 @@ export function TimerStartModal({
 
             {/* Description */}
             <div className="mb-4">
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                htmlFor="timer-description"
+              >
                 What are you working on?
               </label>
               <input
                 ref={descriptionRef}
                 className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                id="timer-description"
                 placeholder="Enter a description..."
                 type="text"
                 value={description}
@@ -348,20 +355,24 @@ export function TimerStartModal({
 
             {/* Project */}
             <div className="mb-4">
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Project <span className="text-red-500">*</span>
-              </label>
+              </span>
               <ProjectSelector projects={projects} selectedId={projectId} onSelect={setProjectId} />
             </div>
 
             {/* Task */}
             {projectTasks.length > 0 && (
               <div className="mb-4">
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  htmlFor="timer-task"
+                >
                   Task
                 </label>
                 <select
                   className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  id="timer-task"
                   value={taskId}
                   onChange={(e) => setTaskId(e.target.value)}
                 >
@@ -377,9 +388,9 @@ export function TimerStartModal({
 
             {/* Tags */}
             <div className="mb-4">
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Tags
-              </label>
+              </span>
               <div className="flex flex-wrap gap-2 rounded-lg border border-gray-200 p-2 dark:border-gray-600">
                 {tags.map((tag) => (
                   <span
@@ -414,9 +425,7 @@ export function TimerStartModal({
 
             {/* Billable Toggle */}
             <div className="mb-6 flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Billable
-              </label>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Billable</span>
               <button
                 className={`relative h-6 w-11 rounded-full transition-colors ${
                   isBillable ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'

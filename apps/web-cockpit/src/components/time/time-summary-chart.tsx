@@ -295,7 +295,7 @@ function LineChart({
 
   return (
     <div className="relative" style={{ height }}>
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
+      <svg className="h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
         {/* Area fill */}
         <path d={areaD} fill="url(#lineGradient)" />
 
@@ -310,7 +310,7 @@ function LineChart({
 
         {/* Gradient definition */}
         <defs>
-          <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="lineGradient" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.2" />
             <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
           </linearGradient>
@@ -378,35 +378,35 @@ export function TimeSummaryChart({
     switch (type) {
       case 'bar':
         return (
-          <BarChart data={data} height={height} showValues={showValues} formatValue={formatValue} />
+          <BarChart data={data} formatValue={formatValue} height={height} showValues={showValues} />
         );
       case 'pie':
         return (
           <PieChart
             data={data}
-            type="pie"
+            formatValue={formatValue}
             height={height}
             showLegend={showLegend}
-            formatValue={formatValue}
+            type="pie"
           />
         );
       case 'donut':
         return (
           <PieChart
             data={data}
-            type="donut"
+            formatValue={formatValue}
             height={height}
             showLegend={showLegend}
-            formatValue={formatValue}
+            type="donut"
           />
         );
       case 'line':
         return (
           <LineChart
             data={data}
+            formatValue={formatValue}
             height={height}
             showValues={showValues}
-            formatValue={formatValue}
           />
         );
       default:

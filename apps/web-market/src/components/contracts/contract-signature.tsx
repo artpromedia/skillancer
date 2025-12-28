@@ -22,7 +22,6 @@ import {
   TabsTrigger,
 } from '@skillancer/ui';
 import {
-  AlertCircle,
   Check,
   ChevronDown,
   Clock,
@@ -66,7 +65,7 @@ export function ContractSignature({
   userRole,
   onSign,
   onCancel,
-}: ContractSignatureProps) {
+}: Readonly<ContractSignatureProps>) {
   const [signatureType, setSignatureType] = useState<'typed' | 'drawn'>('typed');
   const [typedName, setTypedName] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);

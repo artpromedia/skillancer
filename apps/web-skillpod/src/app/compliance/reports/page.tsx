@@ -184,7 +184,11 @@ function ReportCard({
 
           {showMenu && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+              <div
+                aria-hidden="true"
+                className="fixed inset-0 z-10"
+                onClick={() => setShowMenu(false)}
+              />
               <div className="absolute right-0 top-8 z-20 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                 {report.status === 'completed' && (
                   <>
@@ -364,9 +368,9 @@ function FilterPanel({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* Report Type */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Report Type
-          </label>
+          </span>
           <div className="space-y-2">
             {Object.entries(REPORT_TYPE_CONFIG).map(([type, config]) => (
               <label key={type} className="flex cursor-pointer items-center gap-2">
@@ -384,9 +388,9 @@ function FilterPanel({
 
         {/* Status */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Status
-          </label>
+          </span>
           <div className="space-y-2">
             {Object.entries(STATUS_CONFIG).map(([status, config]) => (
               <label key={status} className="flex cursor-pointer items-center gap-2">
@@ -404,9 +408,9 @@ function FilterPanel({
 
         {/* Date Range */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Date Range
-          </label>
+          </span>
           <div className="space-y-2">
             <input
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700"
@@ -540,7 +544,7 @@ export default function ComplianceReportsPage() {
       }
     };
 
-    loadReports();
+    void loadReports();
   }, []);
 
   const filteredReports = useMemo(() => {
@@ -582,8 +586,8 @@ export default function ComplianceReportsPage() {
     router.push(`/compliance/reports/${report.id}`);
   };
 
-  const handleDownloadReport = (report: ComplianceReport) => {
-    console.log('Download report:', report.id);
+  const handleDownloadReport = (_report: ComplianceReport) => {
+    // Feature: Download report as PDF - not yet implemented
   };
 
   const handleDeleteReport = (report: ComplianceReport) => {
@@ -598,8 +602,8 @@ export default function ComplianceReportsPage() {
     );
   };
 
-  const handleShareReport = (report: ComplianceReport) => {
-    console.log('Share report:', report.id);
+  const handleShareReport = (_report: ComplianceReport) => {
+    // Feature: Share report with stakeholders - not yet implemented
   };
 
   const activeFiltersCount =

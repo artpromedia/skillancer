@@ -22,6 +22,14 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastif
 
 import { getConfig } from './config/index.js';
 import { createContainmentMiddleware, createWatermarkMiddleware } from './middleware/index.js';
+import {
+  createLearningProfileRepository,
+  createSkillGapRepository,
+  createMarketActivitySignalRepository,
+  createLearningRecommendationRepository,
+  createLearningPathRepository,
+  createMarketTrendRepository,
+} from './repositories/recommendation/index.js';
 import { createWatermarkRepository } from './repositories/watermark.repository.js';
 import {
   containmentRoutes,
@@ -48,14 +56,6 @@ import {
   createRecommendationEngineService,
   createLearningPathGeneratorService,
 } from './services/index.js';
-import {
-  createLearningProfileRepository,
-  createSkillGapRepository,
-  createMarketActivitySignalRepository,
-  createLearningRecommendationRepository,
-  createLearningPathRepository,
-  createMarketTrendRepository,
-} from './repositories/recommendation/index.js';
 
 import type { ScreenCaptureEvent } from './services/screenshot-detection.service.js';
 import type { Redis as RedisType } from 'ioredis';

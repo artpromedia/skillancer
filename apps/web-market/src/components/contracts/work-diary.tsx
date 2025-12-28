@@ -24,7 +24,7 @@ import {
   Image as ImageIcon,
   Monitor,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 import type { TimeEntry } from '@/lib/api/contracts';
 
@@ -67,7 +67,7 @@ export function WorkDiary({
   screenshots = [],
   onDateChange,
   onExport,
-}: WorkDiaryProps) {
+}: Readonly<WorkDiaryProps>) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'timeline' | 'screenshots'>('timeline');
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
@@ -117,8 +117,8 @@ export function WorkDiary({
 
     const slotEntries = dayEntries.filter((entry) => {
       if (!entry.startTime) return false;
-      const startHour = parseInt(entry.startTime.split(':')[0]);
-      const endHour = entry.endTime ? parseInt(entry.endTime.split(':')[0]) : startHour + 1;
+      const startHour = Number.parseInt(entry.startTime.split(':')[0]);
+      const endHour = entry.endTime ? Number.parseInt(entry.endTime.split(':')[0]) : startHour + 1;
       return hour >= startHour && hour < endHour;
     });
 
@@ -275,7 +275,7 @@ export function WorkDiary({
                 <div className="flex flex-1 items-center gap-2 p-3">
                   {/* 10-minute segments */}
                   <div className="flex flex-1 gap-0.5">
-                    {Array.from({ length: 6 }).map((_, i) => {
+                    {Array.from({ length: 6 }, (_, i) => {
                       const segmentScreenshot = slot.screenshots.find((ss) => {
                         const minute = new Date(ss.timestamp).getMinutes();
                         return minute >= i * 10 && minute < (i + 1) * 10;
@@ -283,7 +283,7 @@ export function WorkDiary({
 
                       return (
                         <div
-                          key={i}
+                          key={`${slot.hour}-segment-${i}`}
                           className={cn(
                             'h-8 flex-1 cursor-pointer rounded-sm transition-opacity hover:opacity-80',
                             segmentScreenshot

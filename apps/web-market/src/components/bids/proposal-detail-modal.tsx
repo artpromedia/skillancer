@@ -40,6 +40,16 @@ import { useCallback, useState } from 'react';
 import type { Proposal } from '@/lib/api/bids';
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+function getScoreColor(value: number): string {
+  if (value >= 80) return 'bg-green-500';
+  if (value >= 60) return 'bg-yellow-500';
+  return 'bg-red-500';
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -58,7 +68,7 @@ interface ProposalDetailModalProps {
 // Freelancer Profile Section
 // ============================================================================
 
-function FreelancerProfile({ proposal }: { proposal: Proposal }) {
+function FreelancerProfile({ proposal }: Readonly<{ proposal: Proposal }>) {
   const freelancer = proposal.freelancer;
   if (!freelancer) return null;
 
@@ -153,7 +163,7 @@ function FreelancerProfile({ proposal }: { proposal: Proposal }) {
 // Proposal Details Section
 // ============================================================================
 
-function ProposalDetails({ proposal }: { proposal: Proposal }) {
+function ProposalDetails({ proposal }: Readonly<{ proposal: Proposal }>) {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -280,7 +290,7 @@ function ProposalDetails({ proposal }: { proposal: Proposal }) {
 // Match Analysis Section
 // ============================================================================
 
-function MatchAnalysis({ proposal }: { proposal: Proposal }) {
+function MatchAnalysis({ proposal }: Readonly<{ proposal: Proposal }>) {
   const matchScore = proposal.matchScore;
   const qualityScore = proposal.qualityScore;
 
@@ -318,11 +328,11 @@ function MatchAnalysis({ proposal }: { proposal: Proposal }) {
               {Object.entries(matchScore.breakdown).map(([key, value]) => (
                 <div key={key} className="flex items-center gap-3">
                   <span className="text-muted-foreground w-24 text-sm capitalize">
-                    {key.replace(/([A-Z])/g, ' $1').trim()}
+                    {key.replaceAll(/([A-Z])/g, ' $1').trim()}
                   </span>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
                     <div
-                      className={`h-full ${value >= 80 ? 'bg-green-500' : value >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                      className={`h-full ${getScoreColor(value)}`}
                       style={{ width: `${value}%` }}
                     />
                   </div>
@@ -350,26 +360,28 @@ function MatchAnalysis({ proposal }: { proposal: Proposal }) {
 
             {qualityScore.suggestions.length > 0 && (
               <div className="space-y-2">
-                {qualityScore.suggestions.map((suggestion, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-start gap-2 rounded-lg p-2 text-sm ${
-                      suggestion.type === 'SUCCESS'
-                        ? 'bg-green-50 text-green-700'
-                        : suggestion.type === 'WARNING'
-                          ? 'bg-yellow-50 text-yellow-700'
-                          : 'bg-blue-50 text-blue-700'
-                    }`}
-                  >
-                    {suggestion.type === 'SUCCESS' && (
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                    )}
-                    {suggestion.type === 'IMPROVEMENT' && (
-                      <TrendingUp className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                    )}
-                    <span>{suggestion.message}</span>
-                  </div>
-                ))}
+                {qualityScore.suggestions.map((suggestion) => {
+                  const bgColorClass = (() => {
+                    if (suggestion.type === 'SUCCESS') return 'bg-green-50 text-green-700';
+                    if (suggestion.type === 'WARNING') return 'bg-yellow-50 text-yellow-700';
+                    return 'bg-blue-50 text-blue-700';
+                  })();
+
+                  return (
+                    <div
+                      key={`${suggestion.type}-${suggestion.message}`}
+                      className={`flex items-start gap-2 rounded-lg p-2 text-sm ${bgColorClass}`}
+                    >
+                      {suggestion.type === 'SUCCESS' && (
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      )}
+                      {suggestion.type === 'IMPROVEMENT' && (
+                        <TrendingUp className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      )}
+                      <span>{suggestion.message}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -392,7 +404,7 @@ export function ProposalDetailModal({
   onDecline,
   onHire,
   onMessage,
-}: ProposalDetailModalProps) {
+}: Readonly<ProposalDetailModalProps>) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('proposal');
 

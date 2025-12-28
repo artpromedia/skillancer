@@ -1,12 +1,13 @@
 import { Suspense } from 'react';
 
+import { searchJobs, getJobCategories, type JobSearchFilters } from '@/lib/api/jobs';
+
 import { JobFilters } from './components/job-filters';
 import { JobList } from './components/job-list';
 import { JobListSkeleton } from './components/job-list-skeleton';
 
 import type { Metadata } from 'next';
 
-import { searchJobs, getJobCategories, type JobSearchFilters } from '@/lib/api/jobs';
 
 // ============================================================================
 // Types

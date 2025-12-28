@@ -273,7 +273,7 @@ export function prepareForSnapshot<T extends Record<string, unknown>>(
         }
       } else if (dateFields.includes(key) || dateFields.includes(fullPath)) {
         if (value instanceof Date || typeof value === 'string') {
-          const date = new Date(value as string | Date);
+          const date = new Date(value);
           if (!isNaN(date.getTime())) {
             o[key] = '[DATE]';
           }

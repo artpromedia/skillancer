@@ -36,11 +36,11 @@ import {
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
-import type { Job } from '@/lib/api/jobs';
-
 import { MatchScoreBadge } from '@/components/shared/match-score-badge';
 import { SkillTag } from '@/components/shared/skill-tag';
 import { useJobStore } from '@/stores/job-store';
+
+import type { Job } from '@/lib/api/jobs';
 
 // ============================================================================
 // Types
@@ -50,11 +50,42 @@ interface JobDetailContentProps {
   job: Job;
 }
 
+// Helper to determine action button content
+function _getActionButton(
+  applied: boolean,
+  status: string,
+  jobSlug: string
+): {
+  disabled: boolean;
+  variant?: 'secondary';
+  href?: string;
+  icon: React.ElementType;
+  label: string;
+} {
+  if (applied) {
+    return { disabled: true, icon: CheckCircle, label: 'Applied' };
+  }
+  if (status === 'OPEN') {
+    return {
+      disabled: false,
+      href: `/jobs/${jobSlug}/apply`,
+      icon: MessageSquare,
+      label: 'Submit Proposal',
+    };
+  }
+  return { disabled: true, variant: 'secondary', icon: XCircle, label: 'Job Closed' };
+}
+
+// Helper for plural suffix
+function getPluralSuffix(count: number): string {
+  return count === 1 ? '' : 's';
+}
+
 // ============================================================================
 // Component
 // ============================================================================
 
-export function JobDetailContent({ job }: JobDetailContentProps) {
+export function JobDetailContent({ job }: Readonly<JobDetailContentProps>) {
   const [showFullDescription, setShowFullDescription] = useState(false);
 
   // Store state - Zustand middleware type inference handled by file-level eslint-disable
@@ -127,30 +158,38 @@ export function JobDetailContent({ job }: JobDetailContentProps) {
 
           {/* Actions */}
           <div className="mt-6 flex flex-wrap gap-3 border-t pt-6">
-            {applied ? (
-              <Button disabled className="flex-1 sm:flex-none" size="lg">
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Applied
-              </Button>
-            ) : job.status === 'OPEN' ? (
-              <Button asChild className="flex-1 sm:flex-none" size="lg">
-                <Link href={`/jobs/${job.slug}/apply`}>
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Submit Proposal
-                </Link>
-              </Button>
-            ) : (
-              <Button disabled className="flex-1 sm:flex-none" size="lg" variant="secondary">
-                <XCircle className="mr-2 h-4 w-4" />
-                Job Closed
-              </Button>
-            )}
+            {(() => {
+              if (applied) {
+                return (
+                  <Button disabled className="flex-1 sm:flex-none" size="lg">
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Applied
+                  </Button>
+                );
+              }
+              if (job.status === 'OPEN') {
+                return (
+                  <Button asChild className="flex-1 sm:flex-none" size="lg">
+                    <Link href={`/jobs/${job.slug}/apply`}>
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Submit Proposal
+                    </Link>
+                  </Button>
+                );
+              }
+              return (
+                <Button disabled className="flex-1 sm:flex-none" size="lg" variant="secondary">
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Job Closed
+                </Button>
+              );
+            })()}
 
             {/* Show proposal count badge */}
             {job.proposalCount > 0 && !applied && job.status === 'OPEN' && (
               <div className="flex items-center gap-2 self-center">
                 <span className="text-muted-foreground text-sm">
-                  {job.proposalCount} proposal{job.proposalCount !== 1 ? 's' : ''} submitted
+                  {job.proposalCount} proposal{getPluralSuffix(job.proposalCount)} submitted
                 </span>
                 {job.proposalCount >= 10 && job.proposalCount < 20 && (
                   <Badge className="text-xs" variant="secondary">
@@ -202,8 +241,8 @@ export function JobDetailContent({ job }: JobDetailContentProps) {
             )}
           >
             {/* Render description with line breaks */}
-            {displayDescription.split('\n').map((paragraph, i) => (
-              <p key={i}>{paragraph}</p>
+            {displayDescription.split('\n').map((paragraph) => (
+              <p key={paragraph.slice(0, 50)}>{paragraph}</p>
             ))}
           </div>
 
@@ -405,11 +444,11 @@ function StatCard({
   icon: Icon,
   label,
   value,
-}: {
+}: Readonly<{
   icon: React.ElementType;
   label: string;
   value: string;
-}) {
+}>) {
   return (
     <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
       <Icon className="text-muted-foreground h-5 w-5 shrink-0" />
@@ -441,18 +480,26 @@ function formatBudget(job: Job): string {
     if (budgetMin && budgetMax) {
       return `${format(budgetMin)} - ${format(budgetMax)}/hr`;
     }
-    return budgetMin
-      ? `${format(budgetMin)}+/hr`
-      : budgetMax
-        ? `Up to ${format(budgetMax)}/hr`
-        : 'Hourly';
+    if (budgetMin) return `${format(budgetMin)}+/hr`;
+    if (budgetMax) return `Up to ${format(budgetMax)}/hr`;
+    return 'Hourly';
   }
 
   if (budgetMin && budgetMax) {
     if (budgetMin === budgetMax) return format(budgetMin);
     return `${format(budgetMin)} - ${format(budgetMax)}`;
   }
-  return budgetMin ? `${format(budgetMin)}+` : budgetMax ? `Up to ${format(budgetMax)}` : 'TBD';
+  return formatBudgetSingleValue(budgetMin, budgetMax, format);
+}
+
+function formatBudgetSingleValue(
+  budgetMin: number | undefined,
+  budgetMax: number | undefined,
+  format: (value: number) => string
+): string {
+  if (budgetMin) return `${format(budgetMin)}+`;
+  if (budgetMax) return `Up to ${format(budgetMax)}`;
+  return 'TBD';
 }
 
 function formatDuration(duration: number | undefined, unit: string | undefined): string {
@@ -466,7 +513,7 @@ function formatDuration(duration: number | undefined, unit: string | undefined):
   };
 
   const label = unitLabels[unit] || unit.toLowerCase();
-  return `${duration} ${label}${duration !== 1 ? 's' : ''}`;
+  return `${duration} ${label}${getPluralSuffix(duration)}`;
 }
 
 function formatExperienceLevel(level: string | undefined): string {

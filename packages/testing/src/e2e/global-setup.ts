@@ -4,9 +4,10 @@
  * Runs once before all tests to set up the test environment.
  */
 
-import { chromium, type FullConfig } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
+
+import { chromium, type FullConfig } from '@playwright/test';
 
 // Test credentials
 const TEST_USER = {

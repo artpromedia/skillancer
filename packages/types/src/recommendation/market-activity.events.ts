@@ -142,8 +142,10 @@ export interface ProfileSkillGapEvent {
 }
 
 export type TrendType = 'RISING' | 'STABLE' | 'DECLINING';
-export type CompetitionLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
 export type TrendPeriod = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY';
+
+// Import from cockpit to avoid duplicate definitions
+import type { CompetitionLevel } from '../cockpit/pricing.types.js';
 
 /**
  * Emitted when market trends are updated

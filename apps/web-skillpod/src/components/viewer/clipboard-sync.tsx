@@ -77,7 +77,7 @@ export function ClipboardSyncIndicator({
   policy,
   onClick,
   className,
-}: ClipboardSyncIndicatorProps) {
+}: Readonly<ClipboardSyncIndicatorProps>) {
   const getStatusConfig = () => {
     switch (status) {
       case 'synced':
@@ -147,7 +147,7 @@ export function ClipboardSync({
   onPasteToRemote,
   onCopyFromRemote,
   className,
-}: ClipboardSyncProps) {
+}: Readonly<ClipboardSyncProps>) {
   const [isPasting, setIsPasting] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -186,13 +186,11 @@ export function ClipboardSync({
     <Popover>
       <PopoverTrigger asChild>
         <button className={cn('hover:bg-accent rounded-lg p-2 transition-colors', className)}>
-          {status === 'synced' ? (
-            <ClipboardCheck className="h-5 w-5 text-green-500" />
-          ) : status === 'blocked' ? (
-            <ClipboardX className="h-5 w-5 text-red-500" />
-          ) : (
-            <Clipboard className="text-muted-foreground h-5 w-5" />
-          )}
+          {(() => {
+            if (status === 'synced') return <ClipboardCheck className="h-5 w-5 text-green-500" />;
+            if (status === 'blocked') return <ClipboardX className="h-5 w-5 text-red-500" />;
+            return <Clipboard className="text-muted-foreground h-5 w-5" />;
+          })()}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80">
@@ -225,13 +223,12 @@ export function ClipboardSync({
             <ul className="space-y-1">
               <li>
                 • Direction:{' '}
-                {policy.direction === 'both'
-                  ? 'Bidirectional'
-                  : policy.direction === 'local-to-remote'
-                    ? 'Local → Remote only'
-                    : policy.direction === 'remote-to-local'
-                      ? 'Remote → Local only'
-                      : 'Disabled'}
+                {(() => {
+                  if (policy.direction === 'both') return 'Bidirectional';
+                  if (policy.direction === 'local-to-remote') return 'Local → Remote only';
+                  if (policy.direction === 'remote-to-local') return 'Remote → Local only';
+                  return 'Disabled';
+                })()}
               </li>
               <li>• Auto-sync: {policy.autoSync ? 'Enabled' : 'Manual'}</li>
               {policy.logging && <li>• Content logging enabled</li>}
@@ -249,13 +246,12 @@ export function ClipboardSync({
                 variant="outline"
                 onClick={handlePaste}
               >
-                {isPasting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : lastAction === 'paste' ? (
-                  <Check className="mr-2 h-4 w-4 text-green-500" />
-                ) : (
-                  <ArrowUpFromLine className="mr-2 h-4 w-4" />
-                )}
+                {(() => {
+                  if (isPasting) return <Loader2 className="mr-2 h-4 w-4 animate-spin" />;
+                  if (lastAction === 'paste')
+                    return <Check className="mr-2 h-4 w-4 text-green-500" />;
+                  return <ArrowUpFromLine className="mr-2 h-4 w-4" />;
+                })()}
                 Paste to Remote
               </Button>
               <Button
@@ -265,13 +261,12 @@ export function ClipboardSync({
                 variant="outline"
                 onClick={handleCopy}
               >
-                {isCopying ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : lastAction === 'copy' ? (
-                  <Check className="mr-2 h-4 w-4 text-green-500" />
-                ) : (
-                  <ArrowDownToLine className="mr-2 h-4 w-4" />
-                )}
+                {(() => {
+                  if (isCopying) return <Loader2 className="mr-2 h-4 w-4 animate-spin" />;
+                  if (lastAction === 'copy')
+                    return <Check className="mr-2 h-4 w-4 text-green-500" />;
+                  return <ArrowDownToLine className="mr-2 h-4 w-4" />;
+                })()}
                 Copy to Local
               </Button>
             </div>

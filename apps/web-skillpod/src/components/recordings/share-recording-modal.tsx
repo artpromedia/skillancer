@@ -21,8 +21,6 @@ import {
   Eye,
   Download,
   FileText,
-  Users,
-  Calendar,
   AlertCircle,
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
@@ -30,6 +28,9 @@ import { useState, useCallback } from 'react';
 // ============================================================================
 // Types
 // ============================================================================
+
+type ShareMethod = 'link' | 'email' | 'compliance';
+type AccessLevel = 'view' | 'view_download';
 
 interface Recording {
   id: string;
@@ -40,9 +41,9 @@ interface Recording {
 }
 
 interface ShareSettings {
-  method: 'link' | 'email' | 'compliance';
+  method: ShareMethod;
   recipients: string[];
-  accessLevel: 'view' | 'view_download';
+  accessLevel: AccessLevel;
   expiresIn: number | null; // hours, null = never
   requireWatermark: boolean;
   timeRestriction: {
@@ -113,10 +114,10 @@ function formatDuration(seconds: number): string {
 function MethodSelector({
   method,
   onChange,
-}: {
-  method: 'link' | 'email' | 'compliance';
-  onChange: (method: 'link' | 'email' | 'compliance') => void;
-}) {
+}: Readonly<{
+  method: ShareMethod;
+  onChange: (method: ShareMethod) => void;
+}>) {
   const methods = [
     { value: 'link', label: 'Generate Link', icon: Link },
     { value: 'email', label: 'Email', icon: Mail },
@@ -146,10 +147,10 @@ function MethodSelector({
 function RecipientInput({
   recipients,
   onChange,
-}: {
+}: Readonly<{
   recipients: string[];
   onChange: (recipients: string[]) => void;
-}) {
+}>) {
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -185,12 +186,16 @@ function RecipientInput({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label
+        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        htmlFor="share-recipients-email"
+      >
         Recipients
       </label>
       <div className="flex gap-2">
         <input
           className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          id="share-recipients-email"
           placeholder="Enter email address"
           type="email"
           value={input}
@@ -233,15 +238,15 @@ function RecipientInput({
 function AccessLevelSelector({
   accessLevel,
   onChange,
-}: {
-  accessLevel: 'view' | 'view_download';
-  onChange: (level: 'view' | 'view_download') => void;
-}) {
+}: Readonly<{
+  accessLevel: AccessLevel;
+  onChange: (level: AccessLevel) => void;
+}>) {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         Access Level
-      </label>
+      </span>
       <div className="space-y-2">
         {ACCESS_LEVELS.map((level) => (
           <label
@@ -252,6 +257,7 @@ function AccessLevelSelector({
                 : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
             }`}
           >
+            <span className="sr-only">{level.label}</span>
             <input
               checked={accessLevel === level.value}
               className="mt-1"
@@ -277,21 +283,27 @@ function AccessLevelSelector({
 function ExpirySelector({
   expiresIn,
   onChange,
-}: {
+}: Readonly<{
   expiresIn: number | null;
   onChange: (hours: number | null) => void;
-}) {
+}>) {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label
+        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        htmlFor="share-link-expiry"
+      >
         Link Expiry
       </label>
       <div className="relative">
         <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <select
           className="w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-4 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          id="share-link-expiry"
           value={expiresIn ?? 'never'}
-          onChange={(e) => onChange(e.target.value === 'never' ? null : parseInt(e.target.value))}
+          onChange={(e) =>
+            onChange(e.target.value === 'never' ? null : Number.parseInt(e.target.value, 10))
+          }
         >
           {EXPIRY_OPTIONS.map((option) => (
             <option key={option.value ?? 'never'} value={option.value ?? 'never'}>
@@ -310,13 +322,13 @@ function TimeRestriction({
   endTime,
   onToggle,
   onChange,
-}: {
+}: Readonly<{
   enabled: boolean;
   startTime?: string;
   endTime?: string;
   onToggle: () => void;
   onChange: (start: string, end: string) => void;
-}) {
+}>) {
   return (
     <div className="space-y-2">
       <label className="flex items-center gap-2">
@@ -355,11 +367,11 @@ function ShareLinkResult({
   shareUrl,
   onCopy,
   copied,
-}: {
+}: Readonly<{
   shareUrl: string;
   onCopy: () => void;
   copied: boolean;
-}) {
+}>) {
   return (
     <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
       <div className="mb-2 flex items-center gap-2 text-green-800 dark:text-green-400">
@@ -405,7 +417,7 @@ export function ShareRecordingModal({
   isOpen,
   onClose,
   onShare,
-}: ShareRecordingModalProps) {
+}: Readonly<ShareRecordingModalProps>) {
   const [settings, setSettings] = useState<ShareSettings>({
     method: 'link',
     recipients: [],
@@ -443,6 +455,7 @@ export function ShareRecordingModal({
         setError('Failed to share recording');
       }
     } catch (err) {
+      console.error('Share error:', err);
       setError('An error occurred while sharing');
     } finally {
       setIsSharing(false);
@@ -451,7 +464,7 @@ export function ShareRecordingModal({
 
   const handleCopy = useCallback(() => {
     if (!shareUrl) return;
-    navigator.clipboard.writeText(shareUrl);
+    void navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [shareUrl]);
@@ -468,7 +481,7 @@ export function ShareRecordingModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
+      <div aria-hidden="true" className="absolute inset-0 bg-black/50" onClick={handleClose} />
 
       {/* Modal */}
       <div className="relative w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-gray-800">
@@ -611,11 +624,11 @@ export function ShareRecordingModal({
                     {settings.method === 'link' && <Link className="h-4 w-4" />}
                     {settings.method === 'email' && <Mail className="h-4 w-4" />}
                     {settings.method === 'compliance' && <FileText className="h-4 w-4" />}
-                    {settings.method === 'link'
-                      ? 'Generate Link'
-                      : settings.method === 'email'
-                        ? 'Send Email'
-                        : 'Add to Report'}
+                    {(() => {
+                      if (settings.method === 'link') return 'Generate Link';
+                      if (settings.method === 'email') return 'Send Email';
+                      return 'Add to Report';
+                    })()}
                   </>
                 )}
               </button>

@@ -36,7 +36,16 @@ interface ReviewsSectionProps {
 // Rating Stars Component
 // ============================================================================
 
-function RatingStars({ rating, size = 'sm' }: { rating: number; size?: 'xs' | 'sm' | 'md' }) {
+function getStarColorClass(star: number, rating: number): string {
+  if (star <= rating) return 'fill-yellow-400 text-yellow-400';
+  if (star - 0.5 <= rating) return 'fill-yellow-400/50 text-yellow-400';
+  return 'fill-muted text-muted';
+}
+
+function RatingStars({
+  rating,
+  size = 'sm',
+}: Readonly<{ rating: number; size?: 'xs' | 'sm' | 'md' }>) {
   const sizeClasses = {
     xs: 'h-3 w-3',
     sm: 'h-4 w-4',
@@ -46,17 +55,7 @@ function RatingStars({ rating, size = 'sm' }: { rating: number; size?: 'xs' | 's
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={cn(
-            sizeClasses[size],
-            star <= rating
-              ? 'fill-yellow-400 text-yellow-400'
-              : star - 0.5 <= rating
-                ? 'fill-yellow-400/50 text-yellow-400'
-                : 'fill-muted text-muted'
-          )}
-        />
+        <Star key={star} className={cn(sizeClasses[size], getStarColorClass(star, rating))} />
       ))}
     </div>
   );
@@ -69,10 +68,10 @@ function RatingStars({ rating, size = 'sm' }: { rating: number; size?: 'xs' | 's
 function RatingBreakdown({
   breakdown,
   avgRatings,
-}: {
+}: Readonly<{
   breakdown: ReviewsResponse['ratingBreakdown'];
   avgRatings: ReviewsResponse['avgRatings'];
-}) {
+}>) {
   const total = Object.values(breakdown).reduce((a, b) => a + b, 0);
 
   return (
@@ -127,7 +126,7 @@ function RatingBreakdown({
 // Review Card Component
 // ============================================================================
 
-function ReviewCard({ review }: { review: FreelancerReview }) {
+function ReviewCard({ review }: Readonly<{ review: FreelancerReview }>) {
   const [expanded, setExpanded] = useState(false);
   const isLongContent = review.content.length > 300;
 
@@ -222,7 +221,7 @@ export function ReviewsSection({
   userId: _userId,
   onLoadMore,
   className,
-}: ReviewsSectionProps) {
+}: Readonly<ReviewsSectionProps>) {
   const [reviews, setReviews] = useState(initialData.reviews);
   const [page, setPage] = useState(initialData.page);
   const [loading, setLoading] = useState(false);
@@ -249,7 +248,7 @@ export function ReviewsSection({
   const filteredReviews =
     filterRating === 'all'
       ? reviews
-      : reviews.filter((r) => r.rating === parseInt(filterRating, 10));
+      : reviews.filter((r) => r.rating === Number.parseInt(filterRating, 10));
 
   if (initialData.total === 0) {
     return (

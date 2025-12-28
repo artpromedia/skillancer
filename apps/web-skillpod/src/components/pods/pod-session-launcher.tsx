@@ -50,6 +50,13 @@ export interface PodSessionLauncherProps {
 
 type QualityLevel = 'auto' | 'high' | 'medium' | 'low';
 
+function getPodStatusIndicatorClass(status: string): string {
+  if (status === 'running') return 'bg-green-500';
+  if (status === 'starting') return 'animate-pulse bg-yellow-500';
+  if (status === 'stopped') return 'bg-gray-500';
+  return 'bg-red-500';
+}
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -59,7 +66,7 @@ export function PodSessionLauncher({
   podStatus,
   activeSessionId,
   containmentLevel,
-}: PodSessionLauncherProps) {
+}: Readonly<PodSessionLauncherProps>) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -167,18 +174,7 @@ export function PodSessionLauncher({
       {/* Pod Status */}
       <div className="mb-4 flex items-center justify-between rounded-lg bg-gray-700/50 p-3">
         <div className="flex items-center gap-2">
-          <div
-            className={cn(
-              'h-3 w-3 rounded-full',
-              podStatus === 'running'
-                ? 'bg-green-500'
-                : podStatus === 'starting'
-                  ? 'animate-pulse bg-yellow-500'
-                  : podStatus === 'stopped'
-                    ? 'bg-gray-500'
-                    : 'bg-red-500'
-            )}
-          />
+          <div className={cn('h-3 w-3 rounded-full', getPodStatusIndicatorClass(podStatus))} />
           <span className="text-sm capitalize text-gray-300">{podStatus}</span>
         </div>
 

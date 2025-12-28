@@ -2,7 +2,6 @@
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
-import type { Metadata } from 'next';
 
 import {
   AvailabilityWidget,
@@ -21,6 +20,8 @@ import {
   getFreelancerReviews,
   getFreelancerSkills,
 } from '@/lib/api/freelancers';
+
+import type { Metadata } from 'next';
 
 // ============================================================================
 // Types
@@ -83,7 +84,7 @@ interface PersonSchemaProps {
   profile: Awaited<ReturnType<typeof getFreelancerByUsername>>;
 }
 
-function PersonSchema({ profile }: PersonSchemaProps) {
+function PersonSchema({ profile }: Readonly<PersonSchemaProps>) {
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -140,17 +141,17 @@ function PersonSchema({ profile }: PersonSchemaProps) {
 // Page Sections
 // ============================================================================
 
-async function SkillsSectionLoader({ username }: { username: string }) {
+async function SkillsSectionLoader({ username }: Readonly<{ username: string }>) {
   const skills = await getFreelancerSkills(username);
   return <SkillsSection skills={skills} />;
 }
 
-async function PortfolioLoader({ username }: { username: string }) {
+async function PortfolioLoader({ username }: Readonly<{ username: string }>) {
   const portfolio = await getFreelancerPortfolio(username, { limit: 6 });
   return <PortfolioGallery items={portfolio.items} profileUrl={`/freelancers/${username}`} />;
 }
 
-async function ReviewsLoader({ username }: { username: string }) {
+async function ReviewsLoader({ username }: Readonly<{ username: string }>) {
   const reviews = await getFreelancerReviews(username, { limit: 5 });
   return (
     <ReviewsSection
@@ -165,7 +166,7 @@ async function ReviewsLoader({ username }: { username: string }) {
   );
 }
 
-async function CredentialsLoader({ username }: { username: string }) {
+async function CredentialsLoader({ username }: Readonly<{ username: string }>) {
   const credentials = await getFreelancerCredentials(username);
   return <CredentialShowcase credentials={credentials} />;
 }
@@ -174,12 +175,12 @@ async function CredentialsLoader({ username }: { username: string }) {
 // Loading States
 // ============================================================================
 
-function SectionSkeleton({ rows = 3 }: { rows?: number }) {
+function SectionSkeleton({ rows = 3 }: Readonly<{ rows?: number }>) {
   return (
     <div className="animate-pulse space-y-4">
       <div className="bg-muted h-6 w-32 rounded" />
-      {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="bg-muted h-16 rounded-lg" />
+      {Array.from({ length: rows }, (_, i) => `skeleton-row-${i}`).map((id) => (
+        <div key={id} className="bg-muted h-16 rounded-lg" />
       ))}
     </div>
   );
@@ -189,7 +190,7 @@ function SectionSkeleton({ rows = 3 }: { rows?: number }) {
 // Main Page
 // ============================================================================
 
-export default async function FreelancerProfilePage({ params }: PageProps) {
+export default async function FreelancerProfilePage({ params }: Readonly<PageProps>) {
   const { username } = await params;
 
   let profile: Awaited<ReturnType<typeof getFreelancerByUsername>>;

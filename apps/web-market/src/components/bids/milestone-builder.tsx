@@ -52,7 +52,7 @@ function MilestoneCard({
   onUpdate,
   onRemove,
   currency,
-}: MilestoneCardProps) {
+}: Readonly<MilestoneCardProps>) {
   const [isEditing, setIsEditing] = useState(false);
 
   return (
@@ -127,7 +127,7 @@ function MilestoneCard({
                 min={1}
                 type="number"
                 value={milestone.amount}
-                onChange={(e) => onUpdate({ amount: parseInt(e.target.value, 10) || 0 })}
+                onChange={(e) => onUpdate({ amount: Number.parseInt(e.target.value, 10) || 0 })}
               />
             ) : (
               <span className="font-medium">
@@ -146,7 +146,9 @@ function MilestoneCard({
                   min={1}
                   type="number"
                   value={milestone.durationDays}
-                  onChange={(e) => onUpdate({ durationDays: parseInt(e.target.value, 10) || 1 })}
+                  onChange={(e) =>
+                    onUpdate({ durationDays: Number.parseInt(e.target.value, 10) || 1 })
+                  }
                 />
                 <span className="text-sm">days</span>
               </div>
@@ -182,7 +184,7 @@ export function MilestoneBuilder({
   currency = '$',
   error,
   className,
-}: MilestoneBuilderProps) {
+}: Readonly<MilestoneBuilderProps>) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<MilestoneFormData>({
     title: '',
@@ -214,10 +216,10 @@ export function MilestoneBuilder({
     if (!formData.description.trim()) {
       errors.description = 'Description is required';
     }
-    if (!formData.amount || parseInt(formData.amount, 10) <= 0) {
+    if (!formData.amount || Number.parseInt(formData.amount, 10) <= 0) {
       errors.amount = 'Amount must be positive';
     }
-    if (!formData.durationDays || parseInt(formData.durationDays, 10) <= 0) {
+    if (!formData.durationDays || Number.parseInt(formData.durationDays, 10) <= 0) {
       errors.durationDays = 'Duration must be at least 1 day';
     }
 
@@ -232,8 +234,8 @@ export function MilestoneBuilder({
     onAdd({
       title: formData.title.trim(),
       description: formData.description.trim(),
-      amount: parseInt(formData.amount, 10),
-      durationDays: parseInt(formData.durationDays, 10),
+      amount: Number.parseInt(formData.amount, 10),
+      durationDays: Number.parseInt(formData.durationDays, 10),
     });
 
     setFormData({ title: '', description: '', amount: '', durationDays: '' });
@@ -481,9 +483,9 @@ export function MilestoneBuilder({
             Based on similar projects, we recommend these milestones:
           </p>
           <div className="space-y-2">
-            {suggestions.map((suggestion, index) => (
+            {suggestions.map((suggestion) => (
               <button
-                key={index}
+                key={`${suggestion.title}-${suggestion.percentageOfTotal}`}
                 className="flex w-full items-center justify-between rounded-lg border bg-white p-3 text-left transition-colors hover:bg-blue-50"
                 type="button"
                 onClick={() => applySuggestion(suggestion)}

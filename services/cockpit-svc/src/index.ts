@@ -1,9 +1,9 @@
 // @skillancer/cockpit-svc
 // Cockpit integrations and business logic service
 
-import Fastify from 'fastify';
 import { PrismaClient } from '@skillancer/database';
 import { createLogger, type Logger } from '@skillancer/logger';
+import Fastify from 'fastify';
 import { Redis } from 'ioredis';
 
 import { registerRoutes } from './routes/index.js';

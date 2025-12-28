@@ -303,7 +303,10 @@ function QuickTimerStart({
 // View Toggle Component
 // ============================================================================
 
-function ViewToggle({ view, onChange }: { view: ViewMode; onChange: (view: ViewMode) => void }) {
+function ViewToggle({
+  view,
+  onChange,
+}: Readonly<{ view: ViewMode; onChange: (view: ViewMode) => void }>) {
   const views: { id: ViewMode; icon: typeof List; label: string }[] = [
     { id: 'timesheet', icon: Grid3x3, label: 'Timesheet' },
     { id: 'calendar', icon: Calendar, label: 'Calendar' },
@@ -395,7 +398,10 @@ function WeekNavigation({
 // Timesheet View Component
 // ============================================================================
 
-function TimesheetView({ entries, currentDate }: { entries: TimeEntry[]; currentDate: Date }) {
+function TimesheetView({
+  entries,
+  currentDate,
+}: Readonly<{ entries: TimeEntry[]; currentDate: Date }>) {
   const weekDates = getWeekDates(currentDate);
 
   // Group entries by project
@@ -547,7 +553,7 @@ function TimesheetView({ entries, currentDate }: { entries: TimeEntry[]; current
 // List View Component
 // ============================================================================
 
-function ListView({ entries }: { entries: TimeEntry[] }) {
+function ListView({ entries }: Readonly<{ entries: TimeEntry[] }>) {
   // Group entries by date
   const groupedEntries = useMemo(() => {
     const groups: Record<string, TimeEntry[]> = {};
@@ -657,7 +663,17 @@ export default function TimeTrackingPage() {
   useEffect(() => {
     const stored = localStorage.getItem('activeTimer');
     if (stored) {
-      const timer = JSON.parse(stored);
+      const timer = JSON.parse(stored) as {
+        startTime: string;
+        id: string;
+        projectId: string;
+        projectName: string;
+        projectColor: string;
+        description: string;
+        isPaused?: boolean;
+        pausedDuration?: number;
+        pausedAt?: number;
+      };
       setActiveTimer({
         ...timer,
         startTime: new Date(timer.startTime),
@@ -691,8 +707,7 @@ export default function TimeTrackingPage() {
   };
 
   const handlePauseTimer = () => {
-    // In a real app, this would create a partial entry
-    console.log('Pause timer');
+    // Feature: Create partial time entry on pause - not yet implemented
   };
 
   const handleStopTimer = () => {

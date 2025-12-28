@@ -66,10 +66,10 @@ interface FreelancerSearchProps {
 function FreelancerCard({
   freelancer,
   viewMode,
-}: {
+}: Readonly<{
   freelancer: FreelancerListItem;
   viewMode: 'grid' | 'list';
-}) {
+}>) {
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -225,10 +225,24 @@ function FreelancerCard({
 }
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+function parseSkillsFromParams(skills: string | string[] | undefined): string[] | undefined {
+  if (Array.isArray(skills)) return skills;
+  if (skills) return [skills];
+  return undefined;
+}
+
+function getPluralSuffix(count: number): string {
+  return count === 1 ? '' : 's';
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
-export function FreelancerSearch({ initialParams }: FreelancerSearchProps) {
+export function FreelancerSearch({ initialParams }: Readonly<FreelancerSearchProps>) {
   const router = useRouter();
   const _searchParams = useSearchParams();
   const [_isPending, startTransition] = useTransition();
@@ -242,13 +256,9 @@ export function FreelancerSearch({ initialParams }: FreelancerSearchProps) {
   // Parse initial filters
   const [filters, setFilters] = useState<FreelancerSearchFilters>({
     query: initialParams.q,
-    skills: Array.isArray(initialParams.skills)
-      ? initialParams.skills
-      : initialParams.skills
-        ? [initialParams.skills]
-        : undefined,
-    minRate: initialParams.minRate ? parseInt(initialParams.minRate, 10) : undefined,
-    maxRate: initialParams.maxRate ? parseInt(initialParams.maxRate, 10) : undefined,
+    skills: parseSkillsFromParams(initialParams.skills),
+    minRate: initialParams.minRate ? Number.parseInt(initialParams.minRate, 10) : undefined,
+    maxRate: initialParams.maxRate ? Number.parseInt(initialParams.maxRate, 10) : undefined,
     verificationLevel: initialParams.verification as FreelancerSearchFilters['verificationLevel'],
     availability: initialParams.availability as FreelancerSearchFilters['availability'],
     country: initialParams.country,
@@ -257,7 +267,9 @@ export function FreelancerSearch({ initialParams }: FreelancerSearchProps) {
   const [sortBy, setSortBy] = useState<FreelancerSortBy>(
     (initialParams.sortBy as FreelancerSortBy) ?? 'relevance'
   );
-  const [page, setPage] = useState(initialParams.page ? parseInt(initialParams.page, 10) : 1);
+  const [page, setPage] = useState(
+    initialParams.page ? Number.parseInt(initialParams.page, 10) : 1
+  );
 
   // Fetch results
   const fetchResults = useCallback(async () => {
@@ -427,7 +439,7 @@ export function FreelancerSearch({ initialParams }: FreelancerSearchProps) {
                       onChange={(e) =>
                         setFilters((prev) => ({
                           ...prev,
-                          minRate: e.target.value ? parseInt(e.target.value, 10) : undefined,
+                          minRate: e.target.value ? Number.parseInt(e.target.value, 10) : undefined,
                         }))
                       }
                     />
@@ -440,7 +452,7 @@ export function FreelancerSearch({ initialParams }: FreelancerSearchProps) {
                       onChange={(e) =>
                         setFilters((prev) => ({
                           ...prev,
-                          maxRate: e.target.value ? parseInt(e.target.value, 10) : undefined,
+                          maxRate: e.target.value ? Number.parseInt(e.target.value, 10) : undefined,
                         }))
                       }
                     />
@@ -476,7 +488,7 @@ export function FreelancerSearch({ initialParams }: FreelancerSearchProps) {
           <div className="mt-6 flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
               {results
-                ? `${results.total} freelancer${results.total !== 1 ? 's' : ''} found`
+                ? `${results.total} freelancer${getPluralSuffix(results.total)} found`
                 : 'Loading...'}
             </p>
 
@@ -521,10 +533,10 @@ export function FreelancerSearch({ initialParams }: FreelancerSearchProps) {
 
           {/* Results */}
           <div className="mt-6">
-            {loading ? (
+            {loading && (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Card key={i} className="animate-pulse">
+                {Array.from({ length: 6 }, (_, i) => `skeleton-${i}`).map((id) => (
+                  <Card key={id} className="animate-pulse">
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
                         <div className="bg-muted h-12 w-12 rounded-full" />
@@ -537,7 +549,8 @@ export function FreelancerSearch({ initialParams }: FreelancerSearchProps) {
                   </Card>
                 ))}
               </div>
-            ) : results && results.freelancers.length > 0 ? (
+            )}
+            {!loading && results && results.freelancers.length > 0 && (
               <div
                 className={cn(
                   'grid gap-4',
@@ -548,7 +561,8 @@ export function FreelancerSearch({ initialParams }: FreelancerSearchProps) {
                   <FreelancerCard key={freelancer.id} freelancer={freelancer} viewMode={viewMode} />
                 ))}
               </div>
-            ) : (
+            )}
+            {!loading && (!results || results.freelancers.length === 0) && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Search className="text-muted-foreground/30 h-12 w-12" />
                 <h3 className="mt-4 font-semibold">No freelancers found</h3>

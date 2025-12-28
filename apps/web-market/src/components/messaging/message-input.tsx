@@ -2,7 +2,7 @@
 'use client';
 
 import { Button, cn, Textarea } from '@skillancer/ui';
-import { AtSign, File, Image, Loader2, Mic, Paperclip, Send, Smile, X } from 'lucide-react';
+import { File, Image, Loader2, Mic, Paperclip, Send, Smile, X } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -19,18 +19,18 @@ import type { Message } from '@/lib/api/messages';
 // ============================================================================
 
 interface MessageInputProps {
-  onSend: (content: string, attachments?: File[]) => Promise<void>;
-  onTypingChange?: (isTyping: boolean) => void;
-  replyingTo?: Message | null;
-  onCancelReply?: () => void;
-  placeholder?: string;
-  disabled?: boolean;
-  maxLength?: number;
+  readonly onSend: (content: string, attachments?: File[]) => Promise<void>;
+  readonly onTypingChange?: ((isTyping: boolean) => void) | undefined;
+  readonly replyingTo?: Message | null | undefined;
+  readonly onCancelReply?: (() => void) | undefined;
+  readonly placeholder?: string | undefined;
+  readonly disabled?: boolean | undefined;
+  readonly maxLength?: number | undefined;
 }
 
 interface AttachmentPreviewProps {
-  files: File[];
-  onRemove: (index: number) => void;
+  readonly files: File[];
+  readonly onRemove: (index: number) => void;
 }
 
 // ============================================================================
@@ -40,13 +40,14 @@ interface AttachmentPreviewProps {
 const QUICK_EMOJIS = ['👍', '❤️', '😊', '🎉', '🔥', '👏', '💪', '🙏'];
 
 interface EmojiPickerProps {
-  onSelect: (emoji: string) => void;
-  onClose: () => void;
+  readonly onSelect: (emoji: string) => void;
+  readonly onClose: () => void;
 }
 
-function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
+function EmojiPicker({ onSelect, onClose }: Readonly<EmojiPickerProps>) {
   return (
-    <div
+    // eslint-disable-next-line jsx-a11y/mouse-events-have-key-events
+    <fieldset
       className="absolute bottom-full left-0 mb-2 rounded-lg border bg-white p-2 shadow-lg dark:bg-gray-900"
       onMouseLeave={onClose}
     >
@@ -62,7 +63,7 @@ function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
           </button>
         ))}
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -70,7 +71,7 @@ function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
 // Attachment Preview
 // ============================================================================
 
-function AttachmentPreview({ files, onRemove }: AttachmentPreviewProps) {
+function AttachmentPreview({ files, onRemove }: Readonly<AttachmentPreviewProps>) {
   if (files.length === 0) return null;
 
   const formatFileSize = (bytes: number): string => {
@@ -127,11 +128,11 @@ function AttachmentPreview({ files, onRemove }: AttachmentPreviewProps) {
 // ============================================================================
 
 interface ReplyPreviewProps {
-  message: Message;
-  onCancel: () => void;
+  readonly message: Message;
+  readonly onCancel: () => void;
 }
 
-function ReplyPreview({ message, onCancel }: ReplyPreviewProps) {
+function ReplyPreview({ message, onCancel }: Readonly<ReplyPreviewProps>) {
   return (
     <div className="flex items-center gap-2 border-b bg-blue-50 px-3 py-2 dark:bg-blue-950/20">
       <div className="bg-primary h-full w-1 rounded-full" />
@@ -158,7 +159,7 @@ export function MessageInput({
   placeholder = 'Type a message...',
   disabled = false,
   maxLength = 5000,
-}: MessageInputProps) {
+}: Readonly<MessageInputProps>) {
   const [content, setContent] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [sending, setSending] = useState(false);

@@ -489,11 +489,15 @@ function ConfirmationModal({
 
           {/* Reason Input */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              htmlFor="kill-switch-reason"
+            >
               Reason for activation <span className="text-red-500">*</span>
             </label>
             <textarea
               className="h-24 w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
+              id="kill-switch-reason"
               placeholder="Describe the security incident or reason..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -541,7 +545,7 @@ function ConfirmationModal({
   );
 }
 
-function HistoryPanel({ history }: { history: KillSwitchHistory[] }) {
+function HistoryPanel({ history }: Readonly<{ history: KillSwitchHistory[] }>) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div className="border-b border-gray-200 p-4 dark:border-gray-700">
@@ -648,7 +652,7 @@ export function KillSwitchPanel({
     if (config.requiresConfirmation) {
       setConfirmingSwitch(config);
     } else {
-      confirmTrigger(config.id, 'Quick trigger');
+      void confirmTrigger(config.id, 'Quick trigger');
     }
   };
 

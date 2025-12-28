@@ -149,7 +149,7 @@ export function Timeline({
                 <div
                   className={cn(
                     'h-0.5 flex-1',
-                    items[index - 1].status === 'complete' ? 'bg-green-500' : 'bg-muted'
+                    items[index - 1]?.status === 'complete' ? 'bg-green-500' : 'bg-muted'
                   )}
                 />
               )}

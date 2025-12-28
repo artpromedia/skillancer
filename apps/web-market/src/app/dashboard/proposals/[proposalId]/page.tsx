@@ -15,12 +15,23 @@ import {
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { getProposalStatusInfo } from '@/lib/api/bids';
+
 import { ProposalDetailClient } from './proposal-detail-client';
 
 import type { Proposal } from '@/lib/api/bids';
 import type { Metadata } from 'next';
 
-import { getProposalStatusInfo } from '@/lib/api/bids';
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+function getScoreColor(value: number): string {
+  if (value >= 80) return 'bg-green-500';
+  if (value >= 60) return 'bg-yellow-500';
+  return 'bg-red-500';
+}
 
 // ============================================================================
 // Data Fetching
@@ -167,7 +178,7 @@ export async function generateMetadata({
 // Status Badge
 // ============================================================================
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: Readonly<{ status: string }>) {
   const statusInfo = getProposalStatusInfo(status as Proposal['status']);
 
   const getStyle = () => {
@@ -200,7 +211,9 @@ function StatusBadge({ status }: { status: string }) {
 // Page
 // ============================================================================
 
-export default async function ProposalDetailPage({ params }: { params: { proposalId: string } }) {
+export default async function ProposalDetailPage({
+  params,
+}: Readonly<{ params: { proposalId: string } }>) {
   const proposal = await getProposalDetails(params.proposalId);
 
   if (!proposal) {
@@ -457,7 +470,7 @@ export default async function ProposalDetailPage({ params }: { params: { proposa
                         <span className="text-muted-foreground w-24 text-sm capitalize">{key}</span>
                         <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
                           <div
-                            className={`h-full ${value >= 80 ? 'bg-green-500' : value >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            className={`h-full ${getScoreColor(value)}`}
                             style={{ width: `${value}%` }}
                           />
                         </div>

@@ -13,11 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea,
 } from '@skillancer/ui';
 import {
@@ -34,7 +29,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 import type { Contract, Dispute } from '@/lib/api/contracts';
 
@@ -100,6 +95,47 @@ const resolutionOptions: Record<Resolution, { label: string; description: string
 };
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+function renderSubmitButtonContent({
+  isSubmitting,
+  step,
+}: {
+  isSubmitting: boolean;
+  step: 'reason' | 'details' | 'evidence' | 'resolution';
+}) {
+  if (isSubmitting) {
+    return (
+      <>
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Submitting...
+      </>
+    );
+  }
+
+  if (step === 'resolution') {
+    return 'Submit Dispute';
+  }
+
+  return (
+    <>
+      Continue
+      <ArrowRight className="ml-2 h-4 w-4" />
+    </>
+  );
+}
+
+function createRemoveEvidenceHandler(
+  url: string,
+  setEvidenceUrls: React.Dispatch<React.SetStateAction<string[]>>
+) {
+  return () => {
+    setEvidenceUrls((prev) => prev.filter((item) => item !== url));
+  };
+}
+
+// ============================================================================
 // Open Dispute Modal
 // ============================================================================
 
@@ -109,7 +145,7 @@ interface OpenDisputeModalProps {
   onSubmit: (data: DisputeRequest) => Promise<void>;
 }
 
-function OpenDisputeModal({ open, onOpenChange, onSubmit }: OpenDisputeModalProps) {
+function OpenDisputeModal({ open, onOpenChange, onSubmit }: Readonly<OpenDisputeModalProps>) {
   const [step, setStep] = useState<'reason' | 'details' | 'evidence' | 'resolution'>('reason');
   const [reason, setReason] = useState<DisputeReason | null>(null);
   const [description, setDescription] = useState('');
@@ -227,7 +263,9 @@ function OpenDisputeModal({ open, onOpenChange, onSubmit }: OpenDisputeModalProp
                 placeholder="Provide a detailed explanation of what happened, including dates and specific issues..."
                 rows={6}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setDescription(e.target.value)
+                }
               />
               <p className="text-muted-foreground text-xs">
                 Be specific and factual. Include relevant dates, communications, and deliverables.
@@ -255,8 +293,8 @@ function OpenDisputeModal({ open, onOpenChange, onSubmit }: OpenDisputeModalProp
             {evidenceUrls.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium">Uploaded Evidence</p>
-                {evidenceUrls.map((url, i) => (
-                  <div key={i} className="flex items-center justify-between rounded border p-2">
+                {evidenceUrls.map((url) => (
+                  <div key={url} className="flex items-center justify-between rounded border p-2">
                     <div className="flex items-center gap-2">
                       <Paperclip className="h-4 w-4" />
                       <span className="text-sm">{url}</span>
@@ -264,7 +302,7 @@ function OpenDisputeModal({ open, onOpenChange, onSubmit }: OpenDisputeModalProp
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => setEvidenceUrls((prev) => prev.filter((_, j) => j !== i))}
+                      onClick={createRemoveEvidenceHandler(url, setEvidenceUrls)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -326,7 +364,14 @@ function OpenDisputeModal({ open, onOpenChange, onSubmit }: OpenDisputeModalProp
         <div className="flex justify-between border-t pt-4">
           <Button
             variant="ghost"
-            onClick={step === 'reason' ? handleClose : () => setStep(steps[currentStepIndex - 1])}
+            onClick={
+              step === 'reason'
+                ? handleClose
+                : () => {
+                    const prevStep = steps[currentStepIndex - 1];
+                    if (prevStep) setStep(prevStep);
+                  }
+            }
           >
             {step === 'reason' ? 'Cancel' : 'Back'}
           </Button>
@@ -339,22 +384,15 @@ function OpenDisputeModal({ open, onOpenChange, onSubmit }: OpenDisputeModalProp
               (step === 'resolution' && !desiredResolution)
             }
             onClick={
-              step === 'resolution' ? handleSubmit : () => setStep(steps[currentStepIndex + 1])
+              step === 'resolution'
+                ? handleSubmit
+                : () => {
+                    const nextStep = steps[currentStepIndex + 1];
+                    if (nextStep) setStep(nextStep);
+                  }
             }
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Submitting...
-              </>
-            ) : step === 'resolution' ? (
-              'Submit Dispute'
-            ) : (
-              <>
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
+            {renderSubmitButtonContent({ isSubmitting, step })}
           </Button>
         </div>
       </DialogContent>
@@ -369,18 +407,23 @@ function OpenDisputeModal({ open, onOpenChange, onSubmit }: OpenDisputeModalProp
 interface DisputeStatusCardProps {
   dispute: Dispute;
   isClient: boolean;
-  onResolve?: (resolution: Resolution) => Promise<void>;
-  onEscalate?: () => Promise<void>;
+  onResolve?: ((resolution: Resolution) => Promise<void>) | undefined;
+  onEscalate?: (() => Promise<void>) | undefined;
 }
 
-function DisputeStatusCard({ dispute, isClient, onResolve, onEscalate }: DisputeStatusCardProps) {
+function DisputeStatusCard({
+  dispute,
+  isClient,
+  onResolve,
+  onEscalate,
+}: Readonly<DisputeStatusCardProps>) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'OPEN':
         return 'bg-amber-500';
-      case 'IN_REVIEW':
+      case 'UNDER_REVIEW':
         return 'bg-blue-500';
       case 'RESOLVED':
         return 'bg-green-500';
@@ -419,7 +462,7 @@ function DisputeStatusCard({ dispute, isClient, onResolve, onEscalate }: Dispute
 
         <div>
           <p className="text-muted-foreground text-sm">Opened</p>
-          <p className="text-sm">{new Date(dispute.createdAt).toLocaleDateString()}</p>
+          <p className="text-sm">{new Date(dispute.openedAt).toLocaleDateString()}</p>
         </div>
 
         {dispute.status === 'OPEN' && (
@@ -460,7 +503,7 @@ export function DisputeCenter({
   onOpenDispute,
   onResolve,
   onEscalate,
-}: DisputeCenterProps) {
+}: Readonly<DisputeCenterProps>) {
   const [showOpenModal, setShowOpenModal] = useState(false);
 
   // If there's an active dispute, show the status
@@ -475,7 +518,7 @@ export function DisputeCenter({
         />
 
         {/* Resolution Options (if applicable) */}
-        {dispute.status === 'IN_REVIEW' && onResolve && (
+        {dispute.status === 'UNDER_REVIEW' && onResolve && (
           <Card>
             <CardHeader>
               <h3 className="font-semibold">Proposed Resolution</h3>

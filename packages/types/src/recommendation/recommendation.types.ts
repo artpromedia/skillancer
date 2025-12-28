@@ -3,13 +3,8 @@
  * Learning Recommendation Types
  */
 
-import type {
-  SkillLevel,
-  GapType,
-  TrendType,
-  CompetitionLevel,
-  TrendPeriod,
-} from './market-activity.events.js';
+import type { GapType, TrendType, TrendPeriod } from './market-activity.events.js';
+import type { CompetitionLevel } from '../cockpit/pricing.types.js';
 
 // =============================================================================
 // ENUMS AS TYPES
@@ -52,7 +47,7 @@ export type ContentType =
   | 'PROJECT'
   | 'ARTICLE';
 
-export type RecommendationStatus =
+export type LearningRecommendationStatus =
   | 'PENDING'
   | 'VIEWED'
   | 'STARTED'
@@ -183,7 +178,7 @@ export interface MarketActivitySignal {
 // LEARNING RECOMMENDATION
 // =============================================================================
 
-export interface RecommendationReason {
+export interface LearningRecommendationReason {
   type: string;
   message: string;
 }
@@ -216,7 +211,7 @@ export interface LearningRecommendation {
   overallScore: number; // 0-100
 
   // Reasoning
-  reasons: RecommendationReason[];
+  reasons: LearningRecommendationReason[];
   expectedOutcomes: RecommendationOutcome[];
 
   // Display
@@ -225,7 +220,7 @@ export interface LearningRecommendation {
   expiresAt?: Date;
 
   // Interaction tracking
-  status: RecommendationStatus;
+  status: LearningRecommendationStatus;
   viewedAt?: Date;
   clickedAt?: Date;
   startedAt?: Date;
@@ -360,7 +355,7 @@ export interface RecommendationResponse {
   type: RecommendationType;
   content: RecommendationContent;
   scores: RecommendationScores;
-  reasons: RecommendationReason[];
+  reasons: LearningRecommendationReason[];
   expectedOutcomes: RecommendationOutcome[];
   relatedGap?: RelatedGapInfo;
   isHighlighted: boolean;
@@ -481,7 +476,7 @@ export interface RecommendationInteractionRequest {
   dismissReason?: string;
 }
 
-export interface GetRecommendationsQuery {
+export interface GetLearningRecommendationsQuery {
   limit?: number;
   type?: RecommendationType;
 }
@@ -490,6 +485,3 @@ export interface GetMarketTrendsQuery {
   category?: string;
   period?: TrendPeriod;
 }
-
-// Re-export event types
-export type { SkillLevel, GapType, TrendType, CompetitionLevel, TrendPeriod };

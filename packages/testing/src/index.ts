@@ -8,7 +8,8 @@
 export * from './config/jest.config.base';
 
 // ==================== Setup ====================
-export * from './setup/jest.setup';
+// jest.setup is a side-effect only module, just import it
+import './setup/jest.setup';
 
 // ==================== Fixtures ====================
 export * from './fixtures/test-database';
@@ -26,15 +27,3 @@ export * from './e2e/page-objects';
 // Testing libraries
 export { faker } from '@faker-js/faker';
 export type { Page, Locator, BrowserContext } from '@playwright/test';
-
-// Custom types
-export type { TestDatabaseOptions, TestDatabaseContext } from './fixtures/test-database';
-
-export type { UserData, CourseData, JobData, ContractData } from './fixtures/factories';
-
-export type {
-  AuthTokens,
-  APITestClientOptions,
-  RequestOptions,
-  APIResponse,
-} from './helpers/api-test-client';

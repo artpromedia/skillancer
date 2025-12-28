@@ -30,6 +30,10 @@ export type { ButtonProps } from './components/Button';
 export { Input } from './components/input';
 export type { InputProps } from './components/input';
 
+// Textarea
+export { Textarea } from './components/textarea';
+export type { TextareaProps } from './components/textarea';
+
 // Label
 export { Label } from './components/label';
 

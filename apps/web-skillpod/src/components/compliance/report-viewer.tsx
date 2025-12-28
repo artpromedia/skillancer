@@ -188,7 +188,7 @@ function formatDateShort(date: Date): string {
 // Sub-Components
 // ============================================================================
 
-function ReportHeader({ report }: { report: ComplianceReport }) {
+function ReportHeader({ report }: Readonly<{ report: ComplianceReport }>) {
   const statusConfig = STATUS_CONFIG[report.summary.status];
   const StatusIcon = statusConfig.icon;
 
@@ -259,7 +259,7 @@ function ReportHeader({ report }: { report: ComplianceReport }) {
   );
 }
 
-function ExecutiveSummary({ summary }: { summary: ReportSummary }) {
+function ExecutiveSummary({ summary }: Readonly<{ summary: ReportSummary }>) {
   const scoreColor =
     summary.overallScore >= 90
       ? 'text-green-600'
@@ -496,7 +496,7 @@ function SectionCard({
   );
 }
 
-function FindingsList({ findings }: { findings: Finding[] }) {
+function FindingsList({ findings }: Readonly<{ findings: Finding[] }>) {
   if (findings.length === 0) {
     return (
       <div className="py-8 text-center text-gray-500">
@@ -556,7 +556,7 @@ function FindingsList({ findings }: { findings: Finding[] }) {
   );
 }
 
-function RecommendationsList({ recommendations }: { recommendations: Recommendation[] }) {
+function RecommendationsList({ recommendations }: Readonly<{ recommendations: Recommendation[] }>) {
   return (
     <div className="space-y-3">
       {recommendations.map((rec, index) => (

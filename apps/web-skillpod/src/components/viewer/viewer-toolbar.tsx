@@ -41,14 +41,13 @@ import {
   Monitor,
   Power,
   Settings,
-  Signal,
   SignalHigh,
   SignalLow,
   SignalMedium,
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { QualityLevel } from './vdi-viewer';
 
@@ -98,9 +97,9 @@ export function ViewerToolbar({
   onOpenShortcuts,
   onOpenSessionInfo,
   onDisconnect,
-}: ViewerToolbarProps) {
+}: Readonly<ViewerToolbarProps>) {
   const [isVisible, setIsVisible] = useState(true);
-  const [isPinned, setIsPinned] = useState(false);
+  const [isPinned] = useState(false);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
@@ -118,16 +117,10 @@ export function ViewerToolbar({
       }
     };
 
-    const handleMouseLeave = () => {
-      if (!isPinned) {
-        startHideTimeout();
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
+    globalThis.addEventListener('mousemove', handleMouseMove);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
+      globalThis.removeEventListener('mousemove', handleMouseMove);
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
       }
@@ -219,10 +212,12 @@ export function ViewerToolbar({
     <TooltipProvider>
       <div
         ref={toolbarRef}
+        aria-label="Session controls"
         className={cn(
           'fixed left-1/2 top-0 z-50 -translate-x-1/2 transition-all duration-300',
           isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
         )}
+        role="toolbar"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -348,11 +343,11 @@ export function ViewerToolbar({
             <TooltipContent>
               <p>
                 Clipboard:{' '}
-                {clipboardState === 'synced'
-                  ? 'Synced'
-                  : clipboardState === 'blocked'
-                    ? 'Blocked by policy'
-                    : 'Syncing...'}
+                {(() => {
+                  if (clipboardState === 'synced') return 'Synced';
+                  if (clipboardState === 'blocked') return 'Blocked by policy';
+                  return 'Syncing...';
+                })()}
               </p>
             </TooltipContent>
           </Tooltip>

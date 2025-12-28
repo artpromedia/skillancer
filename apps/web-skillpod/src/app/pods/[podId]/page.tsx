@@ -48,7 +48,7 @@ function PodLoading() {
 // ERROR STATE
 // ============================================================================
 
-function PodError({ message }: { message: string }) {
+function PodError({ message }: Readonly<{ message: string }>) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-900">
       <div className="max-w-md rounded-lg bg-red-900/20 p-8 text-center">
@@ -69,7 +69,7 @@ function PodError({ message }: { message: string }) {
 // PAGE
 // ============================================================================
 
-export default async function PodPage({ params }: PodPageProps) {
+export default async function PodPage({ params }: Readonly<PodPageProps>) {
   const { podId } = await params;
 
   const pod = await getPodDetails(podId);
@@ -79,6 +79,20 @@ export default async function PodPage({ params }: PodPageProps) {
       <PodError message="The pod you're looking for doesn't exist or you don't have access." />
     );
   }
+
+  // Determine status badge color
+  const getStatusColor = () => {
+    switch (pod.status) {
+      case 'running':
+        return 'bg-green-500';
+      case 'starting':
+        return 'animate-pulse bg-yellow-500';
+      case 'stopped':
+        return 'bg-gray-500';
+      default:
+        return 'bg-red-500';
+    }
+  };
 
   return (
     <main className="min-h-screen bg-gray-900">
@@ -99,17 +113,7 @@ export default async function PodPage({ params }: PodPageProps) {
           <div className="flex items-center gap-4">
             {/* Pod status badge */}
             <div className="flex items-center gap-2">
-              <div
-                className={`h-2 w-2 rounded-full ${
-                  pod.status === 'running'
-                    ? 'bg-green-500'
-                    : pod.status === 'starting'
-                      ? 'animate-pulse bg-yellow-500'
-                      : pod.status === 'stopped'
-                        ? 'bg-gray-500'
-                        : 'bg-red-500'
-                }`}
-              />
+              <div className={`h-2 w-2 rounded-full ${getStatusColor()}`} />
               <span className="text-sm capitalize text-gray-400">{pod.status}</span>
             </div>
           </div>

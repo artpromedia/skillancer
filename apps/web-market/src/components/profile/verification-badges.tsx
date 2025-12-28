@@ -73,7 +73,7 @@ function SingleBadge({
   bgColor,
   verified,
   animated = false,
-}: SingleBadgeProps) {
+}: Readonly<SingleBadgeProps>) {
   if (!verified) return null;
 
   return (
@@ -107,10 +107,10 @@ function SingleBadge({
 function IdentityVerificationBadge({
   level,
   animated,
-}: {
+}: Readonly<{
   level: VerificationLevel;
   animated?: boolean;
-}) {
+}>) {
   if (level === 'NONE' || level === 'EMAIL') return null;
 
   const config = {
@@ -149,7 +149,10 @@ function IdentityVerificationBadge({
 // Talent Badge
 // ============================================================================
 
-function TalentBadge({ badge, animated }: { badge: FreelancerBadge; animated?: boolean }) {
+function TalentBadge({
+  badge,
+  animated,
+}: Readonly<{ badge: FreelancerBadge; animated?: boolean }>) {
   const config = {
     RISING_TALENT: {
       icon: <Sparkles className="h-4 w-4" />,
@@ -198,7 +201,10 @@ function TalentBadge({ badge, animated }: { badge: FreelancerBadge; animated?: b
 // Compliance Badge
 // ============================================================================
 
-function ComplianceBadgeItem({ badge, animated }: { badge: ComplianceBadge; animated?: boolean }) {
+function ComplianceBadgeItem({
+  badge,
+  animated,
+}: Readonly<{ badge: ComplianceBadge; animated?: boolean }>) {
   const config = {
     HIPAA: {
       icon: <Building2 className="h-4 w-4" />,
@@ -265,7 +271,7 @@ export function VerificationBadges({
   showLearnMore = false,
   animated = false,
   className,
-}: VerificationBadgesProps) {
+}: Readonly<VerificationBadgesProps>) {
   const hasAnyBadge =
     isIdentityVerified ||
     isPaymentVerified ||
@@ -350,10 +356,10 @@ export function VerificationBadges({
 export function InlineVerificationBadge({
   verificationLevel,
   size = 'sm',
-}: {
+}: Readonly<{
   verificationLevel: VerificationLevel;
   size?: 'xs' | 'sm' | 'md';
-}) {
+}>) {
   if (verificationLevel === 'NONE' || verificationLevel === 'EMAIL') return null;
 
   const sizeClasses = {

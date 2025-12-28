@@ -13,7 +13,6 @@
  */
 
 import {
-  Button,
   cn,
   Label,
   Popover,
@@ -24,21 +23,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Slider,
   Switch,
 } from '@skillancer/ui';
-import {
-  Activity,
-  Gauge,
-  Monitor,
-  Settings,
-  Signal,
-  SignalHigh,
-  SignalLow,
-  SignalMedium,
-  Wifi,
-  Zap,
-} from 'lucide-react';
+import { Activity, Settings, Signal, SignalHigh, SignalLow, SignalMedium } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 // ============================================================================
@@ -47,6 +34,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export type QualityPreset = 'auto' | 'high' | 'medium' | 'low';
 export type FrameRate = 30 | 60;
+export type StatusLevel = 'good' | 'fair' | 'poor';
 
 export interface QualityConfig {
   preset: QualityPreset;
@@ -100,7 +88,7 @@ interface LatencyGraphProps {
   maxLatency?: number;
 }
 
-function LatencyGraph({ latencyHistory, maxLatency = 200 }: LatencyGraphProps) {
+function LatencyGraph({ latencyHistory, maxLatency = 200 }: Readonly<LatencyGraphProps>) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -169,10 +157,10 @@ interface StatItemProps {
   label: string;
   value: string | number;
   unit?: string;
-  status?: 'good' | 'fair' | 'poor';
+  status?: StatusLevel;
 }
 
-function StatItem({ label, value, unit, status }: StatItemProps) {
+function StatItem({ label, value, unit, status }: Readonly<StatItemProps>) {
   const statusColors = {
     good: 'text-green-500',
     fair: 'text-yellow-500',
@@ -199,7 +187,17 @@ interface QualityIndicatorProps {
   size?: 'sm' | 'md';
 }
 
-export function QualityIndicator({ stats, size = 'md' }: QualityIndicatorProps) {
+/**
+ * Gets the appropriate signal icon based on quality level (number of bars).
+ */
+function getSignalIcon(bars: number) {
+  if (bars >= 4) return SignalHigh;
+  if (bars >= 3) return SignalMedium;
+  if (bars >= 2) return SignalLow;
+  return Signal;
+}
+
+export function QualityIndicator({ stats, size = 'md' }: Readonly<QualityIndicatorProps>) {
   const getQuality = () => {
     if (
       stats.latency < QUALITY_THRESHOLDS.latency.good &&
@@ -229,14 +227,7 @@ export function QualityIndicator({ stats, size = 'md' }: QualityIndicatorProps) 
     critical: 'text-red-500',
   };
 
-  const Icon =
-    quality.bars >= 4
-      ? SignalHigh
-      : quality.bars >= 3
-        ? SignalMedium
-        : quality.bars >= 2
-          ? SignalLow
-          : Signal;
+  const Icon = getSignalIcon(quality.bars);
 
   return <Icon className={cn(iconSize, colors[quality.level as keyof typeof colors])} />;
 }
@@ -250,7 +241,7 @@ export function QualitySettings({
   stats,
   onConfigChange,
   className,
-}: QualitySettingsProps) {
+}: Readonly<QualitySettingsProps>) {
   const [latencyHistory, setLatencyHistory] = useState<number[]>([]);
 
   // Track latency history for graph
@@ -261,13 +252,13 @@ export function QualitySettings({
     });
   }, [stats.latency]);
 
-  const getLatencyStatus = (): 'good' | 'fair' | 'poor' => {
+  const getLatencyStatus = (): StatusLevel => {
     if (stats.latency < QUALITY_THRESHOLDS.latency.good) return 'good';
     if (stats.latency < QUALITY_THRESHOLDS.latency.fair) return 'fair';
     return 'poor';
   };
 
-  const getPacketLossStatus = (): 'good' | 'fair' | 'poor' => {
+  const getPacketLossStatus = (): StatusLevel => {
     if (stats.packetLoss < QUALITY_THRESHOLDS.packetLoss.good) return 'good';
     if (stats.packetLoss < QUALITY_THRESHOLDS.packetLoss.fair) return 'fair';
     return 'poor';
@@ -325,7 +316,9 @@ export function QualitySettings({
             </div>
             <Select
               value={config.frameRate.toString()}
-              onValueChange={(v) => onConfigChange({ frameRate: parseInt(v) as FrameRate })}
+              onValueChange={(v) =>
+                onConfigChange({ frameRate: Number.parseInt(v, 10) as FrameRate })
+              }
             >
               <SelectTrigger className="w-20">
                 <SelectValue />

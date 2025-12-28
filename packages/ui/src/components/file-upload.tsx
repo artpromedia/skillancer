@@ -81,9 +81,19 @@ export function FileUpload({
     setLocalFiles(value);
   }, [value]);
 
-  const updateFiles = (files: UploadedFile[]) => {
-    setLocalFiles(files);
-    onChange?.(files);
+  const updateFiles = (
+    filesOrUpdater: UploadedFile[] | ((prev: UploadedFile[]) => UploadedFile[])
+  ) => {
+    if (typeof filesOrUpdater === 'function') {
+      setLocalFiles((prev) => {
+        const newFiles = filesOrUpdater(prev);
+        onChange?.(newFiles);
+        return newFiles;
+      });
+    } else {
+      setLocalFiles(filesOrUpdater);
+      onChange?.(filesOrUpdater);
+    }
   };
 
   const handleFiles = async (fileList: FileList) => {
@@ -95,15 +105,19 @@ export function FileUpload({
     }
 
     const filesToProcess = newFiles.slice(0, remainingSlots);
-    const pendingFiles: UploadedFile[] = filesToProcess.map((file) => ({
-      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      progress: 0,
-      status: 'pending' as const,
-      error: file.size > maxSize ? `File exceeds ${formatFileSize(maxSize)} limit` : undefined,
-    }));
+    const pendingFiles: UploadedFile[] = filesToProcess.map((file) => {
+      const errorMessage =
+        file.size > maxSize ? `File exceeds ${formatFileSize(maxSize)} limit` : undefined;
+      const baseFile = {
+        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        progress: 0,
+        status: 'pending' as const,
+      };
+      return errorMessage ? { ...baseFile, error: errorMessage } : baseFile;
+    });
 
     // Mark files that are too large as errors
     const filesWithErrors = pendingFiles.map((f) => ({
@@ -118,7 +132,7 @@ export function FileUpload({
       const file = filesToProcess[i];
       const pendingFile = filesWithErrors[i];
 
-      if (pendingFile.error || !onUpload) {
+      if (!file || !pendingFile || pendingFile.error || !onUpload) {
         continue;
       }
 

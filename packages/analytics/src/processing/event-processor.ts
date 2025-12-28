@@ -3,8 +3,8 @@
  * Kafka event processor for analytics events
  */
 
-import type { Consumer, Producer, EachMessagePayload, Kafka as KafkaType } from 'kafkajs';
 import type { AnalyticsEvent } from '../events/index.js';
+import type { Consumer, Producer, EachMessagePayload, Kafka as KafkaType } from 'kafkajs';
 
 export interface EventProcessorConfig {
   kafka: {
@@ -80,9 +80,9 @@ export class EventProcessor {
 
     this.logger.info('Starting event processor');
 
-    await this.producer!.connect();
-    await this.consumer!.connect();
-    await this.consumer!.subscribe({
+    await this.producer.connect();
+    await this.consumer.connect();
+    await this.consumer.subscribe({
       topic: this.config.kafka.inputTopic,
       fromBeginning: false,
     });
@@ -90,7 +90,7 @@ export class EventProcessor {
     this.isRunning = true;
     this.startFlushTimer();
 
-    await this.consumer!.run({
+    await this.consumer.run({
       eachMessage: async (payload) => {
         await this.processMessage(payload);
       },

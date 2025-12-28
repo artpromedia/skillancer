@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars, @typescript-eslint/no-unsafe-argument */
 'use client';
 
-import { Badge, Button, Card, CardContent, CardHeader, cn } from '@skillancer/ui';
+import { Button, Card, CardContent, CardHeader, cn } from '@skillancer/ui';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -10,7 +10,6 @@ import {
   CreditCard,
   DollarSign,
   ExternalLink,
-  Loader2,
   Wallet,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -22,11 +21,11 @@ import type { Contract, PaymentInfo } from '@/lib/api/contracts';
 // ============================================================================
 
 interface PaymentStatusProps {
-  contract: Contract;
-  payments: PaymentInfo;
-  isClient: boolean;
-  onAddFunds?: () => void;
-  onWithdraw?: () => void;
+  readonly contract: Contract;
+  readonly payments: PaymentInfo;
+  readonly isClient: boolean;
+  readonly onAddFunds?: () => void;
+  readonly onWithdraw?: () => void;
 }
 
 // ============================================================================
@@ -175,8 +174,8 @@ interface Transaction {
 }
 
 interface TransactionListProps {
-  transactions: Transaction[];
-  limit?: number;
+  readonly transactions: Transaction[];
+  readonly limit?: number;
 }
 
 export function TransactionList({ transactions, limit = 5 }: TransactionListProps) {
@@ -267,7 +266,7 @@ export function TransactionList({ transactions, limit = 5 }: TransactionListProp
         </div>
       ))}
 
-      {limit && transactions.length > limit && (
+      {Boolean(limit) && transactions.length > limit && (
         <Link
           className="text-primary block text-center text-sm hover:underline"
           href="/dashboard/transactions"

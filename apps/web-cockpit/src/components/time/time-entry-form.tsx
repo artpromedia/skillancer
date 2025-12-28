@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable jsx-a11y/label-has-associated-control */
+/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
 'use client';
 
 /**
@@ -10,7 +12,6 @@
  * @module components/time/time-entry-form
  */
 
-import { useState, useEffect, useRef } from 'react';
 import {
   X,
   Save,
@@ -24,6 +25,7 @@ import {
   Search,
   Check,
 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 
 // ============================================================================
 // Types
@@ -130,24 +132,24 @@ function DurationPicker({
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1">
         <input
-          type="number"
-          min={0}
-          max={23}
-          value={hours}
-          onChange={(e) => handleHoursChange(parseInt(e.target.value) || 0)}
           className="w-16 rounded border border-gray-200 px-2 py-2 text-center text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
+          max={23}
+          min={0}
+          type="number"
+          value={hours}
+          onChange={(e) => handleHoursChange(Number.parseInt(e.target.value) || 0)}
         />
         <span className="text-sm text-gray-500">h</span>
       </div>
       <div className="flex items-center gap-1">
         <input
-          type="number"
-          min={0}
-          max={59}
-          step={5}
-          value={minutes}
-          onChange={(e) => handleMinutesChange(parseInt(e.target.value) || 0)}
           className="w-16 rounded border border-gray-200 px-2 py-2 text-center text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
+          max={59}
+          min={0}
+          step={5}
+          type="number"
+          value={minutes}
+          onChange={(e) => handleMinutesChange(Number.parseInt(e.target.value) || 0)}
         />
         <span className="text-sm text-gray-500">m</span>
       </div>
@@ -159,7 +161,7 @@ function DurationPicker({
 // Quick Duration Buttons
 // ============================================================================
 
-function QuickDurationButtons({ onSelect }: { onSelect: (minutes: number) => void }) {
+function QuickDurationButtons({ onSelect }: Readonly<{ onSelect: (minutes: number) => void }>) {
   const presets = [15, 30, 45, 60, 90, 120, 180, 240];
 
   return (
@@ -167,9 +169,9 @@ function QuickDurationButtons({ onSelect }: { onSelect: (minutes: number) => voi
       {presets.map((mins) => (
         <button
           key={mins}
+          className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
           type="button"
           onClick={() => onSelect(mins)}
-          className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
         >
           {formatDuration(mins)}
         </button>
@@ -339,12 +341,16 @@ export function TimeEntryForm({
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      <div aria-hidden="true" className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
         <div
+          aria-modal="true"
           className="w-full max-w-lg rounded-xl bg-white shadow-2xl dark:bg-gray-800"
+          role="dialog"
           onClick={(e) => e.stopPropagation()}
         >
           <form onSubmit={handleSubmit}>
@@ -354,9 +360,9 @@ export function TimeEntryForm({
                 {mode === 'create' ? 'Add Time Entry' : 'Edit Time Entry'}
               </h2>
               <button
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
                 type="button"
                 onClick={onClose}
-                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -371,24 +377,24 @@ export function TimeEntryForm({
                 </label>
                 <textarea
                   ref={descriptionRef}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   placeholder="What did you work on?"
                   rows={2}
-                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
 
               {/* Project */}
-              <div className="mb-4" ref={projectDropdownRef}>
+              <div ref={projectDropdownRef} className="mb-4">
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Project <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <button
+                    className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-left hover:border-gray-300 dark:border-gray-600"
                     type="button"
                     onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
-                    className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-4 py-3 text-left hover:border-gray-300 dark:border-gray-600"
                   >
                     {selectedProject ? (
                       <div className="flex items-center gap-2">
@@ -412,12 +418,11 @@ export function TimeEntryForm({
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                           <input
-                            type="text"
+                            className="w-full rounded-md border-0 bg-gray-50 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
                             placeholder="Search projects..."
+                            type="text"
                             value={projectSearch}
                             onChange={(e) => setProjectSearch(e.target.value)}
-                            className="w-full rounded-md border-0 bg-gray-50 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                            autoFocus
                           />
                         </div>
                       </div>
@@ -425,13 +430,13 @@ export function TimeEntryForm({
                         {filteredProjects.map((project) => (
                           <button
                             key={project.id}
-                            type="button"
-                            onClick={() => handleProjectSelect(project.id)}
                             className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 ${
                               project.id === formData.projectId
                                 ? 'bg-blue-50 dark:bg-blue-900/30'
                                 : ''
                             }`}
+                            type="button"
+                            onClick={() => handleProjectSelect(project.id)}
                           >
                             <div
                               className="h-3 w-3 rounded-full"
@@ -461,9 +466,9 @@ export function TimeEntryForm({
                     Task
                   </label>
                   <select
+                    className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
                     value={formData.taskId}
                     onChange={(e) => setFormData({ ...formData, taskId: e.target.value })}
-                    className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
                   >
                     <option value="">No task</option>
                     {projectTasks.map((task) => (
@@ -481,34 +486,34 @@ export function TimeEntryForm({
                   Date
                 </label>
                 <input
+                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
                 />
               </div>
 
               {/* Time Mode Toggle */}
               <div className="mb-2 flex items-center gap-2">
                 <button
-                  type="button"
-                  onClick={() => setTimeMode('range')}
                   className={`rounded-lg px-3 py-1 text-sm font-medium ${
                     timeMode === 'range'
                       ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                       : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                   }`}
+                  type="button"
+                  onClick={() => setTimeMode('range')}
                 >
                   Time Range
                 </button>
                 <button
-                  type="button"
-                  onClick={() => setTimeMode('duration')}
                   className={`rounded-lg px-3 py-1 text-sm font-medium ${
                     timeMode === 'duration'
                       ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                       : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                   }`}
+                  type="button"
+                  onClick={() => setTimeMode('duration')}
                 >
                   Duration
                 </button>
@@ -521,19 +526,19 @@ export function TimeEntryForm({
                     <div className="flex-1">
                       <label className="mb-1 block text-xs text-gray-500">Start</label>
                       <input
+                        className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
                         type="time"
                         value={formData.startTime}
                         onChange={(e) => handleTimeChange('startTime', e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
                       />
                     </div>
                     <div className="flex-1">
                       <label className="mb-1 block text-xs text-gray-500">End</label>
                       <input
+                        className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
                         type="time"
                         value={formData.endTime}
                         onChange={(e) => handleTimeChange('endTime', e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
                       />
                     </div>
                     <div className="text-right">
@@ -563,28 +568,28 @@ export function TimeEntryForm({
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                     <input
-                      type="number"
+                      className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-4 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
                       min={0}
+                      placeholder="0"
                       step={1}
+                      type="number"
                       value={formData.hourlyRate || ''}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          hourlyRate: parseFloat(e.target.value) || undefined,
+                          hourlyRate: Number.parseFloat(e.target.value) || undefined,
                         })
                       }
-                      placeholder="0"
-                      className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-4 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700"
                     />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 pb-2">
                   <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, billable: !formData.billable })}
                     className={`relative h-6 w-11 rounded-full transition-colors ${
                       formData.billable ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, billable: !formData.billable })}
                   >
                     <span
                       className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
@@ -609,15 +614,17 @@ export function TimeEntryForm({
                     >
                       #{tag}
                       <button
+                        className="hover:text-blue-900"
                         type="button"
                         onClick={() => handleRemoveTag(tag)}
-                        className="hover:text-blue-900"
                       >
                         <X className="h-3 w-3" />
                       </button>
                     </span>
                   ))}
                   <input
+                    className="min-w-[100px] flex-1 border-0 bg-transparent p-1 text-sm focus:outline-none dark:text-white"
+                    placeholder="Add tag..."
                     type="text"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
@@ -627,8 +634,6 @@ export function TimeEntryForm({
                         handleAddTag();
                       }
                     }}
-                    placeholder="Add tag..."
-                    className="min-w-[100px] flex-1 border-0 bg-transparent p-1 text-sm focus:outline-none dark:text-white"
                   />
                 </div>
               </div>
@@ -639,11 +644,11 @@ export function TimeEntryForm({
                   Notes
                 </label>
                 <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   placeholder="Additional notes..."
                   rows={3}
-                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
               </div>
             </div>
@@ -651,16 +656,16 @@ export function TimeEntryForm({
             {/* Footer */}
             <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
               <button
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 Cancel
               </button>
               <button
-                type="submit"
-                disabled={!formData.projectId}
                 className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!formData.projectId}
+                type="submit"
               >
                 <Save className="h-4 w-4" />
                 {mode === 'create' ? 'Add Entry' : 'Save Changes'}

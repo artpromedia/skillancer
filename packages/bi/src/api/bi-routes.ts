@@ -3,9 +3,9 @@
  * BI API routes
  */
 
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { KPIService } from '../kpi/kpi-service.js';
 import type { ReportService } from '../reports/report-service.js';
+import type { FastifyInstance } from 'fastify';
 
 interface DateRangeQuery {
   start?: string;
@@ -22,7 +22,7 @@ interface DashboardParams {
   category: string;
 }
 
-interface TargetParams {
+interface _TargetParams {
   kpiId: string;
   period?: string;
 }

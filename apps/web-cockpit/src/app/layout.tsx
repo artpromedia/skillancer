@@ -10,10 +10,6 @@
  * @module app/layout
  */
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import '../styles/globals.css';
 import {
   Home,
   Clock,
@@ -36,6 +32,10 @@ import {
   User,
   HelpCircle,
 } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import '../styles/globals.css';
 
 // ============================================================================
 // Types
@@ -80,21 +80,20 @@ function Sidebar({
   isOpen,
   onClose,
   currentPath,
-}: {
+}: Readonly<{
   isOpen: boolean;
   onClose: () => void;
   currentPath: string;
-}) {
+}>) {
   return (
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+        <button
+          aria-label="Close sidebar"
+          className="fixed inset-0 z-40 cursor-default border-0 bg-black/50 lg:hidden"
+          type="button"
           onClick={onClose}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Escape' && onClose()}
         />
       )}
 
@@ -106,13 +105,13 @@ function Sidebar({
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700">
-          <Link href="/" className="flex items-center gap-2">
+          <Link className="flex items-center gap-2" href="/">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
               <Briefcase className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold text-gray-900 dark:text-white">Cockpit</span>
           </Link>
-          <button onClick={onClose} className="rounded p-1 hover:bg-gray-100 lg:hidden">
+          <button className="rounded p-1 hover:bg-gray-100 lg:hidden" onClick={onClose}>
             <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
@@ -124,12 +123,12 @@ function Sidebar({
             return (
               <Link
                 key={item.id}
-                href={item.href}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                     : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                 }`}
+                href={item.href}
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}
@@ -175,7 +174,7 @@ function HeaderTimerWidget() {
     // Check for active timer
     const stored = localStorage.getItem('activeTimer');
     if (stored) {
-      const timer = JSON.parse(stored);
+      const timer = JSON.parse(stored) as { projectName?: string; startTime: string };
       setIsRunning(true);
       setProjectName(timer.projectName || 'No project');
       const startTime = new Date(timer.startTime).getTime();
@@ -200,8 +199,8 @@ function HeaderTimerWidget() {
   if (!isRunning) {
     return (
       <Link
-        href="/time?action=start"
         className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+        href="/time?action=start"
       >
         <Timer className="h-4 w-4" />
         Start Timer
@@ -211,8 +210,8 @@ function HeaderTimerWidget() {
 
   return (
     <Link
-      href="/time"
       className="flex items-center gap-3 rounded-lg bg-green-50 px-3 py-2 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+      href="/time"
     >
       <div className="relative">
         <Timer className="h-4 w-4" />
@@ -234,10 +233,10 @@ function HeaderTimerWidget() {
 function Header({
   onMenuClick,
   notifications,
-}: {
+}: Readonly<{
   onMenuClick: () => void;
   notifications: number;
-}) {
+}>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
@@ -246,8 +245,8 @@ function Header({
       {/* Left side */}
       <div className="flex items-center gap-4">
         <button
-          onClick={onMenuClick}
           className="rounded p-2 hover:bg-gray-100 lg:hidden dark:hover:bg-gray-700"
+          onClick={onMenuClick}
         >
           <Menu className="h-5 w-5 text-gray-500" />
         </button>
@@ -256,11 +255,11 @@ function Header({
         <div className="relative hidden sm:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
-            type="text"
+            className="w-64 rounded-lg border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
             placeholder="Search..."
+            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-64 rounded-lg border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
           />
         </div>
       </div>
@@ -283,8 +282,8 @@ function Header({
         {/* User Menu */}
         <div className="relative">
           <button
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white">
               <span className="text-sm font-medium">AJ</span>
@@ -294,39 +293,44 @@ function Header({
 
           {isUserMenuOpen && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
+              <button
+                aria-label="Close menu"
+                className="fixed inset-0 z-40 cursor-default border-0 bg-transparent"
+                type="button"
+                onClick={() => setIsUserMenuOpen(false)}
+              />
               <div className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                 <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">Alex Johnson</p>
                   <p className="text-xs text-gray-500">alex@example.com</p>
                 </div>
                 <Link
-                  href="/settings/profile"
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  href="/settings/profile"
                 >
                   <User className="h-4 w-4" />
                   Profile
                 </Link>
                 <Link
-                  href="/settings"
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  href="/settings"
                 >
                   <Settings className="h-4 w-4" />
                   Settings
                 </Link>
                 <Link
-                  href="/help"
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  href="/help"
                 >
                   <HelpCircle className="h-4 w-4" />
                   Help Center
                 </Link>
                 <div className="border-t border-gray-200 dark:border-gray-700">
                   <button
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                     onClick={() => {
                       // Handle logout
                     }}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                   >
                     <LogOut className="h-4 w-4" />
                     Sign Out
@@ -359,13 +363,18 @@ function FloatingActionButton() {
     <div className="fixed bottom-6 right-6 z-50">
       {isOpen && (
         <>
-          <div className="fixed inset-0" onClick={() => setIsOpen(false)} />
+          <button
+            aria-label="Close actions"
+            className="fixed inset-0 cursor-default border-0 bg-transparent"
+            type="button"
+            onClick={() => setIsOpen(false)}
+          />
           <div className="absolute bottom-16 right-0 mb-2 space-y-2">
             {actions.map((action) => (
               <Link
                 key={action.id}
-                href={action.href}
                 className="flex items-center gap-3 whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                href={action.href}
               >
                 <action.icon className="h-4 w-4" />
                 {action.label}
@@ -375,10 +384,10 @@ function FloatingActionButton() {
         </>
       )}
       <button
-        onClick={() => setIsOpen(!isOpen)}
         className={`flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-transform hover:bg-blue-700 ${
           isOpen ? 'rotate-45' : ''
         }`}
+        onClick={() => setIsOpen(!isOpen)}
       >
         <Plus className="h-6 w-6" />
       </button>
@@ -390,10 +399,10 @@ function FloatingActionButton() {
 // Main Layout
 // ============================================================================
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifications, setNotifications] = useState(3);
+  const notifications = 3;
 
   return (
     <html lang="en">
@@ -401,14 +410,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="flex min-h-screen">
           {/* Sidebar */}
           <Sidebar
+            currentPath={pathname}
             isOpen={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
-            currentPath={pathname}
           />
 
           {/* Main Content */}
           <div className="flex flex-1 flex-col">
-            <Header onMenuClick={() => setSidebarOpen(true)} notifications={notifications} />
+            <Header notifications={notifications} onMenuClick={() => setSidebarOpen(true)} />
             <main className="flex-1">{children}</main>
           </div>
         </div>

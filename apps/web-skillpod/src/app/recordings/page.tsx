@@ -13,11 +13,7 @@
 import {
   Search,
   Filter,
-  Calendar,
-  User,
-  Box,
   FileText,
-  AlertTriangle,
   Download,
   Trash2,
   Share2,
@@ -25,8 +21,6 @@ import {
   Clock,
   ChevronDown,
   X,
-  CheckSquare,
-  Square,
   LayoutGrid,
   List,
   RefreshCw,
@@ -169,7 +163,7 @@ function formatFileSize(bytes: number): string {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 function formatDate(date: Date): string {
@@ -184,7 +178,7 @@ function formatDate(date: Date): string {
 // Sub-Components
 // ============================================================================
 
-function StorageSummary({ stats }: { stats: StorageStats }) {
+function StorageSummary({ stats }: Readonly<{ stats: StorageStats }>) {
   const usagePercent = (stats.totalUsed / stats.quota) * 100;
   const isWarning = usagePercent > 80;
   const isCritical = usagePercent > 95;
@@ -207,22 +201,22 @@ function StorageSummary({ stats }: { stats: StorageStats }) {
             {formatFileSize(stats.totalUsed)} of {formatFileSize(stats.quota)}
           </span>
           <span
-            className={`font-medium ${
-              isCritical
-                ? 'text-red-600'
-                : isWarning
-                  ? 'text-yellow-600'
-                  : 'text-gray-900 dark:text-white'
-            }`}
+            className={`font-medium ${(() => {
+              if (isCritical) return 'text-red-600';
+              if (isWarning) return 'text-yellow-600';
+              return 'text-gray-900 dark:text-white';
+            })()}`}
           >
             {usagePercent.toFixed(1)}%
           </span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
           <div
-            className={`h-full transition-all ${
-              isCritical ? 'bg-red-500' : isWarning ? 'bg-yellow-500' : 'bg-blue-500'
-            }`}
+            className={`h-full transition-all ${(() => {
+              if (isCritical) return 'bg-red-500';
+              if (isWarning) return 'bg-yellow-500';
+              return 'bg-blue-500';
+            })()}`}
             style={{ width: `${Math.min(usagePercent, 100)}%` }}
           />
         </div>
@@ -247,7 +241,7 @@ function StorageSummary({ stats }: { stats: StorageStats }) {
   );
 }
 
-function RetentionPolicyBanner({ policy }: { policy: RetentionPolicy }) {
+function RetentionPolicyBanner({ policy }: Readonly<{ policy: RetentionPolicy }>) {
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
       <div className="flex items-start gap-3">
@@ -275,7 +269,7 @@ function FilterPanel({
   contracts,
   projects,
   onClose,
-}: {
+}: Readonly<{
   filters: RecordingFilters;
   onFiltersChange: (filters: RecordingFilters) => void;
   users: FilterOption[];
@@ -284,7 +278,7 @@ function FilterPanel({
   contracts: FilterOption[];
   projects: FilterOption[];
   onClose: () => void;
-}) {
+}>) {
   const [localFilters, setLocalFilters] = useState(filters);
 
   const handleApply = () => {
@@ -323,9 +317,9 @@ function FilterPanel({
       <div className="space-y-4">
         {/* Date Range */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Date Range
-          </label>
+          </span>
           <div className="flex gap-2">
             <input
               className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
@@ -355,11 +349,15 @@ function FilterPanel({
 
         {/* User Filter */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            htmlFor="filter-user"
+          >
             User
           </label>
           <select
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            id="filter-user"
             value={localFilters.userId || ''}
             onChange={(e) =>
               setLocalFilters({
@@ -379,11 +377,15 @@ function FilterPanel({
 
         {/* Pod Filter */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            htmlFor="filter-pod"
+          >
             Pod / Template
           </label>
           <select
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            id="filter-pod"
             value={localFilters.podId || ''}
             onChange={(e) =>
               setLocalFilters({
@@ -403,11 +405,15 @@ function FilterPanel({
 
         {/* Contract Filter */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            htmlFor="filter-contract"
+          >
             Contract / Project
           </label>
           <select
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            id="filter-contract"
             value={localFilters.contractId || ''}
             onChange={(e) =>
               setLocalFilters({
@@ -427,9 +433,9 @@ function FilterPanel({
 
         {/* Violations Filter */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Violations
-          </label>
+          </span>
           <div className="space-y-2">
             <label className="flex items-center gap-2">
               <input
@@ -464,15 +470,12 @@ function FilterPanel({
                       }}
                     />
                     <span
-                      className={`rounded px-1.5 py-0.5 text-xs ${
-                        severity === 'critical'
-                          ? 'bg-red-100 text-red-700'
-                          : severity === 'high'
-                            ? 'bg-orange-100 text-orange-700'
-                            : severity === 'medium'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-blue-100 text-blue-700'
-                      }`}
+                      className={`rounded px-1.5 py-0.5 text-xs ${(() => {
+                        if (severity === 'critical') return 'bg-red-100 text-red-700';
+                        if (severity === 'high') return 'bg-orange-100 text-orange-700';
+                        if (severity === 'medium') return 'bg-yellow-100 text-yellow-700';
+                        return 'bg-blue-100 text-blue-700';
+                      })()}`}
                     >
                       {severity}
                     </span>
@@ -485,9 +488,9 @@ function FilterPanel({
 
         {/* Status Filter */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Status
-          </label>
+          </span>
           <div className="flex flex-wrap gap-2">
             {STATUS_OPTIONS.map((status) => (
               <label key={status.value} className="flex items-center gap-1">
@@ -535,7 +538,7 @@ function BulkActionsBar({
   onDownload,
   onDelete,
   onShare,
-}: {
+}: Readonly<{
   selectedCount: number;
   totalCount: number;
   onSelectAll: () => void;
@@ -543,7 +546,7 @@ function BulkActionsBar({
   onDownload: () => void;
   onDelete: () => void;
   onShare: () => void;
-}) {
+}>) {
   if (selectedCount === 0) return null;
 
   return (
@@ -659,7 +662,7 @@ export default function RecordingsPage() {
           podName: ['Dev Environment', 'Design Studio', 'Data Analysis'][i % 3],
           templateName: ['Ubuntu Desktop', 'Windows 11', 'CentOS'][i % 3],
           contractId: i % 2 === 0 ? `contract-${(i % 4) + 1}` : undefined,
-          contractName: i % 2 === 0 ? `Project ${String.fromCharCode(65 + (i % 4))}` : undefined,
+          contractName: i % 2 === 0 ? `Project ${String.fromCodePoint(65 + (i % 4))}` : undefined,
           startTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
           endTime: new Date(Date.now() - Math.random() * 29 * 24 * 60 * 60 * 1000),
           duration: Math.floor(Math.random() * 7200) + 300,
@@ -762,7 +765,7 @@ export default function RecordingsPage() {
       }
     };
 
-    loadRecordings();
+    void loadRecordings();
   }, [filters]);
 
   // Filter and sort recordings
@@ -825,19 +828,16 @@ export default function RecordingsPage() {
 
   // Bulk action handlers
   const handleBulkDownload = async () => {
-    console.log('Downloading recordings:', Array.from(selectedIds));
-    // Implement bulk download
+    // Feature: Bulk download recordings - not yet implemented
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (!confirm(`Delete ${selectedIds.size} recordings? This cannot be undone.`)) return;
-    console.log('Deleting recordings:', Array.from(selectedIds));
-    // Implement bulk delete
+    // Feature: Bulk delete recordings via API - not yet implemented
   };
 
   const handleBulkShare = () => {
-    console.log('Sharing recordings:', Array.from(selectedIds));
-    // Implement bulk share
+    // Feature: Bulk share recordings - not yet implemented
   };
 
   // Recording action handlers
@@ -845,17 +845,17 @@ export default function RecordingsPage() {
     router.push(`/recordings/${id}`);
   };
 
-  const handleDownloadRecording = async (id: string) => {
-    console.log('Downloading recording:', id);
+  const handleDownloadRecording = async (_id: string) => {
+    // Feature: Download single recording - not yet implemented
   };
 
-  const handleShareRecording = (id: string) => {
-    console.log('Sharing recording:', id);
+  const handleShareRecording = (_id: string) => {
+    // Feature: Share recording - not yet implemented
   };
 
-  const handleDeleteRecording = async (id: string) => {
+  const handleDeleteRecording = (_id: string) => {
     if (!confirm('Delete this recording? This cannot be undone.')) return;
-    console.log('Deleting recording:', id);
+    // Feature: Delete recording via API - not yet implemented
   };
 
   // Active filter count
@@ -1004,49 +1004,60 @@ export default function RecordingsPage() {
             />
 
             {/* Recordings Grid/List */}
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
-              </div>
-            ) : error ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
-                {error}
-              </div>
-            ) : filteredRecordings.length === 0 ? (
-              <div className="py-12 text-center">
-                <FileText className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-                <h3 className="mb-1 text-lg font-medium text-gray-900 dark:text-white">
-                  No recordings found
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {activeFilterCount > 0
-                    ? 'Try adjusting your filters'
-                    : 'Recordings will appear here after SkillPod sessions'}
-                </p>
-              </div>
-            ) : (
-              <div
-                className={
-                  viewMode === 'grid'
-                    ? 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'
-                    : 'space-y-2'
-                }
-              >
-                {filteredRecordings.map((recording) => (
-                  <RecordingCard
-                    key={recording.id}
-                    isSelected={selectedIds.has(recording.id)}
-                    recording={recording}
-                    viewMode={viewMode}
-                    onDelete={() => handleDeleteRecording(recording.id)}
-                    onDownload={() => handleDownloadRecording(recording.id)}
-                    onPlay={() => handlePlayRecording(recording.id)}
-                    onSelect={(selected) => handleSelectRecording(recording.id, selected)}
-                    onShare={() => handleShareRecording(recording.id)}
-                  />
-                ))}
-              </div>
-            )}
+            {(() => {
+              if (isLoading) {
+                return (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
+                  </div>
+                );
+              }
+              if (error) {
+                return (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                    {error}
+                  </div>
+                );
+              }
+              if (filteredRecordings.length === 0) {
+                return (
+                  <div className="py-12 text-center">
+                    <FileText className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+                    <h3 className="mb-1 text-lg font-medium text-gray-900 dark:text-white">
+                      No recordings found
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      {activeFilterCount > 0
+                        ? 'Try adjusting your filters'
+                        : 'Recordings will appear here after SkillPod sessions'}
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  className={
+                    viewMode === 'grid'
+                      ? 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'
+                      : 'space-y-2'
+                  }
+                >
+                  {filteredRecordings.map((recording) => (
+                    <RecordingCard
+                      key={recording.id}
+                      isSelected={selectedIds.has(recording.id)}
+                      recording={recording}
+                      viewMode={viewMode}
+                      onDelete={() => handleDeleteRecording(recording.id)}
+                      onDownload={() => handleDownloadRecording(recording.id)}
+                      onPlay={() => handlePlayRecording(recording.id)}
+                      onSelect={(selected) => handleSelectRecording(recording.id, selected)}
+                      onShare={() => handleShareRecording(recording.id)}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
 
             {/* Results Summary */}
             {!isLoading && !error && filteredRecordings.length > 0 && (

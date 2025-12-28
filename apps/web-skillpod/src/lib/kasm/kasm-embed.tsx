@@ -74,7 +74,7 @@ const ALLOWED_FEATURES = [
 // MAIN COMPONENT
 // ============================================================================
 
-export function KasmEmbed({ config, events, className }: KasmEmbedProps) {
+export function KasmEmbed({ config, events, className }: Readonly<KasmEmbedProps>) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [isFocused, setIsFocused] = useState(false);

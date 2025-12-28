@@ -13,23 +13,8 @@ export * from './cockpit.js';
 export * from './conversion.js';
 
 import { z } from 'zod';
+
 import { PageViewEventSchema, IdentifyEventSchema, TrackEventSchema } from './base.js';
-import {
-  CourseEventSchema,
-  LessonEventSchema,
-  VideoEventSchema,
-  AssessmentEventSchema,
-  LearningPathEventSchema,
-  SkillEventSchema,
-} from './skillpod.js';
-import {
-  JobEventSchema,
-  ProposalEventSchema,
-  ContractEventSchema,
-  SearchEventSchema,
-  ProfileEventSchema,
-  MessageEventSchema,
-} from './market.js';
 import {
   TimeTrackingEventSchema,
   InvoiceEventSchema,
@@ -44,6 +29,22 @@ import {
   ErrorEventSchema,
   ExperimentEventSchema,
 } from './conversion.js';
+import {
+  JobEventSchema,
+  ProposalEventSchema,
+  ContractEventSchema,
+  SearchEventSchema,
+  ProfileEventSchema,
+  MessageEventSchema,
+} from './market.js';
+import {
+  CourseEventSchema,
+  LessonEventSchema,
+  VideoEventSchema,
+  AssessmentEventSchema,
+  LearningPathEventSchema,
+  SkillEventSchema,
+} from './skillpod.js';
 
 /**
  * All event types for discriminated union

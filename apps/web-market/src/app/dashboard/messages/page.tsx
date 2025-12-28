@@ -5,10 +5,11 @@ import { cn } from '@skillancer/ui';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 
-import type { Conversation, Message } from '@/lib/api/messages';
 
 import { ConversationList } from '@/components/messaging/conversation-list';
 import { MessageThread } from '@/components/messaging/message-thread';
+
+import type { Conversation, Message } from '@/lib/api/messages';
 
 // ============================================================================
 // Mock Data (Replace with API/WebSocket)

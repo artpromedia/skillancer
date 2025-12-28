@@ -6,14 +6,13 @@
 import {
   getSLOService,
   defaultSLOs,
-  getSLOsByService,
   type SLOStatusResult,
   type SLOReport,
 } from '@skillancer/metrics';
 
 import { getConfig } from '../config/index.js';
 
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 
 interface SLOStatusParams {
   sloId?: string;
@@ -53,7 +52,7 @@ export function observabilityRoutes(
   _opts: Record<string, never>,
   done: (err?: Error) => void
 ): void {
-  const config = getConfig();
+  const _config = getConfig();
   const sloService = getSLOService();
 
   // Register default SLOs on startup
@@ -129,7 +128,7 @@ export function observabilityRoutes(
         },
       },
     },
-    async (request, reply): Promise<SLOStatusResponse> => {
+    async (request, _reply): Promise<SLOStatusResponse> => {
       const { service } = request.query;
 
       let statuses = await sloService.getAllSLOStatuses();
@@ -195,13 +194,14 @@ export function observabilityRoutes(
         },
       },
     },
+    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
     async (request, reply): Promise<SLOStatusResult | { error: string; message: string }> => {
       const { sloId } = request.params;
 
       const status = await sloService.getSLOStatus(sloId);
 
       if (!status) {
-        reply.status(404);
+        void reply.status(404);
         return {
           error: 'SLO_NOT_FOUND',
           message: `SLO with ID '${sloId}' not found`,
@@ -285,15 +285,18 @@ export function observabilityRoutes(
       // Filter by services if specified
       if (services) {
         const serviceList = services.split(',').map((s) => s.trim());
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         report.sloDetails = report.sloDetails.filter((d) => serviceList.includes(d.service));
       }
 
       // Filter by tags if specified
       if (tags) {
         const tagList = tags.split(',').map((t) => t.trim());
+        /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument */
         report.sloDetails = report.sloDetails.filter((d) =>
           d.tags?.some((t) => tagList.includes(t))
         );
+        /* eslint-enable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument */
       }
 
       // Recalculate summary after filtering
@@ -310,7 +313,8 @@ export function observabilityRoutes(
             : 100,
         avgErrorBudgetRemaining:
           report.sloDetails.length > 0
-            ? report.sloDetails.reduce((sum, d) => sum + d.errorBudget.remainingPercent, 0) /
+            ? // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+              report.sloDetails.reduce((sum, d) => sum + d.errorBudget.remainingPercent, 0) /
               report.sloDetails.length
             : 100,
       };
@@ -408,10 +412,10 @@ export function observabilityRoutes(
         produces: ['text/plain'],
       },
     },
-    async (request, reply): Promise<void> => {
+    async (_request, reply): Promise<void> => {
       const metrics = await sloService.getMetrics();
-      reply.header('Content-Type', 'text/plain; charset=utf-8');
-      reply.send(metrics);
+      void reply.header('Content-Type', 'text/plain; charset=utf-8');
+      void reply.send(metrics);
     }
   );
 

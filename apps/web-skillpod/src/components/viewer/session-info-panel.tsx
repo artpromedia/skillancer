@@ -16,7 +16,6 @@ import { Badge, Button, cn, Progress, Separator } from '@skillancer/ui';
 import {
   Activity,
   AlertCircle,
-  Calendar,
   Clock,
   Cpu,
   FileText,
@@ -28,7 +27,7 @@ import {
   Shield,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // ============================================================================
 // TYPES
@@ -105,7 +104,7 @@ function formatBytes(bytes: number): string {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 function formatTime(date: Date): string {
@@ -125,7 +124,7 @@ interface SessionDetailsSectionProps {
   duration: string;
 }
 
-function SessionDetailsSection({ session, duration }: SessionDetailsSectionProps) {
+function SessionDetailsSection({ session, duration }: Readonly<SessionDetailsSectionProps>) {
   return (
     <div className="space-y-3">
       <h4 className="flex items-center gap-2 text-sm font-semibold">
@@ -150,12 +149,10 @@ function SessionDetailsSection({ session, duration }: SessionDetailsSectionProps
           <p className="text-primary font-medium">{duration}</p>
         </div>
         {session.projectName && (
-          <>
-            <div className="col-span-2">
-              <span className="text-muted-foreground">Project</span>
-              <p>{session.projectName}</p>
-            </div>
-          </>
+          <div className="col-span-2">
+            <span className="text-muted-foreground">Project</span>
+            <p>{session.projectName}</p>
+          </div>
         )}
       </div>
     </div>
@@ -166,7 +163,7 @@ interface SecurityPolicySectionProps {
   policy: SecurityPolicy;
 }
 
-function SecurityPolicySection({ policy }: SecurityPolicySectionProps) {
+function SecurityPolicySection({ policy }: Readonly<SecurityPolicySectionProps>) {
   const items = [
     { label: 'Clipboard', enabled: policy.clipboardEnabled },
     { label: 'File Transfer', enabled: policy.fileTransferEnabled },
@@ -200,7 +197,7 @@ interface ResourceUsageSectionProps {
   resources: ResourceUsage;
 }
 
-function ResourceUsageSection({ resources }: ResourceUsageSectionProps) {
+function ResourceUsageSection({ resources }: Readonly<ResourceUsageSectionProps>) {
   return (
     <div className="space-y-3">
       <h4 className="flex items-center gap-2 text-sm font-semibold">
@@ -273,7 +270,7 @@ interface ActivityLogSectionProps {
   activities: ActivityEvent[];
 }
 
-function ActivityLogSection({ activities }: ActivityLogSectionProps) {
+function ActivityLogSection({ activities }: Readonly<ActivityLogSectionProps>) {
   const getIcon = (type: ActivityEvent['type']) => {
     switch (type) {
       case 'connection':
@@ -341,7 +338,7 @@ export function SessionInfoPanel({
   activities,
   onEndSession,
   className,
-}: SessionInfoPanelProps) {
+}: Readonly<SessionInfoPanelProps>) {
   const [duration, setDuration] = useState('');
 
   useEffect(() => {

@@ -13,21 +13,14 @@
 import {
   ArrowLeft,
   AlertTriangle,
-  Play,
-  Camera,
   FileText,
   Clock,
   User,
-  Shield,
   MessageSquare,
   Link2,
   ChevronDown,
   ChevronUp,
-  Flag,
-  Check,
-  X,
   ExternalLink,
-  History,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -35,7 +28,7 @@ import {
   Download,
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 import { EvidenceViewer } from '@/components/violations/evidence-viewer';
 import { UserViolationHistory } from '@/components/violations/user-violation-history';
@@ -202,7 +195,10 @@ function formatRelativeTime(seconds: number): string {
 // Sub-Components
 // ============================================================================
 
-function ViolationHeader({ violation, onBack }: { violation: Violation; onBack: () => void }) {
+function ViolationHeader({
+  violation,
+  onBack,
+}: Readonly<{ violation: Violation; onBack: () => void }>) {
   const severityConfig = SEVERITY_CONFIG[violation.severity];
   const statusConfig = STATUS_CONFIG[violation.status];
 
@@ -225,7 +221,7 @@ function ViolationHeader({ violation, onBack }: { violation: Violation; onBack: 
             <div>
               <div className="mb-1 flex items-center gap-3">
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {violation.type.replace(/_/g, ' ')}
+                  {violation.type.replaceAll('_', ' ')}
                 </h1>
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${severityConfig.bg} ${severityConfig.text}`}
@@ -272,11 +268,11 @@ function ActivityTimeline({
   events,
   violationTimestamp,
   onEventClick,
-}: {
+}: Readonly<{
   events: TimelineEvent[];
   violationTimestamp: number;
   onEventClick: (event: TimelineEvent) => void;
-}) {
+}>) {
   const [expanded, setExpanded] = useState(true);
 
   // Sort events by timestamp
@@ -313,20 +309,19 @@ function ActivityTimeline({
                 const severityConfig = event.severity ? SEVERITY_CONFIG[event.severity] : null;
 
                 return (
-                  <div
+                  <button
                     key={event.id}
-                    className="relative pl-10"
+                    type="button"
+                    className="relative w-full cursor-pointer pl-10 text-left"
                     onClick={() => onEventClick(event)}
                   >
                     {/* Dot */}
                     <div
-                      className={`absolute left-2 h-4 w-4 rounded-full border-2 ${
-                        isViolation
-                          ? 'border-red-500 bg-red-500'
-                          : severityConfig
-                            ? `${severityConfig.bg} ${severityConfig.border}`
-                            : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'
-                      }`}
+                      className={`absolute left-2 h-4 w-4 rounded-full border-2 ${(() => {
+                        if (isViolation) return 'border-red-500 bg-red-500';
+                        if (severityConfig) return `${severityConfig.bg} ${severityConfig.border}`;
+                        return 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800';
+                      })()}`}
                     />
 
                     <div
@@ -354,7 +349,7 @@ function ActivityTimeline({
                         {event.description}
                       </p>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -368,18 +363,18 @@ function ActivityTimeline({
 function NotesSection({
   notes,
   onAddNote,
-}: {
+}: Readonly<{
   notes: ViolationNote[];
   onAddNote: (content: string) => void;
-}) {
+}>) {
   const [newNote, setNewNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!newNote.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await onAddNote(newNote.trim());
+      onAddNote(newNote.trim());
       setNewNote('');
     } finally {
       setIsSubmitting(false);
@@ -454,11 +449,11 @@ function RelatedViolationsPanel({
   violationIds,
   onViewViolation,
   onLinkViolation,
-}: {
+}: Readonly<{
   violationIds: string[];
   onViewViolation: (id: string) => void;
   onLinkViolation: () => void;
-}) {
+}>) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
       <div className="mb-4 flex items-center justify-between">
@@ -677,6 +672,7 @@ export default function ViolationInvestigatePage() {
           },
         ]);
       } catch (err) {
+        console.error('Failed to load violation:', err);
         setError('Failed to load violation details');
       } finally {
         setIsLoading(false);
@@ -691,7 +687,7 @@ export default function ViolationInvestigatePage() {
     router.push('/violations');
   };
 
-  const handleAddNote = async (content: string) => {
+  const handleAddNote = (content: string) => {
     if (!violation) return;
     const newNote: ViolationNote = {
       id: `note-${Date.now()}`,
@@ -711,8 +707,8 @@ export default function ViolationInvestigatePage() {
     router.push(`/recordings/${violation.recordingId}?t=${violation.recordingTimestamp}`);
   };
 
-  const handleEventClick = (event: TimelineEvent) => {
-    console.log('Event clicked:', event);
+  const handleEventClick = (_event: TimelineEvent) => {
+    // Feature: Handle event click for detailed view - not yet implemented
   };
 
   const handleViewViolation = (id: string) => {
@@ -720,10 +716,10 @@ export default function ViolationInvestigatePage() {
   };
 
   const handleLinkViolation = () => {
-    console.log('Link violation');
+    // Feature: Link violation to related violations - not yet implemented
   };
 
-  const handleResolution = async (action: string, reason: string) => {
+  const handleResolution = (action: string, reason: string) => {
     if (!violation) return;
     setViolation({
       ...violation,

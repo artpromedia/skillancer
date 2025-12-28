@@ -3,8 +3,8 @@
  * Analytics API routes
  */
 
+import type { AnalyticsQueryService } from '../query/analytics-query-service.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { AnalyticsQueryService } from '../query/analytics-query-service.js';
 
 interface DateRangeQuery {
   start?: string;

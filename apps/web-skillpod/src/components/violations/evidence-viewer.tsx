@@ -136,7 +136,7 @@ function RecordingClipViewer({
       if (isPlaying) {
         videoRef.current.pause();
       } else {
-        videoRef.current.play();
+        void videoRef.current.play();
       }
       setIsPlaying(!isPlaying);
     }
@@ -208,7 +208,7 @@ function RecordingClipViewer({
   );
 }
 
-function ScreenshotViewer({ evidence }: { evidence: Evidence }) {
+function ScreenshotViewer({ evidence }: Readonly<{ evidence: Evidence }>) {
   const [zoom, setZoom] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Annotation['type'] | null>(null);
@@ -348,8 +348,15 @@ function ScreenshotViewer({ evidence }: { evidence: Evidence }) {
         <div
           ref={imageContainerRef}
           className="relative inline-block"
+          role="button"
           style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+          tabIndex={0}
           onClick={handleImageClick}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              handleImageClick(e as unknown as React.MouseEvent<HTMLDivElement>);
+            }
+          }}
         >
           <img alt={evidence.title} className="max-w-none" src={evidence.url} />
 
@@ -432,7 +439,7 @@ function ScreenshotViewer({ evidence }: { evidence: Evidence }) {
   );
 }
 
-function LogViewer({ evidence }: { evidence: Evidence }) {
+function LogViewer({ evidence }: Readonly<{ evidence: Evidence }>) {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -521,7 +528,7 @@ function LogViewer({ evidence }: { evidence: Evidence }) {
   );
 }
 
-function SystemStateViewer({ evidence }: { evidence: Evidence }) {
+function SystemStateViewer({ evidence }: Readonly<{ evidence: Evidence }>) {
   const state = evidence.data || {};
 
   return (

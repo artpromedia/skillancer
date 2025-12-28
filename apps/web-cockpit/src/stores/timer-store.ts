@@ -1,4 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /**
  * Timer Store
  *
@@ -101,6 +104,15 @@ export interface TimerActions {
   // Utilities
   getElapsedTime: () => number;
   getCurrentDuration: () => string;
+}
+
+/** State that gets persisted to localStorage */
+interface PersistedState {
+  isRunning: boolean;
+  isPaused: boolean;
+  currentEntry: TimerEntry | null;
+  recentEntries: TimerEntry[];
+  isExpanded: boolean;
 }
 
 // ============================================================================
@@ -351,13 +363,20 @@ export const useTimerStore = create<TimerState & TimerActions>()(
     {
       name: 'timer-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
+      partialize: (state): PersistedState => ({
         isRunning: state.isRunning,
         isPaused: state.isPaused,
         currentEntry: state.currentEntry,
         recentEntries: state.recentEntries,
         isExpanded: state.isExpanded,
       }),
+      merge: (persistedState, currentState): TimerState & TimerActions => {
+        const persisted = persistedState as PersistedState | undefined;
+        return {
+          ...currentState,
+          ...(persisted ?? {}),
+        };
+      },
     }
   )
 );

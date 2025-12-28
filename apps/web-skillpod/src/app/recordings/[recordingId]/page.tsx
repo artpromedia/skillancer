@@ -42,7 +42,7 @@ function RecordingLoading() {
   );
 }
 
-function RecordingError({ message }: { message: string }) {
+function RecordingError({ message }: Readonly<{ message: string }>) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-900">
       <div className="max-w-md rounded-lg bg-red-900/20 p-8 text-center">
@@ -63,7 +63,7 @@ function RecordingError({ message }: { message: string }) {
 // PAGE
 // ============================================================================
 
-export default async function RecordingPage({ params }: RecordingPageProps) {
+export default async function RecordingPage({ params }: Readonly<RecordingPageProps>) {
   const { recordingId } = await params;
 
   const recording = await getRecordingDetails(recordingId);
@@ -198,8 +198,8 @@ export default async function RecordingPage({ params }: RecordingPageProps) {
             <div className="rounded-lg border border-gray-800 bg-gray-800/50 p-6">
               <h2 className="mb-4 text-lg font-semibold text-white">Chapters</h2>
               <ul className="space-y-2">
-                {recording.chapters.map((chapter, index) => (
-                  <li key={index}>
+                {recording.chapters.map((chapter) => (
+                  <li key={`chapter-${chapter.startTime}`}>
                     <button
                       className="flex w-full items-center justify-between rounded-md p-2 text-left hover:bg-gray-700"
                       onClick={() => {
@@ -207,7 +207,7 @@ export default async function RecordingPage({ params }: RecordingPageProps) {
                         const event = new CustomEvent('seek-to-time', {
                           detail: { time: chapter.startTime },
                         });
-                        window.dispatchEvent(event);
+                        globalThis.dispatchEvent(event);
                       }}
                     >
                       <span className="text-white">{chapter.title}</span>
@@ -224,8 +224,8 @@ export default async function RecordingPage({ params }: RecordingPageProps) {
             <h2 className="mb-4 text-lg font-semibold text-white">Activity Log</h2>
             {recording.auditLog && recording.auditLog.length > 0 ? (
               <ul className="space-y-2 text-sm">
-                {recording.auditLog.slice(0, 10).map((entry, index) => (
-                  <li key={index} className="flex items-start gap-2">
+                {recording.auditLog.slice(0, 10).map((entry) => (
+                  <li key={`audit-${entry.timestamp}`} className="flex items-start gap-2">
                     <span className="text-gray-500">{formatTime(entry.timestamp)}</span>
                     <span className="text-gray-300">{entry.action}</span>
                   </li>

@@ -21,20 +21,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@skillancer/ui';
-import {
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  Download,
-  File,
-  FileText,
-  Image,
-  Loader2,
-  Shield,
-  Upload,
-  X,
-  XCircle,
-} from 'lucide-react';
+import { Clock, Download, File, FileText, Image, Loader2, Shield, Upload, X } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 
 // ============================================================================
@@ -73,15 +60,15 @@ export interface PolicyRestrictions {
 }
 
 interface FileTransferPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
-  transfers: FileTransfer[];
-  restrictions: PolicyRestrictions;
-  onUpload: (files: File[]) => Promise<void>;
-  onDownload: (transferId: string) => Promise<void>;
-  onCancelTransfer: (transferId: string) => void;
-  onRequestApproval: (transferId: string) => Promise<void>;
-  className?: string;
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  readonly transfers: FileTransfer[];
+  readonly restrictions: PolicyRestrictions;
+  readonly onUpload: (files: File[]) => Promise<void>;
+  readonly onDownload: (transferId: string) => Promise<void>;
+  readonly onCancelTransfer: (transferId: string) => void;
+  readonly onRequestApproval: (transferId: string) => Promise<void>;
+  readonly className?: string;
 }
 
 // ============================================================================
@@ -93,7 +80,7 @@ function formatFileSize(bytes: number): string {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 function getFileIcon(type: string) {
@@ -125,13 +112,18 @@ function getStatusBadge(status: TransferStatus) {
 // ============================================================================
 
 interface UploadSectionProps {
-  restrictions: PolicyRestrictions;
-  transfers: FileTransfer[];
-  onUpload: (files: File[]) => Promise<void>;
-  onCancel: (id: string) => void;
+  readonly restrictions: PolicyRestrictions;
+  readonly transfers: FileTransfer[];
+  readonly onUpload: (files: File[]) => Promise<void>;
+  readonly onCancel: (id: string) => void;
 }
 
-function UploadSection({ restrictions, transfers, onUpload, onCancel }: UploadSectionProps) {
+function UploadSection({
+  restrictions,
+  transfers,
+  onUpload,
+  onCancel,
+}: Readonly<UploadSectionProps>) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -251,11 +243,11 @@ function UploadSection({ restrictions, transfers, onUpload, onCancel }: UploadSe
 // ============================================================================
 
 interface DownloadSectionProps {
-  transfers: FileTransfer[];
-  onDownload: (id: string) => Promise<void>;
+  readonly transfers: FileTransfer[];
+  readonly onDownload: (id: string) => Promise<void>;
 }
 
-function DownloadSection({ transfers, onDownload }: DownloadSectionProps) {
+function DownloadSection({ transfers, onDownload }: Readonly<DownloadSectionProps>) {
   const downloadTransfers = transfers.filter(
     (t) => t.direction === 'download' && t.status !== 'pending'
   );
@@ -295,12 +287,12 @@ function DownloadSection({ transfers, onDownload }: DownloadSectionProps) {
 // ============================================================================
 
 interface PendingSectionProps {
-  transfers: FileTransfer[];
-  onRequestApproval: (id: string) => Promise<void>;
-  onCancel: (id: string) => void;
+  readonly transfers: FileTransfer[];
+  readonly onRequestApproval: (id: string) => Promise<void>;
+  readonly onCancel: (id: string) => void;
 }
 
-function PendingSection({ transfers, onRequestApproval, onCancel }: PendingSectionProps) {
+function PendingSection({ transfers, onRequestApproval, onCancel }: Readonly<PendingSectionProps>) {
   const pendingTransfers = transfers.filter(
     (t) => t.status === 'pending' || t.status === 'scanning'
   );
@@ -360,8 +352,8 @@ function PendingSection({ transfers, onRequestApproval, onCancel }: PendingSecti
 // ============================================================================
 
 interface TransferItemProps {
-  transfer: FileTransfer;
-  onCancel: () => void;
+  readonly transfer: FileTransfer;
+  readonly onCancel: () => void;
 }
 
 function TransferItem({ transfer, onCancel }: TransferItemProps) {
@@ -435,7 +427,7 @@ export function FileTransferPanel({
             <TabsTrigger value="download">Download</TabsTrigger>
             <TabsTrigger value="pending">
               Pending
-              {transfers.filter((t) => t.status === 'pending').length > 0 && (
+              {transfers.some((t) => t.status === 'pending') && (
                 <Badge className="ml-1 h-5 px-1.5" variant="secondary">
                   {transfers.filter((t) => t.status === 'pending').length}
                 </Badge>

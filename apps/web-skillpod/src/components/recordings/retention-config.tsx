@@ -10,18 +10,8 @@
  * @module components/recordings/retention-config
  */
 
-import {
-  X,
-  Plus,
-  Trash2,
-  Clock,
-  Shield,
-  AlertTriangle,
-  HardDrive,
-  Check,
-  ChevronDown,
-} from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { X, Plus, Trash2, AlertTriangle, HardDrive, Check } from 'lucide-react';
+import { useState, useMemo } from 'react';
 
 // ============================================================================
 // Types
@@ -137,14 +127,17 @@ function formatFileSize(bytes: number): string {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 // ============================================================================
 // Sub-Components
 // ============================================================================
 
-function RetentionSlider({ value, onChange }: { value: number; onChange: (days: number) => void }) {
+function RetentionSlider({
+  value,
+  onChange,
+}: Readonly<{ value: number; onChange: (days: number) => void }>) {
   // Map slider position to days
   const positions = [30, 60, 90, 180, 365, 730, 1095, 2555, -1];
   const currentIndex = positions.indexOf(value);
@@ -153,7 +146,10 @@ function RetentionSlider({ value, onChange }: { value: number; onChange: (days: 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          htmlFor="retention-period-slider"
+        >
           Retention Period
         </label>
         <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
@@ -163,11 +159,18 @@ function RetentionSlider({ value, onChange }: { value: number; onChange: (days: 
 
       <input
         className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-500 dark:bg-gray-700"
+        id="retention-period-slider"
         max={positions.length - 1}
         min={0}
         type="range"
         value={sliderValue}
-        onChange={(e) => onChange(positions[parseInt(e.target.value)])}
+        onChange={(e) => {
+          const index = Number.parseInt(e.target.value, 10);
+          const days = positions[index];
+          if (days !== undefined) {
+            onChange(days);
+          }
+        }}
       />
 
       <div className="flex justify-between text-xs text-gray-500">
@@ -199,13 +202,90 @@ function RetentionSlider({ value, onChange }: { value: number; onChange: (days: 
   );
 }
 
+// Helper function to render condition value input based on field type
+function renderConditionValueInput(
+  fieldConfig: (typeof CONDITION_FIELDS)[number] | undefined,
+  condition: PolicyCondition,
+  onUpdate: (updates: Partial<PolicyCondition>) => void
+) {
+  if (fieldConfig?.type === 'select') {
+    if (condition.operator === 'in') {
+      return (
+        <div className="flex flex-1 flex-wrap gap-1">
+          {fieldConfig.options?.map((opt) => {
+            const currentValues = Array.isArray(condition.value) ? condition.value : [];
+            const isChecked = currentValues.includes(opt);
+            return (
+              <label
+                key={opt}
+                className={`cursor-pointer rounded px-2 py-0.5 text-xs ${
+                  isChecked
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}
+              >
+                <input
+                  checked={isChecked}
+                  className="sr-only"
+                  type="checkbox"
+                  onChange={(e) => {
+                    const newValues = e.target.checked
+                      ? [...currentValues, opt]
+                      : currentValues.filter((v) => v !== opt);
+                    onUpdate({ value: newValues });
+                  }}
+                />
+                {opt}
+              </label>
+            );
+          })}
+        </div>
+      );
+    }
+    return (
+      <select
+        className="flex-1 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+        value={String(condition.value)}
+        onChange={(e) => onUpdate({ value: e.target.value })}
+      >
+        <option value="">Select...</option>
+        {fieldConfig.options?.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  if (fieldConfig?.type === 'number') {
+    return (
+      <input
+        className="w-32 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+        type="number"
+        value={condition.value as number}
+        onChange={(e) => onUpdate({ value: Number.parseFloat(e.target.value) || 0 })}
+      />
+    );
+  }
+
+  return (
+    <input
+      className="flex-1 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+      type="text"
+      value={String(condition.value)}
+      onChange={(e) => onUpdate({ value: e.target.value })}
+    />
+  );
+}
+
 function ConditionBuilder({
   conditions,
   onChange,
-}: {
+}: Readonly<{
   conditions: PolicyCondition[];
   onChange: (conditions: PolicyCondition[]) => void;
-}) {
+}>) {
   const handleAddCondition = () => {
     onChange([
       ...conditions,
@@ -233,9 +313,9 @@ function ConditionBuilder({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Conditions
-        </label>
+        </span>
         <button
           className="flex items-center gap-1 text-sm text-blue-600 hover:underline dark:text-blue-400"
           onClick={handleAddCondition}
@@ -291,7 +371,7 @@ function ConditionBuilder({
                     })
                   }
                 >
-                  {operators.map((op) => (
+                  {operators?.map((op) => (
                     <option key={op.value} value={op.value}>
                       {op.label}
                     </option>
@@ -299,72 +379,8 @@ function ConditionBuilder({
                 </select>
 
                 {/* Value Input */}
-                {fieldConfig?.type === 'select' ? (
-                  condition.operator === 'in' ? (
-                    <div className="flex flex-1 flex-wrap gap-1">
-                      {fieldConfig.options?.map((opt) => (
-                        <label
-                          key={opt}
-                          className={`cursor-pointer rounded px-2 py-0.5 text-xs ${
-                            Array.isArray(condition.value) && condition.value.includes(opt)
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                          }`}
-                        >
-                          <input
-                            checked={
-                              Array.isArray(condition.value) && condition.value.includes(opt)
-                            }
-                            className="sr-only"
-                            type="checkbox"
-                            onChange={(e) => {
-                              const currentValues = Array.isArray(condition.value)
-                                ? condition.value
-                                : [];
-                              const newValues = e.target.checked
-                                ? [...currentValues, opt]
-                                : currentValues.filter((v) => v !== opt);
-                              handleUpdateCondition(condition.id, { value: newValues });
-                            }}
-                          />
-                          {opt}
-                        </label>
-                      ))}
-                    </div>
-                  ) : (
-                    <select
-                      className="flex-1 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                      value={String(condition.value)}
-                      onChange={(e) =>
-                        handleUpdateCondition(condition.id, { value: e.target.value })
-                      }
-                    >
-                      <option value="">Select...</option>
-                      {fieldConfig.options?.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  )
-                ) : fieldConfig?.type === 'number' ? (
-                  <input
-                    className="w-32 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                    type="number"
-                    value={condition.value as number}
-                    onChange={(e) =>
-                      handleUpdateCondition(condition.id, {
-                        value: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                  />
-                ) : (
-                  <input
-                    className="flex-1 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                    type="text"
-                    value={String(condition.value)}
-                    onChange={(e) => handleUpdateCondition(condition.id, { value: e.target.value })}
-                  />
+                {renderConditionValueInput(fieldConfig, condition, (updates) =>
+                  handleUpdateCondition(condition.id, updates)
                 )}
 
                 {/* Remove Button */}
@@ -383,7 +399,7 @@ function ConditionBuilder({
   );
 }
 
-function StorageImpactPreview({ retentionDays }: { retentionDays: number }) {
+function StorageImpactPreview({ retentionDays }: Readonly<{ retentionDays: number }>) {
   const estimatedStorage = useMemo(() => estimateStorageImpact(retentionDays), [retentionDays]);
 
   return (
@@ -402,7 +418,7 @@ function StorageImpactPreview({ retentionDays }: { retentionDays: number }) {
   );
 }
 
-function ComplianceRequirements({ retentionDays }: { retentionDays: number }) {
+function ComplianceRequirements({ retentionDays }: Readonly<{ retentionDays: number }>) {
   const meetsRequirements = COMPLIANCE_REQUIREMENTS.filter(
     (req) => retentionDays === -1 || retentionDays >= req.minDays
   );
@@ -455,7 +471,7 @@ function ComplianceRequirements({ retentionDays }: { retentionDays: number }) {
 // Main Component
 // ============================================================================
 
-export function RetentionConfig({ policy, onSave, onClose }: RetentionConfigProps) {
+export function RetentionConfig({ policy, onSave, onClose }: Readonly<RetentionConfigProps>) {
   const [name, setName] = useState(policy?.name || '');
   const [description, setDescription] = useState(policy?.description || '');
   const [retentionDays, setRetentionDays] = useState(policy?.retentionDays || 90);
@@ -497,7 +513,7 @@ export function RetentionConfig({ policy, onSave, onClose }: RetentionConfigProp
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div aria-hidden="true" className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
       <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl dark:bg-gray-800">
@@ -518,13 +534,17 @@ export function RetentionConfig({ policy, onSave, onClose }: RetentionConfigProp
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
           {/* Name */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              htmlFor="policy-name"
+            >
               Policy Name
             </label>
             <input
               className={`w-full rounded-lg border bg-white px-3 py-2 text-gray-900 dark:bg-gray-700 dark:text-white ${
                 errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
+              id="policy-name"
               placeholder="e.g., Compliance 7-year"
               type="text"
               value={name}
@@ -535,13 +555,17 @@ export function RetentionConfig({ policy, onSave, onClose }: RetentionConfigProp
 
           {/* Description */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              htmlFor="policy-description"
+            >
               Description
             </label>
             <textarea
               className={`w-full resize-none rounded-lg border bg-white px-3 py-2 text-gray-900 dark:bg-gray-700 dark:text-white ${
                 errors.description ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
+              id="policy-description"
               placeholder="Describe when this policy should be applied..."
               rows={2}
               value={description}

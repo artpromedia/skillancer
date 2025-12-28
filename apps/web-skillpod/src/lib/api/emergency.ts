@@ -183,11 +183,11 @@ class EmergencyAPIClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
+      const error = (await response.json().catch(() => ({}))) as { message?: string };
       throw new Error(error.message || `API error: ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   // =========================================================================

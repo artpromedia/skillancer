@@ -42,9 +42,10 @@ import {
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
 
+import { getProposalStatusInfo } from '@/lib/api/bids';
+
 import type { Proposal, SmartMatchScore } from '@/lib/api/bids';
 
-import { getProposalStatusInfo } from '@/lib/api/bids';
 
 // ============================================================================
 // Types
@@ -80,7 +81,7 @@ function ProposalCard({
   onArchive,
   onDecline,
   onHire,
-}: {
+}: Readonly<{
   proposal: Proposal;
   isSelected: boolean;
   onSelect: () => void;
@@ -89,7 +90,7 @@ function ProposalCard({
   onArchive: () => Promise<void>;
   onDecline: () => Promise<void>;
   onHire: () => void;
-}) {
+}>) {
   const [isProcessing, setIsProcessing] = useState(false);
   const _statusInfo = getProposalStatusInfo(proposal.status);
 
@@ -294,7 +295,7 @@ function ProposalCard({
 // Match Score Indicator
 // ============================================================================
 
-function MatchScoreIndicator({ score }: { score: SmartMatchScore }) {
+function MatchScoreIndicator({ score }: Readonly<{ score: SmartMatchScore }>) {
   const getColor = (value: number) => {
     if (value >= 80) return 'bg-green-500';
     if (value >= 60) return 'bg-yellow-500';
@@ -347,7 +348,7 @@ export function ProposalList({
   onHire,
   isLoading,
   className,
-}: ProposalListProps) {
+}: Readonly<ProposalListProps>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('match-score');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');

@@ -16,6 +16,25 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+function getCharacterLimitColor(
+  isMaxExceeded: boolean,
+  isMinMet: boolean,
+  type: 'bg' | 'text'
+): string {
+  if (type === 'bg') {
+    if (isMaxExceeded) return 'bg-red-500';
+    if (isMinMet) return 'bg-green-500';
+    return 'bg-yellow-500';
+  }
+  if (isMaxExceeded) return 'text-red-600';
+  if (isMinMet) return 'text-green-600';
+  return 'text-yellow-600';
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -52,7 +71,7 @@ export function CoverLetterEditor({
   onSaveAsTemplate,
   className,
   error,
-}: CoverLetterEditorProps) {
+}: Readonly<CoverLetterEditorProps>) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -320,7 +339,7 @@ export function CoverLetterEditor({
           <div
             className={cn(
               'h-full transition-all',
-              isMaxExceeded ? 'bg-red-500' : isMinMet ? 'bg-green-500' : 'bg-yellow-500'
+              getCharacterLimitColor(isMaxExceeded, isMinMet, 'bg')
             )}
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
@@ -331,10 +350,7 @@ export function CoverLetterEditor({
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <div className="flex items-center gap-4">
           <span
-            className={cn(
-              'font-medium',
-              isMaxExceeded ? 'text-red-600' : isMinMet ? 'text-green-600' : 'text-yellow-600'
-            )}
+            className={cn('font-medium', getCharacterLimitColor(isMaxExceeded, isMinMet, 'text'))}
           >
             {charCount.toLocaleString()} / {maxLength.toLocaleString()} characters
           </span>
@@ -414,8 +430,11 @@ export function CoverLetterEditor({
             <div>
               <h4 className="mb-2 font-medium text-blue-900">Writing Tips</h4>
               <ul className="space-y-1">
-                {suggestions.map((suggestion, index) => (
-                  <li key={index} className="text-sm text-blue-800">
+                {suggestions.map((suggestion) => (
+                  <li
+                    key={`${suggestion.type}-${suggestion.text.slice(0, 20)}`}
+                    className="text-sm text-blue-800"
+                  >
                     {suggestion.type === 'tip' && '💡 '}
                     {suggestion.type === 'highlight' && '⭐ '}
                     {suggestion.type === 'question' && '❓ '}

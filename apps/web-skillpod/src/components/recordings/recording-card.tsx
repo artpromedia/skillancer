@@ -16,7 +16,6 @@ import {
   Share2,
   Trash2,
   MoreVertical,
-  Clock,
   User,
   Box,
   AlertTriangle,
@@ -112,7 +111,7 @@ function formatFileSize(bytes: number): string {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 function formatDate(date: Date): string {
@@ -186,7 +185,7 @@ function getStatusBadge(status: string) {
 // Sub-Components
 // ============================================================================
 
-function ViolationIndicators({ violations }: { violations: ViolationSummary[] }) {
+function ViolationIndicators({ violations }: Readonly<{ violations: ViolationSummary[] }>) {
   if (violations.length === 0) return null;
 
   // Group by severity
@@ -225,7 +224,7 @@ function ContextMenu({
   onShare,
   onDelete,
   position,
-}: {
+}: Readonly<{
   isOpen: boolean;
   onClose: () => void;
   onPlay: () => void;
@@ -233,7 +232,7 @@ function ContextMenu({
   onShare: () => void;
   onDelete: () => void;
   position: { x: number; y: number };
-}) {
+}>) {
   if (!isOpen) return null;
 
   const actions = [
@@ -294,7 +293,7 @@ export function RecordingCard({
   onDownload,
   onShare,
   onDelete,
-}: RecordingCardProps) {
+}: Readonly<RecordingCardProps>) {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);

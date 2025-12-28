@@ -19,12 +19,10 @@ import {
   VolumeX,
   Maximize,
   Minimize,
-  Settings,
   Download,
   Camera,
   Scissors,
   ChevronLeft,
-  ChevronRight,
   ZoomIn,
   ZoomOut,
   AlertTriangle,
@@ -157,7 +155,7 @@ function PlaybackControls({
   onPlaybackRateChange,
   onFullscreenToggle,
   onFrameStep,
-}: {
+}: Readonly<{
   state: PlaybackState;
   onPlayPause: () => void;
   onSeek: (time: number) => void;
@@ -166,7 +164,7 @@ function PlaybackControls({
   onPlaybackRateChange: (rate: number) => void;
   onFullscreenToggle: () => void;
   onFrameStep: (direction: 'prev' | 'next') => void;
-}) {
+}>) {
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
@@ -211,7 +209,7 @@ function PlaybackControls({
           min={0}
           type="range"
           value={state.currentTime}
-          onChange={(e) => onSeek(parseFloat(e.target.value))}
+          onChange={(e) => onSeek(Number.parseFloat(e.target.value))}
         />
       </div>
 
@@ -241,7 +239,7 @@ function PlaybackControls({
               style={{ writingMode: 'horizontal-tb' }}
               type="range"
               value={state.volume}
-              onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+              onChange={(e) => onVolumeChange(Number.parseFloat(e.target.value))}
             />
           </div>
         )}
@@ -286,17 +284,30 @@ function PlaybackControls({
   );
 }
 
+function getSeverityClass(severity: string): string {
+  switch (severity) {
+    case 'critical':
+      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+    case 'high':
+      return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+    default:
+      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+  }
+}
+
 function EventDetailsPanel({
   event,
   isActive,
   onSeekTo,
   onClose,
-}: {
+}: Readonly<{
   event: RecordingEvent | null;
   isActive: boolean;
   onSeekTo: (timestamp: number) => void;
   onClose: () => void;
-}) {
+}>) {
   if (!event) return null;
 
   const Icon = getEventIcon(event.type);
@@ -338,15 +349,7 @@ function EventDetailsPanel({
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-500 dark:text-gray-400">Severity</span>
             <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                event.severity === 'critical'
-                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  : event.severity === 'high'
-                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                    : event.severity === 'medium'
-                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                      : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-              }`}
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${getSeverityClass(event.severity)}`}
             >
               {event.severity}
             </span>
@@ -373,12 +376,12 @@ function ToolsPanel({
   onExportClip,
   onDownload,
   onShare,
-}: {
+}: Readonly<{
   onScreenshot: () => void;
   onExportClip: () => void;
   onDownload: () => void;
   onShare: () => void;
-}) {
+}>) {
   return (
     <div className="flex items-center gap-1 px-2">
       <button
@@ -427,7 +430,7 @@ export function RecordingViewer({
   onClose,
   onShare,
   onDownload,
-}: RecordingViewerProps) {
+}: Readonly<RecordingViewerProps>) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -445,7 +448,8 @@ export function RecordingViewer({
 
   const [selectedEvent, setSelectedEvent] = useState<RecordingEvent | null>(null);
   const [activeEvent, setActiveEvent] = useState<RecordingEvent | null>(null);
-  const [eventFilter, setEventFilter] = useState<string[]>([]);
+  // Filter is set to show all events by default; could be made configurable in the future
+  const eventFilter: string[] = [];
   const [timelineZoom, setTimelineZoom] = useState(1);
 
   // Filter events
@@ -519,6 +523,38 @@ export function RecordingViewer({
     };
   }, [initialTimestamp]);
 
+  // Handlers used by keyboard shortcuts (defined before useEffect)
+  const handleMuteToggle = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setPlaybackState((prev) => ({ ...prev, isMuted: video.muted }));
+  }, []);
+
+  const handleFullscreenToggle = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+      setPlaybackState((prev) => ({ ...prev, isFullscreen: false }));
+    } else {
+      container.requestFullscreen();
+      setPlaybackState((prev) => ({ ...prev, isFullscreen: true }));
+    }
+  }, []);
+
+  const handleFrameStep = useCallback((direction: 'prev' | 'next') => {
+    const video = videoRef.current;
+    if (!video) return;
+    // Approximate frame step (30fps)
+    const frameTime = 1 / 30;
+    video.currentTime = Math.max(
+      0,
+      Math.min(video.duration, video.currentTime + (direction === 'next' ? frameTime : -frameTime))
+    );
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -570,9 +606,9 @@ export function RecordingViewer({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
+  }, [handleFrameStep, handleFullscreenToggle, handleMuteToggle]);
 
   // Handlers
   const handlePlayPause = useCallback(() => {
@@ -595,42 +631,11 @@ export function RecordingViewer({
     setPlaybackState((prev) => ({ ...prev, volume, isMuted: volume === 0 }));
   }, []);
 
-  const handleMuteToggle = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = !video.muted;
-    setPlaybackState((prev) => ({ ...prev, isMuted: video.muted }));
-  }, []);
-
   const handlePlaybackRateChange = useCallback((rate: number) => {
     const video = videoRef.current;
     if (!video) return;
     video.playbackRate = rate;
     setPlaybackState((prev) => ({ ...prev, playbackRate: rate }));
-  }, []);
-
-  const handleFullscreenToggle = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    if (!document.fullscreenElement) {
-      container.requestFullscreen();
-      setPlaybackState((prev) => ({ ...prev, isFullscreen: true }));
-    } else {
-      document.exitFullscreen();
-      setPlaybackState((prev) => ({ ...prev, isFullscreen: false }));
-    }
-  }, []);
-
-  const handleFrameStep = useCallback((direction: 'prev' | 'next') => {
-    const video = videoRef.current;
-    if (!video) return;
-    // Approximate frame step (30fps)
-    const frameTime = 1 / 30;
-    video.currentTime = Math.max(
-      0,
-      Math.min(video.duration, video.currentTime + (direction === 'next' ? frameTime : -frameTime))
-    );
   }, []);
 
   const handleScreenshot = useCallback(() => {
@@ -649,13 +654,13 @@ export function RecordingViewer({
     // Download
     const link = document.createElement('a');
     link.href = dataUrl;
-    link.download = `recording-${recording.id}-${formatTime(playbackState.currentTime).replace(/:/g, '-')}.png`;
+    link.download = `recording-${recording.id}-${formatTime(playbackState.currentTime).replaceAll(':', '-')}.png`;
     link.click();
   }, [recording.id, playbackState.currentTime]);
 
   const handleExportClip = useCallback(() => {
     // Would open a modal to select start/end times
-    console.log('Export clip at', playbackState.currentTime);
+    // TODO: Implement clip export functionality
   }, [playbackState.currentTime]);
 
   const handleEventClick = useCallback(

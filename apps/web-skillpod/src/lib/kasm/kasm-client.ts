@@ -88,7 +88,7 @@ export class KasmClient {
   private handlers: KasmEventHandlers = {};
   private wsConnection: WebSocket | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
+  private readonly maxReconnectAttempts = 5;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private qualityLevel: QualityLevel = 'auto';
   private metricsInterval: NodeJS.Timeout | null = null;
@@ -199,6 +199,7 @@ export class KasmClient {
     try {
       await this.connect();
     } catch (error) {
+      console.warn('Reconnection attempt failed:', error);
       // Schedule next reconnect attempt with exponential backoff
       const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
       this.reconnectTimeout = setTimeout(() => this.reconnect(), delay);

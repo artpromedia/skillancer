@@ -18,9 +18,7 @@ import {
   Monitor,
   ArrowLeft,
   Check,
-  Clock,
   Moon,
-  Sun,
   AlertTriangle,
   Shield,
   Activity,
@@ -34,7 +32,7 @@ import {
   Info,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 // ============================================================================
 // Types
@@ -163,11 +161,11 @@ function ChannelToggle({
   channel,
   enabled,
   onChange,
-}: {
+}: Readonly<{
   channel: NotificationChannel;
   enabled: boolean;
   onChange: (enabled: boolean) => void;
-}) {
+}>) {
   const Icon = channel.icon;
 
   return (
@@ -188,17 +186,18 @@ function ChannelToggle({
 function CategoryCard({
   category,
   onUpdate,
-}: {
+}: Readonly<{
   category: NotificationCategory;
   onUpdate: (updates: Partial<NotificationCategory>) => void;
-}) {
+}>) {
   const Icon = category.icon;
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <div
-        className="flex cursor-pointer items-start gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+      <button
+        type="button"
+        className="flex w-full cursor-pointer items-start gap-4 p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
@@ -210,7 +209,7 @@ function CategoryCard({
         </div>
         <div className="flex items-center gap-2">
           {NOTIFICATION_CHANNELS.slice(0, 3).map((channel) => {
-            const isEnabled = category.channels[channel.type as keyof typeof category.channels];
+            const isEnabled = category.channels[channel.type];
             return (
               <div
                 key={channel.id}
@@ -220,21 +219,21 @@ function CategoryCard({
             );
           })}
         </div>
-      </div>
+      </button>
 
       {isExpanded && (
         <div className="space-y-4 border-t border-gray-100 px-4 pb-4 pt-0 dark:border-gray-700">
           {/* Channels */}
           <div className="pt-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Notification Channels
-            </label>
+            </span>
             <div className="flex items-center gap-2">
               {NOTIFICATION_CHANNELS.map((channel) => (
                 <ChannelToggle
                   key={channel.id}
                   channel={channel}
-                  enabled={category.channels[channel.type as keyof typeof category.channels]}
+                  enabled={category.channels[channel.type]}
                   onChange={(enabled) =>
                     onUpdate({
                       channels: {
@@ -250,9 +249,9 @@ function CategoryCard({
 
           {/* Frequency */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Delivery Frequency
-            </label>
+            </span>
             <div className="flex flex-wrap gap-2">
               {[
                 { id: 'instant', label: 'Instant' },
@@ -279,9 +278,9 @@ function CategoryCard({
 
           {/* Priority Filter */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Priority Filter
-            </label>
+            </span>
             <div className="flex flex-wrap gap-2">
               {[
                 { id: 'all', label: 'All Notifications' },
@@ -313,10 +312,10 @@ function CategoryCard({
 function QuietHoursSection({
   quietHours,
   onUpdate,
-}: {
+}: Readonly<{
   quietHours: QuietHours;
   onUpdate: (updates: Partial<QuietHours>) => void;
-}) {
+}>) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
       <div className="mb-6 flex items-center justify-between">
@@ -332,6 +331,7 @@ function QuietHoursSection({
           </div>
         </div>
         <label className="relative inline-flex cursor-pointer items-center">
+          <span className="sr-only">Toggle quiet hours</span>
           <input
             checked={quietHours.enabled}
             className="peer sr-only"
@@ -347,22 +347,30 @@ function QuietHoursSection({
           {/* Time Range */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                htmlFor="quiet-hours-start"
+              >
                 Start Time
               </label>
               <input
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
+                id="quiet-hours-start"
                 type="time"
                 value={quietHours.start}
                 onChange={(e) => onUpdate({ start: e.target.value })}
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                htmlFor="quiet-hours-end"
+              >
                 End Time
               </label>
               <input
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
+                id="quiet-hours-end"
                 type="time"
                 value={quietHours.end}
                 onChange={(e) => onUpdate({ end: e.target.value })}
@@ -372,11 +380,15 @@ function QuietHoursSection({
 
           {/* Timezone */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              htmlFor="quiet-hours-timezone"
+            >
               Timezone
             </label>
             <select
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
+              id="quiet-hours-timezone"
               value={quietHours.timezone}
               onChange={(e) => onUpdate({ timezone: e.target.value })}
             >
@@ -390,9 +402,9 @@ function QuietHoursSection({
 
           {/* Days */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Active Days
-            </label>
+            </span>
             <div className="flex flex-wrap gap-2">
               {DAYS_OF_WEEK.map((day) => (
                 <button
@@ -424,6 +436,7 @@ function QuietHoursSection({
               </span>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
+              <span className="sr-only">Allow critical alerts during quiet hours</span>
               <input
                 checked={quietHours.allowCritical}
                 className="peer sr-only"
@@ -543,6 +556,7 @@ export default function NotificationsSettingsPage() {
                 </div>
               </div>
               <label className="relative inline-flex cursor-pointer items-center">
+                <span className="sr-only">Toggle notification sounds</span>
                 <input
                   checked={globalSound}
                   className="peer sr-only"
@@ -617,6 +631,7 @@ export default function NotificationsSettingsPage() {
                 <p className="text-sm text-gray-500">Only receive essential notifications</p>
               </div>
               <label className="relative inline-flex cursor-pointer items-center">
+                <span className="sr-only">Unsubscribe from marketing</span>
                 <input className="peer sr-only" type="checkbox" />
                 <div className="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full dark:bg-gray-700" />
               </label>

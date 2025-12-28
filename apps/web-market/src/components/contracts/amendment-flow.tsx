@@ -14,11 +14,6 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea,
 } from '@skillancer/ui';
 import {
@@ -26,7 +21,6 @@ import {
   ArrowRight,
   Calendar,
   Check,
-  Clock,
   DollarSign,
   FileText,
   Loader2,
@@ -36,7 +30,56 @@ import {
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
-import type { Contract, Milestone, Amendment } from '@/lib/api/contracts';
+import type { Contract, Amendment } from '@/lib/api/contracts';
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+type AmendmentStep = 'type' | 'details' | 'review';
+
+function getPreviousStep(currentStep: AmendmentStep): AmendmentStep {
+  if (currentStep === 'review') return 'details';
+  return 'type';
+}
+
+function getStepIndicatorClass(stepName: string, currentStep: string, index: number): string {
+  const steps = ['type', 'details', 'review'];
+  const currentIndex = steps.indexOf(currentStep);
+  if (stepName === currentStep) return 'bg-primary text-primary-foreground';
+  if (index < currentIndex) return 'bg-green-500 text-white';
+  return 'bg-muted text-muted-foreground';
+}
+
+function getMilestoneActionVariant(action: string): 'default' | 'destructive' | 'secondary' {
+  if (action === 'ADD') return 'default';
+  if (action === 'REMOVE') return 'destructive';
+  return 'secondary';
+}
+
+function getAmendmentStatusVariant(status: string): 'default' | 'destructive' | 'secondary' {
+  if (status === 'APPROVED') return 'default';
+  if (status === 'REJECTED') return 'destructive';
+  return 'secondary';
+}
+
+function getSubmitButtonContent(step: string, isSubmitting: boolean): React.ReactNode {
+  if (isSubmitting) {
+    return (
+      <>
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Submitting...
+      </>
+    );
+  }
+  if (step === 'review') return 'Submit Amendment';
+  return (
+    <>
+      Continue
+      <ArrowRight className="ml-2 h-4 w-4" />
+    </>
+  );
+}
 
 // ============================================================================
 // Types
@@ -104,7 +147,12 @@ const amendmentTypes: Record<
 // Main Component
 // ============================================================================
 
-export function AmendmentFlow({ contract, open, onOpenChange, onSubmit }: AmendmentFlowProps) {
+export function AmendmentFlow({
+  contract,
+  open,
+  onOpenChange,
+  onSubmit,
+}: Readonly<AmendmentFlowProps>) {
   const [step, setStep] = useState<'type' | 'details' | 'review'>('type');
   const [type, setType] = useState<AmendmentType | null>(null);
   const [reason, setReason] = useState('');
@@ -214,11 +262,7 @@ export function AmendmentFlow({ contract, open, onOpenChange, onSubmit }: Amendm
               <div
                 className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium',
-                  step === s
-                    ? 'bg-primary text-primary-foreground'
-                    : i < ['type', 'details', 'review'].indexOf(step)
-                      ? 'bg-green-500 text-white'
-                      : 'bg-muted text-muted-foreground'
+                  getStepIndicatorClass(s, step, i)
                 )}
               >
                 {i < ['type', 'details', 'review'].indexOf(step) ? (
@@ -362,19 +406,12 @@ export function AmendmentFlow({ contract, open, onOpenChange, onSubmit }: Amendm
                 ) : (
                   <div className="space-y-3">
                     {milestoneChanges.map((mc, index) => (
-                      <div key={index} className="rounded-lg border p-3">
+                      <div
+                        key={`milestone-${mc.milestoneId ?? index}`}
+                        className="rounded-lg border p-3"
+                      >
                         <div className="mb-2 flex items-center justify-between">
-                          <Badge
-                            variant={
-                              mc.action === 'ADD'
-                                ? 'default'
-                                : mc.action === 'REMOVE'
-                                  ? 'destructive'
-                                  : 'secondary'
-                            }
-                          >
-                            {mc.action}
-                          </Badge>
+                          <Badge variant={getMilestoneActionVariant(mc.action)}>{mc.action}</Badge>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -467,8 +504,8 @@ export function AmendmentFlow({ contract, open, onOpenChange, onSubmit }: Amendm
                   <div>
                     <span className="text-muted-foreground">Milestone Changes</span>
                     <ul className="mt-1 space-y-1 text-sm">
-                      {milestoneChanges.map((mc, i) => (
-                        <li key={i}>
+                      {milestoneChanges.map((mc) => (
+                        <li key={`${mc.action}-${mc.title}`}>
                           {mc.action}: {mc.title} (${mc.amount})
                         </li>
                       ))}
@@ -514,9 +551,7 @@ export function AmendmentFlow({ contract, open, onOpenChange, onSubmit }: Amendm
         <div className="flex justify-between border-t pt-4">
           <Button
             variant="ghost"
-            onClick={
-              step === 'type' ? handleClose : () => setStep(step === 'review' ? 'details' : 'type')
-            }
+            onClick={step === 'type' ? handleClose : () => setStep(getPreviousStep(step))}
           >
             {step === 'type' ? 'Cancel' : 'Back'}
           </Button>
@@ -525,19 +560,7 @@ export function AmendmentFlow({ contract, open, onOpenChange, onSubmit }: Amendm
               disabled={isSubmitting || (step === 'details' && !reason)}
               onClick={step === 'details' ? () => setStep('review') : handleSubmit}
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : step === 'review' ? (
-                'Submit Amendment'
-              ) : (
-                <>
-                  Continue
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
+              {getSubmitButtonContent(step, isSubmitting)}
             </Button>
           )}
         </div>
@@ -556,7 +579,11 @@ interface AmendmentHistoryProps {
   onReject?: (id: string) => Promise<void>;
 }
 
-export function AmendmentHistory({ amendments, onApprove, onReject }: AmendmentHistoryProps) {
+export function AmendmentHistory({
+  amendments,
+  onApprove,
+  onReject,
+}: Readonly<AmendmentHistoryProps>) {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
@@ -586,15 +613,7 @@ export function AmendmentHistory({ amendments, onApprove, onReject }: AmendmentH
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <Badge
-                    variant={
-                      amendment.status === 'APPROVED'
-                        ? 'default'
-                        : amendment.status === 'REJECTED'
-                          ? 'destructive'
-                          : 'secondary'
-                    }
-                  >
+                  <Badge variant={getAmendmentStatusVariant(amendment.status)}>
                     {amendment.status}
                   </Badge>
                   <span className="text-muted-foreground text-sm">

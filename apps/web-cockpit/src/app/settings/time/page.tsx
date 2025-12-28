@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable jsx-a11y/label-has-associated-control */
 'use client';
 
 /**
@@ -248,7 +249,7 @@ export default function TimeSettingsPage() {
                   type="number"
                   value={settings.defaultHourlyRate}
                   onChange={(e) =>
-                    updateSetting('defaultHourlyRate', parseFloat(e.target.value) || 0)
+                    updateSetting('defaultHourlyRate', Number.parseFloat(e.target.value) || 0)
                   }
                 />
               </div>
@@ -266,7 +267,9 @@ export default function TimeSettingsPage() {
                   min={1}
                   type="number"
                   value={settings.workHoursPerDay}
-                  onChange={(e) => updateSetting('workHoursPerDay', parseInt(e.target.value) || 8)}
+                  onChange={(e) =>
+                    updateSetting('workHoursPerDay', Number.parseInt(e.target.value) || 8)
+                  }
                 />
               </div>
               <div>
@@ -279,7 +282,9 @@ export default function TimeSettingsPage() {
                   min={1}
                   type="number"
                   value={settings.workDaysPerWeek}
-                  onChange={(e) => updateSetting('workDaysPerWeek', parseInt(e.target.value) || 5)}
+                  onChange={(e) =>
+                    updateSetting('workDaysPerWeek', Number.parseInt(e.target.value) || 5)
+                  }
                 />
               </div>
             </div>
@@ -378,7 +383,7 @@ export default function TimeSettingsPage() {
                   type="number"
                   value={settings.idleReminderMinutes}
                   onChange={(e) =>
-                    updateSetting('idleReminderMinutes', parseInt(e.target.value) || 30)
+                    updateSetting('idleReminderMinutes', Number.parseInt(e.target.value) || 30)
                   }
                 />
               </div>
@@ -403,7 +408,7 @@ export default function TimeSettingsPage() {
                   type="number"
                   value={settings.longRunningMinutes}
                   onChange={(e) =>
-                    updateSetting('longRunningMinutes', parseInt(e.target.value) || 480)
+                    updateSetting('longRunningMinutes', Number.parseInt(e.target.value) || 480)
                   }
                 />
               </div>

@@ -25,7 +25,6 @@ import {
   Loader2,
   Paperclip,
   Send,
-  Trash2,
   Upload,
   X,
 } from 'lucide-react';
@@ -38,10 +37,10 @@ import type { Milestone } from '@/lib/api/contracts';
 // ============================================================================
 
 interface MilestoneSubmissionModalProps {
-  milestone: Milestone | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (milestoneId: string, data: SubmissionData) => Promise<void>;
+  readonly milestone: Milestone | null;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly onSubmit: (milestoneId: string, data: SubmissionData) => Promise<void>;
 }
 
 interface SubmissionData {
@@ -69,6 +68,20 @@ interface ExternalLink {
   id: string;
   title: string;
   url: string;
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+function getStepIndicatorClass(stepIndex: number, currentStepIndex: number): string {
+  if (stepIndex === currentStepIndex) {
+    return 'bg-primary text-primary-foreground';
+  }
+  if (stepIndex < currentStepIndex) {
+    return 'bg-green-500 text-white';
+  }
+  return 'bg-muted text-muted-foreground';
 }
 
 // ============================================================================
@@ -157,7 +170,7 @@ export function MilestoneSubmissionModal({
     if (!files) return;
 
     const newAttachments: AttachmentFile[] = Array.from(files).map((file) => ({
-      id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       name: file.name,
       size: file.size,
       type: file.type,
@@ -242,37 +255,30 @@ export function MilestoneSubmissionModal({
 
         {/* Step Indicator */}
         <div className="flex items-center gap-2">
-          {(['checklist', 'attachments', 'preview'] as const).map((s, i) => (
-            <div key={s} className="flex items-center">
-              <button
-                className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors',
-                  step === s
-                    ? 'bg-primary text-primary-foreground'
-                    : i < ['checklist', 'attachments', 'preview'].indexOf(step)
-                      ? 'bg-green-500 text-white'
-                      : 'bg-muted text-muted-foreground'
-                )}
-                onClick={() => setStep(s)}
-              >
-                {i < ['checklist', 'attachments', 'preview'].indexOf(step) ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  i + 1
-                )}
-              </button>
-              {i < 2 && (
-                <div
+          {(['checklist', 'attachments', 'preview'] as const).map((s, i) => {
+            const currentStepIndex = ['checklist', 'attachments', 'preview'].indexOf(step);
+            return (
+              <div key={s} className="flex items-center">
+                <button
                   className={cn(
-                    'mx-2 h-0.5 w-12',
-                    i < ['checklist', 'attachments', 'preview'].indexOf(step)
-                      ? 'bg-green-500'
-                      : 'bg-muted'
+                    'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors',
+                    getStepIndicatorClass(i, currentStepIndex)
                   )}
-                />
-              )}
-            </div>
-          ))}
+                  onClick={() => setStep(s)}
+                >
+                  {i < currentStepIndex ? <Check className="h-4 w-4" /> : i + 1}
+                </button>
+                {i < 2 && (
+                  <div
+                    className={cn(
+                      'mx-2 h-0.5 w-12',
+                      i < currentStepIndex ? 'bg-green-500' : 'bg-muted'
+                    )}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <Separator />
@@ -477,7 +483,7 @@ export function MilestoneSubmissionModal({
                         ) : (
                           <AlertCircle className="h-4 w-4 text-amber-500" />
                         )}
-                        <span className={!d.completed ? 'text-muted-foreground' : ''}>
+                        <span className={d.completed ? '' : 'text-muted-foreground'}>
                           {d.title}
                         </span>
                       </div>
@@ -546,11 +552,7 @@ export function MilestoneSubmissionModal({
             Back
           </Button>
 
-          {step !== 'preview' ? (
-            <Button onClick={() => setStep(step === 'checklist' ? 'attachments' : 'preview')}>
-              Continue
-            </Button>
-          ) : (
+          {step === 'preview' ? (
             <Button disabled={isSubmitting} onClick={handleSubmit}>
               {isSubmitting ? (
                 <>
@@ -563,6 +565,10 @@ export function MilestoneSubmissionModal({
                   Submit Milestone
                 </>
               )}
+            </Button>
+          ) : (
+            <Button onClick={() => setStep(step === 'checklist' ? 'attachments' : 'preview')}>
+              Continue
             </Button>
           )}
         </div>

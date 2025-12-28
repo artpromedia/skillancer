@@ -159,8 +159,8 @@ export class AuditLogger {
       actor,
       target,
       outcome: 'SUCCESS',
-      changes,
-      metadata,
+      ...(changes !== undefined && { changes }),
+      ...(metadata !== undefined && { metadata }),
     });
   }
 
@@ -182,7 +182,7 @@ export class AuditLogger {
         id: actor.sessionId ?? 'unknown',
       },
       outcome,
-      metadata,
+      ...(metadata !== undefined && { metadata }),
       riskLevel: action === 'LOGIN_FAILED' ? 'MEDIUM' : 'LOW',
     });
   }
@@ -204,8 +204,8 @@ export class AuditLogger {
       actor,
       target,
       outcome,
-      reason,
-      metadata,
+      ...(reason !== undefined && { reason }),
+      ...(metadata !== undefined && { metadata }),
       riskLevel: outcome === 'FAILURE' ? 'HIGH' : 'MEDIUM',
     });
   }
@@ -271,15 +271,15 @@ export class AuditLogger {
    * Sanitize actor data (remove sensitive info for logs)
    */
   private sanitizeActor(actor: AuditActor): AuditActor {
-    return {
-      userId: actor.userId,
-      userEmail: actor.userEmail ? this.maskEmail(actor.userEmail) : undefined,
-      userRole: actor.userRole,
-      ipAddress: actor.ipAddress,
-      userAgent: actor.userAgent ? actor.userAgent.substring(0, 100) : undefined,
-      sessionId: actor.sessionId,
-      tenantId: actor.tenantId,
-    };
+    const result: AuditActor = {};
+    if (actor.userId !== undefined) result.userId = actor.userId;
+    if (actor.userEmail !== undefined) result.userEmail = this.maskEmail(actor.userEmail);
+    if (actor.userRole !== undefined) result.userRole = actor.userRole;
+    if (actor.ipAddress !== undefined) result.ipAddress = actor.ipAddress;
+    if (actor.userAgent !== undefined) result.userAgent = actor.userAgent.substring(0, 100);
+    if (actor.sessionId !== undefined) result.sessionId = actor.sessionId;
+    if (actor.tenantId !== undefined) result.tenantId = actor.tenantId;
+    return result;
   }
 
   /**
@@ -304,11 +304,13 @@ export class AuditLogger {
       return result;
     };
 
-    return {
-      before: sanitizeObj(changes.before),
-      after: sanitizeObj(changes.after),
-      fields: changes.fields,
-    };
+    const result: AuditChanges = {};
+    const sanitizedBefore = sanitizeObj(changes.before);
+    const sanitizedAfter = sanitizeObj(changes.after);
+    if (sanitizedBefore !== undefined) result.before = sanitizedBefore;
+    if (sanitizedAfter !== undefined) result.after = sanitizedAfter;
+    if (changes.fields !== undefined) result.fields = changes.fields;
+    return result;
   }
 
   /**

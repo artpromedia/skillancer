@@ -167,7 +167,8 @@ export function useJobSearch(options: UseJobSearchOptions = {}): UseJobSearchRet
       if (!syncUrl) return;
 
       const params = filtersToSearchParams(newFilters);
-      const newUrl = `${pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+      const queryString = params.toString();
+      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
 
       startTransition(() => {
         router.push(newUrl, { scroll: false });

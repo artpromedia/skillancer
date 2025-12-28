@@ -304,6 +304,7 @@ export function useVdiSession(
         startSessionWarningTimer(new Date(Date.now() + 60 * 60 * 1000)); // Extend by 1 hour
       }
     } catch (error) {
+      console.error('Failed to extend session:', error);
       toast({
         title: 'Failed to Extend',
         description: 'Could not extend session. Please save your work.',

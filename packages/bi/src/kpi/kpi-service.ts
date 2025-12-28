@@ -3,8 +3,8 @@
  * KPI calculation and caching service
  */
 
-import type { ClickHouseClient } from '@clickhouse/client';
-import Redis from 'ioredis';
+import { getKPIById, getNorthStarKPIs } from './definitions.js';
+
 import type {
   KPIValue,
   KPITimeSeries,
@@ -18,7 +18,8 @@ import type {
   TargetStatus,
   KPIDefinition,
 } from './types.js';
-import { allKPIs, getKPIById, getNorthStarKPIs } from './definitions.js';
+import type { ClickHouseClient } from '@clickhouse/client';
+import type Redis from 'ioredis';
 
 export interface KPIServiceConfig {
   clickhouse: ClickHouseClient;
@@ -430,10 +431,11 @@ export class KPIService {
       case 'percent':
         return `${value.toFixed(decimals)}%`;
 
-      case 'duration':
+      case 'duration': {
         const hours = Math.floor(value / 60);
         const minutes = value % 60;
         return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+      }
 
       default:
         return value.toLocaleString('en-US', {

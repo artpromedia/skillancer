@@ -154,7 +154,7 @@ function getTimeAgo(date: Date): string {
 // Sub-Components
 // ============================================================================
 
-function TrustScoreCard({ user }: { user: UserProfile }) {
+function TrustScoreCard({ user }: Readonly<{ user: UserProfile }>) {
   const getTrustScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
     if (score >= 60) return 'text-yellow-600';
@@ -206,7 +206,9 @@ function TrustScoreCard({ user }: { user: UserProfile }) {
   );
 }
 
-function ViolationTypesChart({ violationsByType }: { violationsByType: Record<string, number> }) {
+function ViolationTypesChart({
+  violationsByType,
+}: Readonly<{ violationsByType: Record<string, number> }>) {
   const sortedTypes = useMemo(() => {
     return Object.entries(violationsByType)
       .sort(([, a], [, b]) => b - a)
@@ -230,7 +232,7 @@ function ViolationTypesChart({ violationsByType }: { violationsByType: Record<st
             <div key={type}>
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span className="truncate text-gray-700 dark:text-gray-300">
-                  {type.replace(/_/g, ' ')}
+                  {type.replaceAll('_', ' ')}
                 </span>
                 <span className="text-gray-500">{count}</span>
               </div>
@@ -250,9 +252,9 @@ function ViolationTypesChart({ violationsByType }: { violationsByType: Record<st
 
 function SeverityDistribution({
   violationsBySeverity,
-}: {
+}: Readonly<{
   violationsBySeverity: Record<string, number>;
-}) {
+}>) {
   const total = Object.values(violationsBySeverity).reduce((a, b) => a + b, 0);
 
   const severityOrder = ['critical', 'high', 'medium', 'low'];
@@ -307,7 +309,7 @@ function SeverityDistribution({
   );
 }
 
-function PreviousActionsTimeline({ actions }: { actions: PreviousAction[] }) {
+function PreviousActionsTimeline({ actions }: Readonly<{ actions: PreviousAction[] }>) {
   const [expanded, setExpanded] = useState(true);
 
   const sortedActions = [...actions].sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -370,11 +372,11 @@ function ViolationHistoryList({
   violations,
   currentViolationId,
   onViewViolation,
-}: {
+}: Readonly<{
   violations: ViolationHistoryItem[];
   currentViolationId: string;
   onViewViolation: (id: string) => void;
-}) {
+}>) {
   const [showAll, setShowAll] = useState(false);
 
   const displayViolations = showAll ? violations : violations.slice(0, 5);
@@ -417,7 +419,7 @@ function ViolationHistoryList({
                   <div className="flex-1">
                     <div className="mb-1 flex items-center gap-2">
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {violation.type.replace(/_/g, ' ')}
+                        {violation.type.replaceAll('_', ' ')}
                       </span>
                       <span
                         className={`rounded px-1.5 py-0.5 text-xs ${severityConfig.bg} ${severityConfig.text}`}
@@ -462,22 +464,23 @@ function PatternAnalysis({
   violationsByType,
   totalViolations,
   lastViolationAt,
-}: {
+}: Readonly<{
   violationsByType: Record<string, number>;
   totalViolations: number;
   lastViolationAt?: Date;
-}) {
+}>) {
   const patterns = useMemo(() => {
     const items = [];
 
     // Most common violation type
     const types = Object.entries(violationsByType);
     if (types.length > 0) {
-      const [mostCommon] = types.sort(([, a], [, b]) => b - a);
+      const sortedTypes = types.toSorted(([, a], [, b]) => b - a);
+      const [mostCommon] = sortedTypes;
       const percentage = Math.round((mostCommon[1] / totalViolations) * 100);
       items.push({
         label: 'Most common violation',
-        value: `${mostCommon[0].replace(/_/g, ' ')} (${percentage}%)`,
+        value: `${mostCommon[0].replaceAll('_', ' ')} (${percentage}%)`,
         type: 'info' as const,
       });
     }
@@ -586,7 +589,7 @@ export function UserViolationHistory({ user, currentViolationId }: UserViolation
   ];
 
   const handleViewViolation = (id: string) => {
-    window.location.href = `/violations/${id}/investigate`;
+    globalThis.location.href = `/violations/${id}/investigate`;
   };
 
   return (

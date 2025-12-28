@@ -141,13 +141,11 @@ function ConnectingState() {
               )}
             >
               <div className="flex-shrink-0">
-                {isComplete ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                ) : isCurrent ? (
-                  <Loader2 className="text-primary h-5 w-5 animate-spin" />
-                ) : (
-                  <div className="border-muted h-5 w-5 rounded-full border-2" />
-                )}
+                {(() => {
+                  if (isComplete) return <CheckCircle className="h-5 w-5 text-green-500" />;
+                  if (isCurrent) return <Loader2 className="text-primary h-5 w-5 animate-spin" />;
+                  return <div className="border-muted h-5 w-5 rounded-full border-2" />;
+                })()}
               </div>
               <span
                 className={cn(
@@ -184,7 +182,12 @@ interface ReconnectingStateProps {
   onCancel?: () => void;
 }
 
-function ReconnectingState({ attempt, maxAttempts, onRetry, onCancel }: ReconnectingStateProps) {
+function ReconnectingState({
+  attempt,
+  maxAttempts,
+  onRetry,
+  onCancel,
+}: Readonly<ReconnectingStateProps>) {
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
@@ -229,7 +232,7 @@ function ReconnectingState({ attempt, maxAttempts, onRetry, onCancel }: Reconnec
       <div className="flex gap-2">
         {Array.from({ length: maxAttempts }).map((_, i) => (
           <div
-            key={i}
+            key={`reconnect-attempt-${i + 1}`}
             className={cn(
               'h-3 w-3 rounded-full transition-colors',
               i < attempt ? 'bg-yellow-500' : 'bg-muted'
@@ -262,7 +265,7 @@ interface ErrorStateProps {
   onCancel?: () => void;
 }
 
-function ErrorState({ error, onRetry, onCancel }: ErrorStateProps) {
+function ErrorState({ error, onRetry, onCancel }: Readonly<ErrorStateProps>) {
   const [showTips, setShowTips] = useState(false);
 
   return (
@@ -293,8 +296,8 @@ function ErrorState({ error, onRetry, onCancel }: ErrorStateProps) {
         {showTips && (
           <div className="bg-muted/50 mt-4 rounded-lg p-4">
             <ul className="text-muted-foreground space-y-2 text-sm">
-              {TROUBLESHOOTING_TIPS.map((tip, i) => (
-                <li key={i} className="flex items-start gap-2">
+              {TROUBLESHOOTING_TIPS.map((tip) => (
+                <li key={tip} className="flex items-start gap-2">
                   <span className="text-primary">•</span>
                   {tip}
                 </li>
@@ -332,7 +335,7 @@ interface DisconnectedStateProps {
   onCancel?: () => void;
 }
 
-function DisconnectedState({ onRetry, onCancel }: DisconnectedStateProps) {
+function DisconnectedState({ onRetry, onCancel }: Readonly<DisconnectedStateProps>) {
   return (
     <div className="flex flex-col items-center gap-6">
       <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-full">
@@ -369,7 +372,7 @@ export function ConnectionOverlay({
   onRetry,
   onCancel,
   className,
-}: ConnectionOverlayProps) {
+}: Readonly<ConnectionOverlayProps>) {
   if (state === 'connected') {
     return null;
   }

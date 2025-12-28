@@ -6,7 +6,6 @@ import { Scale, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
-import type { Contract, Proposal } from '@/lib/api/bids';
 
 import { HireModal } from '@/components/bids/hire-modal';
 import { ProposalComparison } from '@/components/bids/proposal-comparison';
@@ -20,11 +19,13 @@ import {
   subscribeToJobProposals,
 } from '@/lib/api/bids';
 
+import type { Contract, Proposal } from '@/lib/api/bids';
+
 // ============================================================================
 // Component
 // ============================================================================
 
-export function ProposalsClient({ jobId }: { jobId: string }) {
+export function ProposalsClient({ jobId }: Readonly<{ jobId: string }>) {
   const router = useRouter();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -95,7 +96,7 @@ export function ProposalsClient({ jobId }: { jobId: string }) {
   const _handleAddToCompare = useCallback(
     (proposal: Proposal) => {
       if (compareProposals.length >= 3) return;
-      if (compareProposals.find((p) => p.id === proposal.id)) return;
+      if (compareProposals.some((p) => p.id === proposal.id)) return;
       setCompareProposals((prev) => [...prev, proposal]);
     },
     [compareProposals]
@@ -118,9 +119,8 @@ export function ProposalsClient({ jobId }: { jobId: string }) {
   );
 
   // Message handler
-  const handleMessage = useCallback((proposal: Proposal) => {
-    // Open messaging - for now just log
-    console.log('Message freelancer:', proposal.freelancer?.name);
+  const handleMessage = useCallback((_proposal: Proposal) => {
+    // Feature: Open messaging modal - not yet implemented
   }, []);
 
   // Filter proposals by tab

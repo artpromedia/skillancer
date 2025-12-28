@@ -67,7 +67,7 @@ export function ContractOverview({
   onViewMessages,
   onOpenDispute,
   isClient = true,
-}: ContractOverviewProps) {
+}: Readonly<ContractOverviewProps>) {
   const statusInfo = getContractStatusInfo(contract.status);
   const progress = calculateContractProgress(contract);
   const StatusIcon = statusIcons[contract.status];

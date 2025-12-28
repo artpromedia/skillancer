@@ -96,7 +96,10 @@ function getDuration(startTime: string, endTime?: string): number {
 // Schedule Item Component
 // ============================================================================
 
-function ScheduleItemBlock({ item, onClick }: { item: ScheduleItem; onClick?: () => void }) {
+function ScheduleItemBlock({
+  item,
+  onClick,
+}: Readonly<{ item: ScheduleItem; onClick?: () => void }>) {
   const top = getTimePosition(item.startTime);
   const height = getDuration(item.startTime, item.endTime);
 
@@ -237,7 +240,7 @@ function ScheduleSkeleton() {
 // Empty State
 // ============================================================================
 
-function EmptyState({ onAddClick }: { onAddClick?: () => void }) {
+function EmptyState({ onAddClick }: Readonly<{ onAddClick?: () => void }>) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="rounded-full bg-gray-100 p-3 dark:bg-gray-700">

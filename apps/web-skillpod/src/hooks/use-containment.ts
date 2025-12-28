@@ -343,6 +343,7 @@ export function useContainment(
 
           requests.push(request);
         } catch (error) {
+          console.error('Failed to process file upload:', error);
           blocked.push(file.name);
         }
       }
@@ -391,6 +392,7 @@ export function useContainment(
 
         return true;
       } catch (error) {
+        console.error('File download blocked:', error);
         await reportViolation('file_blocked', `Download of ${filename} blocked`);
         return false;
       }

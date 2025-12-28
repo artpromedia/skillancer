@@ -349,7 +349,7 @@ export class FinancialTransactionService {
   async reconcileTransactions(transactionIds: string[], userId: string): Promise<number> {
     // Verify all transactions belong to user
     const transactions = await Promise.all(
-      transactionIds.map((id) => this.transactionRepository.findById(id))
+      transactionIds.map(async (id) => this.transactionRepository.findById(id))
     );
 
     for (const t of transactions) {

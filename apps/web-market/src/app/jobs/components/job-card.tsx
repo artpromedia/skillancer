@@ -15,22 +15,23 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 
-import type { Job } from '@/lib/api/jobs';
 
 import { MatchScoreBadge } from '@/components/shared/match-score-badge';
 import { SkillTag } from '@/components/shared/skill-tag';
 import { useJobStore } from '@/stores/job-store';
 
+import type { Job } from '@/lib/api/jobs';
+
 // ============================================================================
 // Types
 // ============================================================================
 
-interface JobCardProps {
+type JobCardProps = Readonly<{
   job: Job;
   viewMode?: 'list' | 'grid';
   showMatchScore?: boolean;
   className?: string;
-}
+}>;
 
 // ============================================================================
 // Component
@@ -203,7 +204,7 @@ export function JobCard({
               <div className="text-muted-foreground flex items-center gap-1 text-sm">
                 <Users className="h-3 w-3" />
                 <span>
-                  {job.proposalCount} proposal{job.proposalCount !== 1 ? 's' : ''}
+                  {job.proposalCount} proposal{job.proposalCount === 1 ? '' : 's'}
                 </span>
               </div>
             )}
@@ -240,6 +241,39 @@ export function JobCard({
 // Helpers
 // ============================================================================
 
+function formatAmount(amount: number): string {
+  return amount >= 1000 ? `${(amount / 1000).toFixed(0)}k` : amount.toString();
+}
+
+function formatHourlyBudget(budgetMin?: number | null, budgetMax?: number | null): string {
+  if (budgetMin && budgetMax) {
+    return `$${formatAmount(budgetMin)}-$${formatAmount(budgetMax)}/hr`;
+  }
+  if (budgetMin) {
+    return `$${formatAmount(budgetMin)}+/hr`;
+  }
+  if (budgetMax) {
+    return `Up to $${formatAmount(budgetMax)}/hr`;
+  }
+  return 'Hourly';
+}
+
+function formatFixedBudget(budgetMin?: number | null, budgetMax?: number | null): string {
+  if (budgetMin && budgetMax) {
+    if (budgetMin === budgetMax) {
+      return `$${formatAmount(budgetMin)}`;
+    }
+    return `$${formatAmount(budgetMin)}-$${formatAmount(budgetMax)}`;
+  }
+  if (budgetMin) {
+    return `$${formatAmount(budgetMin)}+`;
+  }
+  if (budgetMax) {
+    return `Up to $${formatAmount(budgetMax)}`;
+  }
+  return 'Fixed Price';
+}
+
 function formatBudget(job: Job): string {
   const { budgetType, budgetMin, budgetMax } = job;
 
@@ -247,32 +281,10 @@ function formatBudget(job: Job): string {
     return budgetType === 'HOURLY' ? 'Hourly' : 'Fixed Price';
   }
 
-  const formatAmount = (amount: number) =>
-    amount >= 1000 ? `${(amount / 1000).toFixed(0)}k` : amount.toString();
-
   if (budgetType === 'HOURLY') {
-    if (budgetMin && budgetMax) {
-      return `$${formatAmount(budgetMin)}-$${formatAmount(budgetMax)}/hr`;
-    }
-    return budgetMin
-      ? `$${formatAmount(budgetMin)}+/hr`
-      : budgetMax
-        ? `Up to $${formatAmount(budgetMax)}/hr`
-        : 'Hourly';
+    return formatHourlyBudget(budgetMin, budgetMax);
   }
-
-  // Fixed price
-  if (budgetMin && budgetMax) {
-    if (budgetMin === budgetMax) {
-      return `$${formatAmount(budgetMin)}`;
-    }
-    return `$${formatAmount(budgetMin)}-$${formatAmount(budgetMax)}`;
-  }
-  return budgetMin
-    ? `$${formatAmount(budgetMin)}+`
-    : budgetMax
-      ? `Up to $${formatAmount(budgetMax)}`
-      : 'Fixed Price';
+  return formatFixedBudget(budgetMin, budgetMax);
 }
 
 function formatExperienceLevel(level: string): string {
@@ -293,6 +305,6 @@ function getCountryFlag(countryCode: string): string {
   const codePoints = countryCode
     .toUpperCase()
     .split('')
-    .map((char) => 127397 + char.charCodeAt(0));
+    .map((char) => 127397 + (char.codePointAt(0) ?? 0));
   return String.fromCodePoint(...codePoints);
 }

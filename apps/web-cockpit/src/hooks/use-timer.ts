@@ -150,7 +150,9 @@ export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       broadcastRef.current = new BroadcastChannel(broadcastChannel);
 
-      broadcastRef.current.onmessage = (event) => {
+      broadcastRef.current.onmessage = (
+        event: MessageEvent<{ type: string; timer?: ActiveTimer }>
+      ) => {
         const { type, timer } = event.data;
 
         switch (type) {

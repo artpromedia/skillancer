@@ -27,7 +27,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { Conversation, Message, MessageType } from '@/lib/api/messages';
 
@@ -126,6 +126,19 @@ interface ConversationItemProps {
   onDelete?: () => Promise<void>;
 }
 
+function getMessageStatusIcon(status: string) {
+  if (status === 'READ') return <CheckCheck className="h-4 w-4 text-blue-500" />;
+  if (status === 'DELIVERED') return <CheckCheck className="text-muted-foreground h-4 w-4" />;
+  return <Check className="text-muted-foreground h-4 w-4" />;
+}
+
+function getEmptyStateMessage(searchQuery: string, filter: string): string {
+  if (searchQuery) return 'No conversations found';
+  if (filter === 'unread') return 'No unread messages';
+  if (filter === 'pinned') return 'No pinned conversations';
+  return 'No conversations yet';
+}
+
 function ConversationItem({
   conversation,
   isActive,
@@ -135,7 +148,7 @@ function ConversationItem({
   onMute,
   onArchive,
   onDelete,
-}: ConversationItemProps) {
+}: Readonly<ConversationItemProps>) {
   const [showMenu, setShowMenu] = useState(false);
 
   const otherParticipant = conversation.participants.find((p) => p.userId !== currentUserId);
@@ -198,13 +211,7 @@ function ConversationItem({
               {/* Message Status */}
               {lastMessage?.senderId === currentUserId && (
                 <span className="text-muted-foreground flex-shrink-0">
-                  {lastMessage.status === 'READ' ? (
-                    <CheckCheck className="h-4 w-4 text-blue-500" />
-                  ) : lastMessage.status === 'DELIVERED' ? (
-                    <CheckCheck className="text-muted-foreground h-4 w-4" />
-                  ) : (
-                    <Check className="text-muted-foreground h-4 w-4" />
-                  )}
+                  {getMessageStatusIcon(lastMessage.status)}
                 </span>
               )}
               {/* Unread Badge */}
@@ -246,6 +253,9 @@ function ConversationItem({
       {showMenu && (
         <div
           className="absolute right-2 top-12 z-10 w-48 rounded-lg border bg-white py-1 shadow-lg dark:bg-gray-900"
+          role="menu"
+          tabIndex={-1}
+          onBlur={() => setShowMenu(false)}
           onMouseLeave={() => setShowMenu(false)}
         >
           {onPin && (
@@ -351,7 +361,7 @@ export function ConversationList({
   onArchiveConversation,
   onDeleteConversation,
   currentUserId,
-}: ConversationListProps) {
+}: Readonly<ConversationListProps>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'unread' | 'pinned'>('all');
 
@@ -451,26 +461,20 @@ export function ConversationList({
 
       {/* Conversation List */}
       <div className="flex-1 overflow-y-auto">
-        {loading ? (
+        {loading && (
           <div className="space-y-1 p-2">
-            {[...Array(5)].map((_, i) => (
-              <ConversationSkeleton key={i} />
+            {Array.from({ length: 5 }, (_, i) => `skeleton-${i}`).map((id) => (
+              <ConversationSkeleton key={id} />
             ))}
           </div>
-        ) : filteredConversations.length === 0 ? (
+        )}
+        {!loading && filteredConversations.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <MessageSquare className="text-muted-foreground mb-3 h-12 w-12" />
-            <p className="text-muted-foreground">
-              {searchQuery
-                ? 'No conversations found'
-                : filter === 'unread'
-                  ? 'No unread messages'
-                  : filter === 'pinned'
-                    ? 'No pinned conversations'
-                    : 'No conversations yet'}
-            </p>
+            <p className="text-muted-foreground">{getEmptyStateMessage(searchQuery, filter)}</p>
           </div>
-        ) : (
+        )}
+        {!loading && filteredConversations.length > 0 && (
           <div className="space-y-1 p-2">
             {filteredConversations.map((conversation) => (
               <ConversationItem

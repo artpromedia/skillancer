@@ -210,11 +210,11 @@ class AlertsAPIClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
+      const error = (await response.json().catch(() => ({}))) as { message?: string };
       throw new Error(error.message || `API error: ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   // =========================================================================
@@ -498,7 +498,7 @@ class AlertsAPIClient {
 
     this.wsConnection.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data as string) as { type?: string; payload?: unknown };
         if (data.type === 'alert') {
           const alert = data.payload as SecurityAlert;
           const listeners = this.wsListeners.get('alert') || new Set();

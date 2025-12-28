@@ -1,19 +1,21 @@
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+
 import type { Metadata } from 'next';
+
+
 import '../styles/globals.css';
 
 export const metadata: Metadata = {
   title: 'SkillPod - Skillancer',
-  description: 'Virtual Desktop Infrastructure for secure collaboration',
+  description: 'Skill Development and Verification Platform',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <DashboardLayout>{children}</DashboardLayout>
+      </body>
     </html>
   );
 }

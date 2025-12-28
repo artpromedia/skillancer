@@ -4,9 +4,10 @@
  * Runs once after all tests to clean up the test environment.
  */
 
-import { type FullConfig } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
+
+import type { FullConfig } from '@playwright/test';
 
 /**
  * Global teardown function

@@ -3,23 +3,24 @@
  * Report generation service with PDF, Excel, CSV support
  */
 
-import type { Readable } from 'stream';
-import ExcelJS from 'exceljs';
-import PDFDocument from 'pdfkit';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { randomUUID } from 'crypto';
+
+import { type S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import type { KPIService } from '../kpi/kpi-service.js';
-import type { KPIValue } from '../kpi/types.js';
+import * as ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit';
+
+import { getReportById, reportDefinitions } from './definitions.js';
+
 import type {
   ReportRequest,
   ReportResult,
   ReportData,
-  ReportFormat,
   ReportSection,
   ScheduledReport,
 } from './types.js';
-import { getReportById, reportDefinitions } from './definitions.js';
-import { randomUUID } from 'crypto';
+import type { KPIService } from '../kpi/kpi-service.js';
+import type { KPIValue } from '../kpi/types.js';
 
 export interface ReportServiceConfig {
   kpiService: KPIService;
@@ -95,7 +96,7 @@ export class ReportService {
           extension = 'json';
           break;
         default:
-          throw new Error(`Unsupported format: ${request.format}`);
+          throw new Error(`Unsupported format: ${String(request.format)}`);
       }
 
       // Upload to S3
@@ -191,7 +192,7 @@ export class ReportService {
   // ==================== Private Methods ====================
 
   private async gatherReportData(request: ReportRequest): Promise<ReportData> {
-    const report = getReportById(request.reportId)!;
+    const report = getReportById(request.reportId);
     const sections: ReportSection[] = [];
 
     // Calculate all KPIs for the report

@@ -696,9 +696,9 @@ export default function AlertsPage() {
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 {/* Severity Filter */}
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Severity
-                  </label>
+                  </span>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(SEVERITY_CONFIG).map(([key, config]) => (
                       <button
@@ -722,9 +722,9 @@ export default function AlertsPage() {
 
                 {/* Status Filter */}
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Status
-                  </label>
+                  </span>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                       <button
@@ -748,9 +748,9 @@ export default function AlertsPage() {
 
                 {/* Type Filter */}
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Alert Type
-                  </label>
+                  </span>
                   <div className="flex flex-wrap gap-2">
                     {ALERT_TYPES.map((type) => (
                       <button

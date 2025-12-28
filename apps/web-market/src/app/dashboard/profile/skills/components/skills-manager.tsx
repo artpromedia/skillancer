@@ -42,7 +42,7 @@ interface SkillsManagerProps {
 // Component
 // ============================================================================
 
-export function SkillsManager({ userId: _userId }: SkillsManagerProps) {
+export function SkillsManager({ userId: _userId }: Readonly<SkillsManagerProps>) {
   const [loading, setLoading] = useState(true);
   const [skills, setSkills] = useState<FreelancerSkill[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +51,8 @@ export function SkillsManager({ userId: _userId }: SkillsManagerProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Skill[]>([]);
-  const [_searching, setSearching] = useState(false);
+  // Loading indicator for search (setter used, but not displayed yet)
+  const [_isSearching, setIsSearching] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [proficiency, setProficiency] = useState<string>('INTERMEDIATE');
   const [yearsExperience, setYearsExperience] = useState<number>(1);
@@ -86,7 +87,7 @@ export function SkillsManager({ userId: _userId }: SkillsManagerProps) {
       return;
     }
 
-    setSearching(true);
+    setIsSearching(true);
     try {
       const results = await searchSkills({ query: searchQuery, limit: 10 });
       // Filter out already added skills
@@ -95,7 +96,7 @@ export function SkillsManager({ userId: _userId }: SkillsManagerProps) {
     } catch (err) {
       console.error('Failed to search skills:', err);
     } finally {
-      setSearching(false);
+      setIsSearching(false);
     }
   }, [searchQuery, skills]);
 
@@ -233,7 +234,7 @@ export function SkillsManager({ userId: _userId }: SkillsManagerProps) {
                           {getProficiencyLabel(skill.proficiencyLevel)}
                         </Badge>
                         <span className="text-muted-foreground text-xs">
-                          {skill.yearsExperience} yr{skill.yearsExperience !== 1 ? 's' : ''}
+                          {skill.yearsExperience} yr{skill.yearsExperience === 1 ? '' : 's'}
                         </span>
                       </div>
                     </div>
@@ -348,7 +349,7 @@ export function SkillsManager({ userId: _userId }: SkillsManagerProps) {
                 min={0}
                 type="number"
                 value={yearsExperience}
-                onChange={(e) => setYearsExperience(parseInt(e.target.value, 10) || 0)}
+                onChange={(e) => setYearsExperience(Number.parseInt(e.target.value, 10) || 0)}
               />
             </div>
 

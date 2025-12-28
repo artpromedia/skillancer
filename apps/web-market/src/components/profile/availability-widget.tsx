@@ -98,9 +98,9 @@ function isWorkingHours(tz: string, start?: string, end?: string): boolean {
       hour: 'numeric',
       hour12: false,
     });
-    const currentHour = parseInt(formatter.format(now), 10);
-    const startHour = parseInt(start.split(':')[0], 10);
-    const endHour = parseInt(end.split(':')[0], 10);
+    const currentHour = Number.parseInt(formatter.format(now), 10);
+    const startHour = Number.parseInt(start.split(':')[0], 10);
+    const endHour = Number.parseInt(end.split(':')[0], 10);
 
     return currentHour >= startHour && currentHour < endHour;
   } catch {
@@ -112,7 +112,19 @@ function isWorkingHours(tz: string, start?: string, end?: string): boolean {
 // Availability Heat Map
 // ============================================================================
 
-function AvailabilityHeatMap({ hoursPerWeek }: { hoursPerWeek: number }) {
+function getAvailabilityColor(availability: number): string {
+  if (availability === 0) return 'bg-muted';
+  if (availability < 0.3) return 'bg-emerald-100';
+  if (availability < 0.6) return 'bg-emerald-300';
+  if (availability < 0.9) return 'bg-emerald-500';
+  return 'bg-emerald-600';
+}
+
+function getWeekendAvailability(weekendHours: number): number {
+  return weekendHours > 0 ? 0.3 : 0;
+}
+
+function AvailabilityHeatMap({ hoursPerWeek }: Readonly<{ hoursPerWeek: number }>) {
   // Simulate weekly availability based on hours per week
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const hoursPerDay = Math.ceil(hoursPerWeek / 5); // Assume 5-day week
@@ -123,9 +135,7 @@ function AvailabilityHeatMap({ hoursPerWeek }: { hoursPerWeek: number }) {
       {days.map((day, index) => {
         const isWeekend = index >= 5;
         const availability = isWeekend
-          ? weekendHours > 0
-            ? 0.3
-            : 0
+          ? getWeekendAvailability(weekendHours)
           : Math.min(hoursPerDay / 8, 1);
 
         return (
@@ -134,20 +144,7 @@ function AvailabilityHeatMap({ hoursPerWeek }: { hoursPerWeek: number }) {
               <TooltipTrigger asChild>
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-muted-foreground text-[10px]">{day}</span>
-                  <div
-                    className={cn(
-                      'h-6 w-full rounded',
-                      availability === 0
-                        ? 'bg-muted'
-                        : availability < 0.3
-                          ? 'bg-emerald-100'
-                          : availability < 0.6
-                            ? 'bg-emerald-300'
-                            : availability < 0.9
-                              ? 'bg-emerald-500'
-                              : 'bg-emerald-600'
-                    )}
-                  />
+                  <div className={cn('h-6 w-full rounded', getAvailabilityColor(availability))} />
                 </div>
               </TooltipTrigger>
               <TooltipContent>
@@ -174,7 +171,7 @@ export function AvailabilityWidget({
   timezone,
   isOwnProfile = false,
   className,
-}: AvailabilityWidgetProps) {
+}: Readonly<AvailabilityWidgetProps>) {
   const config = getAvailabilityConfig(availability);
   const currentTime = getCurrentTimeInTimezone(timezone);
   const formattedTz = formatTimezone(timezone);

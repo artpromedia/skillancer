@@ -22,11 +22,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  Button,
-  cn,
 } from '@skillancer/ui';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ConnectionOverlay } from '@/components/viewer/connection-overlay';
 import { ContainmentToast } from '@/components/viewer/containment-toast';
@@ -95,15 +93,8 @@ export default function ViewerPage() {
     extendSession,
   } = useVdiSession(sessionId);
 
-  const {
-    policy,
-    clipboardState,
-    containmentEvents,
-    dismissEvent,
-    requestFileTransfer,
-    pendingTransfers,
-    syncClipboard,
-  } = useContainment(sessionId);
+  const { policy, clipboardState, containmentEvents, requestFileTransfer, pendingTransfers } =
+    useContainment(sessionId);
 
   // Toast notifications for containment events
   const [toasts, setToasts] = useState<ContainmentEvent[]>([]);
@@ -181,8 +172,8 @@ export default function ViewerPage() {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [showExitDialog]);
 
   // Fullscreen change detection
@@ -200,38 +191,37 @@ export default function ViewerPage() {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (connectionState === 'connected') {
         e.preventDefault();
-        e.returnValue = 'You have an active VDI session. Are you sure you want to leave?';
-        return e.returnValue;
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    globalThis.addEventListener('beforeunload', handleBeforeUnload);
+    return () => globalThis.removeEventListener('beforeunload', handleBeforeUnload);
   }, [connectionState]);
 
   // ============================================================================
   // HANDLERS
   // ============================================================================
 
+  const filterToastById = (toasts: ContainmentEvent[], id: string) =>
+    toasts.filter((t) => t.id !== id);
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => filterToastById(prev, id));
+  };
+
   const addToast = (event: ContainmentEvent) => {
     setToasts((prev) => [...prev, event]);
 
     // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== event.id));
-    }, 5000);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setTimeout(() => removeToast(event.id), 5000);
   };
 
   const toggleFullscreen = async () => {
     try {
-      if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
-      } else {
+      if (document.fullscreenElement) {
         await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
       }
     } catch (err) {
       console.error('Fullscreen error:', err);

@@ -202,11 +202,11 @@ class ComplianceAPIClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
+      const error = (await response.json().catch(() => ({}))) as { message?: string };
       throw new Error(error.message || `API error: ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   // =========================================================================
@@ -505,7 +505,7 @@ class ComplianceAPIClient {
       throw new Error('Upload failed');
     }
 
-    return response.json();
+    return response.json() as Promise<Evidence>;
   }
 
   async deleteEvidence(controlId: string, evidenceId: string): Promise<void> {

@@ -79,7 +79,7 @@ export function MilestoneTracker({
   onRequestRevision,
   onFundMilestone,
   onViewSubmission,
-}: MilestoneTrackerProps) {
+}: Readonly<MilestoneTrackerProps>) {
   const [expandedMilestones, setExpandedMilestones] = useState<string[]>([]);
 
   const toggleExpanded = (id: string) => {
@@ -260,9 +260,9 @@ export function MilestoneTracker({
                           <div>
                             <h5 className="mb-2 text-sm font-medium">Deliverables</h5>
                             <ul className="space-y-1">
-                              {milestone.deliverables.map((d, i) => (
+                              {milestone.deliverables.map((d) => (
                                 <li
-                                  key={i}
+                                  key={d}
                                   className="text-muted-foreground flex items-center gap-2 text-sm"
                                 >
                                   <CheckCircle2 className="text-muted-foreground h-3 w-3" />

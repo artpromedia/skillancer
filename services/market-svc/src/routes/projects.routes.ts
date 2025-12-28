@@ -205,7 +205,7 @@ export function registerProjectRoutes(fastify: FastifyInstance, deps: ProjectRou
         | 'email'
         | undefined;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      void signalJobViewed(user?.id, project as any, { source: source || 'direct' });
+      void signalJobViewed(user?.id, project, { source: source || 'direct' });
 
       return await reply.send({
         success: true,

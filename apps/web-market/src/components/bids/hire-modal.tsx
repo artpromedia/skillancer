@@ -41,9 +41,9 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
-import type { Contract, Proposal } from '@/lib/api/bids';
-
 import { hireFreelancer } from '@/lib/api/bids';
+
+import type { Contract, Proposal } from '@/lib/api/bids';
 
 // ============================================================================
 // Types
@@ -64,7 +64,7 @@ type Step = 'review' | 'payment' | 'message' | 'confirm';
 // Step Components
 // ============================================================================
 
-function ReviewStep({ proposal }: { proposal: Proposal }) {
+function ReviewStep({ proposal }: Readonly<{ proposal: Proposal }>) {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -151,11 +151,11 @@ function PaymentStep({
   proposal,
   paymentMethod,
   setPaymentMethod,
-}: {
+}: Readonly<{
   proposal: Proposal;
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
-}) {
+}>) {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -302,12 +302,12 @@ function MessageStep({
   setMessage,
   startDate,
   setStartDate,
-}: {
+}: Readonly<{
   message: string;
   setMessage: (msg: string) => void;
   startDate: string;
   setStartDate: (date: string) => void;
-}) {
+}>) {
   return (
     <div className="space-y-6">
       {/* Start date */}
@@ -369,12 +369,12 @@ function ConfirmStep({
   paymentMethod,
   message,
   startDate,
-}: {
+}: Readonly<{
   proposal: Proposal;
   paymentMethod: PaymentMethod;
   message: string;
   startDate: string;
-}) {
+}>) {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -481,7 +481,7 @@ export function HireModal({
   open,
   onOpenChange,
   onHireSuccess,
-}: HireModalProps) {
+}: Readonly<HireModalProps>) {
   const [step, setStep] = useState<Step>('review');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ESCROW');
   const [message, setMessage] = useState('');
@@ -646,11 +646,7 @@ export function HireModal({
                 Back
               </Button>
 
-              {step !== 'confirm' ? (
-                <Button onClick={() => setStep(steps[currentStepIndex + 1]?.id ?? 'confirm')}>
-                  Continue
-                </Button>
-              ) : (
+              {step === 'confirm' ? (
                 <Button disabled={isProcessing} onClick={() => void handleConfirm()}>
                   {isProcessing ? (
                     <>
@@ -663,6 +659,10 @@ export function HireModal({
                       Confirm &amp; Pay
                     </>
                   )}
+                </Button>
+              ) : (
+                <Button onClick={() => setStep(steps[currentStepIndex + 1]?.id ?? 'confirm')}>
+                  Continue
                 </Button>
               )}
             </div>

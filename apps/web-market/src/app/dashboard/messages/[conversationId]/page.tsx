@@ -7,10 +7,11 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
+import { MessageThread } from '@/components/messaging/message-thread';
+
 import type { TypingUser } from '@/hooks/use-messaging';
 import type { Conversation, Message } from '@/lib/api/messages';
 
-import { MessageThread } from '@/components/messaging/message-thread';
 
 // ============================================================================
 // Mock Data (Replace with API/WebSocket)
@@ -391,14 +392,12 @@ export default function ConversationPage() {
           onDeleteMessage={handleDeleteMessage}
           onEditMessage={handleEditMessage}
           onLoadMore={async () => {
-            // Load more messages
-            console.log('Loading more messages...');
+            // Feature: Load more messages via pagination - not yet implemented
           }}
           onReactToMessage={handleReactToMessage}
           onSendMessage={handleSendMessage}
-          onTypingChange={(isTyping) => {
-            // Send typing indicator via WebSocket
-            console.log('Typing:', isTyping);
+          onTypingChange={(_isTyping) => {
+            // Feature: Send typing indicator via WebSocket - not yet implemented
           }}
         />
       </div>

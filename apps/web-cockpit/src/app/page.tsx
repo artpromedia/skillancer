@@ -10,7 +10,6 @@
  * @module app/page
  */
 
-import { useState, useEffect } from 'react';
 import {
   Clock,
   DollarSign,
@@ -23,8 +22,10 @@ import {
   Pause,
   Square,
 } from 'lucide-react';
-import { StatsCards } from '@/components/dashboard/stats-cards';
+import { useState, useEffect } from 'react';
+
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
+import { StatsCards } from '@/components/dashboard/stats-cards';
 import { TodaySchedule } from '@/components/dashboard/today-schedule';
 
 // ============================================================================
@@ -89,12 +90,12 @@ function QuickActions({
   onCreateInvoice,
   onLogExpense,
   onNewProject,
-}: {
+}: Readonly<{
   onStartTimer: () => void;
   onCreateInvoice: () => void;
   onLogExpense: () => void;
   onNewProject: () => void;
-}) {
+}>) {
   const actions: QuickAction[] = [
     {
       id: 'start-timer',
@@ -131,8 +132,8 @@ function QuickActions({
       {actions.map((action) => (
         <button
           key={action.id}
-          onClick={action.onClick}
           className={`flex items-center gap-2 rounded-lg px-4 py-3 text-white transition-colors ${action.color}`}
+          onClick={action.onClick}
         >
           <action.icon className="h-5 w-5" />
           <span className="text-sm font-medium">{action.label}</span>
@@ -156,7 +157,9 @@ function ActiveTimerBanner() {
       try {
         const response = await fetch('/api/timers/active');
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as {
+            timer?: { projectName?: string; startTime: string };
+          };
           if (data.timer) {
             setHasActiveTimer(true);
             setProjectName(data.timer.projectName || 'No project');
@@ -240,7 +243,7 @@ export default function CockpitHome() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = () => {
       try {
         setUserName('Alex');
         setStats({
@@ -262,19 +265,19 @@ export default function CockpitHome() {
   }, []);
 
   const handleStartTimer = () => {
-    window.location.href = '/time?action=start';
+    globalThis.location.href = '/time?action=start';
   };
 
   const handleCreateInvoice = () => {
-    window.location.href = '/invoices/new';
+    globalThis.location.href = '/invoices/new';
   };
 
   const handleLogExpense = () => {
-    window.location.href = '/expenses/new';
+    globalThis.location.href = '/expenses/new';
   };
 
   const handleNewProject = () => {
-    window.location.href = '/projects/new';
+    globalThis.location.href = '/projects/new';
   };
 
   const today = new Date();
@@ -301,10 +304,10 @@ export default function CockpitHome() {
             Quick Actions
           </h2>
           <QuickActions
-            onStartTimer={handleStartTimer}
             onCreateInvoice={handleCreateInvoice}
             onLogExpense={handleLogExpense}
             onNewProject={handleNewProject}
+            onStartTimer={handleStartTimer}
           />
         </div>
 

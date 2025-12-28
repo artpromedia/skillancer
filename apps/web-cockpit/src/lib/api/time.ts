@@ -209,10 +209,10 @@ export class TimeApiClient {
         this.config.onUnauthorized?.();
       }
 
-      const error: ApiError = await response.json().catch(() => ({
+      const error = (await response.json().catch(() => ({
         code: 'UNKNOWN_ERROR',
         message: 'An unknown error occurred',
-      }));
+      }))) as ApiError;
 
       this.config.onError?.(error);
       throw error;
@@ -223,7 +223,7 @@ export class TimeApiClient {
       return undefined as T;
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   // --------------------------------------------------------------------------

@@ -28,9 +28,9 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 
-import type { FreelancerSkill } from '@/lib/api/freelancers';
-
 import { getProficiencyColor, getProficiencyLabel } from '@/lib/api/skills';
+
+import type { FreelancerSkill } from '@/lib/api/freelancers';
 
 // ============================================================================
 // Types

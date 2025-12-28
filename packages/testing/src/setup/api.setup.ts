@@ -5,8 +5,9 @@
  */
 
 import { beforeAll, afterAll, afterEach, jest } from '@jest/globals';
-import { setupServer } from 'msw/node';
 import { rest, type RestHandler } from 'msw';
+import { setupServer } from 'msw/node';
+
 import type { Express } from 'express';
 
 // ==================== Global Configuration ====================

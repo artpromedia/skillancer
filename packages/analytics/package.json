@@ -56,7 +56,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/",
+    "lint": "eslint --ext .ts src/",
     "test": "vitest run",
     "test:watch": "vitest",
     "clean": "rimraf dist"

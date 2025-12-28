@@ -10,26 +10,7 @@
  * @module app/settings/retention/page
  */
 
-import {
-  Clock,
-  HardDrive,
-  Shield,
-  AlertTriangle,
-  Plus,
-  Edit2,
-  Trash2,
-  Check,
-  X,
-  ChevronRight,
-  Save,
-  RotateCcw,
-  FileText,
-  Calendar,
-  DollarSign,
-  Scale,
-  Lock,
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { HardDrive, AlertTriangle, Plus, Edit2, Trash2, FileText, Lock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 import { RetentionConfig } from '@/components/recordings/retention-config';
@@ -111,7 +92,7 @@ function formatFileSize(bytes: number): string {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 function formatDate(date: Date): string {
@@ -133,7 +114,7 @@ function formatRetentionDays(days: number): string {
 // Sub-Components
 // ============================================================================
 
-function StorageOverview({ quota }: { quota: StorageQuota }) {
+function StorageOverview({ quota }: Readonly<{ quota: StorageQuota }>) {
   const usagePercent = (quota.used / quota.total) * 100;
   const isWarning = usagePercent > 80;
   const isCritical = usagePercent > 95;
@@ -156,22 +137,22 @@ function StorageOverview({ quota }: { quota: StorageQuota }) {
             {formatFileSize(quota.used)} of {formatFileSize(quota.total)} used
           </span>
           <span
-            className={`font-medium ${
-              isCritical
-                ? 'text-red-600'
-                : isWarning
-                  ? 'text-yellow-600'
-                  : 'text-gray-900 dark:text-white'
-            }`}
+            className={`font-medium ${(() => {
+              if (isCritical) return 'text-red-600';
+              if (isWarning) return 'text-yellow-600';
+              return 'text-gray-900 dark:text-white';
+            })()}`}
           >
             {usagePercent.toFixed(1)}%
           </span>
         </div>
         <div className="h-3 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
           <div
-            className={`h-full transition-all ${
-              isCritical ? 'bg-red-500' : isWarning ? 'bg-yellow-500' : 'bg-blue-500'
-            }`}
+            className={`h-full transition-all ${(() => {
+              if (isCritical) return 'bg-red-500';
+              if (isWarning) return 'bg-yellow-500';
+              return 'bg-blue-500';
+            })()}`}
             style={{ width: `${Math.min(usagePercent, 100)}%` }}
           />
         </div>
@@ -205,7 +186,7 @@ function StorageOverview({ quota }: { quota: StorageQuota }) {
               <div
                 className="h-2 w-2 rounded-full bg-blue-500"
                 style={{
-                  backgroundColor: `hsl(${(parseInt(policy.policyId, 36) * 137) % 360}, 70%, 50%)`,
+                  backgroundColor: `hsl(${(Number.parseInt(policy.policyId, 36) * 137) % 360}, 70%, 50%)`,
                 }}
               />
               <span className="text-gray-600 dark:text-gray-400">{policy.policyName}</span>
@@ -226,12 +207,12 @@ function PolicyCard({
   onEdit,
   onDelete,
   onSetDefault,
-}: {
+}: Readonly<{
   policy: RetentionPolicy;
   onEdit: () => void;
   onDelete: () => void;
   onSetDefault: () => void;
-}) {
+}>) {
   return (
     <div
       className={`rounded-lg border bg-white dark:bg-gray-800 ${
@@ -320,11 +301,11 @@ function ComplianceHoldCard({
   hold,
   onRelease,
   onExtend,
-}: {
+}: Readonly<{
   hold: ComplianceHold;
   onRelease: () => void;
   onExtend: () => void;
-}) {
+}>) {
   const isExpiring =
     hold.expiresAt &&
     hold.status === 'active' &&
@@ -361,13 +342,13 @@ function ComplianceHoldCard({
           </div>
         </div>
         <span
-          className={`rounded-full px-2 py-1 text-xs ${
-            hold.status === 'active'
-              ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-              : hold.status === 'expired'
-                ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-          }`}
+          className={`rounded-full px-2 py-1 text-xs ${(() => {
+            if (hold.status === 'active')
+              return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+            if (hold.status === 'expired')
+              return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
+            return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+          })()}`}
         >
           {hold.status}
         </span>
@@ -406,10 +387,10 @@ function ComplianceHoldCard({
 function PendingDeletionList({
   items,
   onOverride,
-}: {
+}: Readonly<{
   items: PendingDeletion[];
   onOverride: (id: string) => void;
-}) {
+}>) {
   if (items.length === 0) {
     return (
       <div className="py-8 text-center text-gray-500 dark:text-gray-400">
@@ -450,8 +431,6 @@ function PendingDeletionList({
 // ============================================================================
 
 export default function RetentionSettingsPage() {
-  const router = useRouter();
-
   // State
   const [isLoading, setIsLoading] = useState(true);
   const [policies, setPolicies] = useState<RetentionPolicy[]>([]);
@@ -589,7 +568,7 @@ export default function RetentionSettingsPage() {
       }
     };
 
-    loadData();
+    void loadData();
   }, []);
 
   // Handlers
@@ -601,7 +580,7 @@ export default function RetentionSettingsPage() {
     setEditingPolicy(policy);
   };
 
-  const handleDeletePolicy = async (policyId: string) => {
+  const handleDeletePolicy = (policyId: string) => {
     if (
       !confirm('Delete this retention policy? Affected recordings will use the default policy.')
     ) {
@@ -610,7 +589,7 @@ export default function RetentionSettingsPage() {
     setPolicies((prev) => prev.filter((p) => p.id !== policyId));
   };
 
-  const handleSetDefaultPolicy = async (policyId: string) => {
+  const handleSetDefaultPolicy = (policyId: string) => {
     setPolicies((prev) =>
       prev.map((p) => ({
         ...p,
@@ -619,7 +598,7 @@ export default function RetentionSettingsPage() {
     );
   };
 
-  const handleReleaseHold = async (holdId: string) => {
+  const handleReleaseHold = (holdId: string) => {
     if (
       !confirm(
         'Release this compliance hold? Affected recordings may become eligible for deletion.'
@@ -632,11 +611,11 @@ export default function RetentionSettingsPage() {
     );
   };
 
-  const handleExtendHold = (holdId: string) => {
-    console.log('Extend hold:', holdId);
+  const handleExtendHold = (_holdId: string) => {
+    // Feature: Extend legal hold duration - not yet implemented
   };
 
-  const handleOverrideDeletion = async (deletionId: string) => {
+  const handleOverrideDeletion = (deletionId: string) => {
     if (
       !confirm(
         'Override this scheduled deletion? The recording will use the next applicable retention policy.'

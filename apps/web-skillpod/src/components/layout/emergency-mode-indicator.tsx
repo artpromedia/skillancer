@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars */
 /**
  * Emergency Mode Indicator Component
  *
@@ -36,7 +35,7 @@ interface EmergencyIndicatorProps {
 // Icons
 // ============================================================================
 
-function ShieldCheckIcon({ className }: { className?: string }) {
+function ShieldCheckIcon({ className }: Readonly<{ className?: string }>) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
@@ -49,7 +48,7 @@ function ShieldCheckIcon({ className }: { className?: string }) {
   );
 }
 
-function ShieldExclamationIcon({ className }: { className?: string }) {
+function ShieldExclamationIcon({ className }: Readonly<{ className?: string }>) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
@@ -62,7 +61,7 @@ function ShieldExclamationIcon({ className }: { className?: string }) {
   );
 }
 
-function LockClosedIcon({ className }: { className?: string }) {
+function LockClosedIcon({ className }: Readonly<{ className?: string }>) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
@@ -164,7 +163,13 @@ export function EmergencyModeIndicator({
     try {
       const response = await fetch('/api/emergency/stats');
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as {
+          currentLevel?: LockdownLevel;
+          activeKillSwitches?: number;
+          openIncidents?: number;
+          activatedAt?: string;
+          reason?: string;
+        };
         setState({
           level: data.currentLevel || 'normal',
           activeKillSwitches: data.activeKillSwitches || 0,
@@ -179,8 +184,8 @@ export function EmergencyModeIndicator({
   }, []);
 
   useEffect(() => {
-    fetchState();
-    const interval = setInterval(fetchState, 15000); // Poll every 15 seconds
+    void fetchState();
+    const interval = setInterval(() => void fetchState(), 15000); // Poll every 15 seconds
     return () => clearInterval(interval);
   }, [fetchState]);
 
@@ -190,7 +195,10 @@ export function EmergencyModeIndicator({
 
     eventSource.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data as string) as {
+          type: string;
+          state: EmergencyState;
+        };
         if (data.type === 'state_update') {
           setState(data.state);
         }
@@ -292,7 +300,12 @@ export function EmergencyBanner() {
       try {
         const response = await fetch('/api/emergency/stats');
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as {
+            currentLevel?: string;
+            activeKillSwitches?: number;
+            openIncidents?: number;
+            reason?: string;
+          };
           setState({
             level: data.currentLevel || 'normal',
             activeKillSwitches: data.activeKillSwitches || 0,
@@ -305,8 +318,8 @@ export function EmergencyBanner() {
       }
     };
 
-    fetchState();
-    const interval = setInterval(fetchState, 15000);
+    void fetchState();
+    const interval = setInterval(() => void fetchState(), 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -371,7 +384,7 @@ export function EmergencyBanner() {
 // Kill Switch Quick Access
 // ============================================================================
 
-export function KillSwitchQuickAccess({ className = '' }: { className?: string }) {
+export function KillSwitchQuickAccess({ className = '' }: Readonly<{ className?: string }>) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [countdown, setCountdown] = useState(3);
   const [isActive, setIsActive] = useState(false);
@@ -380,8 +393,8 @@ export function KillSwitchQuickAccess({ className = '' }: { className?: string }
     // Check if any kill switch is active
     fetch('/api/emergency/kill-switches')
       .then((res) => res.json())
-      .then((data) => {
-        const active = data.some((ks: { status: string }) => ks.status === 'triggered');
+      .then((data: { status: string }[]) => {
+        const active = data.some((ks) => ks.status === 'triggered');
         setIsActive(active);
       })
       .catch(() => {});
@@ -451,7 +464,7 @@ export function KillSwitchQuickAccess({ className = '' }: { className?: string }
             }
           `}
           disabled={countdown > 0}
-          onClick={handleConfirm}
+          onClick={() => void handleConfirm()}
         >
           {countdown > 0 ? `Confirm (${countdown}s)` : 'CONFIRM'}
         </button>

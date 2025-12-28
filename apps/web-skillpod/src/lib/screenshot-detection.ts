@@ -86,7 +86,7 @@ class ScreenshotDetection {
     // Remove all listeners
     this.listeners.forEach(({ event, handler }) => {
       document.removeEventListener(event, handler);
-      window.removeEventListener(event, handler);
+      globalThis.removeEventListener(event, handler);
     });
     this.listeners = [];
 
@@ -271,7 +271,7 @@ class ScreenshotDetection {
       }, 0);
     };
 
-    window.addEventListener('beforeprint', beforePrintHandler);
+    globalThis.addEventListener('beforeprint', beforePrintHandler);
     this.listeners.push({ event: 'beforeprint', handler: beforePrintHandler as EventListener });
 
     // Also detect Ctrl+P
@@ -305,7 +305,8 @@ class ScreenshotDetection {
           // Ignore media events
         });
       } catch (e) {
-        // Media session not supported
+        // Media session not supported - this is expected in some environments
+        console.error('Media session action handler not supported:', e);
       }
     }
   }

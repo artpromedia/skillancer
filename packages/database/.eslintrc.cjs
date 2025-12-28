@@ -12,6 +12,7 @@ module.exports = {
     'src/__tests__/**',
     'tsup.config.ts',
     'scripts/**/*.ts',
+    'temp-types/**',
   ],
   rules: {
     // Disable strict type checks - will be re-enabled when Prisma types are fixed

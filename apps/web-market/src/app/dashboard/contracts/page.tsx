@@ -157,7 +157,7 @@ const mockContracts: Contract[] = [
 // Summary Cards
 // ============================================================================
 
-function SummaryCards({ summary }: { summary: ContractSummary }) {
+function SummaryCards({ summary }: Readonly<{ summary: ContractSummary }>) {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -222,7 +222,7 @@ function SummaryCards({ summary }: { summary: ContractSummary }) {
 // Contract Card
 // ============================================================================
 
-function ContractCard({ contract }: { contract: Contract }) {
+function ContractCard({ contract }: Readonly<{ contract: Contract }>) {
   const statusConfig = STATUS_CONFIG[contract.status];
   const StatusIcon = statusConfig.icon;
 
@@ -318,7 +318,7 @@ function ContractCard({ contract }: { contract: Contract }) {
 // Contracts List
 // ============================================================================
 
-function ContractsList({ contracts }: { contracts: Contract[] }) {
+function ContractsList({ contracts }: Readonly<{ contracts: Contract[] }>) {
   if (contracts.length === 0) {
     return (
       <div className="py-12 text-center">

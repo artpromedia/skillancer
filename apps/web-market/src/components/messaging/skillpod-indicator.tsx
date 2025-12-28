@@ -20,7 +20,6 @@ import {
   Clock,
   ExternalLink,
   GraduationCap,
-  HelpCircle,
   Lightbulb,
   Monitor,
   Play,
@@ -30,7 +29,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 // ============================================================================
 // Types
@@ -47,7 +46,7 @@ interface SkillPodProgress {
   lastActivity?: string;
 }
 
-interface SkillPodIndicatorProps {
+type SkillPodIndicatorProps = Readonly<{
   contractId?: string;
   skills?: SkillPodProgress[];
   size?: 'sm' | 'md' | 'lg';
@@ -55,7 +54,7 @@ interface SkillPodIndicatorProps {
   sessionId?: string;
   sessionStatus?: 'active' | 'inactive' | 'pending';
   onLaunchVdi?: () => void;
-}
+}>;
 
 // ============================================================================
 // Level Config
@@ -92,9 +91,9 @@ const LEVEL_CONFIG = {
 // Skill Card
 // ============================================================================
 
-interface SkillCardProps {
+type SkillCardProps = Readonly<{
   skill: SkillPodProgress;
-}
+}>;
 
 function SkillCard({ skill }: SkillCardProps) {
   const levelConfig = LEVEL_CONFIG[skill.level];
@@ -172,11 +171,11 @@ function getNextLevel(current: SkillPodProgress['level']): SkillPodProgress['lev
 // SkillPod Info Modal
 // ============================================================================
 
-interface SkillPodInfoModalProps {
+type SkillPodInfoModalProps = Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   skills: SkillPodProgress[];
-}
+}>;
 
 function SkillPodInfoModal({ open, onOpenChange, skills }: SkillPodInfoModalProps) {
   const totalHours = skills.reduce((sum, s) => sum + s.hoursLogged, 0);
@@ -283,11 +282,21 @@ function SkillPodInfoModal({ open, onOpenChange, skills }: SkillPodInfoModalProp
 // VDI Session Button
 // ============================================================================
 
-interface VdiSessionButtonProps {
+type VdiSessionButtonProps = Readonly<{
   sessionId?: string;
   sessionStatus?: 'active' | 'inactive' | 'pending';
   onLaunch?: () => void;
   size?: 'sm' | 'md' | 'lg';
+}>;
+
+function getSessionStatusTooltip(sessionStatus?: 'active' | 'inactive' | 'pending'): string {
+  if (sessionStatus === 'active') {
+    return 'Click to join the active secure workspace';
+  }
+  if (sessionStatus === 'pending') {
+    return 'Workspace is starting up...';
+  }
+  return 'Launch a secure development environment';
 }
 
 function VdiSessionButton({
@@ -356,13 +365,7 @@ function VdiSessionButton({
             {sessionStatus === 'active' && <Play className={cn(iconSizes[size], 'ml-0.5')} />}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>
-          {sessionStatus === 'active'
-            ? 'Click to join the active secure workspace'
-            : sessionStatus === 'pending'
-              ? 'Workspace is starting up...'
-              : 'Launch a secure development environment'}
-        </TooltipContent>
+        <TooltipContent>{getSessionStatusTooltip(sessionStatus)}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

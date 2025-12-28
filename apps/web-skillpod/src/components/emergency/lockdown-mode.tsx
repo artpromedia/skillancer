@@ -515,7 +515,7 @@ function IncidentResponsePanel({
   );
 }
 
-function StatusBanner({ state }: { state: LockdownState }) {
+function StatusBanner({ state }: Readonly<{ state: LockdownState }>) {
   const levelConfig = LOCKDOWN_LEVELS.find((l) => l.level === state.level);
   if (!levelConfig || state.level === 'normal') return null;
 
@@ -632,7 +632,7 @@ export function LockdownMode({ organizationId, onLevelChange, onNotify }: Lockdo
 
   const handleNotifyContacts = (contactIds: string[]) => {
     if (onNotify) {
-      onNotify(contactIds, `Security level changed to ${state.level}`);
+      void onNotify(contactIds, `Security level changed to ${state.level}`);
     }
   };
 
@@ -730,11 +730,15 @@ export function LockdownMode({ organizationId, onLevelChange, onNotify }: Lockdo
 
             <div className="space-y-4 p-6">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label
+                  className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  htmlFor="lockdown-escalation-reason"
+                >
                   Reason for escalation <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   className="h-24 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 dark:border-gray-600 dark:bg-gray-700"
+                  id="lockdown-escalation-reason"
                   placeholder="Describe the security incident or threat..."
                   value={changeReason}
                   onChange={(e) => setChangeReason(e.target.value)}
@@ -742,9 +746,9 @@ export function LockdownMode({ organizationId, onLevelChange, onNotify }: Lockdo
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Duration (optional)
-                </label>
+                </span>
                 <div className="flex gap-2">
                   {[1, 4, 8, 24].map((hours) => (
                     <button

@@ -48,7 +48,7 @@ export interface StatsCardsProps {
 // Sparkline Component
 // ============================================================================
 
-function Sparkline({ data, color }: { data: number[]; color: string }) {
+function Sparkline({ data, color }: Readonly<{ data: number[]; color: string }>) {
   if (!data || data.length === 0) return null;
 
   const max = Math.max(...data);
@@ -88,7 +88,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 // Stat Card Component
 // ============================================================================
 
-function StatCard({ stat }: { stat: StatCardData }) {
+function StatCard({ stat }: Readonly<{ stat: StatCardData }>) {
   const iconMap: Record<string, typeof Clock> = {
     clock: Clock,
     dollar: DollarSign,

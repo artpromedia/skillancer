@@ -65,7 +65,7 @@ export function TouchControls({
   onGestureEnd,
   showOverlay = true,
   className,
-}: TouchControlsProps) {
+}: Readonly<TouchControlsProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const touchesRef = useRef<Map<number, TouchPoint>>(new Map());
   const gestureRef = useRef<GestureState>({

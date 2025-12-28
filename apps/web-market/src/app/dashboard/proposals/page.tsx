@@ -43,10 +43,11 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { Proposal, ProposalStatus } from '@/lib/api/bids';
 
 import { BidBoostModal } from '@/components/bids/bid-boost-modal';
 import { getMyProposals, getProposalStatusInfo, withdrawProposal } from '@/lib/api/bids';
+
+import type { Proposal, ProposalStatus } from '@/lib/api/bids';
 
 // ============================================================================
 // Types
@@ -62,11 +63,11 @@ function ProposalCard({
   proposal,
   onWithdraw,
   onBoost,
-}: {
+}: Readonly<{
   proposal: Proposal;
   onWithdraw: (id: string) => void;
   onBoost: (proposal: Proposal) => void;
-}) {
+}>) {
   const router = useRouter();
   const statusInfo = getProposalStatusInfo(proposal.status);
 
@@ -295,7 +296,7 @@ function ProposalCard({
 // Status Timeline
 // ============================================================================
 
-function ProposalStatusTimeline({ status }: { status: ProposalStatus }) {
+function ProposalStatusTimeline({ status }: Readonly<{ status: ProposalStatus }>) {
   const steps = [
     { id: 'SUBMITTED', label: 'Submitted' },
     { id: 'VIEWED', label: 'Viewed' },
@@ -338,7 +339,7 @@ function ProposalStatusTimeline({ status }: { status: ProposalStatus }) {
 // Stats Cards
 // ============================================================================
 
-function StatsCards({ proposals }: { proposals: Proposal[] }) {
+function StatsCards({ proposals }: Readonly<{ proposals: Proposal[] }>) {
   const stats = useMemo(() => {
     const total = proposals.length;
     const pending = proposals.filter((p) =>
@@ -509,12 +510,13 @@ export default function FreelancerProposalsPage() {
         </div>
 
         {/* Proposals list */}
-        {isLoading ? (
+        {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="mr-2 h-6 w-6 animate-spin" />
             Loading proposals...
           </div>
-        ) : filteredProposals.length === 0 ? (
+        )}
+        {!isLoading && filteredProposals.length === 0 && (
           <Card className="p-12 text-center">
             <Briefcase className="mx-auto mb-4 h-12 w-12 text-slate-300" />
             <h3 className="mb-2 text-lg font-semibold">No proposals found</h3>
@@ -527,7 +529,8 @@ export default function FreelancerProposalsPage() {
               <Link href="/jobs">Browse Jobs</Link>
             </Button>
           </Card>
-        ) : (
+        )}
+        {!isLoading && filteredProposals.length > 0 && (
           <div className="space-y-4">
             {filteredProposals.map((proposal) => (
               <ProposalCard

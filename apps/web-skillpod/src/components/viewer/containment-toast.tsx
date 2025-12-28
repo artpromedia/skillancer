@@ -17,7 +17,6 @@ import {
   CheckCircle,
   Clipboard,
   FileX,
-  Info,
   Shield,
   X,
   Monitor,
@@ -148,7 +147,7 @@ interface SingleToastProps {
   index: number;
 }
 
-function SingleToast({ event, onDismiss, index }: SingleToastProps) {
+function SingleToast({ event, onDismiss, index }: Readonly<SingleToastProps>) {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 
@@ -240,6 +239,8 @@ function SingleToast({ event, onDismiss, index }: SingleToastProps) {
         </div>
       )}
 
+      {/* styled-jsx is a built-in Next.js CSS-in-JS solution - the jsx prop is valid */}
+      {/* @ts-expect-error styled-jsx types are provided by Next.js */}
       <style jsx>{`
         @keyframes shrink {
           from {
@@ -262,7 +263,7 @@ interface CollapsedCountProps {
   count: number;
 }
 
-function CollapsedCount({ count }: CollapsedCountProps) {
+function CollapsedCount({ count }: Readonly<CollapsedCountProps>) {
   return (
     <div className="bg-muted/80 w-96 rounded-lg border p-3 text-center backdrop-blur-sm">
       <span className="text-muted-foreground text-sm">
@@ -281,7 +282,7 @@ export function ContainmentToast({
   onDismiss,
   maxVisible = 3,
   className,
-}: ContainmentToastProps) {
+}: Readonly<ContainmentToastProps>) {
   const visibleEvents = events.slice(0, maxVisible);
   const hiddenCount = Math.max(0, events.length - maxVisible);
 

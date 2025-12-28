@@ -844,7 +844,7 @@ export function registerFreelancePlatformRoutes(
               projectCounts.map((p) => [p.source?.toLowerCase() ?? 'unknown', p._count._all])
             ),
             totalProjects: projectCounts.reduce(
-              (sum: number, p) => sum + (p._count._all as number),
+              (sum: number, p) => sum + (p._count._all),
               0
             ),
             totalEarnings: earnings._sum.amount ?? 0,

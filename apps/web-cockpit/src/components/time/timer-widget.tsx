@@ -27,6 +27,12 @@ export interface ActiveTimer {
   startTime: Date;
   isPaused?: boolean;
   pausedDuration?: number; // milliseconds
+  pausedAt?: number; // timestamp when paused
+}
+
+/** Shape of timer data stored in localStorage (startTime is serialized as string) */
+interface StoredTimer extends Omit<ActiveTimer, 'startTime'> {
+  startTime: string;
 }
 
 export interface TimerWidgetProps {
@@ -59,7 +65,7 @@ export function TimerWidget({
     const stored = localStorage.getItem('activeTimer');
     if (stored) {
       try {
-        const timer = JSON.parse(stored);
+        const timer = JSON.parse(stored) as StoredTimer;
         setActiveTimer({
           ...timer,
           startTime: new Date(timer.startTime),
@@ -73,7 +79,7 @@ export function TimerWidget({
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'activeTimer') {
         if (e.newValue) {
-          const timer = JSON.parse(e.newValue);
+          const timer = JSON.parse(e.newValue) as StoredTimer;
           setActiveTimer({
             ...timer,
             startTime: new Date(timer.startTime),
@@ -137,7 +143,7 @@ export function TimerWidget({
 
   const handleResume = () => {
     if (activeTimer) {
-      const pausedAt = (activeTimer as any).pausedAt || Date.now();
+      const pausedAt = activeTimer.pausedAt ?? Date.now();
       const additionalPaused = Date.now() - pausedAt;
       const updated = {
         ...activeTimer,
@@ -196,7 +202,12 @@ export function TimerWidget({
 
         {isDropdownOpen && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+            <div
+              aria-hidden="true"
+              className="fixed inset-0 z-40"
+              onClick={() => setIsDropdownOpen(false)}
+            />
             <div className="absolute right-0 z-50 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
               <div className="mb-4">
                 <div className="flex items-center gap-2">

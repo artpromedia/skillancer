@@ -31,10 +31,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { useState } from 'react';
 
 // Components
-import type { Contract, ContractStatus, Milestone } from '@/lib/api/contracts';
 
 import { AmendmentFlow } from '@/components/contracts/amendment-flow';
 import { ContractOverview } from '@/components/contracts/contract-overview';
@@ -46,6 +45,8 @@ import { MilestoneTracker } from '@/components/contracts/milestone-tracker';
 import { PaymentStatus } from '@/components/contracts/payment-status';
 import { TimeTracker } from '@/components/contracts/time-tracker';
 import { WorkDiary } from '@/components/contracts/work-diary';
+
+import type { Contract, ContractStatus, Milestone } from '@/lib/api/contracts';
 
 // ============================================================================
 // Status Config
@@ -197,7 +198,7 @@ const mockPaymentInfo = {
 // Contract Header
 // ============================================================================
 
-function ContractHeader({ contract }: { contract: Contract }) {
+function ContractHeader({ contract }: Readonly<{ contract: Contract }>) {
   const statusConfig = STATUS_CONFIG[contract.status];
   const StatusIcon = statusConfig.icon;
 
@@ -299,9 +300,8 @@ export default function ContractDetailPage() {
   const isClient = false;
 
   // Mock handlers
-  const handleMilestoneSubmit = async (data: { description: string; attachments: File[] }) => {
-    console.log('Submitting milestone:', selectedMilestone?.id, data);
-    // API call here
+  const handleMilestoneSubmit = async (_data: { description: string; attachments: File[] }) => {
+    // Feature: Submit milestone via API - not yet implemented
     setShowSubmissionModal(false);
     setSelectedMilestone(null);
   };
@@ -381,8 +381,8 @@ export default function ContractDetailPage() {
             <TabsContent className="mt-6 space-y-6" value="amendments">
               <AmendmentFlow
                 contract={mockContract}
-                onSubmitAmendment={async (data) => {
-                  console.log('Amendment submitted:', data);
+                onSubmitAmendment={async (_data) => {
+                  // Feature: Submit amendment via API - not yet implemented
                 }}
               />
             </TabsContent>
@@ -421,8 +421,8 @@ export default function ContractDetailPage() {
               <div className="mt-6">
                 <DisputeCenter
                   contract={mockContract}
-                  onOpenDispute={async (data) => {
-                    console.log('Dispute opened:', data);
+                  onOpenDispute={async (_data) => {
+                    // Feature: Open dispute via API - not yet implemented
                   }}
                 />
               </div>
@@ -438,7 +438,7 @@ export default function ContractDetailPage() {
               contract={mockContract}
               isFreelancer={isFreelancer}
               onSign={async () => {
-                console.log('Contract signed');
+                // Feature: Sign contract via API - not yet implemented
               }}
             />
           )}
@@ -449,11 +449,11 @@ export default function ContractDetailPage() {
             fundedMilestones={fundedMilestones}
             isClient={isClient}
             unfundedMilestones={unfundedMilestones}
-            onFundMilestone={async (milestoneId, amount) => {
-              console.log('Funding milestone:', milestoneId, amount);
+            onFundMilestone={async (_milestoneId, _amount) => {
+              // Feature: Fund milestone via API - not yet implemented
             }}
-            onReleasePayment={async (milestoneId) => {
-              console.log('Releasing payment:', milestoneId);
+            onReleasePayment={async (_milestoneId) => {
+              // Feature: Release payment via API - not yet implemented
             }}
           />
 

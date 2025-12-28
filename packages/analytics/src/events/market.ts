@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+
 import { BaseEventSchema } from './base.js';
 
 // ==================== Job Events ====================

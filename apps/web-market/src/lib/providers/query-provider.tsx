@@ -24,12 +24,10 @@ function makeQueryClient(): QueryClient {
 let browserQueryClient: QueryClient | undefined;
 
 function getQueryClient(): QueryClient {
-  if (typeof window === 'undefined') {
+  if (typeof globalThis.window === 'undefined') {
     return makeQueryClient();
   }
-  if (!browserQueryClient) {
-    browserQueryClient = makeQueryClient();
-  }
+  browserQueryClient ??= makeQueryClient();
   return browserQueryClient;
 }
 

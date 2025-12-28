@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars */
 /**
  * Alert Badge Component
  *
@@ -34,7 +33,7 @@ interface AlertCounts {
 // Icons
 // ============================================================================
 
-function BellIcon({ className }: { className?: string }) {
+function BellIcon({ className }: Readonly<{ className?: string }>) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
@@ -47,7 +46,7 @@ function BellIcon({ className }: { className?: string }) {
   );
 }
 
-function BellAlertIcon({ className }: { className?: string }) {
+function BellAlertIcon({ className }: Readonly<{ className?: string }>) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
@@ -64,7 +63,11 @@ function BellAlertIcon({ className }: { className?: string }) {
 // Component
 // ============================================================================
 
-export function AlertBadge({ className = '', showLabel = false, onClick }: AlertBadgeProps) {
+export function AlertBadge({
+  className = '',
+  showLabel = false,
+  onClick,
+}: Readonly<AlertBadgeProps>) {
   const [counts, setCounts] = useState<AlertCounts>({
     total: 0,
     critical: 0,
@@ -80,7 +83,7 @@ export function AlertBadge({ className = '', showLabel = false, onClick }: Alert
     try {
       const response = await fetch('/api/alerts/counts');
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as AlertCounts;
         setCounts(data);
 
         // Trigger animation if count increased
@@ -91,14 +94,15 @@ export function AlertBadge({ className = '', showLabel = false, onClick }: Alert
         setPreviousTotal(data.total);
       }
     } catch (error) {
-      // Silently fail - alerts may not be available
+      // Silently fail - alerts may not be available on initial load
+      console.debug('Alert fetch failed:', error);
     }
   }, [previousTotal]);
 
   // Initial fetch and polling
   useEffect(() => {
-    fetchAlertCounts();
-    const interval = setInterval(fetchAlertCounts, 30000); // Poll every 30 seconds
+    void fetchAlertCounts();
+    const interval = setInterval(() => void fetchAlertCounts(), 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
   }, [fetchAlertCounts]);
 
@@ -108,7 +112,10 @@ export function AlertBadge({ className = '', showLabel = false, onClick }: Alert
 
     eventSource.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data as string) as {
+          type: string;
+          counts: AlertCounts;
+        };
         if (data.type === 'alert_count_update') {
           setCounts(data.counts);
           if (data.counts.total > previousTotal) {
@@ -118,7 +125,8 @@ export function AlertBadge({ className = '', showLabel = false, onClick }: Alert
           setPreviousTotal(data.counts.total);
         }
       } catch (e) {
-        // Ignore parse errors
+        // Ignore parse errors from SSE stream
+        console.debug('SSE parse error:', e);
       }
     };
 
@@ -189,7 +197,7 @@ export function AlertBadge({ className = '', showLabel = false, onClick }: Alert
 // Alert Badge with Dropdown
 // ============================================================================
 
-export function AlertBadgeDropdown({ className = '' }: { className?: string }) {
+export function AlertBadgeDropdown({ className = '' }: Readonly<{ className?: string }>) {
   const [isOpen, setIsOpen] = useState(false);
   const [recentAlerts, setRecentAlerts] = useState<
     {
@@ -205,7 +213,10 @@ export function AlertBadgeDropdown({ className = '' }: { className?: string }) {
       // Fetch recent alerts when dropdown opens
       fetch('/api/alerts?limit=5&status=active')
         .then((res) => res.json())
-        .then((data) => setRecentAlerts(data.alerts || []))
+        .then(
+          (data: { alerts?: { id: string; title: string; severity: string; timestamp: Date }[] }) =>
+            setRecentAlerts(data.alerts || [])
+        )
         .catch(() => setRecentAlerts([]));
     }
   }, [isOpen]);
@@ -230,7 +241,7 @@ export function AlertBadgeDropdown({ className = '' }: { className?: string }) {
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div aria-hidden="true" className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
           {/* Dropdown */}
           <div className="absolute right-0 z-50 mt-2 w-80 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-gray-800">

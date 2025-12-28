@@ -14,15 +14,8 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Separator,
 } from '@skillancer/ui';
 import {
-  AlertCircle,
   Calendar,
   Check,
   ChevronLeft,
@@ -63,6 +56,16 @@ interface NewTimeEntry {
 }
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+function getStatusVariant(status: string): 'default' | 'secondary' | 'destructive' {
+  if (status === 'APPROVED') return 'default';
+  if (status === 'PENDING') return 'secondary';
+  return 'destructive';
+}
+
+// ============================================================================
 // Component
 // ============================================================================
 
@@ -75,7 +78,7 @@ export function TimeTracker({
   onEditEntry,
   onDeleteEntry,
   onViewDiary,
-}: TimeTrackerProps) {
+}: Readonly<TimeTrackerProps>) {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const now = new Date();
     const day = now.getDay();
@@ -273,7 +276,7 @@ export function TimeTracker({
           <CardContent className="p-4 text-center">
             <p className="text-muted-foreground text-sm">Total Hours</p>
             <p className="text-2xl font-bold">{formatDuration(weeklyTotal)}</p>
-            {weeklyLimit && (
+            {Boolean(weeklyLimit) && (
               <p className="text-muted-foreground text-xs">of {weeklyLimit}h limit</p>
             )}
           </CardContent>
@@ -293,7 +296,7 @@ export function TimeTracker({
       </div>
 
       {/* Weekly Progress Bar */}
-      {weeklyLimit && (
+      {Boolean(weeklyLimit) && (
         <div>
           <div className="mb-2 flex justify-between text-sm">
             <span className="text-muted-foreground">Weekly Progress</span>
@@ -377,15 +380,7 @@ export function TimeTracker({
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge
-                            variant={
-                              entry.status === 'APPROVED'
-                                ? 'default'
-                                : entry.status === 'PENDING'
-                                  ? 'secondary'
-                                  : 'destructive'
-                            }
-                          >
+                          <Badge variant={getStatusVariant(entry.status)}>
                             {entry.status === 'APPROVED' && <Check className="mr-1 h-3 w-3" />}
                             {formatDuration(entry.duration)}
                           </Badge>
@@ -454,13 +449,13 @@ function AddTimeEntryModal({
   open,
   onClose,
   onSubmit,
-}: {
+}: Readonly<{
   contractId: string;
   initialDuration: number;
   open: boolean;
   onClose: () => void;
   onSubmit: (entry: Omit<TimeEntry, 'id' | 'status'>) => Promise<void>;
-}) {
+}>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<NewTimeEntry>({
     date: new Date().toISOString().split('T')[0],
@@ -524,7 +519,7 @@ function AddTimeEntryModal({
                 type="number"
                 value={formData.hours}
                 onChange={(e) =>
-                  setFormData((p) => ({ ...p, hours: parseInt(e.target.value) || 0 }))
+                  setFormData((p) => ({ ...p, hours: Number.parseInt(e.target.value) || 0 }))
                 }
               />
             </div>
@@ -537,7 +532,7 @@ function AddTimeEntryModal({
                 type="number"
                 value={formData.minutes}
                 onChange={(e) =>
-                  setFormData((p) => ({ ...p, minutes: parseInt(e.target.value) || 0 }))
+                  setFormData((p) => ({ ...p, minutes: Number.parseInt(e.target.value) || 0 }))
                 }
               />
             </div>
@@ -583,12 +578,12 @@ function EditTimeEntryModal({
   open,
   onClose,
   onSubmit,
-}: {
+}: Readonly<{
   entry: TimeEntry;
   open: boolean;
   onClose: () => void;
   onSubmit: (data: Partial<TimeEntry>) => Promise<void>;
-}) {
+}>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     hours: Math.floor(entry.duration),
@@ -627,7 +622,7 @@ function EditTimeEntryModal({
                 type="number"
                 value={formData.hours}
                 onChange={(e) =>
-                  setFormData((p) => ({ ...p, hours: parseInt(e.target.value) || 0 }))
+                  setFormData((p) => ({ ...p, hours: Number.parseInt(e.target.value) || 0 }))
                 }
               />
             </div>
@@ -640,7 +635,7 @@ function EditTimeEntryModal({
                 type="number"
                 value={formData.minutes}
                 onChange={(e) =>
-                  setFormData((p) => ({ ...p, minutes: parseInt(e.target.value) || 0 }))
+                  setFormData((p) => ({ ...p, minutes: Number.parseInt(e.target.value) || 0 }))
                 }
               />
             </div>

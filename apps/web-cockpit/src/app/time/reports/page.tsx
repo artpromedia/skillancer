@@ -10,7 +10,6 @@
  * @module app/time/reports/page
  */
 
-import { useState, useMemo } from 'react';
 import {
   BarChart3,
   PieChart,
@@ -27,6 +26,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from 'lucide-react';
+import { useState, useMemo } from 'react';
 
 // ============================================================================
 // Types
@@ -368,12 +368,12 @@ export default function TimeReportsPage() {
             {(['week', 'month', 'quarter', 'year'] as DateRange[]).map((range) => (
               <button
                 key={range}
-                onClick={() => setDateRange(range)}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                   dateRange === range
                     ? 'bg-white text-gray-900 shadow dark:bg-gray-600 dark:text-white'
                     : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
                 }`}
+                onClick={() => setDateRange(range)}
               >
                 {range.charAt(0).toUpperCase() + range.slice(1)}
               </button>
@@ -392,12 +392,12 @@ export default function TimeReportsPage() {
           {(['summary', 'detailed', 'comparison'] as ReportView[]).map((view) => (
             <button
               key={view}
-              onClick={() => setReportView(view)}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 reportView === view
                   ? 'bg-white text-gray-900 shadow dark:bg-gray-600 dark:text-white'
                   : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
               }`}
+              onClick={() => setReportView(view)}
             >
               {view.charAt(0).toUpperCase() + view.slice(1)}
             </button>
@@ -408,36 +408,36 @@ export default function TimeReportsPage() {
       {/* Summary Cards */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard
+          color="#3B82F6"
           icon={Clock}
           label="Total Hours"
-          value={formatHours(report.totalHours)}
           subValue={`${report.entries} entries`}
           trend={{ value: 12, label: 'vs last period' }}
-          color="#3B82F6"
+          value={formatHours(report.totalHours)}
         />
         <SummaryCard
+          color="#10B981"
           icon={DollarSign}
           label="Billable Hours"
-          value={formatHours(report.billableHours)}
           subValue={`${billableRate.toFixed(0)}% billable`}
           trend={{ value: 8, label: 'vs last period' }}
-          color="#10B981"
+          value={formatHours(report.billableHours)}
         />
         <SummaryCard
+          color="#8B5CF6"
           icon={TrendingUp}
           label="Earnings"
-          value={formatCurrency(report.earnings)}
           subValue={`${formatCurrency(report.earnings / report.billableHours)}/hr avg`}
           trend={{ value: 15, label: 'vs last period' }}
-          color="#8B5CF6"
+          value={formatCurrency(report.earnings)}
         />
         <SummaryCard
+          color="#F59E0B"
           icon={BarChart3}
           label="Daily Average"
-          value={formatHours(avgHoursPerDay)}
           subValue="per work day"
           trend={{ value: -3, label: 'vs last period' }}
-          color="#F59E0B"
+          value={formatHours(avgHoursPerDay)}
         />
       </div>
 

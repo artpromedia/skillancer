@@ -2,11 +2,12 @@ import { ThemeProvider, Toaster } from '@skillancer/ui';
 import { Inter } from 'next/font/google';
 import { Suspense } from 'react';
 
-import type { Metadata, Viewport } from 'next';
 
 import { Footer } from '@/components/layout/footer';
 import { Header } from '@/components/layout/header';
 import { QueryProvider } from '@/lib/providers/query-provider';
+
+import type { Metadata, Viewport } from 'next';
 
 import '@/styles/globals.css';
 

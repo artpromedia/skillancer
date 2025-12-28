@@ -14,7 +14,7 @@
  */
 
 import { cn, Skeleton } from '@skillancer/ui';
-import { Activity, Signal, SignalHigh, SignalLow, SignalMedium, Wifi, WifiOff } from 'lucide-react';
+import { Activity, SignalHigh, SignalLow, SignalMedium, WifiOff } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { KasmEmbed } from '@/lib/kasm/kasm-embed';
@@ -33,12 +33,12 @@ export type ConnectionState =
 export type QualityLevel = 'auto' | 'high' | 'medium' | 'low';
 
 interface VdiViewerProps {
-  sessionId: string;
-  connectionState: ConnectionState;
-  quality: QualityLevel;
-  onQualityChange: (quality: QualityLevel) => void;
-  showDebugInfo?: boolean;
-  className?: string;
+  readonly sessionId: string;
+  readonly connectionState: ConnectionState;
+  readonly quality: QualityLevel;
+  readonly onQualityChange: (quality: QualityLevel) => void;
+  readonly showDebugInfo?: boolean;
+  readonly className?: string;
 }
 
 interface PerformanceStats {
@@ -115,16 +115,16 @@ export function VdiViewer({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // ============================================================================
   // HANDLERS
   // ============================================================================
 
-  const handleKasmEvent = useCallback((event: string, data: unknown) => {
-    console.log('Kasm event:', event, data);
+  const handleKasmEvent = useCallback((event: string, _data: unknown) => {
+    // Kasm event handler - events processed by switch below
 
     switch (event) {
       case 'quality_change':
@@ -142,6 +142,22 @@ export function VdiViewer({
   // ============================================================================
   // HELPERS
   // ============================================================================
+
+  const getStatsColor = (
+    value: number,
+    goodThreshold: number,
+    warningThreshold: number,
+    higherIsBetter: boolean
+  ): string => {
+    if (higherIsBetter) {
+      if (value >= goodThreshold) return 'text-green-400';
+      if (value >= warningThreshold) return 'text-yellow-400';
+      return 'text-red-400';
+    }
+    if (value < goodThreshold) return 'text-green-400';
+    if (value < warningThreshold) return 'text-yellow-400';
+    return 'text-red-400';
+  };
 
   const getSignalIcon = () => {
     if (connectionState !== 'connected') {
@@ -212,28 +228,10 @@ export function VdiViewer({
 
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             <span className="text-gray-400">FPS:</span>
-            <span
-              className={cn(
-                stats.fps >= 55
-                  ? 'text-green-400'
-                  : stats.fps >= 30
-                    ? 'text-yellow-400'
-                    : 'text-red-400'
-              )}
-            >
-              {stats.fps}
-            </span>
+            <span className={cn(getStatsColor(stats.fps, 60, 30, true))}>{stats.fps}</span>
 
             <span className="text-gray-400">Latency:</span>
-            <span
-              className={cn(
-                stats.latency < 30
-                  ? 'text-green-400'
-                  : stats.latency < 60
-                    ? 'text-yellow-400'
-                    : 'text-red-400'
-              )}
-            >
+            <span className={cn(getStatsColor(stats.latency, 30, 60, false))}>
               {stats.latency}ms
             </span>
 
@@ -241,15 +239,7 @@ export function VdiViewer({
             <span className="text-blue-400">{stats.bandwidth.toFixed(1)} Mbps</span>
 
             <span className="text-gray-400">Packet Loss:</span>
-            <span
-              className={cn(
-                stats.packetLoss < 0.1
-                  ? 'text-green-400'
-                  : stats.packetLoss < 0.5
-                    ? 'text-yellow-400'
-                    : 'text-red-400'
-              )}
-            >
+            <span className={cn(getStatsColor(stats.packetLoss, 0.1, 0.5, false))}>
               {stats.packetLoss.toFixed(2)}%
             </span>
 

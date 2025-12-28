@@ -12,7 +12,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  Input,
   Label,
 } from '@skillancer/ui';
 import {
@@ -53,7 +52,12 @@ interface FundMilestoneModalProps {
   onFund: (milestoneId: string, amount: number) => Promise<void>;
 }
 
-function FundMilestoneModal({ milestone, open, onOpenChange, onFund }: FundMilestoneModalProps) {
+function FundMilestoneModal({
+  milestone,
+  open,
+  onOpenChange,
+  onFund,
+}: Readonly<FundMilestoneModalProps>) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'balance'>('card');
 
@@ -184,7 +188,7 @@ export function EscrowWidget({
   isClient,
   onFundMilestone,
   onReleasePayment,
-}: EscrowWidgetProps) {
+}: Readonly<EscrowWidgetProps>) {
   const [fundingMilestone, setFundingMilestone] = useState<Milestone | null>(null);
   const [releasingId, setReleasingId] = useState<string | null>(null);
 
@@ -237,19 +241,19 @@ export function EscrowWidget({
             <li className="flex items-start gap-2">
               <span className="bg-primary text-primary-foreground mt-0.5 flex h-4 w-4 items-center justify-center rounded-full text-xs">
                 1
-              </span>
+              </span>{' '}
               Client funds milestone before work begins
             </li>
             <li className="flex items-start gap-2">
               <span className="bg-primary text-primary-foreground mt-0.5 flex h-4 w-4 items-center justify-center rounded-full text-xs">
                 2
-              </span>
+              </span>{' '}
               Freelancer completes and submits work
             </li>
             <li className="flex items-start gap-2">
               <span className="bg-primary text-primary-foreground mt-0.5 flex h-4 w-4 items-center justify-center rounded-full text-xs">
                 3
-              </span>
+              </span>{' '}
               Client approves and releases payment
             </li>
           </ul>

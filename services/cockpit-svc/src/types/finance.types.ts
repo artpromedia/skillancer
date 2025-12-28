@@ -267,7 +267,7 @@ export interface RecurringTransactionWithDetails extends Omit<RecurringTransacti
 // TRANSACTION CATEGORY TYPES
 // ============================================================================
 
-export interface CreateCategoryParams {
+export interface CreateFinanceCategoryParams {
   userId: string;
   name: string;
   type: FinancialTransactionType;
@@ -278,7 +278,7 @@ export interface CreateCategoryParams {
   isDeductible?: boolean;
 }
 
-export interface UpdateCategoryParams {
+export interface UpdateFinanceCategoryParams {
   name?: string;
   icon?: string;
   color?: string;
@@ -658,7 +658,7 @@ export interface PlaidTransactionData {
 
 export type FinancialExportFormat = 'csv' | 'xlsx' | 'pdf' | 'qbo' | 'ofx';
 
-export interface ExportParams {
+export interface FinanceExportParams {
   userId: string;
   format: FinancialExportFormat;
   startDate: Date;
@@ -669,7 +669,7 @@ export interface ExportParams {
   transactionType?: FinancialTransactionType;
 }
 
-export interface ExportResult {
+export interface FinanceExportResult {
   url: string;
   filename: string;
   format: FinancialExportFormat;

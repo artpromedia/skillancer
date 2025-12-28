@@ -1,4 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable jsx-a11y/label-has-associated-control */
+/* eslint-disable jsx-a11y/click-events-have-key-events */
+/* eslint-disable jsx-a11y/no-static-element-interactions */
 'use client';
 
 /**
@@ -166,7 +169,7 @@ function CategoryForm({
     e.preventDefault();
     onSave({
       ...formData,
-      hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
+      hourlyRate: formData.hourlyRate ? Number.parseFloat(formData.hourlyRate) : undefined,
     });
   };
 

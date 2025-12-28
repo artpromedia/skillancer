@@ -117,7 +117,7 @@ function formatCurrency(amount: number): string {
 // Activity Item Component
 // ============================================================================
 
-function ActivityItemRow({ activity }: { activity: ActivityItem }) {
+function ActivityItemRow({ activity }: Readonly<{ activity: ActivityItem }>) {
   const iconConfig = activityIcons[activity.type] || activityIcons.time_entry;
   const Icon = iconConfig.icon;
 

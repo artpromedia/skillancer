@@ -35,17 +35,18 @@ import {
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import {
+  calculateEarningsAfterFees,
+  getProposalTemplates,
+  uploadProposalAttachment,
+} from '@/lib/api/bids';
+
 import { CoverLetterEditor } from './cover-letter-editor';
 import { MilestoneBuilder } from './milestone-builder';
 
 import type { MilestoneData, UseProposalFormReturn } from '@/hooks/use-proposal-form';
 import type { ContractType, ProposalTemplate, QualityScore } from '@/lib/api/bids';
 
-import {
-  calculateEarningsAfterFees,
-  getProposalTemplates,
-  uploadProposalAttachment,
-} from '@/lib/api/bids';
 
 // ============================================================================
 // Types
@@ -84,11 +85,11 @@ function StepIndicator({
   steps,
   currentStep,
   onStepClick,
-}: {
+}: Readonly<{
   steps: { id: string; title: string; isComplete: boolean; isActive: boolean }[];
   currentStep: number;
   onStepClick: (step: number) => void;
-}) {
+}>) {
   return (
     <div className="mb-8">
       {/* Mobile view */}
@@ -142,10 +143,10 @@ function StepIndicator({
 function CoverLetterStep({
   form,
   jobSkills,
-}: {
+}: Readonly<{
   form: UseProposalFormReturn;
   jobSkills: string[];
-}) {
+}>) {
   const [templates, setTemplates] = useState<ProposalTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
 
@@ -214,10 +215,10 @@ function CoverLetterStep({
 function PricingStep({
   form,
   jobBudget,
-}: {
+}: Readonly<{
   form: UseProposalFormReturn;
   jobBudget: { type: ContractType; minAmount?: number; maxAmount?: number; amount?: number };
-}) {
+}>) {
   const { formData, setField, errors } = form;
 
   // Calculate earnings
@@ -293,7 +294,7 @@ function PricingStep({
               placeholder="0"
               type="number"
               value={formData.bidAmount || ''}
-              onChange={(e) => setField('bidAmount', parseInt(e.target.value, 10) || 0)}
+              onChange={(e) => setField('bidAmount', Number.parseInt(e.target.value, 10) || 0)}
             />
           </div>
           {errors.bidAmount && <p className="mt-1 text-sm text-red-500">{errors.bidAmount}</p>}
@@ -330,7 +331,9 @@ function PricingStep({
                 placeholder="0"
                 type="number"
                 value={formData.hourlyRate || ''}
-                onChange={(e) => setField('hourlyRate', parseInt(e.target.value, 10) || undefined)}
+                onChange={(e) =>
+                  setField('hourlyRate', Number.parseInt(e.target.value, 10) || undefined)
+                }
               />
               <span className="text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 text-sm">
                 /hr
@@ -349,7 +352,7 @@ function PricingStep({
               type="number"
               value={formData.estimatedHours || ''}
               onChange={(e) =>
-                setField('estimatedHours', parseInt(e.target.value, 10) || undefined)
+                setField('estimatedHours', Number.parseInt(e.target.value, 10) || undefined)
               }
             />
             {errors.estimatedHours && (
@@ -369,7 +372,7 @@ function PricingStep({
             min={1}
             type="number"
             value={formData.deliveryDays}
-            onChange={(e) => setField('deliveryDays', parseInt(e.target.value, 10) || 1)}
+            onChange={(e) => setField('deliveryDays', Number.parseInt(e.target.value, 10) || 1)}
           />
           <span className="text-muted-foreground">days</span>
         </div>
@@ -412,7 +415,7 @@ function PricingStep({
 // Milestones Step
 // ============================================================================
 
-function MilestonesStep({ form }: { form: UseProposalFormReturn }) {
+function MilestonesStep({ form }: Readonly<{ form: UseProposalFormReturn }>) {
   return (
     <div className="space-y-6">
       <p className="text-muted-foreground">
@@ -436,7 +439,7 @@ function MilestonesStep({ form }: { form: UseProposalFormReturn }) {
 // Attachments Step
 // ============================================================================
 
-function AttachmentsStep({ form }: { form: UseProposalFormReturn }) {
+function AttachmentsStep({ form }: Readonly<{ form: UseProposalFormReturn }>) {
   const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -601,22 +604,31 @@ function AttachmentsStep({ form }: { form: UseProposalFormReturn }) {
 // Review Step
 // ============================================================================
 
-function ReviewStep({ form, jobTitle }: { form: UseProposalFormReturn; jobTitle: string }) {
+function ReviewStep({
+  form,
+  jobTitle,
+}: Readonly<{ form: UseProposalFormReturn; jobTitle: string }>) {
   const { formData, qualityScore, isLoadingQualityScore } = form;
 
   return (
     <div className="space-y-6">
       {/* Quality score */}
-      {isLoadingQualityScore ? (
-        <Card>
-          <CardContent className="flex items-center justify-center p-8">
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Analyzing your proposal...
-          </CardContent>
-        </Card>
-      ) : qualityScore ? (
-        <QualityScoreCard score={qualityScore} />
-      ) : null}
+      {(() => {
+        if (isLoadingQualityScore) {
+          return (
+            <Card>
+              <CardContent className="flex items-center justify-center p-8">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Analyzing your proposal...
+              </CardContent>
+            </Card>
+          );
+        }
+        if (qualityScore) {
+          return <QualityScoreCard score={qualityScore} />;
+        }
+        return null;
+      })()}
 
       {/* Proposal preview */}
       <Card>
@@ -725,7 +737,7 @@ function ReviewStep({ form, jobTitle }: { form: UseProposalFormReturn; jobTitle:
 // Quality Score Card
 // ============================================================================
 
-function QualityScoreCard({ score }: { score: QualityScore }) {
+function QualityScoreCard({ score }: Readonly<{ score: QualityScore }>) {
   const getScoreColor = (value: number) => {
     if (value >= 80) return 'text-green-600';
     if (value >= 60) return 'text-yellow-600';
@@ -757,7 +769,7 @@ function QualityScoreCard({ score }: { score: QualityScore }) {
             <div key={key} className="text-center">
               <div className={cn('text-lg font-semibold', getScoreColor(value))}>{value}%</div>
               <div className="text-muted-foreground text-xs">
-                {key.replace(/([A-Z])/g, ' $1').trim()}
+                {key.replaceAll(/([A-Z])/g, ' $1').trim()}
               </div>
             </div>
           ))}
@@ -766,9 +778,9 @@ function QualityScoreCard({ score }: { score: QualityScore }) {
         {/* Suggestions */}
         {score.suggestions.length > 0 && (
           <div className="space-y-2">
-            {score.suggestions.map((suggestion, index) => (
+            {score.suggestions.map((suggestion) => (
               <div
-                key={index}
+                key={`${suggestion.type}-${suggestion.message.slice(0, 20)}`}
                 className={cn(
                   'flex items-start gap-2 rounded-lg p-2 text-sm',
                   suggestion.type === 'SUCCESS' && 'bg-green-100/50',
@@ -807,7 +819,7 @@ export function ProposalForm({
   form,
   onCancel,
   className,
-}: ProposalFormProps) {
+}: Readonly<ProposalFormProps>) {
   const { steps, currentStep, goToStep, nextStep, prevStep, isSubmitting, isSaving, lastSavedAt } =
     form;
 

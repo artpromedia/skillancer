@@ -14,13 +14,14 @@ import {
 import { Grid3X3, List, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 import { useRef, useCallback, useEffect } from 'react';
 
+import { useJobSearch } from '@/hooks/use-job-search';
+import { useJobStore } from '@/stores/job-store';
+
 import { JobCard } from './job-card';
 import { JobCardSkeleton } from './job-card-skeleton';
 
 import type { JobSearchResult, JobSearchFilters } from '@/lib/api/jobs';
 
-import { useJobSearch } from '@/hooks/use-job-search';
-import { useJobStore } from '@/stores/job-store';
 
 // ============================================================================
 // Types
@@ -47,7 +48,7 @@ const sortOptions = [
 // Component
 // ============================================================================
 
-export function JobList({ initialData, initialFilters }: JobListProps) {
+export function JobList({ initialData, initialFilters }: Readonly<JobListProps>) {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -132,7 +133,7 @@ export function JobList({ initialData, initialFilters }: JobListProps) {
         description={error.message || 'Failed to load jobs. Please try again.'}
         icon={<SlidersHorizontal className="h-12 w-12" />}
         title="Something went wrong"
-        onAction={() => window.location.reload()}
+        onAction={() => globalThis.location.reload()}
       />
     );
   }
@@ -255,9 +256,11 @@ export function JobList({ initialData, initialFilters }: JobListProps) {
         {/* Loading more skeletons */}
         {isFetchingNextPage && (
           <>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <JobCardSkeleton key={`loading-${i}`} viewMode={viewMode} />
-            ))}
+            {Array.from({ length: 4 }, (_, i) => `loading-skeleton-${Date.now()}-${i}`).map(
+              (id) => (
+                <JobCardSkeleton key={id} viewMode={viewMode} />
+              )
+            )}
           </>
         )}
       </div>
@@ -292,9 +295,9 @@ function formatFilterLabel(key: string, value: unknown): string {
       return stringValue.charAt(0) + stringValue.slice(1).toLowerCase();
     case 'category':
     case 'subcategory':
-      return stringValue.replace(/-/g, ' ');
+      return stringValue.replaceAll('-', ' ');
     case 'duration':
-      return stringValue.replace(/_/g, ' ');
+      return stringValue.replaceAll('_', ' ');
     case 'postedWithin':
       return `Posted ${stringValue}`;
     case 'clientHistory':
@@ -323,8 +326,8 @@ export function JobListSkeleton() {
         </div>
       </div>
       <div className="space-y-4">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <JobCardSkeleton key={i} viewMode="list" />
+        {Array.from({ length: 5 }, (_, i) => `init-skeleton-${i}`).map((id) => (
+          <JobCardSkeleton key={id} viewMode="list" />
         ))}
       </div>
     </div>

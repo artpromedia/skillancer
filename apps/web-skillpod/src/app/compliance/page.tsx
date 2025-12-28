@@ -162,7 +162,7 @@ function getDaysUntil(date: Date): number {
 // Sub-Components
 // ============================================================================
 
-function StatsOverview({ stats }: { stats: ComplianceStats }) {
+function StatsOverview({ stats }: Readonly<{ stats: ComplianceStats }>) {
   const violationTrend = stats.violationsThisMonth - stats.violationsLastMonth;
   const violationTrendPercent =
     stats.violationsLastMonth > 0
@@ -267,7 +267,7 @@ function StatsOverview({ stats }: { stats: ComplianceStats }) {
   );
 }
 
-function FrameworkCard({ framework }: { framework: ComplianceFramework }) {
+function FrameworkCard({ framework }: Readonly<{ framework: ComplianceFramework }>) {
   const router = useRouter();
   const statusConfig = STATUS_CONFIG[framework.status];
   const StatusIcon = statusConfig.icon;
@@ -276,7 +276,14 @@ function FrameworkCard({ framework }: { framework: ComplianceFramework }) {
   return (
     <div
       className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-700"
+      role="button"
+      tabIndex={0}
       onClick={() => router.push(`/compliance/frameworks/${framework.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          router.push(`/compliance/frameworks/${framework.id}`);
+        }
+      }}
     >
       <div className="mb-3 flex items-start justify-between">
         <div>
@@ -344,7 +351,7 @@ function FrameworkCard({ framework }: { framework: ComplianceFramework }) {
   );
 }
 
-function UpcomingTasksList({ tasks }: { tasks: ComplianceTask[] }) {
+function UpcomingTasksList({ tasks }: Readonly<{ tasks: ComplianceTask[] }>) {
   const router = useRouter();
   const sortedTasks = useMemo(() => {
     return [...tasks]
@@ -380,7 +387,14 @@ function UpcomingTasksList({ tasks }: { tasks: ComplianceTask[] }) {
               <div
                 key={task.id}
                 className="cursor-pointer p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                role="button"
+                tabIndex={0}
                 onClick={() => router.push(`/compliance/tasks/${task.id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    router.push(`/compliance/tasks/${task.id}`);
+                  }
+                }}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -421,7 +435,7 @@ function UpcomingTasksList({ tasks }: { tasks: ComplianceTask[] }) {
   );
 }
 
-function RecentAuditLog({ events }: { events: AuditEvent[] }) {
+function RecentAuditLog({ events }: Readonly<{ events: AuditEvent[] }>) {
   const router = useRouter();
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -492,7 +506,9 @@ function QuickActions() {
     {
       label: 'Export Audit Log',
       icon: Download,
-      onClick: () => console.log('Export audit log'),
+      onClick: () => {
+        /* Feature: Export audit log - not yet implemented */
+      },
       color: 'text-purple-600',
     },
     {
@@ -679,7 +695,7 @@ export default function ComplianceDashboardPage() {
       }
     };
 
-    loadData();
+    void loadData();
   }, []);
 
   if (isLoading) {

@@ -85,6 +85,91 @@ export interface UseMessagingReturn {
 }
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Creates a new message object from a NewMessageEvent
+ */
+function createMessageFromEvent(event: NewMessageEvent): Message {
+  return {
+    id: event.id,
+    conversationId: event.conversationId,
+    senderId: event.senderId,
+    senderName: event.senderName,
+    senderAvatar: event.senderAvatar,
+    type: event.type,
+    content: event.content,
+    attachments: event.attachments.map((a) => ({
+      ...a,
+      uploadedAt: event.createdAt,
+    })),
+    reactions: [],
+    linkPreviews: [],
+    status: 'DELIVERED',
+    isEdited: false,
+    isDeleted: false,
+    createdAt: event.createdAt,
+    updatedAt: event.createdAt,
+  };
+}
+
+/**
+ * Creates a last message object from a NewMessageEvent for conversation updates
+ */
+function createLastMessageFromEvent(event: NewMessageEvent): Message {
+  return {
+    id: event.id,
+    conversationId: event.conversationId,
+    senderId: event.senderId,
+    senderName: event.senderName,
+    type: event.type,
+    content: event.content,
+    attachments: [],
+    reactions: [],
+    linkPreviews: [],
+    status: 'DELIVERED',
+    isEdited: false,
+    isDeleted: false,
+    createdAt: event.createdAt,
+    updatedAt: event.createdAt,
+  };
+}
+
+/**
+ * Updates a participant's presence in a conversation
+ */
+function updateParticipantPresence(conv: Conversation, event: PresenceEvent): Conversation {
+  return {
+    ...conv,
+    participants: conv.participants.map((p) =>
+      p.userId === event.userId
+        ? { ...p, isOnline: event.isOnline, lastSeenAt: event.lastSeenAt }
+        : p
+    ),
+  };
+}
+
+/**
+ * Filters out a reaction from a message's reactions list
+ */
+function filterReaction(
+  reactions: Message['reactions'],
+  emoji: string,
+  userId: string
+): Message['reactions'] {
+  return reactions.filter((r) => !(r.emoji === emoji && r.userId === userId));
+}
+
+/**
+ * Filters out typing users that have been idle for too long
+ */
+function filterIdleTypingUsers(users: TypingUser[], maxIdleTime: number): TypingUser[] {
+  const now = Date.now();
+  return users.filter((u) => now - u.startedAt < maxIdleTime);
+}
+
+// ============================================================================
 // Hook Implementation
 // ============================================================================
 
@@ -178,28 +263,7 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
         return prev;
       }
 
-      const newMessage: Message = {
-        id: event.id,
-        conversationId: event.conversationId,
-        senderId: event.senderId,
-        senderName: event.senderName,
-        senderAvatar: event.senderAvatar,
-        type: event.type,
-        content: event.content,
-        attachments: event.attachments.map((a) => ({
-          ...a,
-          uploadedAt: event.createdAt,
-        })),
-        reactions: [],
-        linkPreviews: [],
-        status: 'DELIVERED',
-        isEdited: false,
-        isDeleted: false,
-        createdAt: event.createdAt,
-        updatedAt: event.createdAt,
-      };
-
-      return [...prev, newMessage];
+      return [...prev, createMessageFromEvent(event)];
     });
 
     // Update conversation last message
@@ -208,22 +272,7 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
         conv.id === event.conversationId
           ? {
               ...conv,
-              lastMessage: {
-                id: event.id,
-                conversationId: event.conversationId,
-                senderId: event.senderId,
-                senderName: event.senderName,
-                type: event.type,
-                content: event.content,
-                attachments: [],
-                reactions: [],
-                linkPreviews: [],
-                status: 'DELIVERED',
-                isEdited: false,
-                isDeleted: false,
-                createdAt: event.createdAt,
-                updatedAt: event.createdAt,
-              },
+              lastMessage: createLastMessageFromEvent(event),
               unreadCount: conv.unreadCount + 1,
               updatedAt: event.createdAt,
             }
@@ -291,16 +340,7 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
   }, []);
 
   const handlePresenceChange = useCallback((event: PresenceEvent) => {
-    setConversations((prev) =>
-      prev.map((conv) => ({
-        ...conv,
-        participants: conv.participants.map((p) =>
-          p.userId === event.userId
-            ? { ...p, isOnline: event.isOnline, lastSeenAt: event.lastSeenAt }
-            : p
-        ),
-      }))
-    );
+    setConversations((prev) => prev.map((conv) => updateParticipantPresence(conv, event)));
   }, []);
 
   const handleReadReceipt = useCallback((event: ReadReceiptEvent) => {
@@ -319,6 +359,7 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
       const data = await getConversations();
       setConversations(data);
     } catch (error) {
+      console.error(error);
       toast({
         title: 'Error',
         description: 'Failed to load conversations',
@@ -355,6 +396,7 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
           );
         }
       } catch (error) {
+        console.error(error);
         toast({
           title: 'Error',
           description: 'Failed to load messages',
@@ -431,6 +473,7 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
           )
         );
       } catch (error) {
+        console.error(error);
         // Mark as failed
         setMessages((prev) =>
           prev.map((m) => (m.id === optimisticId ? { ...m, status: 'FAILED' } : m))
@@ -458,6 +501,7 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
           )
         );
       } catch (error) {
+        console.error(error);
         toast({
           title: 'Error',
           description: 'Failed to delete message',
@@ -474,6 +518,7 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
         const updated = await editMessageAPI(messageId, content);
         setMessages((prev) => prev.map((m) => (m.id === messageId ? updated : m)));
       } catch (error) {
+        console.error(error);
         toast({
           title: 'Error',
           description: 'Failed to edit message',
@@ -494,6 +539,7 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
           )
         );
       } catch (error) {
+        console.error(error);
         toast({
           title: 'Error',
           description: 'Failed to add reaction',
@@ -511,16 +557,12 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
         setMessages((prev) =>
           prev.map((m) =>
             m.id === messageId
-              ? {
-                  ...m,
-                  reactions: m.reactions.filter(
-                    (r) => !(r.emoji === emoji && r.userId === 'current-user')
-                  ),
-                }
+              ? { ...m, reactions: filterReaction(m.reactions, emoji, 'current-user') }
               : m
           )
         );
       } catch (error) {
+        console.error(error);
         toast({
           title: 'Error',
           description: 'Failed to remove reaction',
@@ -563,8 +605,7 @@ export function useMessaging(options: UseMessagingOptions = {}): UseMessagingRet
   // Cleanup typing users that have been idle for too long
   useEffect(() => {
     const interval = setInterval(() => {
-      const now = Date.now();
-      setTypingUsers((prev) => prev.filter((u) => now - u.startedAt < 10000));
+      setTypingUsers((prev) => filterIdleTypingUsers(prev, 10000));
     }, 5000);
 
     return () => clearInterval(interval);

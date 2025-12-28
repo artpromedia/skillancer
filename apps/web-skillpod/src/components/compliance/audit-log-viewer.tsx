@@ -381,9 +381,9 @@ function FilterPanel({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {/* Categories */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Category
-          </label>
+          </span>
           <div className="space-y-1">
             {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
               <label key={key} className="flex cursor-pointer items-center gap-2">
@@ -401,9 +401,9 @@ function FilterPanel({
 
         {/* Severities */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Severity
-          </label>
+          </span>
           <div className="space-y-1">
             {Object.entries(SEVERITY_CONFIG).map(([key, config]) => (
               <label key={key} className="flex cursor-pointer items-center gap-2">
@@ -421,9 +421,9 @@ function FilterPanel({
 
         {/* Outcomes */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Outcome
-          </label>
+          </span>
           <div className="space-y-1">
             {Object.entries(OUTCOME_CONFIG).map(([key, config]) => (
               <label key={key} className="flex cursor-pointer items-center gap-2">
@@ -441,9 +441,9 @@ function FilterPanel({
 
         {/* Date Range */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Date Range
-          </label>
+          </span>
           <div className="space-y-2">
             <input
               className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700"
@@ -583,7 +583,7 @@ export function AuditLogViewer({
   };
 
   const copyLogToClipboard = (log: AuditLogEntry) => {
-    navigator.clipboard.writeText(JSON.stringify(log, null, 2));
+    void navigator.clipboard.writeText(JSON.stringify(log, null, 2));
   };
 
   const handleRefresh = () => {
