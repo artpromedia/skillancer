@@ -2,23 +2,34 @@
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
-
 import {
   AvailabilityWidget,
+  ComplianceBadges,
   CredentialShowcase,
+  EndorsementsSection,
+  LearningActivityBadge,
   PortfolioGallery,
   ProfileHeader,
+  RecommendationsSection,
   ReviewsSection,
   SkillsSection,
+  TrustScoreDisplay,
   VerificationBadges,
+  VerifiedSkillsShowcase,
   WorkHistory,
 } from '@/components/profile';
 import {
   getFreelancerByUsername,
+  getFreelancerCompliance,
   getFreelancerCredentials,
+  getFreelancerEndorsements,
+  getFreelancerLearningActivity,
   getFreelancerPortfolio,
+  getFreelancerRecommendations,
   getFreelancerReviews,
   getFreelancerSkills,
+  getFreelancerTrustScore,
+  getFreelancerVerifiedSkills,
 } from '@/lib/api/freelancers';
 
 import type { Metadata } from 'next';
@@ -171,6 +182,70 @@ async function CredentialsLoader({ username }: Readonly<{ username: string }>) {
   return <CredentialShowcase credentials={credentials} />;
 }
 
+async function TrustScoreLoader({ username }: Readonly<{ username: string }>) {
+  const trustData = await getFreelancerTrustScore(username);
+  return (
+    <TrustScoreDisplay
+      averageScore={trustData.averageScore}
+      badges={trustData.badges}
+      factors={trustData.factors.map((f) => ({
+        ...f,
+        icon: undefined as never, // Icon will be determined by component
+      }))}
+      overallScore={trustData.overallScore}
+    />
+  );
+}
+
+async function VerifiedSkillsLoader({ username }: Readonly<{ username: string }>) {
+  const skills = await getFreelancerVerifiedSkills(username);
+  return <VerifiedSkillsShowcase skills={skills} />;
+}
+
+async function EndorsementsLoader({ username }: Readonly<{ username: string }>) {
+  const data = await getFreelancerEndorsements(username);
+  return (
+    <EndorsementsSection
+      endorsements={data.endorsements}
+      skillSummaries={data.skillSummaries}
+      totalEndorsements={data.totalEndorsements}
+    />
+  );
+}
+
+async function RecommendationsLoader({ username }: Readonly<{ username: string }>) {
+  const recommendations = await getFreelancerRecommendations(username);
+  return <RecommendationsSection recommendations={recommendations} />;
+}
+
+async function LearningActivityLoader({ username }: Readonly<{ username: string }>) {
+  const activity = await getFreelancerLearningActivity(username);
+  return (
+    <LearningActivityBadge
+      isActiveLearner={activity.isActiveLearner}
+      lastActivityAt={activity.lastActivityAt}
+      learningStreak={activity.learningStreak}
+      recentCompletions={activity.recentCompletions}
+      skillUpdates={activity.skillUpdates}
+      variant="card"
+    />
+  );
+}
+
+async function ComplianceLoader({ username }: Readonly<{ username: string }>) {
+  const compliance = await getFreelancerCompliance(username);
+  if (compliance.certifications.length === 0 && compliance.clearances.length === 0) {
+    return null;
+  }
+  return (
+    <ComplianceBadges
+      certifications={compliance.certifications}
+      clearances={compliance.clearances}
+      variant="list"
+    />
+  );
+}
+
 // ============================================================================
 // Loading States
 // ============================================================================
@@ -241,16 +316,46 @@ export default async function FreelancerProfilePage({ params }: Readonly<PagePro
           <div className="grid gap-8 lg:grid-cols-3">
             {/* Left column - Main content */}
             <div className="space-y-8 lg:col-span-2">
+              {/* Trust Score */}
+              <section>
+                <h2 className="mb-4 text-lg font-semibold">Trust Score</h2>
+                <Suspense fallback={<SectionSkeleton rows={2} />}>
+                  <TrustScoreLoader username={username} />
+                </Suspense>
+              </section>
+
               {/* Verification Badges */}
               <section>
                 <h2 className="mb-4 text-lg font-semibold">Verification & Trust</h2>
                 <VerificationBadges verification={profile.verification} />
               </section>
 
+              {/* Verified Skills Showcase */}
+              <section>
+                <h2 className="mb-4 text-lg font-semibold">Verified Skills</h2>
+                <Suspense fallback={<SectionSkeleton />}>
+                  <VerifiedSkillsLoader username={username} />
+                </Suspense>
+              </section>
+
               {/* Skills */}
               <section>
                 <Suspense fallback={<SectionSkeleton />}>
                   <SkillsSectionLoader username={username} />
+                </Suspense>
+              </section>
+
+              {/* Endorsements */}
+              <section>
+                <Suspense fallback={<SectionSkeleton rows={3} />}>
+                  <EndorsementsLoader username={username} />
+                </Suspense>
+              </section>
+
+              {/* Recommendations */}
+              <section>
+                <Suspense fallback={<SectionSkeleton rows={3} />}>
+                  <RecommendationsLoader username={username} />
                 </Suspense>
               </section>
 
@@ -287,10 +392,24 @@ export default async function FreelancerProfilePage({ params }: Readonly<PagePro
                 timezone={profile.availability.timezone}
               />
 
+              {/* Learning Activity */}
+              <section>
+                <Suspense fallback={<SectionSkeleton rows={1} />}>
+                  <LearningActivityLoader username={username} />
+                </Suspense>
+              </section>
+
               {/* Credentials */}
               <section>
                 <Suspense fallback={<SectionSkeleton rows={2} />}>
                   <CredentialsLoader username={username} />
+                </Suspense>
+              </section>
+
+              {/* Compliance Certifications */}
+              <section>
+                <Suspense fallback={<SectionSkeleton rows={2} />}>
+                  <ComplianceLoader username={username} />
                 </Suspense>
               </section>
 

@@ -23,6 +23,7 @@ import {
 import {
   Archive,
   ArrowUpDown,
+  BadgeCheck,
   CheckCircle2,
   Clock,
   Crown,
@@ -32,9 +33,12 @@ import {
   MessageSquare,
   MoreHorizontal,
   Search,
+  Shield,
+  ShieldCheck,
   Sparkles,
   Star,
   ThumbsDown,
+  ThumbsUp,
   Users,
   X,
   Zap,
@@ -45,7 +49,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { getProposalStatusInfo } from '@/lib/api/bids';
 
 import type { Proposal, SmartMatchScore } from '@/lib/api/bids';
-
 
 // ============================================================================
 // Types
@@ -65,8 +68,8 @@ interface ProposalListProps {
   className?: string;
 }
 
-type SortOption = 'recent' | 'price-low' | 'price-high' | 'rating' | 'match-score';
-type FilterOption = 'all' | 'shortlisted' | 'new' | 'boosted';
+type SortOption = 'recent' | 'price-low' | 'price-high' | 'rating' | 'match-score' | 'verified';
+type FilterOption = 'all' | 'shortlisted' | 'new' | 'boosted' | 'verified';
 
 // ============================================================================
 // Proposal Card
@@ -182,7 +185,14 @@ function ProposalCard({
                   </Link>
                   {proposal.freelancer?.verificationLevel !== 'BASIC' && (
                     <Badge className="bg-blue-100 text-blue-700" variant="secondary">
+                      <ShieldCheck className="mr-1 h-3 w-3" />
                       Verified
+                    </Badge>
+                  )}
+                  {proposal.freelancer?.verificationLevel === 'PREMIUM' && (
+                    <Badge className="bg-purple-100 text-purple-700" variant="secondary">
+                      <Crown className="mr-1 h-3 w-3" />
+                      Premium
                     </Badge>
                   )}
                   {proposal.status === 'SHORTLISTED' && (
@@ -245,7 +255,40 @@ function ProposalCard({
                 <span>{proposal.freelancer?.successRate}% success</span>
               </div>
               <div className="text-muted-foreground">${proposal.freelancer?.hourlyRate}/hr</div>
+              {/* Trust Score */}
+              {proposal.matchScore?.breakdown?.trustScore && (
+                <div className="flex items-center gap-1 text-indigo-600">
+                  <Shield className="h-4 w-4" />
+                  <span>Trust: {proposal.matchScore.breakdown.trustScore}%</span>
+                </div>
+              )}
             </div>
+
+            {/* Skill Match Indicators */}
+            {proposal.freelancer?.skills && proposal.freelancer.skills.length > 0 && (
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                {proposal.freelancer.skills.slice(0, 4).map((skill) => (
+                  <Badge key={skill} className="bg-slate-100 text-slate-700" variant="secondary">
+                    <BadgeCheck className="mr-1 h-3 w-3 text-green-600" />
+                    {skill}
+                  </Badge>
+                ))}
+                {proposal.freelancer.skills.length > 4 && (
+                  <span className="text-muted-foreground text-xs">
+                    +{proposal.freelancer.skills.length - 4} more
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Endorsement indicator */}
+            {proposal.matchScore?.breakdown?.skillsMatch &&
+              proposal.matchScore.breakdown.skillsMatch >= 80 && (
+                <div className="mb-3 flex items-center gap-2 rounded-md bg-green-50 px-3 py-1.5 text-sm text-green-700">
+                  <ThumbsUp className="h-4 w-4" />
+                  <span>Highly endorsed skills matching your requirements</span>
+                </div>
+              )}
 
             {/* Cover letter preview */}
             <p className="text-muted-foreground mb-4 line-clamp-3 text-sm">
@@ -375,6 +418,13 @@ export function ProposalList({
       result = result.filter((p) => new Date(p.submittedAt).getTime() > oneDayAgo);
     } else if (filterBy === 'boosted') {
       result = result.filter((p) => p.boostType);
+    } else if (filterBy === 'verified') {
+      result = result.filter(
+        (p) =>
+          p.freelancer?.verificationLevel &&
+          p.freelancer.verificationLevel !== 'BASIC' &&
+          p.freelancer.verificationLevel !== 'NONE'
+      );
     }
 
     // Sort
@@ -390,6 +440,18 @@ export function ProposalList({
           return (b.freelancer?.rating ?? 0) - (a.freelancer?.rating ?? 0);
         case 'match-score':
           return (b.matchScore?.overall ?? 0) - (a.matchScore?.overall ?? 0);
+        case 'verified': {
+          // Sort verified profiles first
+          const aVerified =
+            a.freelancer?.verificationLevel !== 'BASIC' &&
+            a.freelancer?.verificationLevel !== 'NONE';
+          const bVerified =
+            b.freelancer?.verificationLevel !== 'BASIC' &&
+            b.freelancer?.verificationLevel !== 'NONE';
+          if (bVerified && !aVerified) return 1;
+          if (aVerified && !bVerified) return -1;
+          return (b.matchScore?.overall ?? 0) - (a.matchScore?.overall ?? 0);
+        }
         default:
           return 0;
       }
@@ -496,6 +558,7 @@ export function ProposalList({
             <SelectItem value="shortlisted">Shortlisted</SelectItem>
             <SelectItem value="new">New Today</SelectItem>
             <SelectItem value="boosted">Boosted</SelectItem>
+            <SelectItem value="verified">Verified Only</SelectItem>
           </SelectContent>
         </Select>
 
@@ -511,6 +574,7 @@ export function ProposalList({
             <SelectItem value="price-low">Price: Low to High</SelectItem>
             <SelectItem value="price-high">Price: High to Low</SelectItem>
             <SelectItem value="rating">Highest Rated</SelectItem>
+            <SelectItem value="verified">Verified First</SelectItem>
           </SelectContent>
         </Select>
       </div>

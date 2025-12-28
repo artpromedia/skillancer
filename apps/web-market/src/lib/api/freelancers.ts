@@ -817,3 +817,184 @@ export function calculateProfileCompleteness(
 
   return { percentage, sections, suggestions };
 }
+
+// ============================================================================
+// Trust Score & Endorsements
+// ============================================================================
+
+export interface TrustFactor {
+  id: string;
+  name: string;
+  score: number;
+  maxScore: number;
+  status: 'verified' | 'partial' | 'unverified';
+  description: string;
+}
+
+export interface TrustBadge {
+  id: string;
+  name: string;
+  icon: string;
+  earnedAt: string;
+}
+
+export interface TrustScore {
+  overallScore: number;
+  factors: TrustFactor[];
+  badges: TrustBadge[];
+  averageScore: number;
+  percentile?: number;
+  lastUpdated: string;
+}
+
+/**
+ * Get freelancer trust score with all factors
+ */
+export async function getFreelancerTrustScore(userId: string): Promise<TrustScore> {
+  return apiFetch<TrustScore>(`${API_BASE_URL}/profiles/${userId}/trust-score`);
+}
+
+export interface FreelancerEndorsement {
+  id: string;
+  skill: {
+    id: string;
+    name: string;
+    category: string;
+  };
+  endorser: {
+    id: string;
+    name: string;
+    avatar?: string;
+    title?: string;
+    company?: string;
+    verified?: boolean;
+  };
+  relationship: 'client' | 'colleague' | 'manager' | 'mentor' | 'collaborator' | 'other';
+  endorsementText?: string;
+  projectContext?: {
+    id: string;
+    title: string;
+  };
+  createdAt: string;
+  featured?: boolean;
+}
+
+export interface SkillEndorsementSummary {
+  skillId: string;
+  skillName: string;
+  category: string;
+  totalEndorsements: number;
+  topEndorsers: Array<{
+    id: string;
+    name: string;
+    avatar?: string;
+    title?: string;
+  }>;
+  percentile?: number;
+}
+
+export interface EndorsementsData {
+  endorsements: FreelancerEndorsement[];
+  skillSummaries: SkillEndorsementSummary[];
+  totalEndorsements: number;
+}
+
+/**
+ * Get freelancer endorsements
+ */
+export async function getFreelancerEndorsements(userId: string): Promise<EndorsementsData> {
+  return apiFetch<EndorsementsData>(`${API_BASE_URL}/profiles/${userId}/endorsements`);
+}
+
+export interface FreelancerRecommendation {
+  id: string;
+  recommender: {
+    id: string;
+    name: string;
+    title: string;
+    avatar?: string;
+    verified?: boolean;
+  };
+  relationship: string;
+  duration: string;
+  text: string;
+  skillsMentioned: string[];
+  date: string;
+}
+
+/**
+ * Get freelancer recommendations
+ */
+export async function getFreelancerRecommendations(
+  userId: string
+): Promise<FreelancerRecommendation[]> {
+  return apiFetch<FreelancerRecommendation[]>(`${API_BASE_URL}/profiles/${userId}/recommendations`);
+}
+
+export interface LearningActivity {
+  isActiveLearner: boolean;
+  learningStreak: number;
+  recentCompletions: Array<{
+    id: string;
+    title: string;
+    type: 'course' | 'assessment' | 'certification';
+    completedAt: string;
+  }>;
+  skillUpdates: Array<{
+    skill: string;
+    improvement: number;
+    updatedAt: string;
+  }>;
+  lastActivityAt?: string;
+}
+
+/**
+ * Get freelancer learning activity
+ */
+export async function getFreelancerLearningActivity(userId: string): Promise<LearningActivity> {
+  return apiFetch<LearningActivity>(`${API_BASE_URL}/profiles/${userId}/learning-activity`);
+}
+
+export interface ComplianceData {
+  certifications: Array<{
+    id: string;
+    type: 'hipaa' | 'soc2' | 'pci-dss' | 'gdpr' | 'iso27001' | 'fedramp';
+    verifiedAt: string;
+    expiresAt?: string;
+    status: 'active' | 'expired' | 'pending';
+  }>;
+  clearances: Array<{
+    id: string;
+    level: 'public-trust' | 'confidential' | 'secret' | 'top-secret';
+    verifiedAt: string;
+    expiresAt?: string;
+    status: 'active' | 'expired' | 'pending';
+  }>;
+}
+
+/**
+ * Get freelancer compliance data
+ */
+export async function getFreelancerCompliance(userId: string): Promise<ComplianceData> {
+  return apiFetch<ComplianceData>(`${API_BASE_URL}/profiles/${userId}/compliance`);
+}
+
+export interface VerifiedSkillData {
+  id: string;
+  name: string;
+  category: string;
+  proficiencyLevel: number;
+  yearsOfExperience: number;
+  verificationTier: 'unverified' | 'self-assessed' | 'endorsed' | 'assessed' | 'certified';
+  assessmentScore?: number;
+  endorsementCount: number;
+  credentialId?: string;
+  isPrimary?: boolean;
+}
+
+/**
+ * Get freelancer verified skills with tier info
+ */
+export async function getFreelancerVerifiedSkills(userId: string): Promise<VerifiedSkillData[]> {
+  return apiFetch<VerifiedSkillData[]>(`${API_BASE_URL}/profiles/${userId}/verified-skills`);
+}

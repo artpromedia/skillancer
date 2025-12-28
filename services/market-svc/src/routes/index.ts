@@ -13,6 +13,7 @@ import { registerMessageRoutes } from './messages.routes.js';
 import { registerNotificationRoutes } from './notifications.routes.js';
 import { registerPayoutRoutes } from './payouts.routes.js';
 import { registerPresenceRoutes } from './presence.routes.js';
+import { registerProfileRoutes } from './profiles.routes.js';
 import { rateIntelligenceRoutes } from './rate-intelligence.routes.js';
 import { registerReviewRoutes } from './reviews.routes.js';
 import { registerServiceOrderRoutes } from './service-orders.routes.js';
@@ -162,6 +163,14 @@ export async function registerRoutes(
     { prefix: '/credentials' }
   );
 
+  // Register profile routes (Sprint 13: Profile Integration & Endorsements)
+  await fastify.register(
+    (instance) => {
+      registerProfileRoutes(instance, deps);
+    },
+    { prefix: '/profiles' }
+  );
+
   // FUTURE: Register contract management routes when service implementations are complete
 }
 
@@ -181,6 +190,7 @@ export { registerMessageRoutes } from './messages.routes.js';
 export { registerPresenceRoutes } from './presence.routes.js';
 export { registerNotificationRoutes } from './notifications.routes.js';
 export { registerCredentialRoutes } from './credentials.routes.js';
+export { registerProfileRoutes } from './profiles.routes.js';
 // FUTURE: Export contract routes when implemented
 // export { contractRoutes } from './contract.routes.js';
 // export { contractSubRoutes } from './contract-sub.routes.js';
