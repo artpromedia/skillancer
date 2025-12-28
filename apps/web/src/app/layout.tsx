@@ -1,19 +1,18 @@
+import { Inter } from 'next/font/google';
+
 import type { Metadata } from 'next';
+
 import '../styles/globals.css';
+import { defaultMetadata } from '@/lib/seo/metadata';
 
-export const metadata: Metadata = {
-  title: 'Skillancer',
-  description: 'Skillancer Platform - Connect, Create, Collaborate',
-};
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const metadata: Metadata = defaultMetadata;
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html className={inter.variable} lang="en">
+      <body className="font-sans antialiased">{children}</body>
     </html>
   );
 }
