@@ -1,0 +1,40 @@
+{
+  "name": "@skillancer/admin-app",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Skillancer Admin Dashboard - Internal operations & moderation (Next.js)",
+  "scripts": {
+    "dev": "next dev --port 3010",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .next dist node_modules"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.17.0",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.2.0",
+    "framer-motion": "^10.18.0",
+    "immer": "^10.0.3",
+    "lucide-react": "^0.309.0",
+    "next": "^14.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^2.10.3",
+    "tailwind-merge": "^2.2.0",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@skillancer/api-client": "workspace:*",
+    "@skillancer/config": "workspace:*",
+    "@skillancer/types": "workspace:*",
+    "@skillancer/ui": "workspace:*",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.0"
+  }
+}
