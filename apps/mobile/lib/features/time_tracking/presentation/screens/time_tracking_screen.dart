@@ -399,7 +399,8 @@ class TimerService extends ChangeNotifier {
   String get formattedTime => '00:00:00';
   String? get activeContractTitle => null;
 
-  void startTimer({required String contractId, required String contractTitle}) {}
+  void startTimer(
+      {required String contractId, required String contractTitle}) {}
   void pauseTimer() {}
   void resumeTimer() {}
   void stopTimer({String? memo}) {}

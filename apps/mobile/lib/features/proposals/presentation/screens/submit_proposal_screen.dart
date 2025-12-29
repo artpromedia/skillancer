@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/providers.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../domain/models/proposal.dart';
 
 /// Submit proposal screen
 class SubmitProposalScreen extends ConsumerStatefulWidget {
@@ -12,7 +11,8 @@ class SubmitProposalScreen extends ConsumerStatefulWidget {
   const SubmitProposalScreen({super.key, required this.jobId});
 
   @override
-  ConsumerState<SubmitProposalScreen> createState() => _SubmitProposalScreenState();
+  ConsumerState<SubmitProposalScreen> createState() =>
+      _SubmitProposalScreenState();
 }
 
 class _SubmitProposalScreenState extends ConsumerState<SubmitProposalScreen> {
@@ -126,7 +126,8 @@ class _SubmitProposalScreenState extends ConsumerState<SubmitProposalScreen> {
                   maxLines: 6,
                   maxLength: 2000,
                   decoration: const InputDecoration(
-                    hintText: 'Introduce yourself and explain why you\'re the best fit...',
+                    hintText:
+                        'Introduce yourself and explain why you\'re the best fit...',
                   ),
                   validator: (value) {
                     if (value == null || value.length < 50) {

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/providers/providers.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../auth/domain/models/user.dart';
 
 /// Profile screen
 class ProfileScreen extends ConsumerWidget {
@@ -69,15 +68,19 @@ class ProfileScreen extends ConsumerWidget {
                           const SizedBox(height: AppTheme.spacingSm),
                           Text(
                             user.fullName,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
                                   color: Colors.white,
                                 ),
                           ),
                           Text(
                             '@${user.email.split('@').first}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.white70,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.white70,
+                                    ),
                           ),
                         ],
                       ),
@@ -94,7 +97,9 @@ class ProfileScreen extends ConsumerWidget {
                     children: [
                       Expanded(child: _StatCard(label: 'Jobs', value: '23')),
                       const SizedBox(width: AppTheme.spacingSm),
-                      Expanded(child: _StatCard(label: 'Earnings', value: '\$12.5k')),
+                      Expanded(
+                          child:
+                              _StatCard(label: 'Earnings', value: '\$12.5k')),
                       const SizedBox(width: AppTheme.spacingSm),
                       Expanded(child: _StatCard(label: 'Rating', value: '4.9')),
                     ],
@@ -121,7 +126,6 @@ class ProfileScreen extends ConsumerWidget {
                     title: 'Verification',
                     onTap: () {},
                   ),
-
                   const _SectionHeader(title: 'Billing'),
                   _MenuTile(
                     icon: Icons.account_balance_wallet_outlined,
@@ -133,7 +137,6 @@ class ProfileScreen extends ConsumerWidget {
                     title: 'Transaction History',
                     onTap: () {},
                   ),
-
                   const _SectionHeader(title: 'Settings'),
                   _MenuTile(
                     icon: Icons.notifications_outlined,
@@ -150,9 +153,7 @@ class ProfileScreen extends ConsumerWidget {
                     title: 'Help & Support',
                     onTap: () {},
                   ),
-
                   const SizedBox(height: AppTheme.spacingLg),
-
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppTheme.spacingMd,
@@ -168,7 +169,6 @@ class ProfileScreen extends ConsumerWidget {
                       child: const Text('Log Out'),
                     ),
                   ),
-
                   const SizedBox(height: AppTheme.spacing2xl),
                 ]),
               ),

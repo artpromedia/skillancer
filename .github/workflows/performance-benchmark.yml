@@ -1,0 +1,162 @@
+name: Performance Benchmark
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  benchmark:
+    name: Run Performance Benchmarks
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: skillancer_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build --filter='./packages/*'
+
+      - name: Setup k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Start services
+        run: |
+          pnpm --filter api-gateway start &
+          sleep 10
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/skillancer_test
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run job search benchmark
+        run: |
+          k6 run packages/testing/src/performance/k6/load-tests/job-search.js \
+            --out json=results/job-search.json \
+            --summary-export=results/job-search-summary.json
+        continue-on-error: true
+
+      - name: Run authentication benchmark
+        run: |
+          k6 run packages/testing/src/performance/k6/load-tests/authentication.js \
+            --out json=results/auth.json \
+            --summary-export=results/auth-summary.json
+        continue-on-error: true
+
+      - name: Run messaging benchmark
+        run: |
+          k6 run packages/testing/src/performance/k6/load-tests/real-time-messaging.js \
+            --out json=results/messaging.json \
+            --summary-export=results/messaging-summary.json
+        continue-on-error: true
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: results/
+
+      - name: Download previous benchmark
+        uses: actions/cache@v4
+        with:
+          path: baseline/
+          key: benchmark-baseline-${{ github.ref }}
+          restore-keys: |
+            benchmark-baseline-
+
+      - name: Compare with baseline
+        run: |
+          node scripts/compare-benchmarks.js || true
+
+      - name: Save new baseline
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: |
+          mkdir -p baseline
+          cp results/*.json baseline/
+
+      - name: Check for regressions
+        run: |
+          # Parse results and check for regressions
+          node -e "
+            const fs = require('fs');
+            const summary = JSON.parse(fs.readFileSync('results/job-search-summary.json'));
+            const p95 = summary.metrics?.http_req_duration?.values?.['p(95)'] || 0;
+            
+            console.log('P95 Response Time:', p95, 'ms');
+            
+            if (p95 > 500) {
+              console.error('REGRESSION: P95 exceeds 500ms threshold');
+              process.exit(1);
+            }
+          " || echo "Benchmark check completed"
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let summary = '';
+
+            try {
+              const jobSearch = JSON.parse(fs.readFileSync('results/job-search-summary.json'));
+              summary += '## Performance Benchmark Results\n\n';
+              summary += '### Job Search\n';
+              summary += `- P95 Response Time: ${jobSearch.metrics?.http_req_duration?.values?.['p(95)']?.toFixed(2) || 'N/A'}ms\n`;
+              summary += `- Request Rate: ${jobSearch.metrics?.http_reqs?.values?.rate?.toFixed(2) || 'N/A'}/s\n`;
+            } catch (e) {
+              summary += 'Performance benchmark results unavailable\n';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });

@@ -20,7 +20,8 @@ class TimerService extends ChangeNotifier {
 
   String get formattedTime {
     final hours = (_elapsedSeconds / 3600).floor().toString().padLeft(2, '0');
-    final minutes = ((_elapsedSeconds % 3600) / 60).floor().toString().padLeft(2, '0');
+    final minutes =
+        ((_elapsedSeconds % 3600) / 60).floor().toString().padLeft(2, '0');
     final seconds = (_elapsedSeconds % 60).toString().padLeft(2, '0');
     return '$hours:$minutes:$seconds';
   }

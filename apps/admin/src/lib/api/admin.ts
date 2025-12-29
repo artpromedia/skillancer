@@ -20,10 +20,7 @@ interface PaginatedResponse<T> {
 }
 
 // Generic fetch helper
-async function fetchApi<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<ApiResponse<T>> {
+async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     headers: {
@@ -69,32 +66,41 @@ export interface UserFilters {
 
 export const usersApi = {
   list: (filters: UserFilters = {}) =>
-    fetchApi<PaginatedResponse<User>>(`/admin/users?${new URLSearchParams(filters as Record<string, string>).toString()}`),
-  
-  getById: (userId: string) =>
-    fetchApi<User>(`/admin/users/${userId}`),
-  
+    fetchApi<PaginatedResponse<User>>(
+      `/admin/users?${new URLSearchParams(filters as Record<string, string>).toString()}`
+    ),
+
+  getById: (userId: string) => fetchApi<User>(`/admin/users/${userId}`),
+
   update: (userId: string, data: Partial<User>) =>
     fetchApi<User>(`/admin/users/${userId}`, { method: 'PATCH', body: JSON.stringify(data) }),
-  
+
   suspend: (userId: string, reason: string) =>
-    fetchApi<void>(`/admin/users/${userId}/suspend`, { method: 'POST', body: JSON.stringify({ reason }) }),
-  
+    fetchApi<void>(`/admin/users/${userId}/suspend`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
   unsuspend: (userId: string) =>
     fetchApi<void>(`/admin/users/${userId}/unsuspend`, { method: 'POST' }),
-  
+
   ban: (userId: string, reason: string) =>
-    fetchApi<void>(`/admin/users/${userId}/ban`, { method: 'POST', body: JSON.stringify({ reason }) }),
-  
+    fetchApi<void>(`/admin/users/${userId}/ban`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
   getActivityLog: (userId: string, page = 1) =>
-    fetchApi<PaginatedResponse<{ action: string; timestamp: string; details: string }>>(`/admin/users/${userId}/activity?page=${page}`),
-  
+    fetchApi<PaginatedResponse<{ action: string; timestamp: string; details: string }>>(
+      `/admin/users/${userId}/activity?page=${page}`
+    ),
+
   impersonate: (userId: string, reason: string, duration: number) =>
     fetchApi<{ sessionId: string; expiresAt: string }>(`/admin/users/${userId}/impersonate`, {
       method: 'POST',
       body: JSON.stringify({ reason, duration }),
     }),
-  
+
   endImpersonation: (sessionId: string) =>
     fetchApi<void>(`/admin/impersonate/${sessionId}/end`, { method: 'POST' }),
 };
@@ -117,26 +123,30 @@ export interface ModerationItem {
 
 export const moderationApi = {
   list: (type?: string, status = 'pending') =>
-    fetchApi<PaginatedResponse<ModerationItem>>(`/admin/moderation?type=${type || ''}&status=${status}`),
-  
-  getById: (itemId: string) =>
-    fetchApi<ModerationItem>(`/admin/moderation/${itemId}`),
-  
+    fetchApi<PaginatedResponse<ModerationItem>>(
+      `/admin/moderation?type=${type || ''}&status=${status}`
+    ),
+
+  getById: (itemId: string) => fetchApi<ModerationItem>(`/admin/moderation/${itemId}`),
+
   approve: (itemId: string, notes?: string) =>
-    fetchApi<void>(`/admin/moderation/${itemId}/approve`, { method: 'POST', body: JSON.stringify({ notes }) }),
-  
+    fetchApi<void>(`/admin/moderation/${itemId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    }),
+
   reject: (itemId: string, reason: string, notifyUser = true) =>
     fetchApi<void>(`/admin/moderation/${itemId}/reject`, {
       method: 'POST',
       body: JSON.stringify({ reason, notifyUser }),
     }),
-  
+
   requestChanges: (itemId: string, changes: string[]) =>
     fetchApi<void>(`/admin/moderation/${itemId}/request-changes`, {
       method: 'POST',
       body: JSON.stringify({ changes }),
     }),
-  
+
   bulkApprove: (itemIds: string[]) =>
     fetchApi<{ approved: number; failed: number }>(`/admin/moderation/bulk-approve`, {
       method: 'POST',
@@ -174,34 +184,35 @@ export interface Resolution {
 
 export const disputesApi = {
   list: (filters: { status?: string; type?: string; priority?: string } = {}) =>
-    fetchApi<PaginatedResponse<Dispute>>(`/admin/disputes?${new URLSearchParams(filters).toString()}`),
-  
-  getById: (disputeId: string) =>
-    fetchApi<Dispute>(`/admin/disputes/${disputeId}`),
-  
+    fetchApi<PaginatedResponse<Dispute>>(
+      `/admin/disputes?${new URLSearchParams(filters).toString()}`
+    ),
+
+  getById: (disputeId: string) => fetchApi<Dispute>(`/admin/disputes/${disputeId}`),
+
   getTimeline: (disputeId: string) =>
     fetchApi<{ events: { type: string; description: string; timestamp: string; actor: string }[] }>(
       `/admin/disputes/${disputeId}/timeline`
     ),
-  
+
   addMessage: (disputeId: string, message: string, attachments?: string[]) =>
     fetchApi<void>(`/admin/disputes/${disputeId}/messages`, {
       method: 'POST',
       body: JSON.stringify({ message, attachments }),
     }),
-  
+
   resolve: (disputeId: string, resolution: Resolution) =>
     fetchApi<void>(`/admin/disputes/${disputeId}/resolve`, {
       method: 'POST',
       body: JSON.stringify(resolution),
     }),
-  
+
   escalate: (disputeId: string, reason: string) =>
     fetchApi<void>(`/admin/disputes/${disputeId}/escalate`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
-  
+
   assign: (disputeId: string, adminId: string) =>
     fetchApi<void>(`/admin/disputes/${disputeId}/assign`, {
       method: 'POST',
@@ -230,23 +241,24 @@ export interface Transaction {
 
 export const paymentsApi = {
   list: (filters: { type?: string; status?: string; dateFrom?: string; dateTo?: string } = {}) =>
-    fetchApi<PaginatedResponse<Transaction>>(`/admin/payments?${new URLSearchParams(filters).toString()}`),
-  
-  getById: (transactionId: string) =>
-    fetchApi<Transaction>(`/admin/payments/${transactionId}`),
-  
+    fetchApi<PaginatedResponse<Transaction>>(
+      `/admin/payments?${new URLSearchParams(filters).toString()}`
+    ),
+
+  getById: (transactionId: string) => fetchApi<Transaction>(`/admin/payments/${transactionId}`),
+
   refund: (transactionId: string, amount: number, reason: string) =>
     fetchApi<{ refundId: string }>(`/admin/payments/${transactionId}/refund`, {
       method: 'POST',
       body: JSON.stringify({ amount, reason }),
     }),
-  
+
   manualPayout: (userId: string, amount: number, reason: string) =>
     fetchApi<{ payoutId: string }>(`/admin/payments/manual-payout`, {
       method: 'POST',
       body: JSON.stringify({ userId, amount, reason }),
     }),
-  
+
   getStats: (period: 'day' | 'week' | 'month' | 'year') =>
     fetchApi<{
       totalVolume: number;
@@ -288,29 +300,33 @@ export interface SkillPodViolation {
 
 export const skillpodApi = {
   listSessions: (filters: { status?: string; date?: string } = {}) =>
-    fetchApi<PaginatedResponse<SkillPodSession>>(`/admin/skillpod/sessions?${new URLSearchParams(filters).toString()}`),
-  
+    fetchApi<PaginatedResponse<SkillPodSession>>(
+      `/admin/skillpod/sessions?${new URLSearchParams(filters).toString()}`
+    ),
+
   getSession: (sessionId: string) =>
     fetchApi<SkillPodSession>(`/admin/skillpod/sessions/${sessionId}`),
-  
+
   killSession: (sessionId: string, reason: string) =>
     fetchApi<void>(`/admin/skillpod/sessions/${sessionId}/kill`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
-  
+
   getRecording: (sessionId: string) =>
     fetchApi<{ url: string; expiresAt: string }>(`/admin/skillpod/sessions/${sessionId}/recording`),
-  
+
   listViolations: (filters: { type?: string; severity?: string; resolved?: boolean } = {}) =>
-    fetchApi<PaginatedResponse<SkillPodViolation>>(`/admin/skillpod/violations?${new URLSearchParams(filters as Record<string, string>).toString()}`),
-  
+    fetchApi<PaginatedResponse<SkillPodViolation>>(
+      `/admin/skillpod/violations?${new URLSearchParams(filters as Record<string, string>).toString()}`
+    ),
+
   resolveViolation: (violationId: string, action: string, notes: string) =>
     fetchApi<void>(`/admin/skillpod/violations/${violationId}/resolve`, {
       method: 'POST',
       body: JSON.stringify({ action, notes }),
     }),
-  
+
   getStats: () =>
     fetchApi<{
       activeSessions: number;
@@ -335,9 +351,8 @@ export interface Report {
 }
 
 export const reportsApi = {
-  list: () =>
-    fetchApi<PaginatedResponse<Report>>(`/admin/reports`),
-  
+  list: () => fetchApi<PaginatedResponse<Report>>(`/admin/reports`),
+
   generate: (config: {
     name: string;
     type: string;
@@ -349,13 +364,11 @@ export const reportsApi = {
       method: 'POST',
       body: JSON.stringify(config),
     }),
-  
-  getStatus: (reportId: string) =>
-    fetchApi<Report>(`/admin/reports/${reportId}`),
-  
-  download: (reportId: string) =>
-    fetchApi<{ url: string }>(`/admin/reports/${reportId}/download`),
-  
+
+  getStatus: (reportId: string) => fetchApi<Report>(`/admin/reports/${reportId}`),
+
+  download: (reportId: string) => fetchApi<{ url: string }>(`/admin/reports/${reportId}/download`),
+
   schedule: (config: {
     name: string;
     type: string;
@@ -367,7 +380,7 @@ export const reportsApi = {
       method: 'POST',
       body: JSON.stringify(config),
     }),
-  
+
   getRealtime: () =>
     fetchApi<{
       activeUsers: number;
@@ -401,27 +414,25 @@ export interface PlatformSettings {
 }
 
 export const settingsApi = {
-  getFlags: () =>
-    fetchApi<FeatureFlag[]>(`/admin/settings/feature-flags`),
-  
+  getFlags: () => fetchApi<FeatureFlag[]>(`/admin/settings/feature-flags`),
+
   updateFlag: (flagId: string, updates: Partial<FeatureFlag>) =>
     fetchApi<FeatureFlag>(`/admin/settings/feature-flags/${flagId}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
     }),
-  
+
   createFlag: (flag: Omit<FeatureFlag, 'id' | 'createdAt' | 'updatedAt'>) =>
     fetchApi<FeatureFlag>(`/admin/settings/feature-flags`, {
       method: 'POST',
       body: JSON.stringify(flag),
     }),
-  
+
   deleteFlag: (flagId: string) =>
     fetchApi<void>(`/admin/settings/feature-flags/${flagId}`, { method: 'DELETE' }),
-  
-  getPlatformSettings: () =>
-    fetchApi<PlatformSettings>(`/admin/settings/platform`),
-  
+
+  getPlatformSettings: () => fetchApi<PlatformSettings>(`/admin/settings/platform`),
+
   updatePlatformSettings: (settings: Partial<PlatformSettings>) =>
     fetchApi<PlatformSettings>(`/admin/settings/platform`, {
       method: 'PATCH',
@@ -446,12 +457,21 @@ export interface AuditLogEntry {
 }
 
 export const auditApi = {
-  list: (filters: { adminId?: string; action?: string; resource?: string; dateFrom?: string; dateTo?: string } = {}) =>
-    fetchApi<PaginatedResponse<AuditLogEntry>>(`/admin/audit?${new URLSearchParams(filters).toString()}`),
-  
-  getById: (entryId: string) =>
-    fetchApi<AuditLogEntry>(`/admin/audit/${entryId}`),
-  
+  list: (
+    filters: {
+      adminId?: string;
+      action?: string;
+      resource?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    } = {}
+  ) =>
+    fetchApi<PaginatedResponse<AuditLogEntry>>(
+      `/admin/audit?${new URLSearchParams(filters).toString()}`
+    ),
+
+  getById: (entryId: string) => fetchApi<AuditLogEntry>(`/admin/audit/${entryId}`),
+
   export: (filters: { dateFrom: string; dateTo: string; format: 'csv' | 'json' }) =>
     fetchApi<{ url: string }>(`/admin/audit/export?${new URLSearchParams(filters).toString()}`),
 };
@@ -472,4 +492,3 @@ export const adminApi = {
 };
 
 export default adminApi;
-

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/providers/providers.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/message.dart';
 
@@ -39,7 +38,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final conversationAsync = ref.watch(conversationDetailProvider(widget.conversationId));
+    final conversationAsync =
+        ref.watch(conversationDetailProvider(widget.conversationId));
 
     return conversationAsync.when(
       data: (conversation) {
@@ -182,7 +182,8 @@ class _MessagesList extends ConsumerWidget {
           itemCount: messages.length,
           itemBuilder: (context, index) {
             final message = messages[messages.length - 1 - index];
-            final isMe = message.senderId == 'current_user'; // TODO: Use actual user ID
+            final isMe =
+                message.senderId == 'current_user'; // TODO: Use actual user ID
             return _MessageBubble(message: message, isMe: isMe);
           },
         );
@@ -246,7 +247,9 @@ class _MessageBubble extends StatelessWidget {
                   Icon(
                     message.isRead ? Icons.done_all : Icons.done,
                     size: 14,
-                    color: message.isRead ? Colors.lightBlueAccent : Colors.white70,
+                    color: message.isRead
+                        ? Colors.lightBlueAccent
+                        : Colors.white70,
                   ),
                 ],
               ],

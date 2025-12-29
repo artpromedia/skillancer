@@ -100,7 +100,8 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: notification.isRead ? null : AppTheme.primaryColor.withOpacity(0.05),
+      color:
+          notification.isRead ? null : AppTheme.primaryColor.withOpacity(0.05),
       child: ListTile(
         onTap: () {
           if (notification.actionUrl != null) {
@@ -123,7 +124,8 @@ class _NotificationTile extends StatelessWidget {
         title: Text(
           notification.title,
           style: TextStyle(
-            fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+            fontWeight:
+                notification.isRead ? FontWeight.normal : FontWeight.bold,
           ),
         ),
         subtitle: Column(

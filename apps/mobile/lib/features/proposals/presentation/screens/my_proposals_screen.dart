@@ -50,7 +50,9 @@ class _ProposalsList extends ConsumerWidget {
       case _ProposalFilter.active:
         return proposals.where((p) => p.status.isActive).toList();
       case _ProposalFilter.pending:
-        return proposals.where((p) => p.status == ProposalStatus.pending).toList();
+        return proposals
+            .where((p) => p.status == ProposalStatus.pending)
+            .toList();
       case _ProposalFilter.archived:
         return proposals
             .where((p) =>
@@ -91,7 +93,8 @@ class _ProposalsList extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: AppTheme.errorColor),
+            const Icon(Icons.error_outline,
+                size: 48, color: AppTheme.errorColor),
             const SizedBox(height: AppTheme.spacingMd),
             Text('Failed to load proposals'),
             TextButton(

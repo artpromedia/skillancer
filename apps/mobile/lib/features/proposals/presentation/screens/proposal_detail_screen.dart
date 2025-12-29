@@ -143,7 +143,8 @@ class ProposalDetailScreen extends ConsumerWidget {
               ),
 
               // Milestones
-              if (proposal.milestones != null && proposal.milestones!.isNotEmpty) ...[
+              if (proposal.milestones != null &&
+                  proposal.milestones!.isNotEmpty) ...[
                 const SizedBox(height: AppTheme.spacingMd),
                 Card(
                   child: Padding(
@@ -247,7 +248,8 @@ class _StatusTimeline extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child: isCompleted
-                          ? const Icon(Icons.check, size: 14, color: Colors.white)
+                          ? const Icon(Icons.check,
+                              size: 14, color: Colors.white)
                           : null,
                     ),
                     const SizedBox(height: 4),
@@ -255,7 +257,9 @@ class _StatusTimeline extends StatelessWidget {
                       step.$1,
                       style: TextStyle(
                         fontSize: 10,
-                        color: isCompleted ? AppTheme.primaryColor : AppTheme.neutral500,
+                        color: isCompleted
+                            ? AppTheme.primaryColor
+                            : AppTheme.neutral500,
                       ),
                     ),
                   ],

@@ -60,7 +60,8 @@ class FloatingTimerWidget extends StatelessWidget {
 
             if (contractTitle != null) ...[
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingSm),
+                margin:
+                    const EdgeInsets.symmetric(horizontal: AppTheme.spacingSm),
                 width: 1,
                 height: 20,
                 color: Colors.white30,
