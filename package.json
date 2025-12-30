@@ -1,6 +1,6 @@
 {
   "name": "skillancer",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "Skillancer Platform - Monorepo containing SkillPod, Skillancer Market, and Cockpit",
   "packageManager": "pnpm@8.15.6",
@@ -37,6 +37,9 @@
     "db:push": "pnpm --filter @skillancer/database db:push",
     "db:pull": "pnpm --filter @skillancer/database db:pull",
     "db:seed": "pnpm --filter @skillancer/database db:seed",
+    "db:seed:production": "pnpm --filter @skillancer/database db:seed:production",
+    "db:seed:demo": "pnpm --filter @skillancer/database db:seed:demo",
+    "db:verify": "pnpm --filter @skillancer/database db:verify",
     "db:studio": "pnpm --filter @skillancer/database db:studio",
     "db:check-destructive": "pnpm --filter @skillancer/database db:check-destructive",
     "db:migrate:rollback": "pnpm --filter @skillancer/database db:migrate:rollback",

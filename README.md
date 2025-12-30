@@ -76,18 +76,18 @@ skillancer/
 
 ## Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start all apps in development mode |
-| `pnpm build` | Build all apps and packages |
-| `pnpm test` | Run all tests |
-| `pnpm lint` | Lint all packages |
-| `pnpm format` | Format code with Prettier |
-| `pnpm typecheck` | Run TypeScript type checking |
-| `pnpm clean` | Clean all build outputs |
-| `pnpm db:generate` | Generate Prisma client |
-| `pnpm db:migrate` | Run database migrations |
-| `pnpm db:seed` | Seed the database |
+| Command            | Description                        |
+| ------------------ | ---------------------------------- |
+| `pnpm dev`         | Start all apps in development mode |
+| `pnpm build`       | Build all apps and packages        |
+| `pnpm test`        | Run all tests                      |
+| `pnpm lint`        | Lint all packages                  |
+| `pnpm format`      | Format code with Prettier          |
+| `pnpm typecheck`   | Run TypeScript type checking       |
+| `pnpm clean`       | Clean all build outputs            |
+| `pnpm db:generate` | Generate Prisma client             |
+| `pnpm db:migrate`  | Run database migrations            |
+| `pnpm db:seed`     | Seed the database                  |
 
 ### Running specific apps or services
 
@@ -173,6 +173,77 @@ pnpm test --filter=@skillancer/utils
 
 # Run tests in watch mode
 pnpm test --filter=@skillancer/utils -- --watch
+```
+
+## Documentation
+
+### User Guides
+
+- [Freelancer Quick Start](docs/user-guide/getting-started/freelancer-quickstart.md)
+- [Client Quick Start](docs/user-guide/getting-started/client-quickstart.md)
+- [SkillPod Guide](docs/user-guide/features/skillpod-guide.md)
+- [Cockpit Guide](docs/user-guide/features/cockpit-guide.md)
+- [Verification Guide](docs/user-guide/features/verification-guide.md)
+
+### API Documentation
+
+- [API Overview](docs/api/overview.md)
+- [Jobs API](docs/api/endpoints/jobs.md)
+- [Proposals API](docs/api/endpoints/proposals.md)
+- [Contracts API](docs/api/endpoints/contracts.md)
+- [Webhooks](docs/api/webhooks.md)
+
+### Operations Runbooks
+
+- [Incident Response](docs/runbooks/incident-response.md)
+- [Deployment](docs/runbooks/deployment.md)
+- [Database Operations](docs/runbooks/database-operations.md)
+- [Scaling](docs/runbooks/scaling.md)
+- [Security Incidents](docs/runbooks/security-incident.md)
+- [SkillPod Operations](docs/runbooks/skillpod-operations.md)
+
+### Launch Documentation
+
+- [Launch Checklist](docs/launch/launch-checklist.md)
+- [Launch Communication Plan](docs/launch/launch-communication.md)
+- [Rollback Plan](docs/launch/rollback-plan.md)
+- [Week 1 Priorities](docs/launch/week-1-priorities.md)
+- [Success Metrics](docs/launch/success-metrics.md)
+
+### Legal & Compliance
+
+- [GDPR Compliance](docs/legal/gdpr-compliance.md)
+- [Data Retention Policy](docs/legal/data-retention-policy.md)
+
+### Support
+
+- [Common Issues](docs/support/common-issues.md)
+- [Escalation Matrix](docs/support/escalation-matrix.md)
+
+## Production Infrastructure
+
+### Infrastructure as Code
+
+- Terraform configuration: `infrastructure/terraform/production/main.tf`
+- Kubernetes values: `infrastructure/kubernetes/production/values.yaml`
+
+### Production Checklists
+
+- [Security Checklist](infrastructure/production/security-checklist.md)
+- [Performance Checklist](infrastructure/production/performance-checklist.md)
+- [Monitoring Setup](infrastructure/production/monitoring-setup.md)
+
+## Database Scripts
+
+```bash
+# Seed production data
+pnpm db:seed:production
+
+# Seed demo data (staging only)
+pnpm db:seed:demo
+
+# Verify migration integrity
+pnpm db:verify
 ```
 
 ## License

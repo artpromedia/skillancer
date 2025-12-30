@@ -1,0 +1,552 @@
+# Skillancer Helm Values - Production
+# Kubernetes deployment configuration
+
+# Global settings
+global:
+  environment: production
+  domain: skillancer.com
+  imageRegistry: ghcr.io/skillancer
+  imagePullSecrets:
+    - name: ghcr-secret
+
+# ============================================================
+# Web Application
+# ============================================================
+web:
+  enabled: true
+  replicaCount: 3
+
+  image:
+    repository: web
+    tag: '1.0.0'
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+      nginx.ingress.kubernetes.io/proxy-body-size: '50m'
+    hosts:
+      - host: skillancer.com
+        paths:
+          - path: /
+            pathType: Prefix
+      - host: www.skillancer.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: skillancer-tls
+        hosts:
+          - skillancer.com
+          - www.skillancer.com
+
+  env:
+    - name: NEXT_PUBLIC_API_URL
+      value: https://api.skillancer.com
+    - name: NODE_ENV
+      value: production
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfied: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app: web
+
+# ============================================================
+# API Gateway
+# ============================================================
+apiGateway:
+  enabled: true
+  replicaCount: 3
+
+  image:
+    repository: api-gateway
+    tag: '1.0.0'
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 30
+    targetCPUUtilizationPercentage: 60
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+      nginx.ingress.kubernetes.io/proxy-body-size: '100m'
+      nginx.ingress.kubernetes.io/proxy-read-timeout: '120'
+      nginx.ingress.kubernetes.io/proxy-send-timeout: '120'
+    hosts:
+      - host: api.skillancer.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: api-skillancer-tls
+        hosts:
+          - api.skillancer.com
+
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: LOG_LEVEL
+      value: info
+    - name: RATE_LIMIT_ENABLED
+      value: 'true'
+    - name: RATE_LIMIT_WINDOW_MS
+      value: '60000'
+    - name: RATE_LIMIT_MAX_REQUESTS
+      value: '100'
+
+  envFrom:
+    - secretRef:
+        name: skillancer-secrets
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# ============================================================
+# Auth Service
+# ============================================================
+authService:
+  enabled: true
+  replicaCount: 3
+
+  image:
+    repository: auth-svc
+    tag: '1.0.0'
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 70
+
+  service:
+    type: ClusterIP
+    port: 8081
+
+  env:
+    - name: JWT_EXPIRY
+      value: '1h'
+    - name: REFRESH_TOKEN_EXPIRY
+      value: '7d'
+
+  envFrom:
+    - secretRef:
+        name: auth-secrets
+
+# ============================================================
+# SkillPod Service
+# ============================================================
+skillpodService:
+  enabled: true
+  replicaCount: 4
+
+  image:
+    repository: skillpod-svc
+    tag: '1.0.0'
+
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 4
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 60
+
+  nodeSelector:
+    role: skillpod
+
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: skillpod
+      effect: NoSchedule
+
+  service:
+    type: ClusterIP
+    port: 8085
+
+  env:
+    - name: SESSION_TIMEOUT_MINUTES
+      value: '480'
+    - name: MAX_CONCURRENT_SESSIONS
+      value: '1000'
+    - name: RECORDING_ENABLED
+      value: 'true'
+    - name: KASM_API_URL
+      valueFrom:
+        secretKeyRef:
+          name: skillpod-secrets
+          key: kasm-api-url
+
+  envFrom:
+    - secretRef:
+        name: skillpod-secrets
+
+# ============================================================
+# Cockpit Service
+# ============================================================
+cockpitService:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: cockpit-svc
+    tag: '1.0.0'
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+  service:
+    type: ClusterIP
+    port: 8086
+
+# ============================================================
+# Billing Service
+# ============================================================
+billingService:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: billing-svc
+    tag: '1.0.0'
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+  service:
+    type: ClusterIP
+    port: 8082
+
+  env:
+    - name: STRIPE_WEBHOOK_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: billing-secrets
+          key: stripe-webhook-secret
+
+  envFrom:
+    - secretRef:
+        name: billing-secrets
+
+# ============================================================
+# Notification Service
+# ============================================================
+notificationService:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: notification-svc
+    tag: '1.0.0'
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+  service:
+    type: ClusterIP
+    port: 8083
+
+  envFrom:
+    - secretRef:
+        name: notification-secrets
+
+# ============================================================
+# ML Recommendation Service
+# ============================================================
+mlRecommendationService:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: ml-recommendation-svc
+    tag: '1.0.0'
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+  service:
+    type: ClusterIP
+    port: 8087
+
+  nodeSelector:
+    role: general
+
+# ============================================================
+# Database (External - managed by RDS)
+# ============================================================
+postgresql:
+  enabled: false
+
+externalDatabase:
+  host: skillancer-production.xxxxx.us-east-1.rds.amazonaws.com
+  port: 5432
+  database: skillancer
+  existingSecret: db-credentials
+  existingSecretPasswordKey: password
+
+# ============================================================
+# Redis (External - managed by ElastiCache)
+# ============================================================
+redis:
+  enabled: false
+
+externalRedis:
+  host: skillancer-production.xxxxx.cache.amazonaws.com
+  port: 6379
+  existingSecret: redis-credentials
+  existingSecretPasswordKey: password
+
+# ============================================================
+# Monitoring
+# ============================================================
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+grafana:
+  enabled: true
+  adminPassword:
+    existingSecret: grafana-admin
+    existingSecretPasswordKey: password
+  ingress:
+    enabled: true
+    hosts:
+      - metrics.skillancer.com
+    tls:
+      - secretName: metrics-skillancer-tls
+        hosts:
+          - metrics.skillancer.com
+
+# ============================================================
+# Ingress Controller
+# ============================================================
+ingress-nginx:
+  enabled: true
+  controller:
+    replicaCount: 3
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+    metrics:
+      enabled: true
+    config:
+      use-forwarded-headers: 'true'
+      compute-full-forwarded-for: 'true'
+      use-proxy-protocol: 'false'
+
+# ============================================================
+# Cert Manager
+# ============================================================
+cert-manager:
+  enabled: true
+  installCRDs: true
+
+  clusterIssuers:
+    - name: letsencrypt-prod
+      spec:
+        acme:
+          server: https://acme-v02.api.letsencrypt.org/directory
+          email: devops@skillancer.com
+          privateKeySecretRef:
+            name: letsencrypt-prod
+          solvers:
+            - http01:
+                ingress:
+                  class: nginx
+
+# ============================================================
+# Pod Security
+# ============================================================
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# ============================================================
+# Network Policies
+# ============================================================
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432 # PostgreSQL
+        - protocol: TCP
+          port: 6379 # Redis
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443 # External HTTPS
+
+# ============================================================
+# Service Accounts
+# ============================================================
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/skillancer-production
+
+# ============================================================
+# Secrets (references only - actual values in external secrets manager)
+# ============================================================
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: doppler
