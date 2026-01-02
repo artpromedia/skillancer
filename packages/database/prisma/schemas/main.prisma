@@ -5,7 +5,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions", "prismaSchemaFolder"]
 }
 
 datasource db {
@@ -209,6 +209,36 @@ model User {
   rateHistoryEntries     RateHistory[]
   revenueProjections     RevenueProjection[]
 
+  // Sprint M4: Portable Verified Work History
+  platformConnections      PlatformConnection[]
+  workHistoryItems         WorkHistoryItem[]
+  workHistoryReviews       WorkHistoryReview[]
+  verifiableCredentials    VerifiableCredential[]
+  unifiedReputationScore   UnifiedReputationScore?
+  unifiedProfile           UnifiedProfile?
+
+  // Sprint M8: Guild & Agency Accounts
+  guildMemberships GuildMember[]
+
+  // Sprint M9: Healthcare Vertical Module
+  medicalCredentials       MedicalCredential[]
+  hipaaTrainingRecords     HIPAATraining[]
+  exclusionChecks          ExclusionCheck[]
+  healthcarePhiAccessLogs  PHIAccessLog[]
+  healthcareClientConfig   HealthcareClientConfig?
+
+  // Sprint EX1: Executive Profile & Vetting
+  executiveProfile         ExecutiveProfile?
+
+  // Sprint M5: Financial Services
+  treasuryAccount          TreasuryAccount?
+  cardholder               Cardholder?
+  issuedCards              IssuedCard[]
+  quarterlyReminders       QuarterlyReminder[]
+
+  // Sprint M3: SkillPod B2B Enterprise
+  skillPodMemberships      SkillPodTenantUser[]
+
   @@unique([oauthProvider, oauthId])
   @@index([email])
   @@index([status])
@@ -316,9 +346,18 @@ model UserProfile {
   portfolioUrl String? @map("portfolio_url") @db.VarChar(500)
   twitterUrl   String? @map("twitter_url") @db.VarChar(500)
 
-  // Location
-  country String? @db.VarChar(2) // ISO 3166-1 alpha-2
-  city    String? @db.VarChar(100)
+  // Location & Address
+  country    String? @db.VarChar(2) // ISO 3166-1 alpha-2
+  city       String? @db.VarChar(100)
+  address    String? @db.VarChar(255)
+  postalCode String? @map("postal_code") @db.VarChar(20)
+  state      String? @db.VarChar(100)
+
+  // Contact
+  phone String? @db.VarChar(30)
+
+  // Personal Information
+  dateOfBirth DateTime? @map("date_of_birth") @db.Date
 
   // Visibility Settings
   isPublic     Boolean @default(false) @map("is_public")
@@ -869,6 +908,9 @@ model Job {
   invitations   ProjectInvitation[]
   questions     ProjectQuestion[]
   conversations Conversation[]      @relation("JobConversations")
+  
+  // Sprint M9: Healthcare
+  healthcareDetails HealthcareJobDetails?
 
   @@index([clientId])
   @@index([tenantId])
@@ -1911,6 +1953,45 @@ model SecurityViolation {
   @@index([severity])
   @@index([createdAt])
   @@map("security_violations")
+}
+
+// Sprint M5: Security Events for fraud detection
+model SecurityEvent {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  type        String   @db.VarChar(50)
+  severity    String   @default("LOW") @db.VarChar(20)
+  description String   @db.Text
+  ipAddress   String?  @map("ip_address") @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.Text
+  metadata    Json?
+  resolved    Boolean  @default(false)
+  resolution  String?  @db.Text
+  resolvedAt  DateTime? @map("resolved_at")
+  resolvedBy  String?  @map("resolved_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([type])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("security_events")
+}
+
+// Sprint M5: User sessions for re-authentication tracking
+model UserSession {
+  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  ipAddress           String?   @map("ip_address") @db.VarChar(45)
+  userAgent           String?   @map("user_agent") @db.Text
+  lastAuthenticatedAt DateTime? @map("last_authenticated_at")
+  expiresAt           DateTime  @map("expires_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
 }
 
 model FileTransferRequest {
@@ -12133,4 +12214,1464 @@ enum ScenarioType {
   MODERATE
   AGGRESSIVE
   CUSTOM
+}
+
+// ============================================================================
+// SPRINT M4: PORTABLE VERIFIED WORK HISTORY
+// ============================================================================
+
+// Platform connection for OAuth-based integrations
+model PlatformConnection {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+  platform String @db.VarChar(50) // upwork, fiverr, freelancer, linkedin
+
+  // OAuth tokens (encrypted in production)
+  accessToken    String?   @map("access_token") @db.Text
+  refreshToken   String?   @map("refresh_token") @db.Text
+  tokenExpiresAt DateTime? @map("token_expires_at")
+  tokenScope     String?   @map("token_scope") @db.VarChar(500)
+
+  // Connection status
+  status    PlatformConnectionStatus @default(PENDING)
+  lastError String?                  @map("last_error") @db.Text
+
+  // Sync metadata
+  lastSyncAt DateTime? @map("last_sync_at")
+  syncStats  Json?     @map("sync_stats") @db.JsonB
+
+  // External profile data
+  externalProfileId  String? @map("external_profile_id") @db.VarChar(255)
+  externalProfileUrl String? @map("external_profile_url") @db.VarChar(500)
+  externalUsername   String? @map("external_username") @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform], name: "userId_platform")
+  @@index([userId])
+  @@index([platform])
+  @@index([status])
+  @@map("platform_connections")
+}
+
+enum PlatformConnectionStatus {
+  PENDING
+  CONNECTED
+  SYNCING
+  ERROR
+  DISCONNECTED
+  TOKEN_EXPIRED
+}
+
+// OAuth state for CSRF protection
+model OauthState {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  platform    String   @db.VarChar(50)
+  state       String   @unique @db.VarChar(255)
+  redirectUri String   @map("redirect_uri") @db.VarChar(500)
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([state])
+  @@index([expiresAt])
+  @@map("oauth_states")
+}
+
+// Work history items imported from platforms or added manually
+model WorkHistoryItem {
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  platform   String @db.VarChar(50) // upwork, fiverr, freelancer, manual
+  externalId String @map("external_id") @db.VarChar(255)
+
+  // Project details
+  title       String    @db.VarChar(500)
+  description String?   @db.Text
+  client      String    @db.VarChar(255)
+  clientId    String?   @map("client_id") @db.VarChar(255)
+  category    String    @db.VarChar(255)
+  skills      String[]  @db.VarChar(100)
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime? @map("end_date")
+  status      String    @db.VarChar(50) // completed, in_progress, cancelled
+
+  // Financial data
+  amount     Decimal  @default(0) @db.Decimal(14, 2)
+  currency   String   @default("USD") @db.VarChar(10)
+  billingType String?  @map("billing_type") @db.VarChar(50) // hourly, fixed, milestone
+  hoursWorked Decimal? @map("hours_worked") @db.Decimal(10, 2)
+  hourlyRate  Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+
+  // Verification
+  verificationLevel VerificationLevelM4 @default(SELF_REPORTED) @map("verification_level")
+  verificationHash  String?             @map("verification_hash") @db.VarChar(255)
+  verificationData  Json?               @map("verification_data") @db.JsonB
+  verifiedAt        DateTime?           @map("verified_at")
+
+  // Blockchain anchor (for cryptographically sealed)
+  blockchainNetwork String? @map("blockchain_network") @db.VarChar(50)
+  blockchainTxHash  String? @map("blockchain_tx_hash") @db.VarChar(255)
+  blockchainBlock   Int?    @map("blockchain_block")
+
+  // Raw data from platform API
+  rawData Json? @map("raw_data") @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews WorkHistoryReview[]
+
+  @@unique([userId, platform, externalId], name: "userId_platform_externalId")
+  @@index([userId])
+  @@index([platform])
+  @@index([verificationLevel])
+  @@index([startDate])
+  @@map("work_history_items")
+}
+
+enum VerificationLevelM4 {
+  SELF_REPORTED
+  PLATFORM_CONNECTED
+  PLATFORM_VERIFIED
+  CRYPTOGRAPHICALLY_SEALED
+}
+
+// Reviews associated with work history items
+model WorkHistoryReview {
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  platform   String @db.VarChar(50)
+  externalId String @map("external_id") @db.VarChar(255)
+
+  workHistoryItemId String? @map("work_history_item_id") @db.Uuid
+  projectId         String? @map("project_id") @db.VarChar(255)
+
+  // Review data
+  rating       Decimal  @db.Decimal(3, 2) // e.g., 4.80
+  text         String?  @db.Text
+  reviewerName String   @map("reviewer_name") @db.VarChar(255)
+  reviewDate   DateTime @map("review_date")
+
+  // Verification
+  isVerified     Boolean  @default(false) @map("is_verified")
+  authenticityScore Decimal? @map("authenticity_score") @db.Decimal(5, 4)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workHistoryItem WorkHistoryItem? @relation(fields: [workHistoryItemId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, platform, externalId], name: "review_userId_platform_externalId")
+  @@index([userId])
+  @@index([workHistoryItemId])
+  @@index([rating])
+  @@map("work_history_reviews")
+}
+
+// Verifiable credentials issued to users
+model VerifiableCredential {
+  id        String @id @db.VarChar(255) // e.g., urn:uuid:...
+  subjectId String @map("subject_id") @db.Uuid
+  type      String @db.VarChar(100) // WorkHistory, Earnings, Skills, Reviews, CompleteProfile
+
+  // W3C VC data
+  credential Json @db.JsonB
+
+  // Status
+  status           CredentialStatus @default(ACTIVE)
+  issuedAt         DateTime         @map("issued_at")
+  expiresAt        DateTime?        @map("expires_at")
+  revokedAt        DateTime?        @map("revoked_at")
+  revocationReason String?          @map("revocation_reason") @db.Text
+
+  // Blockchain anchor
+  blockchainNetwork String? @map("blockchain_network") @db.VarChar(50)
+  blockchainTxHash  String? @map("blockchain_tx_hash") @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  subject          User                       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  verificationLogs CredentialVerificationLog[]
+
+  @@index([subjectId])
+  @@index([type])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("verifiable_credentials")
+}
+
+// Note: CredentialStatus enum is defined earlier in the schema (line ~11373)
+
+// Log of credential verifications (for analytics and fraud detection)
+model CredentialVerificationLog {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  credentialId String   @map("credential_id") @db.VarChar(255)
+  verifiedAt   DateTime @map("verified_at")
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent") @db.Text
+  referrer     String?  @db.VarChar(500)
+  country      String?  @db.VarChar(2)
+  isValid      Boolean  @default(true) @map("is_valid")
+
+  credential VerifiableCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@index([credentialId])
+  @@index([verifiedAt])
+  @@map("credential_verification_logs")
+}
+
+// Unified reputation score calculated across platforms
+model UnifiedReputationScore {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  // Overall score (0-100)
+  overallScore Decimal @map("overall_score") @db.Decimal(5, 2)
+  tier         ReputationTier
+
+  // Component scores (0-100)
+  earningsScore      Decimal @map("earnings_score") @db.Decimal(5, 2)
+  reviewsScore       Decimal @map("reviews_score") @db.Decimal(5, 2)
+  completionScore    Decimal @map("completion_score") @db.Decimal(5, 2)
+  responsivenessScore Decimal @map("responsiveness_score") @db.Decimal(5, 2)
+  profileScore       Decimal @map("profile_score") @db.Decimal(5, 2)
+  credentialsScore   Decimal @map("credentials_score") @db.Decimal(5, 2)
+
+  // Aggregated stats
+  totalEarnings     Decimal @map("total_earnings") @db.Decimal(14, 2)
+  totalProjects     Int     @map("total_projects")
+  completedProjects Int     @map("completed_projects")
+  totalReviews      Int     @map("total_reviews")
+  averageRating     Decimal @map("average_rating") @db.Decimal(3, 2)
+  platformCount     Int     @map("platform_count")
+
+  // Percentile ranking
+  percentileRank Decimal @map("percentile_rank") @db.Decimal(5, 2)
+
+  // Trend
+  trend            ScoreTrend
+  trendPercentage  Decimal    @map("trend_percentage") @db.Decimal(5, 2)
+
+  // History (stored as JSON array)
+  scoreHistory Json @map("score_history") @db.JsonB
+
+  // Badges earned
+  badges Json @db.JsonB
+
+  calculatedAt DateTime @map("calculated_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([overallScore])
+  @@index([tier])
+  @@index([percentileRank])
+  @@map("unified_reputation_scores")
+}
+
+enum ReputationTier {
+  RISING
+  ESTABLISHED
+  EXPERT
+  ELITE
+  LEGENDARY
+}
+
+enum ScoreTrend {
+  UP
+  DOWN
+  STABLE
+}
+
+// Background job queue for sync and verification tasks
+model VerificationJob {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  type   VerificationJobType
+
+  // Job data
+  payload  Json  @db.JsonB
+  result   Json? @db.JsonB
+
+  // Status
+  status       VerificationJobStatus @default(PENDING)
+  attempts     Int       @default(0)
+  maxAttempts  Int       @default(3) @map("max_attempts")
+  lastError    String?   @map("last_error") @db.Text
+  
+  // Scheduling
+  scheduledFor DateTime  @map("scheduled_for")
+  startedAt    DateTime? @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([scheduledFor])
+  @@map("verification_jobs")
+}
+
+enum VerificationJobType {
+  PLATFORM_SYNC
+  WORK_HISTORY_VERIFY
+  EARNINGS_VERIFY
+  REVIEW_VERIFY
+  CREDENTIAL_ISSUE
+  CREDENTIAL_REVOKE
+  REPUTATION_CALCULATE
+  BLOCKCHAIN_ANCHOR
+}
+
+enum VerificationJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// Unified profile aggregated from multiple platforms
+model UnifiedProfile {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  // Aggregated profile data
+  headline      String?  @db.VarChar(500)
+  bio           String?  @db.Text
+  skills        String[] @db.VarChar(100)
+  languages     String[] @db.VarChar(50)
+  location      String?  @db.VarChar(255)
+  timezone      String?  @db.VarChar(50)
+  hourlyRate    Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  currency      String   @default("USD") @db.VarChar(10)
+  availability  String?  @db.VarChar(50)
+
+  // Skill levels (JSON map: skill -> level)
+  skillLevels Json @map("skill_levels") @db.JsonB
+
+  // Platform profile URLs
+  platformProfiles Json @map("platform_profiles") @db.JsonB
+
+  // Categories/expertise
+  primaryCategory    String?  @map("primary_category") @db.VarChar(255)
+  secondaryCategories String[] @map("secondary_categories") @db.VarChar(255)
+
+  // Completeness score (0-100)
+  completenessScore Decimal @map("completeness_score") @db.Decimal(5, 2)
+
+  lastAggregatedAt DateTime @map("last_aggregated_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("unified_profiles")
+}
+
+// ============================================================================
+// GUILD & AGENCY ACCOUNTS (Sprint M8)
+// ============================================================================
+
+model Guild {
+  id              String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  slug            String      @unique @db.VarChar(100)
+  name            String      @db.VarChar(200)
+  description     String?     @db.Text
+  logo            String?     @map("logo_url") @db.VarChar(500)
+  tagline         String?     @db.VarChar(300)
+  specializations String[]    @db.VarChar(100)
+  technologies    String[]    @db.VarChar(100)
+  isVerified      Boolean     @default(false) @map("is_verified")
+  status          GuildStatus @default(ACTIVE)
+
+  // Settings stored as JSON
+  settings Json @default("{}") @db.JsonB
+
+  // Reputation
+  rating        Decimal @default(0) @db.Decimal(3, 2)
+  projectCount  Int     @default(0) @map("project_count")
+  totalEarnings Decimal @default(0) @map("total_earnings") @db.Decimal(15, 2)
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  members      GuildMember[]
+  projects     GuildProject[]
+  proposals    GuildProposal[]
+  treasury     GuildTreasury?
+  reviews      GuildReview[]
+  invitations  GuildInvitation[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([isVerified])
+  @@index([rating])
+  @@map("guilds")
+}
+
+model GuildMember {
+  id          String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guildId     String       @map("guild_id") @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  role        GuildRole    @default(MEMBER)
+  status      MemberStatus @default(INVITED)
+  isPrimary   Boolean      @default(false) @map("is_primary")
+
+  // Permissions stored as JSON
+  permissions Json @default("{}") @db.JsonB
+
+  // Contribution tracking
+  projectsCompleted Int     @default(0) @map("projects_completed")
+  totalEarned       Decimal @default(0) @map("total_earned") @db.Decimal(15, 2)
+
+  // Timestamps
+  joinedAt DateTime  @default(now()) @map("joined_at")
+  leftAt   DateTime? @map("left_at")
+
+  // Relations
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Project assignments
+  projectAssignments GuildProjectAssignment[]
+
+  @@unique([guildId, userId])
+  @@index([userId])
+  @@index([role])
+  @@index([status])
+  @@map("guild_members")
+}
+
+model GuildInvitation {
+  id        String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guildId   String           @map("guild_id") @db.Uuid
+  email     String           @db.VarChar(255)
+  role      GuildRole        @default(MEMBER)
+  status    InvitationStatus @default(PENDING)
+  message   String?          @db.Text
+  token     String           @unique @db.VarChar(100)
+  expiresAt DateTime         @map("expires_at")
+
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  respondedAt DateTime? @map("responded_at")
+
+  // Relations
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([email])
+  @@index([token])
+  @@map("guild_invitations")
+}
+
+model GuildProject {
+  id              String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guildId         String              @map("guild_id") @db.Uuid
+  contractId      String?             @map("contract_id") @db.Uuid
+  proposalId      String?             @map("proposal_id") @db.Uuid
+  name            String              @db.VarChar(300)
+  description     String?             @db.Text
+  status          GuildProjectStatus  @default(ACTIVE)
+
+  // Team composition stored as JSON
+  teamComposition Json @map("team_composition") @db.JsonB
+
+  // Revenue split configuration
+  revenueSplit Json @map("revenue_split") @db.JsonB
+
+  // Financial tracking
+  totalValue    Decimal  @default(0) @map("total_value") @db.Decimal(15, 2)
+  paidOut       Decimal  @default(0) @map("paid_out") @db.Decimal(15, 2)
+
+  // Timestamps
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  guild       Guild                    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  assignments GuildProjectAssignment[]
+  splits      GuildRevenueSplit[]
+
+  @@index([guildId])
+  @@index([status])
+  @@map("guild_projects")
+}
+
+model GuildProjectAssignment {
+  id            String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId     String  @map("project_id") @db.Uuid
+  memberId      String  @map("member_id") @db.Uuid
+  role          String  @db.VarChar(100)
+  allocation    Decimal @db.Decimal(5, 2) // Percentage or hours
+  allocationType String @default("PERCENTAGE") @map("allocation_type") @db.VarChar(20)
+
+  // Timestamps
+  assignedAt DateTime  @default(now()) @map("assigned_at")
+  removedAt  DateTime? @map("removed_at")
+
+  // Relations
+  project GuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member  GuildMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, memberId])
+  @@map("guild_project_assignments")
+}
+
+model GuildProposal {
+  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guildId         String            @map("guild_id") @db.Uuid
+  jobId           String            @map("job_id") @db.Uuid
+  bidId           String?           @map("bid_id") @db.Uuid
+  status          GuildProposalStatus @default(DRAFT)
+
+  // Proposal content
+  coverLetter     String  @map("cover_letter") @db.Text
+  proposedRate    Decimal @map("proposed_rate") @db.Decimal(15, 2)
+  estimatedDays   Int?    @map("estimated_days")
+
+  // Team composition for this proposal
+  teamComposition Json @map("team_composition") @db.JsonB
+
+  // Proposed revenue split
+  proposedSplit Json @map("proposed_split") @db.JsonB
+
+  // Timestamps
+  submittedAt DateTime? @map("submitted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([jobId])
+  @@index([status])
+  @@map("guild_proposals")
+}
+
+model GuildTreasury {
+  id       String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guildId  String  @unique @map("guild_id") @db.Uuid
+  balance  Decimal @default(0) @db.Decimal(15, 2)
+  currency String  @default("USD") @db.VarChar(10)
+
+  // Spending limits and governance
+  settings Json @default("{}") @db.JsonB
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  guild        Guild                @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  transactions GuildTransaction[]
+
+  @@map("guild_treasuries")
+}
+
+model GuildTransaction {
+  id          String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  treasuryId  String                 @map("treasury_id") @db.Uuid
+  type        GuildTransactionType
+  amount      Decimal                @db.Decimal(15, 2)
+  description String                 @db.VarChar(500)
+  projectId   String?                @map("project_id") @db.Uuid
+  userId      String?                @map("user_id") @db.Uuid
+  reference   String?                @db.VarChar(100)
+  metadata    Json                   @default("{}") @db.JsonB
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  treasury GuildTreasury @relation(fields: [treasuryId], references: [id], onDelete: Cascade)
+
+  @@index([treasuryId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("guild_transactions")
+}
+
+model GuildRevenueSplit {
+  id        String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String          @map("project_id") @db.Uuid
+  status    RevenueSplitStatus @default(PENDING)
+
+  // Split configuration
+  splitMode   String  @map("split_mode") @db.VarChar(20) // EQUAL, WEIGHTED, HOURLY, CUSTOM
+  totalAmount Decimal @map("total_amount") @db.Decimal(15, 2)
+  platformFee Decimal @map("platform_fee") @db.Decimal(15, 2)
+  guildFee    Decimal @default(0) @map("guild_fee") @db.Decimal(15, 2)
+
+  // Member allocations stored as JSON array
+  allocations Json @db.JsonB
+
+  // Approval tracking
+  approvedBy  String[] @map("approved_by") @db.Uuid
+  requiredApprovals Int @default(1) @map("required_approvals")
+
+  // Timestamps
+  proposedAt  DateTime  @default(now()) @map("proposed_at")
+  approvedAt  DateTime? @map("approved_at")
+  executedAt  DateTime? @map("executed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  project GuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([status])
+  @@map("guild_revenue_splits")
+}
+
+model GuildReview {
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guildId    String @map("guild_id") @db.Uuid
+  projectId  String @map("project_id") @db.Uuid
+  clientId   String @map("client_id") @db.Uuid
+
+  // Ratings
+  rating           Int     @db.SmallInt // 1-5
+  qualityRating    Int?    @map("quality_rating") @db.SmallInt
+  communicationRating Int? @map("communication_rating") @db.SmallInt
+  timelinessRating Int?    @map("timeliness_rating") @db.SmallInt
+
+  // Review content
+  reviewText String? @map("review_text") @db.Text
+  isPublic   Boolean @default(true) @map("is_public")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([rating])
+  @@map("guild_reviews")
+}
+
+// Guild Enums
+enum GuildStatus {
+  ACTIVE
+  SUSPENDED
+  DISSOLVED
+}
+
+enum GuildRole {
+  LEADER
+  ADMIN
+  MEMBER
+  ASSOCIATE
+}
+
+enum MemberStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DEPARTED
+}
+
+// Note: InvitationStatus is defined earlier (line ~1140)
+// Guilds reuse the same InvitationStatus enum
+
+enum GuildProjectStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+enum GuildProposalStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum GuildTransactionType {
+  DEPOSIT
+  DISTRIBUTION
+  EXPENSE
+  REFUND
+  FEE
+}
+
+enum RevenueSplitStatus {
+  PENDING
+  APPROVED
+  EXECUTED
+  DISPUTED
+  CANCELLED
+}
+
+// =============================================================================
+// HEALTHCARE VERTICAL MODULE (Sprint M9)
+// =============================================================================
+
+// Medical Credential - Stores healthcare professional credentials
+model MedicalCredential {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  userId              String                    @map("user_id") @db.Uuid
+  type                CredentialType
+  licenseNumber       String?                   @map("license_number")
+  state               String?                   // Issuing state/jurisdiction
+  issuingAuthority    String?                   @map("issuing_authority")
+  issueDate           DateTime?                 @map("issue_date")
+  expirationDate      DateTime?                 @map("expiration_date")
+  specialty           String?
+  npiNumber           String?                   @map("npi_number")
+  deaNumber           String?                   @map("dea_number")
+  
+  // Verification
+  verificationStatus  CredentialVerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt          DateTime?                 @map("verified_at")
+  verifiedBy          String?                   @map("verified_by")
+  verificationMethod  String?                   @map("verification_method")
+  verificationSource  String?                   @map("verification_source")
+  lastVerifiedAt      DateTime?                 @map("last_verified_at")
+  nextVerificationAt  DateTime?                 @map("next_verification_at")
+  
+  // Documents
+  documentUrl         String?                   @map("document_url")
+  documentHash        String?                   @map("document_hash")
+  
+  // Status
+  status              CredentialStatus          @default(ACTIVE)
+  disciplinaryActions Json?                     @map("disciplinary_actions")
+  notes               String?
+  
+  // Metadata
+  metadata            Json?
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+
+  // Relations
+  user                User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationHistory CredentialVerification[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([expirationDate])
+  @@map("medical_credentials")
+}
+
+// Credential Verification History
+model CredentialVerification {
+  id              String                    @id @default(uuid()) @db.Uuid
+  credentialId    String                    @map("credential_id") @db.Uuid
+  verificationDate DateTime                 @default(now()) @map("verification_date")
+  method          String                    // PRIMARY_SOURCE, API, MANUAL
+  source          String                    // State board, NPDB, etc.
+  status          CredentialVerificationStatus
+  result          Json?                     // Full verification result
+  notes           String?
+  verifiedBy      String?                   @map("verified_by")
+  
+  createdAt       DateTime                  @default(now()) @map("created_at")
+
+  // Relations
+  credential      MedicalCredential         @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@index([credentialId])
+  @@map("credential_verifications")
+}
+
+// HIPAA Training Record
+model HIPAATraining {
+  id                String              @id @default(uuid()) @db.Uuid
+  userId            String              @map("user_id") @db.Uuid
+  trainingType      HIPAATrainingType   @map("training_type")
+  provider          String              // Training provider name
+  completionDate    DateTime            @map("completion_date")
+  expirationDate    DateTime            @map("expiration_date")
+  certificateUrl    String?             @map("certificate_url")
+  certificateHash   String?             @map("certificate_hash")
+  verificationCode  String?             @map("verification_code")
+  
+  // Status
+  status            HIPAATrainingStatus @default(ACTIVE)
+  verifiedAt        DateTime?           @map("verified_at")
+  verifiedBy        String?             @map("verified_by")
+  
+  // Metadata
+  metadata          Json?
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expirationDate])
+  @@index([status])
+  @@map("hipaa_trainings")
+}
+
+// Business Associate Agreement
+model BAA {
+  id                String          @id @default(uuid()) @db.Uuid
+  type              BAAType
+  partyAId          String          @map("party_a_id") @db.Uuid  // Usually Skillancer or Client
+  partyAType        String          @map("party_a_type")          // PLATFORM, CLIENT, FREELANCER
+  partyBId          String          @map("party_b_id") @db.Uuid
+  partyBType        String          @map("party_b_type")
+  
+  // BAA Details
+  version           String          @default("1.0")
+  templateId        String?         @map("template_id")
+  customTerms       Json?           @map("custom_terms")
+  
+  // Signing
+  status            BAAStatus       @default(DRAFT)
+  partyASigned      Boolean         @default(false) @map("party_a_signed")
+  partyASignedAt    DateTime?       @map("party_a_signed_at")
+  partyASignatureId String?         @map("party_a_signature_id")
+  partyBSigned      Boolean         @default(false) @map("party_b_signed")
+  partyBSignedAt    DateTime?       @map("party_b_signed_at")
+  partyBSignatureId String?         @map("party_b_signature_id")
+  
+  // Dates
+  effectiveDate     DateTime?       @map("effective_date")
+  expirationDate    DateTime?       @map("expiration_date")
+  terminatedAt      DateTime?       @map("terminated_at")
+  terminationReason String?         @map("termination_reason")
+  
+  // Documents
+  documentUrl       String?         @map("document_url")
+  signedDocumentUrl String?         @map("signed_document_url")
+  
+  // Metadata
+  metadata          Json?
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  amendments        BAAAmendment[]
+
+  @@index([partyAId])
+  @@index([partyBId])
+  @@index([status])
+  @@index([expirationDate])
+  @@map("baas")
+}
+
+// BAA Amendment
+model BAAAmendment {
+  id              String          @id @default(uuid()) @db.Uuid
+  baaId           String          @map("baa_id") @db.Uuid
+  version         String
+  description     String
+  changes         Json
+  status          BAAStatus       @default(DRAFT)
+  
+  effectiveDate   DateTime?       @map("effective_date")
+  signedAt        DateTime?       @map("signed_at")
+  documentUrl     String?         @map("document_url")
+  
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  baa             BAA             @relation(fields: [baaId], references: [id], onDelete: Cascade)
+
+  @@index([baaId])
+  @@map("baa_amendments")
+}
+
+// Exclusion Check Record
+model ExclusionCheck {
+  id              String              @id @default(uuid()) @db.Uuid
+  userId          String              @map("user_id") @db.Uuid
+  checkDate       DateTime            @default(now()) @map("check_date")
+  
+  // Databases checked
+  oigChecked      Boolean             @default(false) @map("oig_checked")
+  oigResult       ExclusionResult     @default(CLEAR) @map("oig_result")
+  oigMatchData    Json?               @map("oig_match_data")
+  
+  samChecked      Boolean             @default(false) @map("sam_checked")
+  samResult       ExclusionResult     @default(CLEAR) @map("sam_result")
+  samMatchData    Json?               @map("sam_match_data")
+  
+  stateChecked    Boolean             @default(false) @map("state_checked")
+  stateResult     ExclusionResult     @default(CLEAR) @map("state_result")
+  stateMatchData  Json?               @map("state_match_data")
+  
+  // Overall result
+  overallResult   ExclusionResult     @default(CLEAR) @map("overall_result")
+  reviewedBy      String?             @map("reviewed_by")
+  reviewedAt      DateTime?           @map("reviewed_at")
+  reviewNotes     String?             @map("review_notes")
+  
+  // Status
+  status          ExclusionCheckStatus @default(COMPLETED)
+  nextCheckDate   DateTime?           @map("next_check_date")
+  
+  createdAt       DateTime            @default(now()) @map("created_at")
+
+  // Relations
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([checkDate])
+  @@index([overallResult])
+  @@map("exclusion_checks")
+}
+
+// PHI Access Log
+model PHIAccessLog {
+  id              String          @id @default(uuid()) @db.Uuid
+  userId          String          @map("user_id") @db.Uuid
+  sessionId       String?         @map("session_id") @db.Uuid
+  contractId      String?         @map("contract_id") @db.Uuid
+  
+  // Access details
+  accessType      PHIAccessType   @map("access_type")
+  action          String          // VIEW, EDIT, DOWNLOAD, PRINT, etc.
+  resourceType    String          @map("resource_type")   // PATIENT_RECORD, LAB_RESULT, etc.
+  resourceId      String?         @map("resource_id")     // De-identified reference
+  
+  // Context
+  ehrSystem       String?         @map("ehr_system")
+  patientCount    Int?            @map("patient_count")   // Number of records accessed
+  dataCategories  String[]        @map("data_categories") // Types of PHI accessed
+  
+  // Location/Device
+  ipAddress       String?         @map("ip_address")
+  userAgent       String?         @map("user_agent")
+  deviceId        String?         @map("device_id")
+  
+  // Authorization
+  authorized      Boolean         @default(true)
+  authorizationId String?         @map("authorization_id")
+  justification   String?         // Reason for access
+  
+  // Recording
+  recordingUrl    String?         @map("recording_url")
+  screenshotUrl   String?         @map("screenshot_url")
+  
+  // Flags
+  flagged         Boolean         @default(false)
+  flagReason      String?         @map("flag_reason")
+  reviewedBy      String?         @map("reviewed_by")
+  reviewedAt      DateTime?       @map("reviewed_at")
+  
+  timestamp       DateTime        @default(now())
+  
+  // Relations
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([contractId])
+  @@index([timestamp])
+  @@index([flagged])
+  @@map("healthcare_phi_access_logs")
+}
+
+// Healthcare Job Extension
+model HealthcareJobDetails {
+  id                  String              @id @default(uuid()) @db.Uuid
+  jobId               String              @unique @map("job_id") @db.Uuid
+  
+  // Healthcare-specific fields
+  ehrSystems          String[]            @map("ehr_systems")      // Epic, Cerner, etc.
+  requiredCredentials String[]            @map("required_credentials")
+  phiAccessLevel      PHIAccessLevel      @map("phi_access_level")
+  hipaaTrainingRequired Boolean           @default(true) @map("hipaa_training_required")
+  baaRequired         Boolean             @default(true) @map("baa_required")
+  
+  // Setting
+  healthcareSetting   String?             @map("healthcare_setting") // Hospital, Clinic, etc.
+  specialty           String?
+  
+  // Compliance
+  complianceNotes     String?             @map("compliance_notes")
+  
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  job                 Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("healthcare_job_details")
+}
+
+// Healthcare Client Setup
+model HealthcareClientConfig {
+  id                  String              @id @default(uuid()) @db.Uuid
+  clientId            String              @unique @map("client_id") @db.Uuid
+  
+  // Organization type
+  organizationType    HealthcareOrgType   @map("organization_type")
+  coveredEntity       Boolean             @default(false) @map("covered_entity")
+  
+  // EHR Configuration
+  ehrSystem           String?             @map("ehr_system")
+  ehrApiEndpoint      String?             @map("ehr_api_endpoint")
+  ehrCredentialsEnc   String?             @map("ehr_credentials_enc") // Encrypted
+  ehrConnected        Boolean             @default(false) @map("ehr_connected")
+  ehrLastTestedAt     DateTime?           @map("ehr_last_tested_at")
+  
+  // Default policies
+  defaultPHIPolicy    Json?               @map("default_phi_policy")
+  defaultCredentials  String[]            @map("default_credentials")
+  defaultTrainingReqs String[]            @map("default_training_reqs")
+  
+  // BAA Status
+  platformBAAId       String?             @map("platform_baa_id") @db.Uuid
+  platformBAASigned   Boolean             @default(false) @map("platform_baa_signed")
+  
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  client              User                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("healthcare_client_configs")
+}
+
+// Healthcare Compliance Enums
+enum HealthcareCredentialType {
+  MD          // Medical Doctor
+  DO          // Doctor of Osteopathy
+  NP          // Nurse Practitioner
+  PA          // Physician Assistant
+  RN          // Registered Nurse
+  LPN         // Licensed Practical Nurse
+  CPC         // Certified Professional Coder
+  CCS         // Certified Coding Specialist
+  RHIT        // Registered Health Information Technician
+  RHIA        // Registered Health Information Administrator
+  DEA         // DEA Registration
+  BOARD_CERT  // Board Certification
+  MALPRACTICE // Malpractice Insurance
+  NPI         // National Provider Identifier
+  OTHER
+}
+
+enum CredentialVerificationStatus {
+  PENDING
+  IN_PROGRESS
+  VERIFIED
+  FAILED
+  EXPIRED
+  REVOKED
+}
+
+enum HealthcareCredentialStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  SUSPENDED
+  PENDING
+}
+
+enum HIPAATrainingType {
+  GENERAL_AWARENESS
+  PRIVACY_RULE
+  SECURITY_RULE
+  BREACH_NOTIFICATION
+  ROLE_SPECIFIC
+  ANNUAL_REFRESHER
+}
+
+enum HIPAATrainingStatus {
+  ACTIVE
+  EXPIRED
+  PENDING_VERIFICATION
+  INVALID
+}
+
+enum BAAType {
+  PLATFORM_CLIENT      // Skillancer to Client
+  PLATFORM_FREELANCER  // Skillancer to Freelancer
+  CLIENT_FREELANCER    // Client to Freelancer (via platform)
+  SUBCONTRACTOR        // Freelancer subcontractor
+}
+
+enum BAAStatus {
+  DRAFT
+  PENDING_SIGNATURE
+  PARTIALLY_SIGNED
+  EXECUTED
+  EXPIRED
+  TERMINATED
+  AMENDED
+}
+
+enum ExclusionResult {
+  CLEAR
+  POTENTIAL_MATCH
+  CONFIRMED_MATCH
+  REVIEW_REQUIRED
+}
+
+enum ExclusionCheckStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum PHIAccessType {
+  READ
+  WRITE
+  DELETE
+  EXPORT
+  PRINT
+}
+
+enum PHIAccessLevel {
+  NONE
+  LIMITED        // De-identified data only
+  STANDARD       // Normal PHI access
+  FULL           // Full access including sensitive
+}
+
+enum HealthcareOrgType {
+  HOSPITAL
+  CLINIC
+  HEALTH_SYSTEM
+  INSURANCE_PAYER
+  PHARMACY
+  LAB
+  HEALTH_IT_VENDOR
+  CONSULTING_FIRM
+  OTHER
+}
+
+// ============================================================================
+// TALENT INTELLIGENCE API (Sprint M10)
+// B2B API for freelance market intelligence
+// ============================================================================
+
+model APICustomer {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyName String    @map("company_name") @db.VarChar(255)
+  email       String    @unique @db.VarChar(255)
+  contactName String?   @map("contact_name") @db.VarChar(200)
+  phone       String?   @db.VarChar(50)
+  website     String?   @db.VarChar(500)
+  industry    String?   @db.VarChar(100)
+  companySize String?   @map("company_size") @db.VarChar(50)
+  plan        APIPlan   @default(STARTER)
+  status      APICustomerStatus @default(ACTIVE)
+  
+  // Billing
+  stripeCustomerId String? @unique @map("stripe_customer_id") @db.VarChar(255)
+  billingEmail     String? @map("billing_email") @db.VarChar(255)
+  
+  // Limits
+  monthlyCallLimit   Int @default(1000) @map("monthly_call_limit")
+  customDataAccess   Boolean @default(false) @map("custom_data_access")
+  
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  cancelledAt DateTime? @map("cancelled_at")
+
+  // Relations
+  apiKeys     APIKey[]
+  usage       APIUsage[]
+  invoices    APIInvoice[]
+  usageAlerts APIUsageAlert[]
+
+  @@map("api_customers")
+}
+
+model APIKey {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId  String    @map("customer_id") @db.Uuid
+  keyHash     String    @unique @map("key_hash") @db.VarChar(255)
+  keyPrefix   String    @map("key_prefix") @db.VarChar(20) // e.g., "sk_live_abc..."
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  scopes      String[]  // ["rates:read", "availability:read", etc.]
+  
+  // Status
+  status      APIKeyStatus @default(ACTIVE)
+  lastUsedAt  DateTime?    @map("last_used_at")
+  expiresAt   DateTime?    @map("expires_at")
+  
+  // Rate limiting
+  rateLimitPerMinute Int @default(60) @map("rate_limit_per_minute")
+  rateLimitPerDay    Int @default(10000) @map("rate_limit_per_day")
+  
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  revokedAt   DateTime? @map("revoked_at")
+
+  // Relations
+  customer    APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  usage       APIUsage[]
+
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model APIUsage {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  keyId       String   @map("key_id") @db.Uuid
+  endpoint    String   @db.VarChar(200)
+  method      String   @db.VarChar(10)
+  path        String   @db.VarChar(500)
+  queryParams Json?    @map("query_params")
+  
+  // Response
+  statusCode  Int      @map("status_code")
+  responseMs  Int      @map("response_ms")
+  responseSize Int?    @map("response_size")
+  
+  // Request metadata
+  ipAddress   String?  @map("ip_address") @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.VarChar(500)
+  
+  // Error tracking
+  errorCode   String?  @map("error_code") @db.VarChar(50)
+  errorMessage String? @map("error_message") @db.Text
+  
+  // Timestamp
+  timestamp   DateTime @default(now())
+
+  // Relations
+  customer    APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  key         APIKey @relation(fields: [keyId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, timestamp])
+  @@index([keyId, timestamp])
+  @@index([endpoint, timestamp])
+  @@map("api_usage")
+}
+
+model APIInvoice {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  
+  // Billing period
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+  
+  // Usage
+  totalCalls  Int      @map("total_calls")
+  includedCalls Int    @map("included_calls")
+  overageCalls Int     @map("overage_calls")
+  
+  // Amounts
+  baseFee     Decimal  @map("base_fee") @db.Decimal(10, 2)
+  overageFee  Decimal  @map("overage_fee") @db.Decimal(10, 2)
+  totalAmount Decimal  @map("total_amount") @db.Decimal(10, 2)
+  
+  // Status
+  status      InvoiceStatus @default(PENDING)
+  stripeInvoiceId String? @map("stripe_invoice_id") @db.VarChar(255)
+  paidAt      DateTime? @map("paid_at")
+  
+  // Timestamps
+  createdAt   DateTime @default(now()) @map("created_at")
+  dueAt       DateTime @map("due_at")
+
+  // Relations
+  customer    APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, periodStart])
+  @@map("api_invoices")
+}
+
+model APIUsageAlert {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  
+  alertType   UsageAlertType @map("alert_type")
+  threshold   Int      // e.g., 80 for 80%
+  message     String   @db.Text
+  
+  // Status
+  acknowledged Boolean @default(false)
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  
+  // Timestamp
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  customer    APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@map("api_usage_alerts")
+}
+
+// ============================================================================
+// INTELLIGENCE RATE AGGREGATES (Pre-computed for API performance)
+// ============================================================================
+
+model IntelligenceRateAggregate {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  skill           String   @db.VarChar(200)
+  skillCategory   String?  @map("skill_category") @db.VarChar(100)
+  experienceLevel String?  @map("experience_level") @db.VarChar(50)
+  location        String?  @db.VarChar(100) // Country code or region
+  projectType     String?  @map("project_type") @db.VarChar(50) // hourly, fixed, etc.
+  
+  // Time period
+  period          DateTime // First day of month/week
+  periodType      PeriodType @map("period_type") @default(MONTHLY)
+  
+  // Sample data
+  sampleSize      Int      @map("sample_size")
+  
+  // Rate percentiles (hourly)
+  p10             Decimal  @db.Decimal(10, 2)
+  p25             Decimal  @db.Decimal(10, 2)
+  p50             Decimal  @db.Decimal(10, 2)
+  p75             Decimal  @db.Decimal(10, 2)
+  p90             Decimal  @db.Decimal(10, 2)
+  
+  // Statistics
+  mean            Decimal  @db.Decimal(10, 2)
+  stdDev          Decimal? @map("std_dev") @db.Decimal(10, 2)
+  
+  // Fixed project rates
+  fixedProjectAvg Decimal? @map("fixed_project_avg") @db.Decimal(10, 2)
+  fixedProjectP50 Decimal? @map("fixed_project_p50") @db.Decimal(10, 2)
+  
+  // Trend
+  yoyChange       Decimal? @map("yoy_change") @db.Decimal(5, 4) // e.g., 0.0800 = 8%
+  qoqChange       Decimal? @map("qoq_change") @db.Decimal(5, 4)
+  momChange       Decimal? @map("mom_change") @db.Decimal(5, 4)
+  
+  // Metadata
+  calculatedAt    DateTime @default(now()) @map("calculated_at")
+  dataVersion     Int      @default(1) @map("data_version")
+
+  @@unique([skill, experienceLevel, location, projectType, period, periodType])
+  @@index([skill, period])
+  @@index([location, period])
+  @@map("intelligence_rate_aggregates")
+}
+
+model AvailabilitySnapshot {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  skill           String   @db.VarChar(200)
+  skillCategory   String?  @map("skill_category") @db.VarChar(100)
+  experienceLevel String?  @map("experience_level") @db.VarChar(50)
+  location        String?  @db.VarChar(100)
+  
+  // Snapshot date
+  snapshotDate    DateTime @map("snapshot_date")
+  
+  // Availability counts
+  availableNow    Int      @map("available_now") // Ready to start immediately
+  available7Days  Int      @map("available_7_days")
+  available30Days Int      @map("available_30_days")
+  available90Days Int      @map("available_90_days")
+  totalQualified  Int      @map("total_qualified")
+  
+  // Hours availability
+  avgHoursPerWeek Decimal? @map("avg_hours_per_week") @db.Decimal(5, 2)
+  totalHoursAvailable Int? @map("total_hours_available")
+  
+  // Availability score (0-1)
+  availabilityScore Decimal @map("availability_score") @db.Decimal(3, 2)
+  
+  // Metadata
+  calculatedAt    DateTime @default(now()) @map("calculated_at")
+
+  @@unique([skill, experienceLevel, location, snapshotDate])
+  @@index([skill, snapshotDate])
+  @@index([location, snapshotDate])
+  @@map("availability_snapshots")
+}
+
+model DemandSignal {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  skill           String   @db.VarChar(200)
+  skillCategory   String?  @map("skill_category") @db.VarChar(100)
+  location        String?  @db.VarChar(100)
+  
+  // Time period
+  period          DateTime // First day of period
+  periodType      PeriodType @map("period_type") @default(MONTHLY)
+  
+  // Demand metrics
+  jobPostings     Int      @map("job_postings")
+  bidVolume       Int      @map("bid_volume")
+  contractsCreated Int     @map("contracts_created")
+  searchVolume    Int?     @map("search_volume")
+  
+  // Calculated scores
+  demandScore     Decimal  @map("demand_score") @db.Decimal(4, 2) // 1-10 scale
+  competitionRatio Decimal? @map("competition_ratio") @db.Decimal(5, 2) // candidates per job
+  
+  // Trends
+  trend30d        Decimal? @map("trend_30d") @db.Decimal(5, 4)
+  trend90d        Decimal? @map("trend_90d") @db.Decimal(5, 4)
+  trendYoy        Decimal? @map("trend_yoy") @db.Decimal(5, 4)
+  
+  // Related skills
+  relatedSkills   String[] @map("related_skills")
+  
+  // Classification
+  isEmerging      Boolean  @default(false) @map("is_emerging")
+  isDeclining     Boolean  @default(false) @map("is_declining")
+  
+  // Metadata
+  calculatedAt    DateTime @default(now()) @map("calculated_at")
+
+  @@unique([skill, location, period, periodType])
+  @@index([skill, period])
+  @@index([demandScore])
+  @@map("demand_signals")
+}
+
+// Intelligence API Enums
+enum APIPlan {
+  STARTER      // $199/mo - 1,000 calls
+  PROFESSIONAL // $499/mo - 10,000 calls
+  ENTERPRISE   // Custom pricing
+}
+
+enum APICustomerStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+  PENDING
+}
+
+enum APIKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+// Note: InvoiceStatus enum is defined earlier (line ~10726)
+// Note: PeriodType enum is defined earlier (line ~5953)
+
+enum UsageAlertType {
+  APPROACHING_LIMIT  // 80% of quota
+  LIMIT_REACHED      // 100% of quota
+  UNUSUAL_USAGE      // Spike detection
+  RATE_LIMIT_HIT     // Too many requests
 }

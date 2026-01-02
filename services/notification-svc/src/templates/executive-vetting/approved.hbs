@@ -1,0 +1,111 @@
+{{! Executive Approved Email }}
+
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Welcome to Skillancer Executive Suite!</title>
+  </head>
+  <body
+    style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"
+  >
+    <div style='text-align: center; margin-bottom: 30px;'>
+      <img src='{{logoUrl}}' alt='Skillancer' style='height: 40px;' />
+    </div>
+
+    <div style='text-align: center; margin-bottom: 20px;'>
+      <span style='font-size: 48px;'>🎉</span>
+    </div>
+
+    <h1 style='color: #1a1a2e; font-size: 28px; margin-bottom: 20px; text-align: center;'>
+      Welcome to the Executive Suite,
+      {{firstName}}!
+    </h1>
+
+    <p style='text-align: center; font-size: 18px; color: #666;'>
+      You've been approved as a
+      <strong>{{executiveType}}</strong>
+    </p>
+
+    <div
+      style='background: linear-gradient(135deg, #4f46e5, #7c3aed); border-radius: 12px; padding: 24px; margin: 24px 0; color: white;'
+    >
+      <h3 style='margin-top: 0; color: white;'>What You Can Do Now</h3>
+      <ul style='margin: 0; padding-left: 20px;'>
+        <li style='margin-bottom: 8px;'>Complete your public profile</li>
+        <li style='margin-bottom: 8px;'>Set your availability and rates</li>
+        <li style='margin-bottom: 8px;'>Browse open opportunities</li>
+        <li style='margin-bottom: 8px;'>Get matched with clients</li>
+      </ul>
+    </div>
+
+    <div style='text-align: center; margin: 30px 0;'>
+      <a
+        href='{{dashboardUrl}}'
+        style='display: inline-block; background: #4f46e5; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;'
+      >
+        Go to Your Dashboard
+      </a>
+    </div>
+
+    <h3 style='color: #1a1a2e;'>Quick Start Checklist</h3>
+    <table style='width: 100%; border-collapse: collapse;'>
+      <tr>
+        <td style='padding: 12px 0; border-bottom: 1px solid #e5e7eb;'>
+          ☐
+          <strong>Upload a professional photo</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style='padding: 12px 0; border-bottom: 1px solid #e5e7eb;'>
+          ☐
+          <strong>Write a compelling headline</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style='padding: 12px 0; border-bottom: 1px solid #e5e7eb;'>
+          ☐
+          <strong>Add your key achievements</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style='padding: 12px 0; border-bottom: 1px solid #e5e7eb;'>
+          ☐
+          <strong>Set your weekly availability</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style='padding: 12px 0;'>
+          ☐
+          <strong>Choose your subscription plan</strong>
+        </td>
+      </tr>
+    </table>
+
+    <div style='background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 24px 0;'>
+      <h3 style='margin-top: 0; color: #1a1a2e;'>Need Help Getting Started?</h3>
+      <p style='margin: 0; color: #666;'>
+        Book a 15-minute onboarding call with our Executive Success team:<br />
+        <a href='{{onboardingUrl}}' style='color: #4f46e5;'>Schedule Onboarding Call</a>
+      </p>
+    </div>
+
+    <p>
+      We're excited to have you in our network. Let's find you great clients!
+    </p>
+
+    <p>
+      Best,<br />
+      <strong>The Skillancer Executive Team</strong>
+    </p>
+
+    <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;' />
+
+    <p style='color: #999; font-size: 12px; text-align: center;'>
+      ©
+      {{year}}
+      Skillancer. All rights reserved.<br />
+      <a href='{{unsubscribeUrl}}' style='color: #999;'>Unsubscribe</a>
+    </p>
+  </body>
+</html>

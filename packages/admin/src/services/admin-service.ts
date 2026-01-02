@@ -165,6 +165,15 @@ export class AdminService {
     return adminUser ? this.sanitizeAdminUser(adminUser) : null;
   }
 
+  async getAdminUsers(filters?: {
+    role?: AdminRole;
+    isActive?: boolean;
+    department?: string;
+    search?: string;
+  }): Promise<AdminUser[]> {
+    return this.listAdminUsers(filters);
+  }
+
   async listAdminUsers(filters?: {
     role?: AdminRole;
     isActive?: boolean;
@@ -289,18 +298,21 @@ export class AdminService {
 
   async getAuditLogs(filters: {
     adminUserId?: string;
-    action?: AuditAction;
-    resourceType?: ResourceType;
+    adminId?: string;
+    action?: AuditAction | string;
+    resourceType?: ResourceType | string;
     resourceId?: string;
     startDate?: Date;
     endDate?: Date;
     status?: 'success' | 'failure';
     page?: number;
     limit?: number;
+    offset?: number;
   }): Promise<{ logs: AuditLogEntry[]; total: number }> {
     const where: Record<string, unknown> = {};
 
-    if (filters.adminUserId) where.adminUserId = filters.adminUserId;
+    const adminUserId = filters.adminUserId || filters.adminId;
+    if (adminUserId) where.adminUserId = adminUserId;
     if (filters.action) where.action = filters.action;
     if (filters.resourceType) where.resource = { path: ['type'], equals: filters.resourceType };
     if (filters.resourceId) where.resource = { path: ['id'], equals: filters.resourceId };
@@ -311,12 +323,16 @@ export class AdminService {
       if (filters.endDate) (where.timestamp as Record<string, Date>).lte = filters.endDate;
     }
 
+    const page = filters.page || 1;
+    const limit = filters.limit || 50;
+    const offset = filters.offset ?? (page - 1) * limit;
+
     const [logs, total] = await Promise.all([
       (this.prisma as any).auditLog.findMany({
         where,
         orderBy: { timestamp: 'desc' },
-        skip: ((filters.page || 1) - 1) * (filters.limit || 50),
-        take: filters.limit || 50,
+        skip: offset,
+        take: limit,
       }),
       (this.prisma as any).auditLog.count({ where }),
     ]);
@@ -344,31 +360,42 @@ export class AdminService {
 
   async updateFeatureFlag(
     key: string,
-    environment: string,
     data: Partial<{
       enabled: boolean;
       rolloutPercentage: number;
       targetedUsers: string[];
       targetedSegments: string[];
+      allowedUserIds: string[];
       rules: unknown[];
+      metadata: Record<string, unknown>;
     }>,
-    updatedBy: string
+    updatedBy: string,
+    environment?: string
   ): Promise<FeatureFlag> {
-    const existing = await this.getFeatureFlag(key, environment);
+    const env = environment || 'production';
+    const existing = await this.getFeatureFlag(key, env);
     if (!existing) {
       throw new Error('Feature flag not found');
     }
 
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(),
+      updatedBy,
+    };
+    if (data.enabled !== undefined) updateData.enabled = data.enabled;
+    if (data.rolloutPercentage !== undefined) updateData.rolloutPercentage = data.rolloutPercentage;
+    if (data.targetedUsers) updateData.targetedUsers = data.targetedUsers;
+    if (data.allowedUserIds) updateData.targetedUsers = data.allowedUserIds;
+    if (data.targetedSegments) updateData.targetedSegments = data.targetedSegments;
+    if (data.rules) updateData.rules = data.rules;
+    if (data.metadata) updateData.metadata = data.metadata;
+
     const updated = await (this.prisma as any).featureFlag.update({
       where: { id: existing.id },
-      data: {
-        ...data,
-        updatedAt: new Date(),
-        updatedBy,
-      },
+      data: updateData,
     });
 
-    await this.redis.del(`feature:${environment}:${key}`);
+    await this.redis.del(`feature:${env}:${key}`);
 
     await this.logAuditEvent({
       adminUserId: updatedBy,

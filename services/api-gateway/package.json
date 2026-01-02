@@ -23,6 +23,7 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "@skillancer/metrics": "workspace:*",
     "@skillancer/types": "workspace:*",
     "@skillancer/utils": "workspace:*",
     "fastify": "^4.26.0",

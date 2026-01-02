@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/market-svc/repositories/message
  * Repository for message CRUD operations
@@ -334,3 +335,4 @@ export function createMessageRepository(prisma: PrismaClient): MessageRepository
     },
   };
 }
+

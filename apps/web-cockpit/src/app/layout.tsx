@@ -31,6 +31,7 @@ import {
   LogOut,
   User,
   HelpCircle,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -61,6 +62,7 @@ interface UserProfile {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: Home, href: '/' },
+  { id: 'ai-coach', label: 'AI Coach', icon: Sparkles, href: '/ai/coach' },
   { id: 'time', label: 'Time Tracking', icon: Clock, href: '/time' },
   { id: 'projects', label: 'Projects', icon: Briefcase, href: '/projects' },
   { id: 'clients', label: 'Clients', icon: Users, href: '/clients' },

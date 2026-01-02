@@ -35,7 +35,9 @@ export type AdminRole =
 export type AdminPermission =
   // User Management
   | 'users:read'
+  | 'users:view'
   | 'users:write'
+  | 'users:edit'
   | 'users:delete'
   | 'users:impersonate'
   | 'users:ban'
@@ -66,8 +68,13 @@ export type AdminPermission =
   | 'payouts:process'
   | 'invoices:read'
   // System
+  | 'system:view'
+  | 'system:manage'
+  | 'system:deploy'
   | 'settings:read'
+  | 'settings:view'
   | 'settings:write'
+  | 'settings:manage'
   | 'features:read'
   | 'features:write'
   | 'integrations:read'
@@ -80,11 +87,16 @@ export type AdminPermission =
   // Analytics
   | 'analytics:read'
   | 'reports:read'
+  | 'reports:view'
   | 'reports:export'
   // Audit
   | 'audit:read'
+  | 'audit:view'
   | 'compliance:read'
-  | 'compliance:write';
+  | 'compliance:write'
+  // Admin
+  | 'admin:read'
+  | 'admin:manage';
 
 // Role to permissions mapping
 export const rolePermissions: Record<AdminRole, AdminPermission[]> = {

@@ -11,6 +11,15 @@
  * - Sample contracts
  * - Sample reviews
  * - Demo credentials
+ *
+ * @deprecated TODO: This seed file needs updates to match the current schema:
+ * - User model uses firstName/lastName not 'name'
+ * - Job skills should use relation syntax not string array
+ * - JobDuration enum values may have changed
+ * - JobStatus enum may have changed
+ * - 'proposal' model doesn't exist (use 'bid')
+ * - Contract model fields differ
+ * - Review model fields differ
  */
 
 import { PrismaClient } from '@prisma/client';

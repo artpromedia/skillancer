@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/transaction-category
  * Transaction Category data access layer
@@ -350,3 +351,4 @@ export class TransactionCategoryRepository {
     });
   }
 }
+

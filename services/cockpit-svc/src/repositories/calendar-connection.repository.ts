@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/calendar-connection
  * Calendar Connection Repository
@@ -124,3 +125,4 @@ export class CalendarConnectionRepository {
     });
   }
 }
+

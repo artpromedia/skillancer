@@ -4,7 +4,13 @@
  */
 
 import type { AnalyticsQueryService } from '../query/analytics-query-service.js';
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply, FastifySchema } from 'fastify';
+
+// Extended schema type for Swagger support
+interface ExtendedSchema extends FastifySchema {
+  tags?: string[];
+  summary?: string;
+}
 
 interface DateRangeQuery {
   start?: string;
@@ -57,7 +63,7 @@ export function createAnalyticsRoutes(queryService: AnalyticsQueryService) {
               },
             },
           },
-        },
+        } as ExtendedSchema,
       },
       async (_request: FastifyRequest, _reply: FastifyReply) => {
         return queryService.getRealtimeMetrics();
@@ -83,7 +89,7 @@ export function createAnalyticsRoutes(queryService: AnalyticsQueryService) {
               end: { type: 'string' },
             },
           },
-        },
+        } as ExtendedSchema,
       },
       async (request, _reply) => {
         const { userId } = request.params;
@@ -108,7 +114,7 @@ export function createAnalyticsRoutes(queryService: AnalyticsQueryService) {
             properties: { funnelName: { type: 'string' } },
             required: ['funnelName'],
           },
-        },
+        } as ExtendedSchema,
       },
       async (request, _reply) => {
         const { funnelName } = request.params;
@@ -132,7 +138,7 @@ export function createAnalyticsRoutes(queryService: AnalyticsQueryService) {
         schema: {
           tags: ['analytics'],
           summary: 'Get cohort retention data',
-        },
+        } as ExtendedSchema,
       },
       async (request, _reply) => {
         const { type = 'week', start, end, segment } = request.query;
@@ -155,7 +161,7 @@ export function createAnalyticsRoutes(queryService: AnalyticsQueryService) {
         schema: {
           tags: ['analytics'],
           summary: 'Get user segments',
-        },
+        } as ExtendedSchema,
       },
       async (_request, _reply) => {
         return queryService.getUserSegments();
@@ -169,7 +175,7 @@ export function createAnalyticsRoutes(queryService: AnalyticsQueryService) {
         schema: {
           tags: ['analytics'],
           summary: 'Get segment breakdown',
-        },
+        } as ExtendedSchema,
       },
       async (request, _reply) => {
         const { by = 'platform', metric = 'users', start, end } = request.query;
@@ -193,7 +199,7 @@ export function createAnalyticsRoutes(queryService: AnalyticsQueryService) {
             properties: { experimentId: { type: 'string' } },
             required: ['experimentId'],
           },
-        },
+        } as ExtendedSchema,
       },
       async (request, _reply) => {
         const { experimentId } = request.params;

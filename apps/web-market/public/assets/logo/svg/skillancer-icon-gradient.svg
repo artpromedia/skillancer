@@ -1,0 +1,16 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square with gradient -->
+  <rect width="64" height="64" rx="14" fill="url(#bgGradient)"/>
+  <!-- S Letter -->
+  <path d="M20 38.5c0 5.5 4.2 9.5 11 9.5 6.2 0 10.3-3.5 10.3-8.3 0-4.2-2.8-6.5-7.5-7.5l-4.2-1c-2.4-.5-3.4-1.4-3.4-2.8 0-1.7 1.5-2.9 4.1-2.9 2.8 0 4.5 1.4 4.6 3.6h5.5c-.2-5-4-8.4-10.1-8.4-5.8 0-9.6 3.3-9.6 7.9 0 4 2.6 6.4 7.2 7.4l4.2 1c2.6.5 3.8 1.5 3.8 3.1 0 1.9-1.7 3.1-4.6 3.1-3.1 0-5-1.5-5.1-4.1H20v.4z" fill="white"/>
+  <!-- Checkmark Circle -->
+  <circle cx="50" cy="14" r="10" fill="white"/>
+  <!-- Checkmark -->
+  <path d="M45 14L48 17L55 10" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

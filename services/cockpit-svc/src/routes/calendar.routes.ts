@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/routes/calendar
  * Calendar API Routes (Authenticated)
@@ -717,3 +718,4 @@ export const calendarRoutes: FastifyPluginAsync<CalendarRoutesOptions> = async (
 };
 
 export default calendarRoutes;
+

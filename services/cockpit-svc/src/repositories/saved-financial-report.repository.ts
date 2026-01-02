@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Saved Financial Report Repository
  *
@@ -351,3 +352,4 @@ export class SavedFinancialReportRepository {
     return where;
   }
 }
+

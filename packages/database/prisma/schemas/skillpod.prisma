@@ -1,0 +1,665 @@
+// ============================================================================
+// SKILLPOD B2B ENTERPRISE MODELS
+// Sprint M3: Product Packaging for Enterprise Customers
+// ============================================================================
+
+// ============================================================================
+// SKILLPOD ENTERPRISE TENANTS
+// ============================================================================
+
+model SkillPodTenant {
+  id          String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name        String  @db.VarChar(200)
+  slug        String  @unique @db.VarChar(100)
+  displayName String? @map("display_name") @db.VarChar(200)
+  logoUrl     String? @map("logo_url") @db.VarChar(500)
+  domain      String? @db.VarChar(255)
+  industry    String? @db.VarChar(100)
+  companySize String? @map("company_size") @db.VarChar(50) // small, medium, large, enterprise
+
+  // Plan & Status
+  plan               SkillPodPlan   @default(TRIAL)
+  status             SkillPodStatus @default(ACTIVE)
+  subscriptionStatus String?        @map("subscription_status") @db.VarChar(50)
+
+  // Limits
+  maxUsers    Int @default(10) @map("max_users")
+  maxSessions Int @default(100) @map("max_sessions")
+  maxPolicies Int @default(5) @map("max_policies")
+  maxStorageGb Int @default(10) @map("max_storage_gb")
+
+  // Features & Settings (JSON for flexibility)
+  features Json @default("{}")
+  settings Json @default("{}")
+  metadata Json @default("{}")
+
+  // Billing
+  stripeCustomerId     String? @unique @map("stripe_customer_id") @db.VarChar(100)
+  stripeSubscriptionId String? @map("stripe_subscription_id") @db.VarChar(100)
+  billingEmail         String? @map("billing_email") @db.VarChar(255)
+  billingAddress       Json?   @map("billing_address")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  users           SkillPodTenantUser[]
+  trial           SkillPodTrial?
+  ssoConfig       SkillPodSsoConfig?
+  apiKeys         SkillPodApiKey[]
+  webhooks        SkillPodWebhook[]
+  reports         SkillPodReport[]
+  reportSchedules SkillPodReportSchedule[]
+  policies        SkillPodEnterprisePolicy[]
+  billingEvents   SkillPodBillingEvent[]
+  auditLogs       SkillPodEnterpriseAuditLog[]
+  onboarding      SkillPodOnboarding?
+
+  @@index([slug])
+  @@index([plan])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("skillpod_tenants")
+}
+
+enum SkillPodPlan {
+  STARTER
+  PRO
+  ENTERPRISE
+  TRIAL
+}
+
+enum SkillPodStatus {
+  ACTIVE
+  SUSPENDED
+  CHURNED
+}
+
+// ============================================================================
+// SKILLPOD TENANT USERS
+// ============================================================================
+
+model SkillPodTenantUser {
+  id       String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  userId   String? @map("user_id") @db.Uuid // Link to main User table
+
+  // User details
+  email String  @db.VarChar(255)
+  name  String? @db.VarChar(200)
+
+  // Role & Status
+  role   SkillPodUserRole   @default(USER)
+  status SkillPodUserStatus @default(INVITED)
+
+  // SSO
+  ssoLinked     Boolean @default(false) @map("sso_linked")
+  ssoProvider   String? @map("sso_provider") @db.VarChar(50)
+  ssoExternalId String? @map("sso_external_id") @db.VarChar(255)
+
+  // Groups
+  groups String[] @default([])
+
+  // Metadata
+  metadata Json @default("{}")
+
+  // Timestamps
+  invitedAt   DateTime  @default(now()) @map("invited_at")
+  joinedAt    DateTime? @map("joined_at")
+  lastLoginAt DateTime? @map("last_login_at")
+  disabledAt  DateTime? @map("disabled_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant           SkillPodTenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user             User?                        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  apiKeysCreated   SkillPodApiKey[]             @relation("ApiKeyCreator")
+  apiKeysRevoked   SkillPodApiKey[]             @relation("ApiKeyRevoker")
+  reportsRequested SkillPodReport[]
+  auditLogs        SkillPodEnterpriseAuditLog[]
+
+  @@unique([tenantId, email])
+  @@index([userId])
+  @@index([status])
+  @@index([ssoExternalId])
+  @@map("skillpod_tenant_users")
+}
+
+enum SkillPodUserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+  VIEWER
+}
+
+enum SkillPodUserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+// ============================================================================
+// SKILLPOD TRIALS
+// ============================================================================
+
+model SkillPodTrial {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @unique @map("tenant_id") @db.Uuid
+
+  // Status
+  status SkillPodTrialStatus @default(ACTIVE)
+
+  // Dates
+  startedAt   DateTime  @default(now()) @map("started_at")
+  expiresAt   DateTime  @map("expires_at")
+  extendedAt  DateTime? @map("extended_at")
+  convertedAt DateTime? @map("converted_at")
+  expiredAt   DateTime? @map("expired_at")
+  canceledAt  DateTime? @map("canceled_at")
+
+  // Extensions
+  extensionCount  Int     @default(0) @map("extension_count")
+  extensionReason String? @map("extension_reason") @db.Text
+
+  // Conversion
+  targetPlan String? @default("PRO") @map("target_plan") @db.VarChar(50)
+
+  // Engagement
+  engagementScore      Int    @default(0) @map("engagement_score")
+  conversionLikelihood String @default("low") @map("conversion_likelihood") @db.VarChar(20)
+
+  // Metrics
+  metricsSnapshot Json @default("{}") @map("metrics_snapshot")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant SkillPodTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([expiresAt])
+  @@map("skillpod_trials")
+}
+
+enum SkillPodTrialStatus {
+  ACTIVE
+  EXTENDED
+  CONVERTED
+  EXPIRED
+  CANCELED
+}
+
+// ============================================================================
+// SKILLPOD SSO CONFIGURATION
+// ============================================================================
+
+model SkillPodSsoConfig {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @unique @map("tenant_id") @db.Uuid
+
+  // Provider
+  providerType SkillPodSsoProviderType @map("provider_type")
+  providerName String?                 @map("provider_name") @db.VarChar(100)
+
+  // Status
+  status SkillPodSsoStatus @default(DRAFT)
+
+  // SAML Configuration
+  samlEntityId    String? @map("saml_entity_id") @db.VarChar(500)
+  samlSsoUrl      String? @map("saml_sso_url") @db.VarChar(500)
+  samlCertificate String? @map("saml_certificate") @db.Text
+  samlMetadataUrl String? @map("saml_metadata_url") @db.VarChar(500)
+
+  // OIDC Configuration
+  oidcIssuer              String? @map("oidc_issuer") @db.VarChar(500)
+  oidcClientId            String? @map("oidc_client_id") @db.VarChar(255)
+  oidcClientSecretEncrypted String? @map("oidc_client_secret_encrypted") @db.Text
+  oidcDiscoveryUrl        String? @map("oidc_discovery_url") @db.VarChar(500)
+
+  // Mapping
+  attributeMapping Json @default("{}") @map("attribute_mapping")
+
+  // Settings
+  autoProvisionUsers Boolean  @default(true) @map("auto_provision_users")
+  forceSso           Boolean  @default(false) @map("force_sso")
+  allowedDomains     String[] @default([]) @map("allowed_domains")
+
+  // Test Results
+  lastTestAt     DateTime? @map("last_test_at")
+  lastTestResult Json?     @map("last_test_result")
+
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  activatedAt DateTime? @map("activated_at")
+
+  // Relations
+  tenant SkillPodTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("skillpod_sso_configs")
+}
+
+enum SkillPodSsoProviderType {
+  SAML
+  OIDC
+}
+
+enum SkillPodSsoStatus {
+  DRAFT
+  CONFIGURED
+  TESTING
+  ACTIVE
+  DISABLED
+}
+
+// ============================================================================
+// SKILLPOD API KEYS
+// ============================================================================
+
+model SkillPodApiKey {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Identity
+  name      String @db.VarChar(200)
+  keyPrefix String @map("key_prefix") @db.VarChar(20)
+  keyHash   String @unique @map("key_hash") @db.VarChar(64)
+
+  // Scopes
+  scopes String[] @default(["read"])
+
+  // Status
+  status SkillPodApiKeyStatus @default(ACTIVE)
+
+  // Security
+  allowedIps          String[] @map("allowed_ips")
+  rateLimitPerMinute Int?     @default(500) @map("rate_limit_per_minute")
+
+  // Usage
+  lastUsedAt   DateTime? @map("last_used_at")
+  requestCount BigInt    @default(0) @map("request_count")
+
+  // Expiration
+  expiresAt DateTime? @map("expires_at")
+
+  // Audit
+  createdById String?   @map("created_by") @db.Uuid
+  revokedById String?   @map("revoked_by") @db.Uuid
+  revokedAt   DateTime? @map("revoked_at")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant    SkillPodTenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy SkillPodTenantUser? @relation("ApiKeyCreator", fields: [createdById], references: [id])
+  revokedBy SkillPodTenantUser? @relation("ApiKeyRevoker", fields: [revokedById], references: [id])
+  auditLogs SkillPodEnterpriseAuditLog[]
+
+  @@index([keyHash])
+  @@index([keyPrefix])
+  @@index([status])
+  @@map("skillpod_api_keys")
+}
+
+enum SkillPodApiKeyStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+// ============================================================================
+// SKILLPOD WEBHOOKS
+// ============================================================================
+
+model SkillPodWebhook {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Configuration
+  url           String   @db.VarChar(500)
+  secretHash    String?  @map("secret_hash") @db.VarChar(64)
+  subscribedEvents String[] @default([])
+  headers       Json     @default("{}")
+
+  // Status
+  enabled Boolean @default(true)
+
+  // Health
+  lastTriggeredAt    DateTime? @map("last_triggered_at")
+  lastResponseCode   Int?      @map("last_response_code")
+  lastResponseTimeMs Int?      @map("last_response_time_ms")
+  failureCount       Int       @default(0) @map("failure_count")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant        SkillPodTenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  webhookEvents SkillPodWebhookEvent[]
+
+  @@index([enabled])
+  @@map("skillpod_webhooks")
+}
+
+model SkillPodWebhookEvent {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  webhookId String @map("webhook_id") @db.Uuid
+  tenantId  String @map("tenant_id") @db.Uuid
+
+  // Event
+  eventType String @map("event_type") @db.VarChar(100)
+  payload   Json
+
+  // Delivery
+  status      SkillPodWebhookEventStatus @default(PENDING)
+  attempts    Int                        @default(0)
+  maxAttempts Int                        @default(3) @map("max_attempts")
+
+  // Response
+  responseCode   Int?    @map("response_code")
+  responseBody   String? @map("response_body") @db.Text
+  responseTimeMs Int?    @map("response_time_ms")
+
+  // Error
+  errorMessage String? @map("error_message") @db.Text
+
+  // Timing
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deliveredAt DateTime? @map("delivered_at")
+  nextRetryAt DateTime? @map("next_retry_at")
+
+  // Relations
+  webhook SkillPodWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("skillpod_webhook_events")
+}
+
+enum SkillPodWebhookEventStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  RETRYING
+}
+
+// ============================================================================
+// SKILLPOD REPORTS
+// ============================================================================
+
+model SkillPodReport {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Definition
+  type SkillPodReportType
+  name String? @db.VarChar(200)
+
+  // Parameters
+  dateStart DateTime @map("date_start") @db.Date
+  dateEnd   DateTime @map("date_end") @db.Date
+  filters   Json     @default("{}")
+  format    String   @default("json") @db.VarChar(20)
+
+  // Status
+  status SkillPodReportStatus @default(PENDING)
+
+  // Output
+  data          Json?
+  fileUrl       String?  @map("file_url") @db.VarChar(500)
+  fileSizeBytes BigInt?  @map("file_size_bytes")
+
+  // Generation
+  generatedAt      DateTime? @map("generated_at")
+  generationTimeMs Int?      @map("generation_time_ms")
+  errorMessage     String?   @map("error_message") @db.Text
+
+  // Schedule link
+  scheduleId String? @map("schedule_id") @db.Uuid
+
+  // Audit
+  requestedById String? @map("requested_by") @db.Uuid
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime? @map("expires_at")
+
+  // Relations
+  tenant      SkillPodTenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  schedule    SkillPodReportSchedule? @relation(fields: [scheduleId], references: [id])
+  requestedBy SkillPodTenantUser?     @relation(fields: [requestedById], references: [id])
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("skillpod_reports")
+}
+
+enum SkillPodReportType {
+  USAGE
+  SECURITY
+  COMPLIANCE
+  EXECUTIVE
+  USER_ACTIVITY
+  SESSION_ANALYTICS
+  COST_ANALYSIS
+}
+
+enum SkillPodReportStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+model SkillPodReportSchedule {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Definition
+  name       String              @db.VarChar(200)
+  reportType SkillPodReportType  @map("report_type")
+  frequency  SkillPodReportFrequency
+  dayOfWeek  Int?                @map("day_of_week")
+  dayOfMonth Int?                @map("day_of_month")
+  timeUtc    DateTime            @default(dbgenerated("'09:00:00'::time")) @map("time_utc") @db.Time
+
+  // Configuration
+  filters Json   @default("{}")
+  format  String @default("pdf") @db.VarChar(20)
+
+  // Distribution
+  recipients String[] @default([])
+
+  // Status
+  enabled Boolean @default(true)
+
+  // Execution
+  lastRunAt     DateTime?            @map("last_run_at")
+  nextRunAt     DateTime?            @map("next_run_at")
+  lastRunStatus SkillPodReportStatus? @map("last_run_status")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant  SkillPodTenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reports SkillPodReport[]
+
+  @@index([nextRunAt])
+  @@index([enabled])
+  @@map("skillpod_report_schedules")
+}
+
+enum SkillPodReportFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+// ============================================================================
+// SKILLPOD ENTERPRISE POLICIES
+// ============================================================================
+
+model SkillPodEnterprisePolicy {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Identity
+  name        String  @db.VarChar(200)
+  description String? @db.Text
+  type        String  @default("custom") @db.VarChar(50)
+  priority    Int     @default(100)
+
+  // Rules & Conditions
+  rules      Json @default("{}")
+  conditions Json @default("{}")
+
+  // Status
+  enabled Boolean @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant SkillPodTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([priority])
+  @@index([enabled])
+  @@map("skillpod_enterprise_policies")
+}
+
+// ============================================================================
+// SKILLPOD BILLING EVENTS
+// ============================================================================
+
+model SkillPodBillingEvent {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Event
+  eventType String @map("event_type") @db.VarChar(50)
+
+  // Metrics
+  metricName  String  @map("metric_name") @db.VarChar(100)
+  metricValue Decimal @map("metric_value") @db.Decimal(14, 4)
+  unit        String? @db.VarChar(50)
+
+  // Context
+  resourceId   String? @map("resource_id") @db.Uuid
+  resourceType String? @map("resource_type") @db.VarChar(50)
+  metadata     Json    @default("{}")
+
+  // Billing Period
+  billingPeriodStart DateTime? @map("billing_period_start") @db.Date
+  billingPeriodEnd   DateTime? @map("billing_period_end") @db.Date
+
+  // Timestamps
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  // Relations
+  tenant SkillPodTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([eventType])
+  @@index([recordedAt])
+  @@index([billingPeriodStart, billingPeriodEnd])
+  @@map("skillpod_billing_events")
+}
+
+// ============================================================================
+// SKILLPOD ENTERPRISE AUDIT LOG
+// ============================================================================
+
+model SkillPodEnterpriseAuditLog {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Actor
+  actorId   String? @map("actor_id") @db.Uuid
+  actorType String  @map("actor_type") @db.VarChar(50)
+  actorName String? @map("actor_name") @db.VarChar(200)
+
+  // Action
+  action       String  @db.VarChar(100)
+  resourceType String  @map("resource_type") @db.VarChar(100)
+  resourceId   String? @map("resource_id") @db.Uuid
+  resourceName String? @map("resource_name") @db.VarChar(200)
+
+  // Details
+  changes  Json?
+  metadata Json  @default("{}")
+
+  // Context
+  ipAddress String? @map("ip_address") @db.Inet
+  userAgent String? @map("user_agent") @db.Text
+  apiKeyId  String? @map("api_key_id") @db.Uuid
+
+  // Result
+  success      Boolean @default(true)
+  errorMessage String? @map("error_message") @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  tenant SkillPodTenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor  SkillPodTenantUser? @relation(fields: [actorId], references: [id])
+  apiKey SkillPodApiKey?     @relation(fields: [apiKeyId], references: [id])
+
+  @@index([actorId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("skillpod_enterprise_audit_log")
+}
+
+// ============================================================================
+// SKILLPOD ONBOARDING
+// ============================================================================
+
+model SkillPodOnboarding {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId String @unique @map("tenant_id") @db.Uuid
+
+  // Progress
+  currentStep     Int      @default(1) @map("current_step")
+  stepsCompleted  String[] @default([]) @map("steps_completed")
+
+  // Step Data
+  companyInfo         Json     @default("{}") @map("company_info")
+  teamInfo            Json     @default("{}") @map("team_info")
+  securityPreferences Json     @default("{}") @map("security_preferences")
+  policySelections    String[] @default([]) @map("policy_selections")
+  planSelection       String?  @map("plan_selection") @db.VarChar(50)
+
+  // Status
+  status SkillPodOnboardingStatus @default(IN_PROGRESS)
+
+  // Timestamps
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant SkillPodTenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("skillpod_onboarding")
+}
+
+enum SkillPodOnboardingStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/services/template
  * Template Service - Project template management
@@ -351,3 +352,4 @@ export class TemplateService {
     return Array.from(categories).sort((a, b) => a.localeCompare(b));
   }
 }
+

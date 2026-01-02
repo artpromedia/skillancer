@@ -10,6 +10,7 @@ import { helmetPlugin } from './helmet.js';
 import { proxyPlugin } from './proxy.js';
 import { rateLimitPlugin } from './rate-limit.js';
 import { requestLoggerPlugin } from './request-logger.js';
+import { securityPlugin } from './security.js';
 import { sensiblePlugin } from './sensible.js';
 import { swaggerPlugin } from './swagger.js';
 
@@ -23,6 +24,7 @@ export interface PluginOptions {
   swagger?: boolean;
   requestLogger?: boolean;
   proxy?: boolean;
+  security?: boolean;
 }
 
 /**
@@ -47,6 +49,11 @@ export async function registerPlugins(
 
   if (options.helmet !== false) {
     await app.register(helmetPlugin);
+  }
+
+  // Advanced security (SOC 2 compliance)
+  if (options.security !== false) {
+    await app.register(securityPlugin);
   }
 
   // Rate limiting

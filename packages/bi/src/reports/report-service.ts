@@ -115,9 +115,10 @@ export class ReportService {
       );
 
       // Generate signed URL
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const downloadUrl = await getSignedUrl(
-        this.s3,
-        new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+        this.s3 as any,
+        new GetObjectCommand({ Bucket: this.bucket, Key: key }) as any,
         { expiresIn: this.reportExpiry * 3600 }
       );
 
@@ -193,6 +194,9 @@ export class ReportService {
 
   private async gatherReportData(request: ReportRequest): Promise<ReportData> {
     const report = getReportById(request.reportId);
+    if (!report) {
+      throw new Error(`Report not found: ${request.reportId}`);
+    }
     const sections: ReportSection[] = [];
 
     // Calculate all KPIs for the report

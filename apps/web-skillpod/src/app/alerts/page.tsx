@@ -477,7 +477,7 @@ export default function AlertsPage() {
 
   // Auto-refresh simulation
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh) return undefined;
 
     const interval = setInterval(() => {
       // Simulate new alert occasionally

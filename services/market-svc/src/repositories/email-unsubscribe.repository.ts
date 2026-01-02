@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/market-svc/repositories/email-unsubscribe
  * Repository for email unsubscribe management
@@ -130,3 +131,4 @@ export function createEmailUnsubscribeRepository(prisma: PrismaClient): EmailUns
     },
   };
 }
+

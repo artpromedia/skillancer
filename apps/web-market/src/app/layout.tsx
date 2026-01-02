@@ -2,7 +2,6 @@ import { ThemeProvider, Toaster } from '@skillancer/ui';
 import { Inter } from 'next/font/google';
 import { Suspense } from 'react';
 
-
 import { Footer } from '@/components/layout/footer';
 import { Header } from '@/components/layout/header';
 import { QueryProvider } from '@/lib/providers/query-provider';
@@ -19,11 +18,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Skillancer Market - Find Work, Hire Talent',
-    template: '%s | Skillancer Market',
+    default: 'Skillancer - Find the Perfect Match for Your Next Project',
+    template: '%s | Skillancer',
   },
   description:
-    'Discover top freelance jobs and talented professionals. Skillancer Market connects skilled freelancers with clients seeking quality work. Smart matching, secure payments, and verified talent.',
+    'Find the perfect match for your next project. Verified, quality matches between clients and freelancers. Smart AI matching, secure payments, and guaranteed satisfaction.',
   keywords: [
     'freelance',
     'marketplace',
@@ -33,6 +32,8 @@ export const metadata: Metadata = {
     'find work',
     'talent',
     'skills',
+    'verified freelancers',
+    'AI matching',
   ],
   authors: [{ name: 'Skillancer' }],
   creator: 'Skillancer',
@@ -42,24 +43,24 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: '/',
-    siteName: 'Skillancer Market',
-    title: 'Skillancer Market - Find Work, Hire Talent',
+    siteName: 'Skillancer',
+    title: 'Skillancer - Find the Perfect Match for Your Next Project',
     description:
-      'Discover top freelance jobs and talented professionals. Smart matching connects you with the right opportunities.',
+      'Verified, quality matches between clients and freelancers. Smart AI matching connects you with top talent.',
     images: [
       {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Skillancer Market',
+        alt: 'Skillancer - Find the Perfect Match',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Skillancer Market - Find Work, Hire Talent',
+    title: 'Skillancer - Find the Perfect Match for Your Next Project',
     description:
-      'Discover top freelance jobs and talented professionals. Smart matching connects you with the right opportunities.',
+      'Verified, quality matches between clients and freelancers. Smart AI matching connects you with top talent.',
     images: ['/og-image.jpg'],
     creator: '@skillancer',
   },
@@ -75,17 +76,23 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+    icon: [
+      { url: '/assets/logo/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/assets/logo/icons/favicon-16.png', sizes: '16x16', type: 'image/png' },
+    ],
+    shortcut: '/assets/logo/icons/favicon-32.png',
+    apple: [
+      { url: '/assets/logo/icons/icon-180.png', sizes: '180x180', type: 'image/png' },
+      { url: '/assets/logo/icons/icon-152.png', sizes: '152x152', type: 'image/png' },
+    ],
   },
-  manifest: '/site.webmanifest',
+  manifest: '/manifest.json',
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
+    { media: '(prefers-color-scheme: light)', color: '#10b981' },
+    { media: '(prefers-color-scheme: dark)', color: '#10b981' },
   ],
   width: 'device-width',
   initialScale: 1,

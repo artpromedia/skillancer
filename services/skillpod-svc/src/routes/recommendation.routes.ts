@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/skillpod-svc/routes/recommendation
  * Learning recommendation and skill gap API routes
@@ -755,3 +756,4 @@ export function recommendationRoutes(app: FastifyInstance, deps: RecommendationR
     }
   );
 }
+

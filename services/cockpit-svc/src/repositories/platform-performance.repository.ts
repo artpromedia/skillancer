@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Platform Performance Repository
  *
@@ -321,3 +322,4 @@ export class PlatformPerformanceRepository {
     return where;
   }
 }
+

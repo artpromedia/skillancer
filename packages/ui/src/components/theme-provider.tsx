@@ -1,3 +1,5 @@
+'use client';
+
 import * as React from 'react';
 
 type Theme = 'dark' | 'light' | 'system';
@@ -8,9 +10,7 @@ interface ThemeProviderState {
   resolvedTheme: 'dark' | 'light';
 }
 
-const ThemeProviderContext = React.createContext<ThemeProviderState | undefined>(
-  undefined
-);
+const ThemeProviderContext = React.createContext<ThemeProviderState | undefined>(undefined);
 
 export interface ThemeProviderProps {
   children: React.ReactNode;
@@ -43,13 +43,13 @@ export interface ThemeProviderProps {
 
 /**
  * Theme provider for dark mode support
- * 
+ *
  * @example
  * // In your app root:
  * <ThemeProvider defaultTheme="system" storageKey="my-app-theme">
  *   <App />
  * </ThemeProvider>
- * 
+ *
  * // In any component:
  * const { theme, setTheme, resolvedTheme } = useTheme();
  */
@@ -78,9 +78,7 @@ export function ThemeProvider({
   // Get system theme
   const getSystemTheme = React.useCallback((): 'dark' | 'light' => {
     if (typeof window === 'undefined') return 'light';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }, []);
 
   // Apply theme to document
@@ -159,19 +157,15 @@ export function ThemeProvider({
     [theme, setTheme, resolvedTheme]
   );
 
-  return (
-    <ThemeProviderContext.Provider value={value}>
-      {children}
-    </ThemeProviderContext.Provider>
-  );
+  return <ThemeProviderContext.Provider value={value}>{children}</ThemeProviderContext.Provider>;
 }
 
 /**
  * Hook to access theme context
- * 
+ *
  * @example
  * const { theme, setTheme, resolvedTheme } = useTheme();
- * 
+ *
  * // Toggle theme
  * setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
  */

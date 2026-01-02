@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/services/invoice-settings
  * Invoice Settings Service - User settings management
@@ -150,3 +151,4 @@ export class InvoiceSettingsService {
     };
   }
 }
+

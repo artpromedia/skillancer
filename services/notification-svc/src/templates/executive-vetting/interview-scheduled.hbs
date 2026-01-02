@@ -1,0 +1,161 @@
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Interview Scheduled - Skillancer Executive Suite</title>
+  </head>
+  <body
+    style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;"
+  >
+    <table
+      width='100%'
+      cellpadding='0'
+      cellspacing='0'
+      style='background-color: #f5f5f5; padding: 40px 20px;'
+    >
+      <tr>
+        <td align='center'>
+          <table
+            width='600'
+            cellpadding='0'
+            cellspacing='0'
+            style='background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);'
+          >
+            <!-- Header -->
+            <tr>
+              <td
+                style='background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 32px; text-align: center;'
+              >
+                <h1 style='color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;'>Interview
+                  Scheduled</h1>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td style='padding: 40px 32px;'>
+                <p style='color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 24px;'>
+                  Hi
+                  {{executiveName}},
+                </p>
+
+                <p style='color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 24px;'>
+                  Great news! Your interview has been scheduled. We're excited to learn more about
+                  your executive experience.
+                </p>
+
+                <!-- Interview Details Box -->
+                <table
+                  width='100%'
+                  cellpadding='0'
+                  cellspacing='0'
+                  style='background-color: #f8f9fa; border-radius: 8px; margin-bottom: 24px;'
+                >
+                  <tr>
+                    <td style='padding: 24px;'>
+                      <h3 style='color: #1a1a2e; margin: 0 0 16px; font-size: 18px;'>Interview
+                        Details</h3>
+
+                      <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                          <td
+                            style='padding: 8px 0; color: #666666; font-size: 14px; width: 120px;'
+                          >Date:</td>
+                          <td
+                            style='padding: 8px 0; color: #333333; font-size: 14px; font-weight: 600;'
+                          >{{interviewDate}}</td>
+                        </tr>
+                        <tr>
+                          <td style='padding: 8px 0; color: #666666; font-size: 14px;'>Time:</td>
+                          <td
+                            style='padding: 8px 0; color: #333333; font-size: 14px; font-weight: 600;'
+                          >{{interviewTime}} ({{timezone}})</td>
+                        </tr>
+                        <tr>
+                          <td
+                            style='padding: 8px 0; color: #666666; font-size: 14px;'
+                          >Duration:</td>
+                          <td
+                            style='padding: 8px 0; color: #333333; font-size: 14px; font-weight: 600;'
+                          >{{duration}} minutes</td>
+                        </tr>
+                        <tr>
+                          <td
+                            style='padding: 8px 0; color: #666666; font-size: 14px;'
+                          >Interviewer:</td>
+                          <td
+                            style='padding: 8px 0; color: #333333; font-size: 14px; font-weight: 600;'
+                          >{{interviewerName}}</td>
+                        </tr>
+                        <tr>
+                          <td style='padding: 8px 0; color: #666666; font-size: 14px;'>Type:</td>
+                          <td
+                            style='padding: 8px 0; color: #333333; font-size: 14px; font-weight: 600;'
+                          >{{interviewType}}</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Join Button -->
+                <table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom: 24px;'>
+                  <tr>
+                    <td align='center'>
+                      <a
+                        href='{{meetingLink}}'
+                        style='display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;'
+                      >Join Video Call</a>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- What to Expect -->
+                <h3 style='color: #1a1a2e; margin: 32px 0 16px; font-size: 16px;'>What to Expect</h3>
+                <ul
+                  style='color: #555555; font-size: 14px; line-height: 1.8; margin: 0 0 24px; padding-left: 20px;'
+                >
+                  <li>Discussion of your executive experience and achievements</li>
+                  <li>Deep-dive into your leadership style and approach</li>
+                  <li>Questions about your fractional work preferences</li>
+                  <li>Opportunity to ask questions about Skillancer</li>
+                </ul>
+
+                <!-- Tips -->
+                <h3 style='color: #1a1a2e; margin: 24px 0 16px; font-size: 16px;'>Tips for Success</h3>
+                <ul
+                  style='color: #555555; font-size: 14px; line-height: 1.8; margin: 0 0 24px; padding-left: 20px;'
+                >
+                  <li>Ensure you have a stable internet connection</li>
+                  <li>Find a quiet, professional environment</li>
+                  <li>Have specific examples of your executive impact ready</li>
+                  <li>Prepare questions about our platform and clients</li>
+                </ul>
+
+                <p style='color: #666666; font-size: 14px; line-height: 1.6; margin: 24px 0 0;'>
+                  Need to reschedule?
+                  <a href='{{rescheduleLink}}' style='color: #4f46e5; text-decoration: none;'>Click
+                    here</a>
+                  or reply to this email.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td
+                style='background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e5e7eb;'
+              >
+                <p style='color: #999999; font-size: 12px; margin: 0;'>
+                  ©
+                  {{year}}
+                  Skillancer. All rights reserved.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

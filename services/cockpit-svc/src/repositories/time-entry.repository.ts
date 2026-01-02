@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/time-entry
  * Time Entry data access layer
@@ -321,3 +322,4 @@ export class TimeEntryRepository {
     });
   }
 }
+

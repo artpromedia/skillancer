@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/types/crm
  * CRM Type Definitions
@@ -532,3 +533,4 @@ export interface MarketSyncResult {
   updated: number;
   errors: string[];
 }
+

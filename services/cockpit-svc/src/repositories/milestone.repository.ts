@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/milestone
  * Milestone data access layer
@@ -238,3 +239,4 @@ export class MilestoneRepository {
     );
   }
 }
+

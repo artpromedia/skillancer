@@ -101,15 +101,17 @@ export class QueueManagementService {
       throw new Error(`Queue ${queueName} not found`);
     }
 
-    const [waiting, active, completed, failed, delayed, paused, isPaused] = await Promise.all([
+    const [waiting, active, completed, failed, delayed, isPaused] = await Promise.all([
       queue.getWaitingCount(),
       queue.getActiveCount(),
       queue.getCompletedCount(),
       queue.getFailedCount(),
       queue.getDelayedCount(),
-      queue.getPausedCount(),
       queue.isPaused(),
     ]);
+
+    // BullMQ doesn't have getPausedCount - paused jobs are just waiting jobs when queue is paused
+    const paused = isPaused ? waiting : 0;
 
     const waitingJobs = await queue.getWaiting(0, 0);
     const latestCompleted = await queue.getCompleted(0, 0);

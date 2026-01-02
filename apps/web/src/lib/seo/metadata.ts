@@ -102,6 +102,8 @@ interface GenerateMetadataOptions {
   image?: string;
   noIndex?: boolean;
   canonical?: string;
+  /** Page path for canonical URL generation */
+  path?: string;
 }
 
 export function generateMetadata({
@@ -111,14 +113,17 @@ export function generateMetadata({
   image = siteConfig.ogImage,
   noIndex = false,
   canonical,
+  path,
 }: GenerateMetadataOptions): Metadata {
   const allKeywords = [...siteConfig.keywords, ...keywords];
+  // Use path to generate canonical URL if not explicitly provided
+  const canonicalUrl = canonical ?? (path ? `${siteConfig.url}${path}` : undefined);
 
   return {
     title,
     description,
     keywords: allKeywords,
-    alternates: canonical ? { canonical } : undefined,
+    alternates: canonicalUrl ? { canonical: canonicalUrl } : undefined,
     openGraph: {
       title,
       description,

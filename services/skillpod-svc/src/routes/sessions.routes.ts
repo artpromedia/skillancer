@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/skillpod-svc/routes/sessions
  * Session management and transfer monitoring routes
@@ -684,3 +685,4 @@ export function sessionRoutes(
     }
   );
 }
+

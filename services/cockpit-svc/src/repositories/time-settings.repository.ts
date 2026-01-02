@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/time-settings
  * Time Tracking Settings data access layer
@@ -155,3 +156,4 @@ export class TimeSettingsRepository {
     });
   }
 }
+

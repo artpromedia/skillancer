@@ -2,6 +2,8 @@ import { Button, Separator } from '@skillancer/ui';
 import { Linkedin, Globe, DollarSign, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
+import { Logo } from '@/components/brand';
+
 const footerLinks = {
   company: [
     { label: 'About Us', href: '/about' },
@@ -30,7 +32,7 @@ const footerLinks = {
   resources: [
     { label: 'Help & Support', href: '/help' },
     { label: 'Blog', href: '/blog' },
-    { label: 'Developer API', href: '/api' },
+    { label: 'Developer API', href: '/api-docs' },
     { label: 'Status Page', href: '/status' },
     { label: 'Podcast', href: '/podcast' },
     { label: 'Trust & Safety', href: '/trust' },
@@ -69,15 +71,7 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
           {/* Brand Column */}
           <div className="lg:col-span-1">
-            <Link
-              className="hover:text-primary flex items-center gap-2 text-xl font-bold transition-colors"
-              href="/"
-            >
-              <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center rounded-lg">
-                S
-              </div>
-              <span>Skillancer</span>
-            </Link>
+            <Logo size="md" />
             <p className="text-muted-foreground mt-4 max-w-xs text-sm">
               Connecting businesses with top talent worldwide. Smart matching, secure payments, and
               verified professionals.

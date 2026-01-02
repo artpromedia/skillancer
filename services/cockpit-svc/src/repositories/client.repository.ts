@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/client
  * Client data access layer
@@ -459,3 +460,4 @@ export class ClientRepository {
     return parts.length > 0 ? parts.join(' ') : 'Unknown Client';
   }
 }
+

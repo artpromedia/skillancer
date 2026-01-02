@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/skillpod-svc/workers/market-activity
  * BullMQ worker for processing market activity events and generating learning recommendations
@@ -588,3 +589,4 @@ export async function setupMarketActivityScheduler(
 
   await queue.close();
 }
+

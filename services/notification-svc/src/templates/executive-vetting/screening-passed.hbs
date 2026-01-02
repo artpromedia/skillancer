@@ -1,0 +1,78 @@
+{{! Screening Passed - Schedule Interview }}
+
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Schedule Your Interview</title>
+  </head>
+  <body
+    style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"
+  >
+    <div style='text-align: center; margin-bottom: 30px;'>
+      <img src='{{logoUrl}}' alt='Skillancer' style='height: 40px;' />
+    </div>
+
+    <div style='text-align: center; margin-bottom: 20px;'>
+      <span
+        style='display: inline-block; background: #dcfce7; color: #166534; padding: 8px 16px; border-radius: 20px; font-weight: 600;'
+      >
+        ✓ Screening Passed
+      </span>
+    </div>
+
+    <h1 style='color: #1a1a2e; font-size: 24px; margin-bottom: 20px; text-align: center;'>
+      Congratulations,
+      {{firstName}}!
+    </h1>
+
+    <p>
+      You've passed our initial screening! Your background and experience align well with what we're
+      looking for in our
+      {{executiveType}}
+      network.
+    </p>
+
+    <p>
+      <strong>Next Step:</strong>
+      Schedule a brief interview with our Executive Team. This is a 30-45 minute conversation where
+      we'll discuss your experience and how you work with clients.
+    </p>
+
+    <div style='text-align: center; margin: 30px 0;'>
+      <a
+        href='{{calendlyUrl}}'
+        style='display: inline-block; background: #4f46e5; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;'
+      >
+        Schedule Interview
+      </a>
+    </div>
+
+    <div style='background: #fef3c7; border-radius: 8px; padding: 16px; margin: 24px 0;'>
+      <p style='margin: 0; color: #92400e;'>
+        <strong>⏰ Please schedule within 7 days</strong><br />
+        <span style='font-size: 14px;'>Delays may affect your application timeline.</span>
+      </p>
+    </div>
+
+    <h3 style='color: #1a1a2e;'>What to Expect</h3>
+    <ul style='color: #666;'>
+      <li>Discussion of your executive experience</li>
+      <li>How you approach fractional/advisory work</li>
+      <li>Your ideal client profile</li>
+      <li>Questions about the platform</li>
+    </ul>
+
+    <p style='color: #666; font-size: 14px;'>
+      Need to reschedule? Use the link in your calendar invite or reply to this email.
+    </p>
+
+    <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;' />
+
+    <p style='color: #999; font-size: 12px; text-align: center;'>
+      ©
+      {{year}}
+      Skillancer. All rights reserved.
+    </p>
+  </body>
+</html>

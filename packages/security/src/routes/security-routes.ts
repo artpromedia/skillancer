@@ -763,7 +763,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
           return;
         }
 
-        await threatDetectionService.removeKnownDevice(req.params.userId, req.params.fingerprint);
+        await threatDetectionService.removeDevice(req.params.userId, req.params.fingerprint);
 
         res.json({ success: true });
       } catch (error) {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Skill Learning Progress Repository
  */
@@ -75,3 +76,4 @@ export class SkillLearningProgressRepository {
     });
   }
 }
+

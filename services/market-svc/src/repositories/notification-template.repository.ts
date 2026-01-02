@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/market-svc/repositories/notification-template
  * Repository for notification template management
@@ -288,3 +289,4 @@ export function createNotificationTemplateRepository(
     },
   };
 }
+

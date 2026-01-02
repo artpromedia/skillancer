@@ -204,3 +204,13 @@ export function createTestLogger(logs: unknown[] = []): Logger {
     }
   );
 }
+
+/**
+ * Default singleton logger instance for convenience.
+ * Uses environment variables for configuration.
+ * For production services, prefer createLogger() with explicit config.
+ */
+export const logger = createLogger({
+  serviceName: process.env.SERVICE_NAME || 'skillancer',
+  environment: process.env.NODE_ENV || 'development',
+});

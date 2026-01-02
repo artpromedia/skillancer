@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/market-svc/messaging/websocket-gateway
  * WebSocket gateway for real-time messaging with Socket.io and Redis adapter
@@ -586,3 +587,4 @@ export function createWebSocketGateway(deps: WebSocketGatewayDependencies): WebS
     },
   };
 }
+

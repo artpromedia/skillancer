@@ -434,7 +434,7 @@ export const invoiceSettingsApi = {
   /**
    * Upload invoice logo
    */
-  uploadLogo: async (file: File): Promise<{ url: string }> => {
+  uploadLogo: async (file: File): Promise<{ logoUrl: string }> => {
     const formData = new FormData();
     formData.append('logo', file);
 

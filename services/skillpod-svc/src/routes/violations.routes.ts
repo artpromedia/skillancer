@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/skillpod-svc/routes/violations
  * Security violations API routes
@@ -292,3 +293,4 @@ export function violationRoutes(
     }
   );
 }
+

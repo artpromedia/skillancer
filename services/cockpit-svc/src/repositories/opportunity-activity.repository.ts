@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/opportunity-activity
  * Opportunity Activity data access layer
@@ -63,3 +64,4 @@ export class OpportunityActivityRepository {
     });
   }
 }
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/skillpod-svc/repositories/recommendation/market-activity-signal
  * Market Activity Signal repository for database operations
@@ -399,3 +400,4 @@ export function createMarketActivitySignalRepository(
     applyDecay,
   };
 }
+

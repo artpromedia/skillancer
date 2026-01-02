@@ -57,7 +57,11 @@ const STATUS_CONFIG: Record<
   { label: string; color: string; icon: React.ComponentType<{ className?: string }> }
 > = {
   DRAFT: { label: 'Draft', color: 'bg-gray-100 text-gray-700', icon: FileText },
-  PENDING: { label: 'Pending Signature', color: 'bg-amber-100 text-amber-700', icon: Clock },
+  PENDING_SIGNATURE: {
+    label: 'Pending Signature',
+    color: 'bg-amber-100 text-amber-700',
+    icon: Clock,
+  },
   ACTIVE: { label: 'Active', color: 'bg-green-100 text-green-700', icon: PlayCircle },
   PAUSED: { label: 'Paused', color: 'bg-blue-100 text-blue-700', icon: PauseCircle },
   COMPLETED: { label: 'Completed', color: 'bg-purple-100 text-purple-700', icon: CheckCircle },
@@ -73,69 +77,103 @@ const mockContract: Contract = {
   id: 'contract-1',
   jobId: 'job-1',
   proposalId: 'proposal-1',
-  clientId: 'client-1',
-  clientName: 'TechCorp Inc.',
-  clientAvatar: undefined,
-  freelancerId: 'freelancer-1',
-  freelancerName: 'John Developer',
-  freelancerAvatar: undefined,
+  client: {
+    id: 'client-1',
+    userId: 'user-client-1',
+    name: 'TechCorp Inc.',
+    avatarUrl: undefined,
+    rating: 4.8,
+    reviewCount: 25,
+    isVerified: true,
+  },
+  freelancer: {
+    id: 'freelancer-1',
+    userId: 'user-freelancer-1',
+    name: 'John Developer',
+    avatarUrl: undefined,
+    rating: 4.9,
+    reviewCount: 42,
+    isVerified: true,
+  },
   title: 'E-commerce Platform Development',
   description:
     'Build a full-featured e-commerce platform with React and Node.js. Includes user authentication, product catalog, shopping cart, checkout with Stripe integration, and admin dashboard.',
   type: 'FIXED',
   status: 'ACTIVE',
-  totalBudget: 15000,
-  amountEarned: 9000,
-  amountInEscrow: 3000,
+  amount: 15000,
+  totalPaid: 9000,
+  escrowBalance: 3000,
   hourlyRate: undefined,
-  weeklyHourLimit: undefined,
+  weeklyLimit: undefined,
+  skills: [],
+  skillPodEnabled: false,
   milestones: [
     {
       id: 'ms-1',
+      contractId: 'contract-1',
       title: 'Project Setup & Authentication',
       description: 'Set up project structure and implement user authentication',
       amount: 3000,
-      status: 'COMPLETED',
+      status: 'RELEASED',
       dueDate: '2024-11-15',
-      completedAt: '2024-11-14',
+      escrowFunded: true,
+      escrowReleasedAt: '2024-11-14',
       order: 1,
+      createdAt: '2024-10-15',
+      updatedAt: '2024-11-14',
     },
     {
       id: 'ms-2',
+      contractId: 'contract-1',
       title: 'Product Catalog & Search',
       description: 'Build product listing, filtering, and search functionality',
       amount: 3000,
-      status: 'COMPLETED',
+      status: 'RELEASED',
       dueDate: '2024-12-01',
-      completedAt: '2024-11-30',
+      escrowFunded: true,
+      escrowReleasedAt: '2024-11-30',
       order: 2,
+      createdAt: '2024-10-15',
+      updatedAt: '2024-11-30',
     },
     {
       id: 'ms-3',
+      contractId: 'contract-1',
       title: 'Shopping Cart & Checkout',
       description: 'Implement cart functionality and Stripe checkout integration',
       amount: 4500,
       status: 'IN_PROGRESS',
       dueDate: '2024-12-20',
+      escrowFunded: true,
       order: 3,
+      createdAt: '2024-10-15',
+      updatedAt: '2024-12-20',
     },
     {
       id: 'ms-4',
+      contractId: 'contract-1',
       title: 'Admin Dashboard',
       description: 'Build admin panel for product and order management',
       amount: 3000,
       status: 'PENDING',
       dueDate: '2025-01-10',
+      escrowFunded: false,
       order: 4,
+      createdAt: '2024-10-15',
+      updatedAt: '2024-10-15',
     },
     {
       id: 'ms-5',
+      contractId: 'contract-1',
       title: 'Testing & Deployment',
       description: 'Final testing, bug fixes, and production deployment',
       amount: 1500,
       status: 'PENDING',
       dueDate: '2025-02-01',
+      escrowFunded: false,
       order: 5,
+      createdAt: '2024-10-15',
+      updatedAt: '2024-10-15',
     },
   ],
   startDate: '2024-11-01',
@@ -223,16 +261,7 @@ function ContractHeader({ contract }: Readonly<{ contract: Contract }>) {
               {statusConfig.label}
             </Badge>
           </div>
-          <p className="text-muted-foreground mt-1">Contract with {contract.clientName}</p>
-        </div>
-
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href={`/dashboard/messages?contract=${contract.id}`}>
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Message
-            </Link>
-          </Button>
+          <p className="text-muted-foreground mt-1">Contract with {contract.client.name}</p>
           <Button size="icon" variant="ghost">
             <MoreVertical className="h-4 w-4" />
           </Button>
@@ -246,7 +275,7 @@ function ContractHeader({ contract }: Readonly<{ contract: Contract }>) {
             <DollarSign className="text-primary h-5 w-5" />
             <div>
               <p className="text-muted-foreground text-xs">Total Budget</p>
-              <p className="font-semibold">${contract.totalBudget.toLocaleString()}</p>
+              <p className="font-semibold">${contract.amount.toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
@@ -255,7 +284,7 @@ function ContractHeader({ contract }: Readonly<{ contract: Contract }>) {
             <CheckCircle className="h-5 w-5 text-green-600" />
             <div>
               <p className="text-muted-foreground text-xs">Earned</p>
-              <p className="font-semibold">${contract.amountEarned.toLocaleString()}</p>
+              <p className="font-semibold">${contract.totalPaid.toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
@@ -264,7 +293,7 @@ function ContractHeader({ contract }: Readonly<{ contract: Contract }>) {
             <Shield className="h-5 w-5 text-blue-600" />
             <div>
               <p className="text-muted-foreground text-xs">In Escrow</p>
-              <p className="font-semibold">${contract.amountInEscrow.toLocaleString()}</p>
+              <p className="font-semibold">${contract.escrowBalance.toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
@@ -300,7 +329,10 @@ export default function ContractDetailPage() {
   const isClient = false;
 
   // Mock handlers
-  const handleMilestoneSubmit = async (_data: { description: string; attachments: File[] }) => {
+  const handleMilestoneSubmit = async (
+    _milestoneId: string,
+    _data: { message: string; deliverables: unknown[]; attachments: unknown[]; links: unknown[] }
+  ) => {
     // Feature: Submit milestone via API - not yet implemented
     setShowSubmissionModal(false);
     setSelectedMilestone(null);
@@ -314,7 +346,12 @@ export default function ContractDetailPage() {
   };
 
   const fundedMilestones = mockContract.milestones.filter(
-    (m) => m.status === 'COMPLETED' || m.status === 'IN_PROGRESS' || m.status === 'SUBMITTED'
+    (m) =>
+      m.status === 'RELEASED' ||
+      m.status === 'APPROVED' ||
+      m.status === 'IN_PROGRESS' ||
+      m.status === 'SUBMITTED' ||
+      m.status === 'FUNDED'
   );
   const unfundedMilestones = mockContract.milestones.filter((m) => m.status === 'PENDING');
 
@@ -345,45 +382,54 @@ export default function ContractDetailPage() {
 
             <TabsContent className="mt-6" value="milestones">
               <MilestoneTracker
-                isFreelancer={isFreelancer}
+                isClient={isClient}
                 milestones={mockContract.milestones}
-                totalBudget={mockContract.totalBudget}
-                onMilestoneClick={handleMilestoneClick}
+                onSubmitMilestone={(id) =>
+                  handleMilestoneClick(mockContract.milestones.find((m) => m.id === id)!)
+                }
               />
             </TabsContent>
 
             <TabsContent className="mt-6 space-y-6" value="timesheet">
               <TimeTracker
                 contractId={mockContract.id}
-                hourlyRate={mockContract.hourlyRate || 0}
-                weeklyLimit={mockContract.weeklyHourLimit || 40}
+                timeEntries={[]}
+                weeklyLimit={mockContract.weeklyLimit || 40}
+                isFreelancer={isFreelancer}
+                onAddEntry={async () => {}}
+                onEditEntry={async () => {}}
+                onDeleteEntry={async () => {}}
+                onViewDiary={() => {}}
               />
               <WorkDiary
                 contractId={mockContract.id}
-                entries={[]}
-                weekStart={new Date().toISOString()}
+                timeEntries={[]}
+                onDateChange={() => {}}
+                onExport={() => {}}
               />
             </TabsContent>
 
             <TabsContent className="mt-6" value="payments">
               <PaymentStatus
-                escrowAmount={mockPaymentInfo.escrowAmount}
+                contract={mockContract}
+                payments={{
+                  escrowBalance: mockPaymentInfo.escrowAmount,
+                  totalPaid: mockPaymentInfo.releasedAmount,
+                  pendingAmount: mockPaymentInfo.pendingAmount,
+                  nextPaymentDate: mockPaymentInfo.nextPaymentDate,
+                  nextPaymentAmount: mockPaymentInfo.nextPaymentAmount,
+                  transactions: mockPaymentInfo.transactions,
+                }}
                 isClient={isClient}
-                nextPaymentAmount={mockPaymentInfo.nextPaymentAmount}
-                nextPaymentDate={mockPaymentInfo.nextPaymentDate}
-                pendingAmount={mockPaymentInfo.pendingAmount}
-                releasedAmount={mockPaymentInfo.releasedAmount}
-                totalBudget={mockContract.totalBudget}
-                transactions={mockPaymentInfo.transactions}
               />
             </TabsContent>
 
             <TabsContent className="mt-6 space-y-6" value="amendments">
               <AmendmentFlow
                 contract={mockContract}
-                onSubmitAmendment={async (_data) => {
-                  // Feature: Submit amendment via API - not yet implemented
-                }}
+                open={false}
+                onOpenChange={() => {}}
+                onSubmit={async () => {}}
               />
             </TabsContent>
 
@@ -421,9 +467,9 @@ export default function ContractDetailPage() {
               <div className="mt-6">
                 <DisputeCenter
                   contract={mockContract}
-                  onOpenDispute={async (_data) => {
-                    // Feature: Open dispute via API - not yet implemented
-                  }}
+                  dispute={null}
+                  isClient={isClient}
+                  onOpenDispute={async () => {}}
                 />
               </div>
             </TabsContent>
@@ -433,19 +479,18 @@ export default function ContractDetailPage() {
         {/* Right Column - Sidebar */}
         <div className="space-y-6">
           {/* Contract Signature (if pending) */}
-          {mockContract.status === 'PENDING' && (
+          {mockContract.status === 'PENDING_SIGNATURE' && (
             <ContractSignature
               contract={mockContract}
-              isFreelancer={isFreelancer}
-              onSign={async () => {
-                // Feature: Sign contract via API - not yet implemented
-              }}
+              userRole={isFreelancer ? 'freelancer' : 'client'}
+              onSign={async () => {}}
+              onCancel={() => {}}
             />
           )}
 
           {/* Escrow Widget */}
           <EscrowWidget
-            escrowBalance={mockContract.amountInEscrow}
+            escrowBalance={mockContract.escrowBalance}
             fundedMilestones={fundedMilestones}
             isClient={isClient}
             unfundedMilestones={unfundedMilestones}

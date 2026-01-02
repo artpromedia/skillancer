@@ -164,6 +164,24 @@ export interface ContractActivity {
   createdAt: string;
 }
 
+export interface PaymentTransaction {
+  id: string;
+  type: 'ESCROW_FUNDED' | 'PAYMENT_RELEASED' | 'REFUND' | 'WITHDRAWAL';
+  amount: number;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  date: string;
+  description: string;
+}
+
+export interface PaymentInfo {
+  escrowBalance: number;
+  totalPaid: number;
+  pendingAmount: number;
+  nextPaymentDate?: string;
+  nextPaymentAmount?: number;
+  transactions: PaymentTransaction[];
+}
+
 export interface Contract {
   id: string;
   title: string;

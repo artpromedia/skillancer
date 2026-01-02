@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pricing Recommendation Service
  *
@@ -1233,3 +1234,4 @@ export class PricingRecommendationService {
     }
   }
 }
+

@@ -50,6 +50,9 @@
   "dependencies": {
     "@prisma/client": "^5.22.0"
   },
+  "prisma": {
+    "schema": "prisma/schemas"
+  },
   "devDependencies": {
     "@faker-js/faker": "^9.2.0",
     "@skillancer/config": "workspace:*",

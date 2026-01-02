@@ -56,7 +56,7 @@ const STATUS_CONFIG: Record<
   { label: string; color: string; icon: React.ComponentType<{ className?: string }> }
 > = {
   DRAFT: { label: 'Draft', color: 'bg-gray-100 text-gray-700', icon: FileText },
-  PENDING: { label: 'Pending', color: 'bg-amber-100 text-amber-700', icon: Clock },
+  PENDING_SIGNATURE: { label: 'Pending', color: 'bg-amber-100 text-amber-700', icon: Clock },
   ACTIVE: { label: 'Active', color: 'bg-green-100 text-green-700', icon: PlayCircle },
   PAUSED: { label: 'Paused', color: 'bg-blue-100 text-blue-700', icon: PauseCircle },
   COMPLETED: { label: 'Completed', color: 'bg-purple-100 text-purple-700', icon: CheckCircle },
@@ -80,21 +80,35 @@ const mockContracts: Contract[] = [
     id: 'contract-1',
     jobId: 'job-1',
     proposalId: 'proposal-1',
-    clientId: 'client-1',
-    clientName: 'TechCorp Inc.',
-    clientAvatar: undefined,
-    freelancerId: 'freelancer-1',
-    freelancerName: 'John Developer',
-    freelancerAvatar: undefined,
+    client: {
+      id: 'client-1',
+      userId: 'user-client-1',
+      name: 'TechCorp Inc.',
+      avatarUrl: undefined,
+      rating: 4.8,
+      reviewCount: 25,
+      isVerified: true,
+    },
+    freelancer: {
+      id: 'freelancer-1',
+      userId: 'user-freelancer-1',
+      name: 'John Developer',
+      avatarUrl: undefined,
+      rating: 4.9,
+      reviewCount: 42,
+      isVerified: true,
+    },
     title: 'E-commerce Platform Development',
     description: 'Build a full-featured e-commerce platform with React and Node.js',
     type: 'FIXED',
     status: 'ACTIVE',
-    totalBudget: 15000,
-    amountEarned: 9000,
-    amountInEscrow: 3000,
+    amount: 15000,
+    totalPaid: 9000,
+    escrowBalance: 3000,
     hourlyRate: undefined,
-    weeklyHourLimit: undefined,
+    weeklyLimit: undefined,
+    skills: [],
+    skillPodEnabled: false,
     milestones: [],
     startDate: '2024-11-01',
     endDate: '2025-02-01',
@@ -105,21 +119,35 @@ const mockContracts: Contract[] = [
     id: 'contract-2',
     jobId: 'job-2',
     proposalId: 'proposal-2',
-    clientId: 'client-2',
-    clientName: 'StartupXYZ',
-    clientAvatar: undefined,
-    freelancerId: 'freelancer-1',
-    freelancerName: 'John Developer',
-    freelancerAvatar: undefined,
+    client: {
+      id: 'client-2',
+      userId: 'user-client-2',
+      name: 'StartupXYZ',
+      avatarUrl: undefined,
+      rating: 4.7,
+      reviewCount: 18,
+      isVerified: true,
+    },
+    freelancer: {
+      id: 'freelancer-1',
+      userId: 'user-freelancer-1',
+      name: 'John Developer',
+      avatarUrl: undefined,
+      rating: 4.9,
+      reviewCount: 42,
+      isVerified: true,
+    },
     title: 'Mobile App UI/UX Design',
     description: 'Design beautiful and intuitive mobile app interfaces',
     type: 'HOURLY',
     status: 'ACTIVE',
-    totalBudget: 5000,
-    amountEarned: 2400,
-    amountInEscrow: 800,
+    amount: 5000,
+    totalPaid: 2400,
+    escrowBalance: 800,
     hourlyRate: 75,
-    weeklyHourLimit: 20,
+    weeklyLimit: 20,
+    skills: [],
+    skillPodEnabled: false,
     milestones: [],
     startDate: '2024-12-01',
     endDate: undefined,
@@ -130,21 +158,35 @@ const mockContracts: Contract[] = [
     id: 'contract-3',
     jobId: 'job-3',
     proposalId: 'proposal-3',
-    clientId: 'client-3',
-    clientName: 'GlobalFinance',
-    clientAvatar: undefined,
-    freelancerId: 'freelancer-1',
-    freelancerName: 'John Developer',
-    freelancerAvatar: undefined,
+    client: {
+      id: 'client-3',
+      userId: 'user-client-3',
+      name: 'GlobalFinance',
+      avatarUrl: undefined,
+      rating: 4.6,
+      reviewCount: 32,
+      isVerified: true,
+    },
+    freelancer: {
+      id: 'freelancer-1',
+      userId: 'user-freelancer-1',
+      name: 'John Developer',
+      avatarUrl: undefined,
+      rating: 4.9,
+      reviewCount: 42,
+      isVerified: true,
+    },
     title: 'API Integration Project',
     description: 'Integrate third-party payment APIs',
     type: 'FIXED',
     status: 'COMPLETED',
-    totalBudget: 4500,
-    amountEarned: 4500,
-    amountInEscrow: 0,
+    amount: 4500,
+    totalPaid: 4500,
+    escrowBalance: 0,
     hourlyRate: undefined,
-    weeklyHourLimit: undefined,
+    weeklyLimit: undefined,
+    skills: [],
+    skillPodEnabled: false,
     milestones: [],
     startDate: '2024-09-01',
     endDate: '2024-11-15',
@@ -227,7 +269,7 @@ function ContractCard({ contract }: Readonly<{ contract: Contract }>) {
   const StatusIcon = statusConfig.icon;
 
   const progress =
-    contract.totalBudget > 0 ? Math.round((contract.amountEarned / contract.totalBudget) * 100) : 0;
+    contract.amount > 0 ? Math.round((contract.totalPaid / contract.amount) * 100) : 0;
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', {
@@ -259,7 +301,7 @@ function ContractCard({ contract }: Readonly<{ contract: Contract }>) {
                   {statusConfig.label}
                 </Badge>
               </div>
-              <p className="text-muted-foreground mt-1 text-sm">{contract.clientName}</p>
+              <p className="text-muted-foreground mt-1 text-sm">{contract.client.name}</p>
             </div>
             <Button className="flex-shrink-0" size="icon" variant="ghost">
               <MoreVertical className="h-4 w-4" />
@@ -274,8 +316,8 @@ function ContractCard({ contract }: Readonly<{ contract: Contract }>) {
                 {formatCurrency(contract.hourlyRate)}/hr
               </span>
             )}
-            {contract.weeklyHourLimit && (
-              <span className="text-muted-foreground">Up to {contract.weeklyHourLimit}h/week</span>
+            {contract.weeklyLimit && (
+              <span className="text-muted-foreground">Up to {contract.weeklyLimit}h/week</span>
             )}
           </div>
 
@@ -283,9 +325,9 @@ function ContractCard({ contract }: Readonly<{ contract: Contract }>) {
           <div className="mt-4">
             <div className="mb-1 flex justify-between text-sm">
               <span className="text-muted-foreground">
-                {formatCurrency(contract.amountEarned)} earned
+                {formatCurrency(contract.totalPaid)} earned
               </span>
-              <span className="font-medium">{formatCurrency(contract.totalBudget)} total</span>
+              <span className="font-medium">{formatCurrency(contract.amount)} total</span>
             </div>
             <div className="bg-muted h-2 overflow-hidden rounded-full">
               <div
@@ -297,9 +339,9 @@ function ContractCard({ contract }: Readonly<{ contract: Contract }>) {
 
           {/* Escrow & Dates */}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
-            {contract.amountInEscrow > 0 && (
+            {contract.escrowBalance > 0 && (
               <span className="text-green-600">
-                {formatCurrency(contract.amountInEscrow)} in escrow
+                {formatCurrency(contract.escrowBalance)} in escrow
               </span>
             )}
             <div className="text-muted-foreground flex items-center gap-1">
@@ -348,7 +390,9 @@ function ContractsList({ contracts }: Readonly<{ contracts: Contract[] }>) {
 // ============================================================================
 
 export default function ContractsPage() {
-  const activeContracts = mockContracts.filter((c) => ['ACTIVE', 'PENDING'].includes(c.status));
+  const activeContracts = mockContracts.filter((c) =>
+    ['ACTIVE', 'PENDING_SIGNATURE'].includes(c.status)
+  );
   const completedContracts = mockContracts.filter((c) => c.status === 'COMPLETED');
   const allContracts = mockContracts;
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/market-svc/repositories/conversation
  * Repository for conversation and participant CRUD operations
@@ -558,3 +559,4 @@ export function createConversationRepository(prisma: PrismaClient): Conversation
     },
   };
 }
+

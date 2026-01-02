@@ -344,6 +344,48 @@ export class KPIService {
     }));
   }
 
+  private calculateTimeSeriesSummary(
+    dataPoints: Array<{ period: string; value: number; target?: number }>
+  ): KPITimeSeries['summary'] {
+    if (dataPoints.length === 0) {
+      return {
+        min: 0,
+        max: 0,
+        avg: 0,
+        total: 0,
+        trend: 'stable',
+        trendStrength: 0,
+      };
+    }
+
+    const values = dataPoints.map((dp) => dp.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const total = values.reduce((sum, val) => sum + val, 0);
+    const avg = total / values.length;
+
+    // Calculate trend from first to last data point
+    const firstValue = values[0];
+    const lastValue = values[values.length - 1];
+    const changePercent = firstValue !== 0 ? ((lastValue - firstValue) / firstValue) * 100 : 0;
+
+    let trend: TrendDirection = 'stable';
+    if (changePercent > 5) trend = 'up';
+    else if (changePercent < -5) trend = 'down';
+
+    // Trend strength is the absolute percentage change
+    const trendStrength = Math.abs(changePercent);
+
+    return {
+      min,
+      max,
+      avg,
+      total,
+      trend,
+      trendStrength,
+    };
+  }
+
   private async calculateComparison(
     kpi: KPIDefinition,
     currentValue: number,

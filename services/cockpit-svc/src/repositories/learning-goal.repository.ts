@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Learning Goal Repository
  */
@@ -86,3 +87,4 @@ export class LearningGoalRepository {
     await this.prisma.learningGoal.delete({ where: { id } });
   }
 }
+

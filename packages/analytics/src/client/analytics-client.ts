@@ -124,7 +124,7 @@ export class AnalyticsClient {
   page(pageName?: string, properties?: Record<string, unknown>): void {
     const pageProps = {
       pageName: pageName || this.getPageTitle(),
-      pageCategory: properties?.category,
+      pageCategory: (properties?.category as string) || '',
       previousPage: this.getPreviousPage(),
       timeOnPreviousPage: this.getTimeOnPage(),
       ...properties,

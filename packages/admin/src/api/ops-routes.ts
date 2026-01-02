@@ -60,8 +60,7 @@ export function createOpsRoutes(config: OpsRoutesConfig): Router {
 
   router.get('/health/alerts', requirePermission('system:view'), async (req, res, next) => {
     try {
-      const { status } = req.query;
-      const alerts = await healthService.getActiveAlerts(status as any);
+      const alerts = await healthService.getActiveAlerts();
       res.json({ data: alerts });
     } catch (error) {
       next(error);
@@ -115,11 +114,12 @@ export function createOpsRoutes(config: OpsRoutesConfig): Router {
   router.get('/queues/:name/jobs', requirePermission('system:view'), async (req, res, next) => {
     try {
       const { status, limit, offset } = req.query;
-      const jobs = await queueService.getJobs(req.params.name, {
-        status: status as any,
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined,
-      });
+      const parsedLimit = limit ? Number.parseInt(limit as string, 10) : 20;
+      const parsedOffset = offset ? Number.parseInt(offset as string, 10) : 0;
+      const page = Math.floor(parsedOffset / parsedLimit) + 1;
+      const state =
+        (status as 'waiting' | 'active' | 'completed' | 'failed' | 'delayed') || 'waiting';
+      const jobs = await queueService.getJobs(req.params.name, state, page, parsedLimit);
       res.json(jobs);
     } catch (error) {
       next(error);

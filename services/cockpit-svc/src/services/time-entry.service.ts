@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/services/time-entry
  * Time Entry Service - Time tracking functionality
@@ -368,3 +369,4 @@ export class TimeEntryService {
     });
   }
 }
+

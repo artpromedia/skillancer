@@ -1,0 +1,1284 @@
+openapi: 3.1.0
+info:
+  title: SkillPod Enterprise API
+  description: |
+    The SkillPod Enterprise API provides programmatic access to manage sessions, 
+    users, policies, and reporting for your organization.
+
+    ## Authentication
+    All endpoints require Bearer token authentication using your API key.
+
+    ## Rate Limiting
+    Requests are rate limited based on your plan tier.
+  version: 1.0.0
+  contact:
+    name: SkillPod API Support
+    email: api-support@skillpod.io
+    url: https://docs.skillpod.io
+  license:
+    name: Proprietary
+    url: https://skillpod.io/terms
+
+servers:
+  - url: https://api.skillpod.io/v1
+    description: Production API
+  - url: https://api.sandbox.skillpod.io/v1
+    description: Sandbox API
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Sessions
+    description: Manage secure desktop sessions
+  - name: Users
+    description: User provisioning and management
+  - name: Policies
+    description: Security policy configuration
+  - name: Reports
+    description: Analytics and reporting
+  - name: Webhooks
+    description: Webhook configuration
+
+paths:
+  # ==========================================================================
+  # SESSIONS
+  # ==========================================================================
+  /sessions:
+    get:
+      summary: List sessions
+      description: Returns a paginated list of sessions for your tenant
+      operationId: listSessions
+      tags: [Sessions]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, ended, pending]
+          description: Filter by session status
+        - name: user_id
+          in: query
+          schema:
+            type: string
+          description: Filter by user ID
+        - name: template_id
+          in: query
+          schema:
+            type: string
+          description: Filter by template ID
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Sessions created after this timestamp
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Sessions created before this timestamp
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+    post:
+      summary: Create session
+      description: Creates a new secure desktop session
+      operationId: createSession
+      tags: [Sessions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionCreated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /sessions/{session_id}:
+    get:
+      summary: Get session
+      description: Retrieves details for a specific session
+      operationId: getSession
+      tags: [Sessions]
+      parameters:
+        - $ref: '#/components/parameters/SessionIdParam'
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Terminate session
+      description: Immediately terminates an active session
+      operationId: terminateSession
+      tags: [Sessions]
+      parameters:
+        - $ref: '#/components/parameters/SessionIdParam'
+        - name: reason
+          in: query
+          schema:
+            type: string
+          description: Reason for termination (logged for audit)
+      responses:
+        '200':
+          description: Session terminated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionTerminated'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================================================
+  # USERS
+  # ==========================================================================
+  /users:
+    get:
+      summary: List users
+      description: Returns all users in your tenant
+      operationId: listUsers
+      tags: [Users]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, invited, disabled]
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name or email
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create user
+      description: Creates or invites a new user
+      operationId: createUser
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/bulk:
+    post:
+      summary: Bulk create users
+      description: Creates multiple users in a single request (max 100)
+      operationId: bulkCreateUsers
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkCreateUsersRequest'
+      responses:
+        '200':
+          description: Bulk operation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkCreateUsersResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{user_id}:
+    get:
+      summary: Get user
+      description: Retrieves details for a specific user
+      operationId: getUser
+      tags: [Users]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update user
+      description: Updates user properties
+      operationId: updateUser
+      tags: [Users]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/{user_id}/disable:
+    post:
+      summary: Disable user
+      description: Disables a user account and terminates any active sessions
+      operationId: disableUser
+      tags: [Users]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: User disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================================================
+  # POLICIES
+  # ==========================================================================
+  /policies:
+    get:
+      summary: List policies
+      description: Returns all security policies
+      operationId: listPolicies
+      tags: [Policies]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: List of policies
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Policy'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create policy
+      description: Creates a new security policy
+      operationId: createPolicy
+      tags: [Policies]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePolicyRequest'
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /policies/{policy_id}:
+    get:
+      summary: Get policy
+      description: Retrieves details for a specific policy
+      operationId: getPolicy
+      tags: [Policies]
+      parameters:
+        - $ref: '#/components/parameters/PolicyIdParam'
+      responses:
+        '200':
+          description: Policy details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update policy
+      description: Updates policy properties
+      operationId: updatePolicy
+      tags: [Policies]
+      parameters:
+        - $ref: '#/components/parameters/PolicyIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePolicyRequest'
+      responses:
+        '200':
+          description: Policy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete policy
+      description: Deletes a security policy
+      operationId: deletePolicy
+      tags: [Policies]
+      parameters:
+        - $ref: '#/components/parameters/PolicyIdParam'
+      responses:
+        '204':
+          description: Policy deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================================================
+  # REPORTS
+  # ==========================================================================
+  /reports:
+    post:
+      summary: Generate report
+      description: Generates a report and returns the data or a download URL
+      operationId: generateReport
+      tags: [Reports]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateReportRequest'
+      responses:
+        '200':
+          description: Report generated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ReportDataResponse'
+                  - $ref: '#/components/schemas/ReportDownloadResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /reports/{report_id}:
+    get:
+      summary: Get report
+      description: Retrieves a previously generated report
+      operationId: getReport
+      tags: [Reports]
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report details
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ReportDataResponse'
+                  - $ref: '#/components/schemas/ReportDownloadResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================================================
+  # WEBHOOKS
+  # ==========================================================================
+  /webhooks:
+    get:
+      summary: List webhooks
+      description: Returns all configured webhook endpoints
+      operationId: listWebhooks
+      tags: [Webhooks]
+      responses:
+        '200':
+          description: List of webhooks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Webhook'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create webhook
+      description: Creates a new webhook endpoint
+      operationId: createWebhook
+      tags: [Webhooks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+      responses:
+        '201':
+          description: Webhook created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /webhooks/{webhook_id}:
+    get:
+      summary: Get webhook
+      description: Retrieves details for a specific webhook
+      operationId: getWebhook
+      tags: [Webhooks]
+      parameters:
+        - name: webhook_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete webhook
+      description: Deletes a webhook endpoint
+      operationId: deleteWebhook
+      tags: [Webhooks]
+      parameters:
+        - name: webhook_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Webhook deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /webhooks/{webhook_id}/test:
+    post:
+      summary: Test webhook
+      description: Sends a test event to the webhook endpoint
+      operationId: testWebhook
+      tags: [Webhooks]
+      parameters:
+        - name: webhook_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Test sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  response_code:
+                    type: integer
+                  response_time_ms:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+      description: Page number
+
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      description: Items per page
+
+    SessionIdParam:
+      name: session_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Session ID
+
+    UserIdParam:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: User ID
+
+    PolicyIdParam:
+      name: policy_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Policy ID
+
+  responses:
+    Unauthorized:
+      description: Invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: unauthorized
+            message: Invalid or missing API key
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: forbidden
+            message: Insufficient permissions for this action
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: not_found
+            message: Resource not found
+
+    ValidationError:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: rate_limit_exceeded
+            message: Too many requests. Please retry after 60 seconds.
+            retry_after: 60
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+
+  schemas:
+    # ---------------------------------------------------------------------------
+    # Common
+    # ---------------------------------------------------------------------------
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  code:
+                    type: string
+                  message:
+                    type: string
+
+    PaginatedResponse:
+      type: object
+      properties:
+        pagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            page:
+              type: integer
+            limit:
+              type: integer
+            pages:
+              type: integer
+            has_more:
+              type: boolean
+
+    # ---------------------------------------------------------------------------
+    # Sessions
+    # ---------------------------------------------------------------------------
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        template_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, active, ended]
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_seconds:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties: true
+
+    SessionDetails:
+      allOf:
+        - $ref: '#/components/schemas/Session'
+        - type: object
+          properties:
+            policy_id:
+              type: string
+            resources:
+              type: object
+              properties:
+                cpu_usage:
+                  type: number
+                memory_usage:
+                  type: integer
+                disk_usage:
+                  type: integer
+            security:
+              type: object
+              properties:
+                clipboard_enabled:
+                  type: boolean
+                file_transfer_enabled:
+                  type: boolean
+                watermark_enabled:
+                  type: boolean
+
+    CreateSessionRequest:
+      type: object
+      required:
+        - user_id
+        - template_id
+      properties:
+        user_id:
+          type: string
+        template_id:
+          type: string
+        policy_id:
+          type: string
+        timeout_minutes:
+          type: integer
+          default: 60
+        metadata:
+          type: object
+          additionalProperties: true
+
+    SessionCreated:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        status:
+          type: string
+          enum: [pending]
+        connect_url:
+          type: string
+          format: uri
+        connect_token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    SessionTerminated:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [ended]
+        ended_at:
+          type: string
+          format: date-time
+        termination_reason:
+          type: string
+
+    # ---------------------------------------------------------------------------
+    # Users
+    # ---------------------------------------------------------------------------
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+          enum: [active, invited, disabled]
+        sso_linked:
+          type: boolean
+        groups:
+          type: array
+          items:
+            type: string
+        last_session_at:
+          type: string
+          format: date-time
+          nullable: true
+        sessions_count:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          default: user
+        groups:
+          type: array
+          items:
+            type: string
+        send_invite:
+          type: boolean
+          default: true
+        metadata:
+          type: object
+          additionalProperties: true
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        groups:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    BulkCreateUsersRequest:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required:
+              - email
+              - name
+            properties:
+              email:
+                type: string
+                format: email
+              name:
+                type: string
+              role:
+                type: string
+                default: user
+        send_invites:
+          type: boolean
+          default: true
+        on_conflict:
+          type: string
+          enum: [skip, update, error]
+          default: skip
+
+    BulkCreateUsersResponse:
+      type: object
+      properties:
+        created:
+          type: integer
+        skipped:
+          type: integer
+        failed:
+          type: integer
+        users:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              email:
+                type: string
+              status:
+                type: string
+                enum: [created, skipped, failed]
+              error:
+                type: string
+
+    # ---------------------------------------------------------------------------
+    # Policies
+    # ---------------------------------------------------------------------------
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [default, custom]
+        priority:
+          type: integer
+        rules:
+          $ref: '#/components/schemas/PolicyRules'
+        conditions:
+          $ref: '#/components/schemas/PolicyConditions'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PolicyRules:
+      type: object
+      properties:
+        clipboard:
+          type: string
+          enum: [enabled, disabled, download_only]
+        file_transfer:
+          type: string
+          enum: [enabled, disabled, download_only, upload_only]
+        watermark:
+          type: string
+          enum: [enabled, disabled]
+        session_recording:
+          type: string
+          enum: [enabled, disabled]
+        idle_timeout:
+          type: integer
+          description: Minutes before idle timeout
+        max_duration:
+          type: integer
+          description: Maximum session duration in minutes
+        allowed_applications:
+          type: array
+          items:
+            type: string
+        network_restrictions:
+          type: object
+          properties:
+            allow_internet:
+              type: boolean
+            allowed_domains:
+              type: array
+              items:
+                type: string
+
+    PolicyConditions:
+      type: object
+      properties:
+        user_groups:
+          type: array
+          items:
+            type: string
+        ip_ranges:
+          type: array
+          items:
+            type: string
+        time_restrictions:
+          type: object
+          properties:
+            days:
+              type: array
+              items:
+                type: string
+                enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+            hours:
+              type: object
+              properties:
+                start:
+                  type: string
+                  pattern: '^\d{2}:\d{2}$'
+                end:
+                  type: string
+                  pattern: '^\d{2}:\d{2}$'
+            timezone:
+              type: string
+
+    CreatePolicyRequest:
+      type: object
+      required:
+        - name
+        - rules
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+          default: 100
+        rules:
+          $ref: '#/components/schemas/PolicyRules'
+        conditions:
+          $ref: '#/components/schemas/PolicyConditions'
+
+    UpdatePolicyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+        rules:
+          $ref: '#/components/schemas/PolicyRules'
+        conditions:
+          $ref: '#/components/schemas/PolicyConditions'
+
+    # ---------------------------------------------------------------------------
+    # Reports
+    # ---------------------------------------------------------------------------
+    GenerateReportRequest:
+      type: object
+      required:
+        - type
+        - date_range
+      properties:
+        type:
+          type: string
+          enum: [usage, security, compliance, cost, user_activity]
+        date_range:
+          type: object
+          required:
+            - start
+            - end
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+        format:
+          type: string
+          enum: [json, csv, pdf, xlsx]
+          default: json
+        filters:
+          type: object
+          properties:
+            user_groups:
+              type: array
+              items:
+                type: string
+            user_ids:
+              type: array
+              items:
+                type: string
+
+    ReportDataResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+          enum: [completed]
+        data:
+          type: object
+          additionalProperties: true
+        generated_at:
+          type: string
+          format: date-time
+
+    ReportDownloadResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+          enum: [completed]
+        download_url:
+          type: string
+          format: uri
+        expires_at:
+          type: string
+          format: date-time
+
+    # ---------------------------------------------------------------------------
+    # Webhooks
+    # ---------------------------------------------------------------------------
+    Webhook:
+      type: object
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+              - session.started
+              - session.ended
+              - session.timeout
+              - user.created
+              - user.disabled
+              - policy.violated
+              - security.alert
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CreateWebhookRequest:
+      type: object
+      required:
+        - url
+        - events
+      properties:
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum:
+              - session.started
+              - session.ended
+              - session.timeout
+              - user.created
+              - user.disabled
+              - policy.violated
+              - security.alert
+        secret:
+          type: string
+          description: Secret for webhook signature verification
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Custom headers to include in webhook requests

@@ -11,13 +11,24 @@
  * - Quality indicator overlay
  * - Latency display
  * - Frame rate counter (debug mode)
+ * - AI Work Assistant integration (Sprint M7)
  */
 
-import { cn, Skeleton } from '@skillancer/ui';
-import { Activity, SignalHigh, SignalLow, SignalMedium, WifiOff } from 'lucide-react';
+import { cn, Skeleton, Button } from '@skillancer/ui';
+import {
+  Activity,
+  SignalHigh,
+  SignalLow,
+  SignalMedium,
+  WifiOff,
+  Sparkles,
+  X,
+  MessageCircle,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { KasmEmbed } from '@/lib/kasm/kasm-embed';
+import { AIAssistantPanel } from '@/components/ai/assistant-panel';
 
 // ============================================================================
 // TYPES
@@ -69,6 +80,7 @@ export function VdiViewer({
     packetLoss: 0,
   });
   const [showStats, setShowStats] = useState(showDebugInfo);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   // ============================================================================
   // EFFECTS
@@ -112,6 +124,11 @@ export function VdiViewer({
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
         setShowStats((prev) => !prev);
+      }
+      // AI Assistant toggle (Ctrl+Shift+A)
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        setShowAIAssistant((prev) => !prev);
       }
     };
 
@@ -265,6 +282,43 @@ export function VdiViewer({
           <span className="text-sm font-medium text-yellow-900">
             {connectionState === 'reconnecting' ? 'Reconnecting...' : 'Disconnected'}
           </span>
+        </div>
+      )}
+
+      {/* AI Assistant Toggle Button */}
+      {connectionState === 'connected' && (
+        <Button
+          onClick={() => setShowAIAssistant((prev) => !prev)}
+          className={cn(
+            'absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-full shadow-lg transition-all',
+            showAIAssistant
+              ? 'bg-purple-600 text-white hover:bg-purple-700'
+              : 'bg-black/60 text-white backdrop-blur-sm hover:bg-black/80'
+          )}
+          size="sm"
+        >
+          {showAIAssistant ? (
+            <>
+              <X className="h-4 w-4" />
+              <span className="hidden sm:inline">Close AI</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">AI Assistant</span>
+            </>
+          )}
+        </Button>
+      )}
+
+      {/* AI Assistant Panel */}
+      {showAIAssistant && connectionState === 'connected' && (
+        <div className="absolute bottom-0 right-0 top-0 z-10 w-80 border-l border-gray-200 bg-white/95 shadow-2xl backdrop-blur-sm transition-transform lg:w-96">
+          <AIAssistantPanel
+            sessionId={sessionId}
+            onClose={() => setShowAIAssistant(false)}
+            className="h-full"
+          />
         </div>
       )}
     </div>

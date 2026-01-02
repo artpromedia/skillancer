@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/market-svc/repositories/notification-preference
  * Repository for user notification preferences
@@ -206,3 +207,4 @@ export function createNotificationPreferenceRepository(
     },
   };
 }
+

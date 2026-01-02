@@ -36,6 +36,38 @@ export type ThreatType =
   | 'xss_attempt'
   | 'csrf_attempt';
 
+// Map ThreatType to SecurityEventType for audit logging
+type SecurityAlertEventType = Extract<
+  SecurityEventType,
+  | 'suspicious_activity'
+  | 'brute_force_detected'
+  | 'credential_stuffing_detected'
+  | 'account_takeover_attempt'
+  | 'unusual_location'
+  | 'unusual_device'
+  | 'impossible_travel'
+  | 'malicious_payload_detected'
+  | 'sql_injection_attempt'
+  | 'xss_attempt'
+  | 'csrf_attempt'
+>;
+
+const threatToSecurityEventMap: Record<ThreatType, SecurityAlertEventType> = {
+  brute_force: 'brute_force_detected',
+  credential_stuffing: 'credential_stuffing_detected',
+  account_takeover: 'account_takeover_attempt',
+  session_hijacking: 'suspicious_activity',
+  impossible_travel: 'impossible_travel',
+  unusual_activity: 'suspicious_activity',
+  bot_activity: 'suspicious_activity',
+  api_abuse: 'suspicious_activity',
+  data_exfiltration: 'suspicious_activity',
+  privilege_escalation: 'suspicious_activity',
+  injection_attempt: 'sql_injection_attempt',
+  xss_attempt: 'xss_attempt',
+  csrf_attempt: 'csrf_attempt',
+};
+
 export interface LoginAttempt {
   userId?: string;
   email?: string;
@@ -509,7 +541,7 @@ export class ThreatDetectionService {
       }
     }
 
-    return [...new Set(recommendations)];
+    return Array.from(new Set(recommendations));
   }
 
   // ==================== Request Analysis ====================
@@ -541,8 +573,8 @@ export class ThreatDetectionService {
     for (const threat of threats) {
       if (threat.severity === 'high' || threat.severity === 'critical') {
         await this.auditService.logSecurityAlert(
-          threat.type as SecurityEventType,
-          threat.severity as 'medium' | 'high' | 'critical',
+          threatToSecurityEventMap[threat.type],
+          threat.severity,
           {
             type: request.userId ? 'user' : 'anonymous',
             id: request.userId,

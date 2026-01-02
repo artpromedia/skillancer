@@ -96,9 +96,8 @@ function getStatusBgColor(status: HealthStatus): string {
 }
 
 export function ClientHealthScore({
-  _clientId,
+  // clientId and projectCount are part of the interface but not used in this component
   totalRevenue,
-  _projectCount,
   averageRating = 0,
   responseTime = 24,
   lastContactDays,

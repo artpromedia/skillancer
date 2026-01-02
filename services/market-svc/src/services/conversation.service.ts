@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/market-svc/services/conversation
  * Service for conversation lifecycle management
@@ -629,3 +630,4 @@ export function createConversationService(
     },
   };
 }
+

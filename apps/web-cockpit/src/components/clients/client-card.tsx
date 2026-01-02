@@ -20,11 +20,13 @@ export interface ClientCardProps {
   id: string;
   companyName: string;
   contactName: string;
+  contactTitle?: string;
   email: string;
   phone?: string;
   avatar?: string;
   status: 'active' | 'inactive' | 'prospect';
   platform: string;
+  tags?: string[];
   projectsCount: number;
   totalRevenue: number;
   lastContact: string;
@@ -104,11 +106,13 @@ export function ClientCard({
   id,
   companyName,
   contactName,
+  contactTitle,
   email,
   phone,
   avatar,
   status,
   platform,
+  tags = [],
   projectsCount,
   totalRevenue,
   lastContact,
@@ -269,8 +273,7 @@ export function ClientListRow({
   id,
   companyName,
   contactName,
-  _email,
-  _phone,
+  // email and phone are part of ClientCardProps but not used in list view
   avatar,
   status,
   platform,

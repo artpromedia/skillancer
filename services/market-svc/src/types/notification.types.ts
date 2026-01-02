@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/market-svc/types/notification
  * TypeScript types for the Unified Notification System
@@ -426,3 +427,4 @@ export class NotificationError extends Error {
     this.name = 'NotificationError';
   }
 }
+

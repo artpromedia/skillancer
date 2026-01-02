@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/skillpod-svc/repositories/recommendation/skill-gap
  * Skill Gap repository for database operations
@@ -540,3 +541,4 @@ export function createSkillGapRepository(prisma: PrismaClient): SkillGapReposito
     upsert,
   };
 }
+

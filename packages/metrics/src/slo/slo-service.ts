@@ -49,11 +49,14 @@ export class SLOService {
    */
   registerSLO(definition: SLODefinition): void {
     this.sloDefinitions.set(definition.id, definition);
-    this.logger.info('SLO registered', {
-      sloId: definition.id,
-      service: definition.service,
-      target: definition.target,
-    });
+    this.logger.info(
+      {
+        sloId: definition.id,
+        service: definition.service,
+        target: definition.target,
+      },
+      'SLO registered'
+    );
   }
 
   /**
@@ -63,9 +66,12 @@ export class SLOService {
     for (const slo of defaultSLODefinitions) {
       this.registerSLO(slo);
     }
-    this.logger.info('Default SLOs registered', {
-      count: defaultSLODefinitions.length,
-    });
+    this.logger.info(
+      {
+        count: defaultSLODefinitions.length,
+      },
+      'Default SLOs registered'
+    );
   }
 
   /**
@@ -90,7 +96,7 @@ export class SLOService {
   async getSLOStatus(sloId: string): Promise<SLOStatusResult | null> {
     const definition = this.sloDefinitions.get(sloId);
     if (!definition) {
-      this.logger.warn('SLO not found', { sloId });
+      this.logger.warn({ sloId }, 'SLO not found');
       return null;
     }
 
@@ -138,10 +144,13 @@ export class SLOService {
         history,
       };
     } catch (error) {
-      this.logger.error('Failed to get SLO status', {
-        sloId,
-        error: (error as Error).message,
-      });
+      this.logger.error(
+        {
+          sloId,
+          error: (error as Error).message,
+        },
+        'Failed to get SLO status'
+      );
       throw error;
     }
   }
@@ -171,10 +180,13 @@ export class SLOService {
           summary[status.status]++;
         }
       } catch (error) {
-        this.logger.error('Failed to get SLO status', {
-          sloId: id,
-          error: (error as Error).message,
-        });
+        this.logger.error(
+          {
+            sloId: id,
+            error: (error as Error).message,
+          },
+          'Failed to get SLO status'
+        );
       }
     }
 
@@ -246,10 +258,13 @@ export class SLOService {
           downtimeMinutes,
         });
       } catch (error) {
-        this.logger.error('Failed to calculate SLO for report', {
-          sloId: id,
-          error: (error as Error).message,
-        });
+        this.logger.error(
+          {
+            sloId: id,
+            error: (error as Error).message,
+          },
+          'Failed to calculate SLO for report'
+        );
       }
     }
 
@@ -298,10 +313,13 @@ export class SLOService {
 
       return 100;
     } catch (error) {
-      this.logger.error('Failed to calculate SLI', {
-        sloId: definition.id,
-        error: (error as Error).message,
-      });
+      this.logger.error(
+        {
+          sloId: definition.id,
+          error: (error as Error).message,
+        },
+        'Failed to calculate SLI'
+      );
       return 0;
     }
   }
@@ -340,10 +358,13 @@ export class SLOService {
 
       return 100;
     } catch (error) {
-      this.logger.error('Failed to calculate SLI for period', {
-        sloId: definition.id,
-        error: (error as Error).message,
-      });
+      this.logger.error(
+        {
+          sloId: definition.id,
+          error: (error as Error).message,
+        },
+        'Failed to calculate SLI for period'
+      );
       return 0;
     }
   }
@@ -427,10 +448,13 @@ export class SLOService {
 
       return { current: Math.max(0, currentBurnRate), trend };
     } catch (error) {
-      this.logger.error('Failed to calculate burn rate', {
-        sloId: definition.id,
-        error: (error as Error).message,
-      });
+      this.logger.error(
+        {
+          sloId: definition.id,
+          error: (error as Error).message,
+        },
+        'Failed to calculate burn rate'
+      );
       return { current: 0, trend: 'stable' };
     }
   }
@@ -599,15 +623,21 @@ export class SLOService {
       try {
         await this.getSLOStatus(id);
       } catch (error) {
-        this.logger.error('Failed to update SLO metrics', {
-          sloId: id,
-          error: (error as Error).message,
-        });
+        this.logger.error(
+          {
+            sloId: id,
+            error: (error as Error).message,
+          },
+          'Failed to update SLO metrics'
+        );
       }
     }
-    this.logger.debug('SLO metrics updated', {
-      count: this.sloDefinitions.size,
-    });
+    this.logger.debug(
+      {
+        count: this.sloDefinitions.size,
+      },
+      'SLO metrics updated'
+    );
   }
 
   // ==================== Helper Methods ====================
@@ -620,8 +650,11 @@ export class SLOService {
     const match = duration.match(/(\d+)([dhm])/);
     if (!match) return 43200; // Default 30 days
 
-    const value = parseInt(match[1]);
+    const valueStr = match[1];
     const unit = match[2];
+    if (!valueStr || !unit) return 43200; // Default 30 days
+
+    const value = parseInt(valueStr, 10);
 
     switch (unit) {
       case 'd':

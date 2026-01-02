@@ -5,12 +5,7 @@
 
 import { z } from 'zod';
 
-import {
-  uuidSchema,
-  dateSchema,
-  currencyCodeSchema,
-  timestampsSchema,
-} from '../common/base';
+import { uuidSchema, dateSchema, currencyCodeSchema, timestampsSchema } from '../common/base';
 
 // =============================================================================
 // Invoice Enums
@@ -70,17 +65,17 @@ export type LineItemType = z.infer<typeof lineItemTypeSchema>;
  */
 export const invoiceLineItemSchema = z.object({
   id: uuidSchema,
-  
+
   // Item details
   type: lineItemTypeSchema,
   description: z.string().max(500),
   notes: z.string().max(1000).optional(),
-  
+
   // Quantity and price
   quantity: z.number().positive().default(1),
   unitPrice: z.number(), // Can be negative for discounts
   unit: z.string().max(50).optional(), // e.g., "hours", "items"
-  
+
   // Amounts
   subtotal: z.number(),
   discountPercent: z.number().min(0).max(100).optional(),
@@ -88,16 +83,16 @@ export const invoiceLineItemSchema = z.object({
   taxPercent: z.number().min(0).max(100).optional(),
   taxAmount: z.number().nonnegative().optional(),
   total: z.number(),
-  
+
   // Related entity
   contractId: uuidSchema.optional(),
   milestoneId: uuidSchema.optional(),
   serviceId: uuidSchema.optional(),
-  
+
   // Date range (for time-based items)
   periodStart: dateSchema.optional(),
   periodEnd: dateSchema.optional(),
-  
+
   // Display order
   order: z.number().int().nonnegative().default(0),
 });
@@ -144,84 +139,84 @@ export type InvoiceAddress = z.infer<typeof invoiceAddressSchema>;
 export const invoiceSchema = z.object({
   id: uuidSchema,
   invoiceNumber: z.string(), // Human-readable invoice number
-  
+
   // Type and status
   type: invoiceTypeSchema.default('STANDARD'),
   status: invoiceStatusSchema,
-  
+
   // Parties
   senderUserId: uuidSchema,
   senderTenantId: uuidSchema.optional(),
   recipientUserId: uuidSchema.optional(),
   recipientClientId: uuidSchema.optional(),
-  
+
   // Addresses
   senderAddress: invoiceAddressSchema,
   recipientAddress: invoiceAddressSchema,
-  
+
   // Related entities
   contractId: uuidSchema.optional(),
   subscriptionId: uuidSchema.optional(),
-  
+
   // Line items
   lineItems: z.array(invoiceLineItemSchema),
-  
+
   // Amounts
   subtotal: z.number(),
   discountTotal: z.number().nonnegative().default(0),
   taxTotal: z.number().nonnegative().default(0),
   total: z.number(),
-  
+
   // Currency
   currency: currencyCodeSchema.default('USD'),
   exchangeRate: z.number().positive().optional(), // If converted
-  
+
   // Payment tracking
   amountPaid: z.number().nonnegative().default(0),
   amountDue: z.number().nonnegative(),
   payments: z.array(invoicePaymentSchema).optional(),
-  
+
   // Dates
   issueDate: dateSchema,
   dueDate: dateSchema,
   paidDate: dateSchema.optional(),
-  
+
   // Terms
   paymentTermsDays: z.number().int().nonnegative().default(30),
   paymentInstructions: z.string().max(2000).optional(),
   terms: z.string().max(5000).optional(),
-  
+
   // Notes
   notes: z.string().max(2000).optional(),
   internalNotes: z.string().max(2000).optional(),
-  
+
   // Footer
   footer: z.string().max(1000).optional(),
-  
+
   // Reminders
   lastReminderAt: dateSchema.optional(),
   reminderCount: z.number().int().nonnegative().default(0),
   nextReminderAt: dateSchema.optional(),
-  
+
   // PDF
   pdfUrl: z.string().url().optional(),
   pdfGeneratedAt: dateSchema.optional(),
-  
+
   // Recurring
   isRecurring: z.boolean().default(false),
   recurringScheduleId: uuidSchema.optional(),
-  
+
   // Credit/debit note reference
   originalInvoiceId: uuidSchema.optional(),
-  
+
   // Viewing
   viewedAt: dateSchema.optional(),
   viewedByRecipient: z.boolean().default(false),
-  
+
   // External
   externalId: z.string().optional(),
   externalProvider: z.string().optional(),
-  
+
   ...timestampsSchema.shape,
 });
 export type Invoice = z.infer<typeof invoiceSchema>;
@@ -317,7 +312,7 @@ export type InvoiceFilter = z.infer<typeof invoiceFilterSchema>;
 export const recurringInvoiceScheduleSchema = z.object({
   id: uuidSchema,
   userId: uuidSchema,
-  
+
   // Template
   templateInvoice: invoiceSchema.omit({
     id: true,
@@ -331,28 +326,49 @@ export const recurringInvoiceScheduleSchema = z.object({
     createdAt: true,
     updatedAt: true,
   }),
-  
+
   // Schedule
   frequency: z.enum(['WEEKLY', 'BIWEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUALLY']),
   dayOfMonth: z.number().int().min(1).max(28).optional(), // For monthly
   dayOfWeek: z.number().int().min(0).max(6).optional(), // For weekly
-  
+
   // Period
   startDate: dateSchema,
   endDate: dateSchema.optional(),
   maxOccurrences: z.number().int().positive().optional(),
-  
+
   // Status
   isActive: z.boolean().default(true),
   occurrenceCount: z.number().int().nonnegative().default(0),
   nextInvoiceDate: dateSchema.optional(),
   lastInvoiceDate: dateSchema.optional(),
   lastInvoiceId: uuidSchema.optional(),
-  
+
   // Auto-send
   autoSend: z.boolean().default(true),
   sendDaysBefore: z.number().int().nonnegative().default(0),
-  
+
   ...timestampsSchema.shape,
 });
 export type RecurringInvoiceSchedule = z.infer<typeof recurringInvoiceScheduleSchema>;
+
+/**
+ * Recurring invoice - simplified view for API responses
+ */
+export const recurringInvoiceSchema = z.object({
+  id: uuidSchema,
+  title: z.string(),
+  clientId: uuidSchema,
+  clientName: z.string(),
+  amount: z.number(),
+  frequency: z.enum(['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly']),
+  status: z.enum(['active', 'paused', 'ended', 'draft']),
+  nextInvoiceDate: z.string(),
+  lastInvoiceDate: z.string().optional(),
+  startDate: z.string(),
+  endDate: z.string().optional(),
+  invoicesGenerated: z.number().int().nonnegative(),
+  invoicePrefix: z.string(),
+  autoSend: z.boolean(),
+});
+export type RecurringInvoice = z.infer<typeof recurringInvoiceSchema>;

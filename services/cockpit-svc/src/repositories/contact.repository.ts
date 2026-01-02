@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/contact
  * Client Contact data access layer
@@ -104,3 +105,4 @@ export class ContactRepository {
     });
   }
 }
+

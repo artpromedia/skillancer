@@ -1,0 +1,148 @@
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Interview Reminder - Skillancer Executive Suite</title>
+  </head>
+  <body
+    style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;"
+  >
+    <table
+      width='100%'
+      cellpadding='0'
+      cellspacing='0'
+      style='background-color: #f5f5f5; padding: 40px 20px;'
+    >
+      <tr>
+        <td align='center'>
+          <table
+            width='600'
+            cellpadding='0'
+            cellspacing='0'
+            style='background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);'
+          >
+            <!-- Header -->
+            <tr>
+              <td
+                style='background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 32px; text-align: center;'
+              >
+                <h1 style='color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;'>⏰
+                  Interview Tomorrow</h1>
+              </td>
+            </tr>
+
+            <!-- Content -->
+            <tr>
+              <td style='padding: 40px 32px;'>
+                <p style='color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 24px;'>
+                  Hi
+                  {{executiveName}},
+                </p>
+
+                <p style='color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 24px;'>
+                  This is a friendly reminder that your interview is scheduled for
+                  <strong>tomorrow</strong>.
+                </p>
+
+                <!-- Interview Details Box -->
+                <table
+                  width='100%'
+                  cellpadding='0'
+                  cellspacing='0'
+                  style='background-color: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; margin-bottom: 24px;'
+                >
+                  <tr>
+                    <td style='padding: 24px;'>
+                      <table width='100%' cellpadding='0' cellspacing='0'>
+                        <tr>
+                          <td
+                            style='padding: 8px 0; color: #92400e; font-size: 14px; width: 100px;'
+                          >Date:</td>
+                          <td
+                            style='padding: 8px 0; color: #78350f; font-size: 14px; font-weight: 600;'
+                          >{{interviewDate}}</td>
+                        </tr>
+                        <tr>
+                          <td style='padding: 8px 0; color: #92400e; font-size: 14px;'>Time:</td>
+                          <td
+                            style='padding: 8px 0; color: #78350f; font-size: 14px; font-weight: 600;'
+                          >{{interviewTime}} ({{timezone}})</td>
+                        </tr>
+                        <tr>
+                          <td
+                            style='padding: 8px 0; color: #92400e; font-size: 14px;'
+                          >Duration:</td>
+                          <td
+                            style='padding: 8px 0; color: #78350f; font-size: 14px; font-weight: 600;'
+                          >{{duration}} minutes</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Join Button -->
+                <table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom: 24px;'>
+                  <tr>
+                    <td align='center'>
+                      <a
+                        href='{{meetingLink}}'
+                        style='display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;'
+                      >Save Meeting Link</a>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Quick Checklist -->
+                <h3 style='color: #1a1a2e; margin: 24px 0 16px; font-size: 16px;'>Quick Checklist</h3>
+                <table width='100%' cellpadding='0' cellspacing='0'>
+                  <tr>
+                    <td style='padding: 8px 0; color: #555555; font-size: 14px;'>
+                      ☐ Test your camera and microphone
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style='padding: 8px 0; color: #555555; font-size: 14px;'>
+                      ☐ Find a quiet, well-lit space
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style='padding: 8px 0; color: #555555; font-size: 14px;'>
+                      ☐ Review your executive history highlights
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style='padding: 8px 0; color: #555555; font-size: 14px;'>
+                      ☐ Prepare 2-3 questions about Skillancer
+                    </td>
+                  </tr>
+                </table>
+
+                <p style='color: #666666; font-size: 14px; line-height: 1.6; margin: 24px 0 0;'>
+                  Can't make it?
+                  <a
+                    href='{{rescheduleLink}}'
+                    style='color: #4f46e5; text-decoration: none;'
+                  >Reschedule here</a>
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td
+                style='background-color: #f8f9fa; padding: 24px 32px; text-align: center; border-top: 1px solid #e5e7eb;'
+              >
+                <p style='color: #999999; font-size: 12px; margin: 0;'>
+                  ©
+                  {{year}}
+                  Skillancer. All rights reserved.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

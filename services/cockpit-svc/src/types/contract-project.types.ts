@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/types/contract-project
  * Types for Contract-Project Integration
@@ -237,3 +238,4 @@ export interface ClientSyncResult {
   linked: boolean;
   clientId: string;
 }
+

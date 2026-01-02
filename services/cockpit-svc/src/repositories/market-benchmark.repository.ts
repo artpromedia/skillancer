@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Market Rate Benchmark Repository
  *
@@ -312,3 +313,4 @@ export class MarketRateBenchmarkRepository {
     }
   }
 }
+

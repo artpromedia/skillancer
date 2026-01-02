@@ -4,13 +4,18 @@
  */
 
 import {
-  getSLOService,
-  defaultSLOs,
+  createSLOService,
+  defaultSLODefinitions,
   type SLOStatusResult,
   type SLOReport,
+  type PrometheusClient,
 } from '@skillancer/metrics';
+import type { Logger } from 'pino';
 
 import { getConfig } from '../config/index.js';
+
+// Import type extensions
+import '../types/index.js';
 
 import type { FastifyInstance } from 'fastify';
 
@@ -21,7 +26,6 @@ interface SLOStatusParams {
 interface SLOReportQuery {
   period?: string;
   services?: string;
-  tags?: string;
 }
 
 interface DashboardInfo {
@@ -39,8 +43,22 @@ interface SLOStatusResponse {
     total: number;
     healthy: number;
     warning: number;
-    breached: number;
+    critical: number;
     healthRate: number;
+  };
+}
+
+/**
+ * Create a stub Prometheus client for development/non-Prometheus environments
+ */
+function createStubPrometheusClient(): PrometheusClient {
+  return {
+    async query(_query: string) {
+      return { status: 'success' as const, data: { resultType: 'vector' as const, result: [] } };
+    },
+    async queryRange(_query: string, _start: Date, _end: Date, _step: string) {
+      return { status: 'success' as const, data: { resultType: 'matrix' as const, result: [] } };
+    },
   };
 }
 
@@ -53,10 +71,13 @@ export function observabilityRoutes(
   done: (err?: Error) => void
 ): void {
   const _config = getConfig();
-  const sloService = getSLOService();
+  const prometheusClient = createStubPrometheusClient();
+  // Fastify uses pino under the hood, so we can safely cast to pino Logger
+  const logger = app.log as unknown as Logger;
+  const sloService = createSLOService(prometheusClient, logger);
 
   // Register default SLOs on startup
-  for (const slo of defaultSLOs) {
+  for (const slo of defaultSLODefinitions) {
     sloService.registerSLO(slo);
   }
 
@@ -119,7 +140,7 @@ export function observabilityRoutes(
                   total: { type: 'number' },
                   healthy: { type: 'number' },
                   warning: { type: 'number' },
-                  breached: { type: 'number' },
+                  critical: { type: 'number' },
                   healthRate: { type: 'number' },
                 },
               },
@@ -131,25 +152,26 @@ export function observabilityRoutes(
     async (request, _reply): Promise<SLOStatusResponse> => {
       const { service } = request.query;
 
-      let statuses = await sloService.getAllSLOStatuses();
+      const result = await sloService.getAllSLOStatuses();
+      let sloStatuses = result.slos;
 
       // Filter by service if specified
       if (service) {
-        statuses = statuses.filter((s) => s.service === service);
+        sloStatuses = sloStatuses.filter((s) => s.service === service);
       }
 
       const summary = {
-        total: statuses.length,
-        healthy: statuses.filter((s) => s.status === 'healthy').length,
-        warning: statuses.filter((s) => s.status === 'warning').length,
-        breached: statuses.filter((s) => s.status === 'breached').length,
+        total: sloStatuses.length,
+        healthy: sloStatuses.filter((s) => s.status === 'healthy').length,
+        warning: sloStatuses.filter((s) => s.status === 'warning').length,
+        critical: sloStatuses.filter((s) => s.status === 'critical').length,
         healthRate: 0,
       };
       summary.healthRate = summary.total > 0 ? (summary.healthy / summary.total) * 100 : 100;
 
       return {
         timestamp: new Date().toISOString(),
-        slos: statuses,
+        slos: sloStatuses,
         summary,
       };
     }
@@ -219,7 +241,6 @@ export function observabilityRoutes(
     '/api/slo/report',
     {
       schema: {
-        tags: ['observability', 'slo'],
         summary: 'Generate SLO report',
         description: 'Generates a comprehensive SLO report for the specified period',
         querystring: {
@@ -235,45 +256,52 @@ export function observabilityRoutes(
               type: 'string',
               description: 'Comma-separated list of services to include',
             },
-            tags: {
-              type: 'string',
-              description: 'Comma-separated list of tags to filter by',
-            },
           },
         },
         response: {
           200: {
             type: 'object',
             properties: {
-              reportId: { type: 'string' },
-              generatedAt: { type: 'string' },
               period: {
                 type: 'object',
                 properties: {
-                  start: { type: 'string' },
-                  end: { type: 'string' },
-                  duration: { type: 'string' },
+                  start: { type: 'string', format: 'date-time' },
+                  end: { type: 'string', format: 'date-time' },
+                },
+              },
+              slos: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    name: { type: 'string' },
+                    service: { type: 'string' },
+                    target: { type: 'number' },
+                    achieved: { type: 'number' },
+                    status: { type: 'string', enum: ['met', 'at_risk', 'missed'] },
+                    errorBudgetUsed: { type: 'number' },
+                    incidents: { type: 'number' },
+                    downtimeMinutes: { type: 'number' },
+                  },
                 },
               },
               summary: {
                 type: 'object',
                 properties: {
-                  totalSLOs: { type: 'number' },
-                  healthySLOs: { type: 'number' },
-                  warningSLOs: { type: 'number' },
-                  breachedSLOs: { type: 'number' },
-                  overallHealthRate: { type: 'number' },
-                  avgErrorBudgetRemaining: { type: 'number' },
+                  total: { type: 'number' },
+                  met: { type: 'number' },
+                  missed: { type: 'number' },
+                  atRisk: { type: 'number' },
                 },
               },
-              sloDetails: { type: 'array' },
             },
           },
         },
       },
     },
     async (request): Promise<SLOReport> => {
-      const { period = '24h', services, tags } = request.query;
+      const { period = '24h', services } = request.query;
 
       // Parse period to duration
       const durationMs = parsePeriodToMs(period);
@@ -284,39 +312,20 @@ export function observabilityRoutes(
 
       // Filter by services if specified
       if (services) {
-        const serviceList = services.split(',').map((s) => s.trim());
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        report.sloDetails = report.sloDetails.filter((d) => serviceList.includes(d.service));
-      }
-
-      // Filter by tags if specified
-      if (tags) {
-        const tagList = tags.split(',').map((t) => t.trim());
-        /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument */
-        report.sloDetails = report.sloDetails.filter((d) =>
-          d.tags?.some((t) => tagList.includes(t))
-        );
-        /* eslint-enable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument */
+        const serviceList = services.split(',').map((s: string) => s.trim());
+        report.slos = report.slos.filter((slo) => serviceList.includes(slo.service));
       }
 
       // Recalculate summary after filtering
+      const met = report.slos.filter((slo) => slo.status === 'met').length;
+      const missed = report.slos.filter((slo) => slo.status === 'missed').length;
+      const atRisk = report.slos.filter((slo) => slo.status === 'at_risk').length;
+
       report.summary = {
-        totalSLOs: report.sloDetails.length,
-        healthySLOs: report.sloDetails.filter((d) => d.status === 'healthy').length,
-        warningSLOs: report.sloDetails.filter((d) => d.status === 'warning').length,
-        breachedSLOs: report.sloDetails.filter((d) => d.status === 'breached').length,
-        overallHealthRate:
-          report.sloDetails.length > 0
-            ? (report.sloDetails.filter((d) => d.status === 'healthy').length /
-                report.sloDetails.length) *
-              100
-            : 100,
-        avgErrorBudgetRemaining:
-          report.sloDetails.length > 0
-            ? // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-              report.sloDetails.reduce((sum, d) => sum + d.errorBudget.remainingPercent, 0) /
-              report.sloDetails.length
-            : 100,
+        total: report.slos.length,
+        met,
+        missed,
+        atRisk,
       };
 
       return report;

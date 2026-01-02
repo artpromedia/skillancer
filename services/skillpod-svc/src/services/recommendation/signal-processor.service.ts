@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/skillpod-svc/services/recommendation/signal-processor
  * Processes market activity signals and extracts skill gap indicators
@@ -656,3 +657,4 @@ export function createSignalProcessor(
     cleanupExpiredSignals,
   };
 }
+

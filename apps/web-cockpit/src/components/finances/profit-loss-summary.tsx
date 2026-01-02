@@ -91,7 +91,7 @@ export function ProfitLossSummary({
   incomeByPlatform = mockIncomeByPlatform,
   expenses = mockExpenses,
   period = 'December 2024',
-  _previousPeriod = 'December 2023',
+  // previousPeriod is part of props but not currently used
   className,
 }: Readonly<ProfitLossSummaryProps>) {
   const [incomeView, setIncomeView] = useState<'client' | 'type' | 'platform'>('client');

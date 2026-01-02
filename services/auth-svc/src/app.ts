@@ -19,6 +19,7 @@ import Fastify, {
 import { getConfig } from './config/index.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { rateLimitPlugin } from './middleware/rate-limit.js';
+import { authSecurityPlugin } from './plugins/security.js';
 import { authRoutes } from './routes/auth.js';
 import { certificationRoutes } from './routes/certification.js';
 import { clientProfileRoutes } from './routes/client-profile.js';
@@ -158,6 +159,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Rate limiting
   await app.register(rateLimitPlugin, { redis });
+
+  // Auth security plugin (SOC 2 compliance)
+  await app.register(authSecurityPlugin, { redis });
 
   // ==========================================================================
   // INITIALIZE SERVICES

@@ -147,7 +147,7 @@ export interface SLOStatusResult {
   /** Overall status */
   status: SLOStatus;
   /** Estimated time until budget exhaustion */
-  timeToExhaustion?: string;
+  timeToExhaustion?: string | undefined;
   /** Historical data */
   history: SLIHistoryPoint[];
 }

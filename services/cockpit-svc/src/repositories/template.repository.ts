@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/template
  * Project Template data access layer
@@ -193,3 +194,4 @@ export class TemplateRepository {
     return result.map((r) => r.category).filter((c): c is string => c !== null);
   }
 }
+

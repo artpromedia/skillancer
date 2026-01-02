@@ -255,7 +255,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}): UseTimeEntr
         });
       }
       const projectData = projectMap.get(entry.projectId);
-      if (!projectData) continue;
+      if (!projectData) return;
       projectData.duration += entry.duration;
       if (entry.billable && entry.hourlyRate) {
         projectData.earnings += (entry.duration / 60) * entry.hourlyRate;
@@ -266,7 +266,7 @@ export function useTimeEntries(options: UseTimeEntriesOptions = {}): UseTimeEntr
         dailyMap.set(entry.date, { date: entry.date, duration: 0, earnings: 0 });
       }
       const dailyData = dailyMap.get(entry.date);
-      if (!dailyData) continue;
+      if (!dailyData) return;
       dailyData.duration += entry.duration;
       if (entry.billable && entry.hourlyRate) {
         dailyData.earnings += (entry.duration / 60) * entry.hourlyRate;

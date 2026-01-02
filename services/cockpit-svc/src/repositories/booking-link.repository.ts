@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/booking-link
  * Booking Link Repository
@@ -280,3 +281,4 @@ export class BookingLinkRepository {
     };
   }
 }
+

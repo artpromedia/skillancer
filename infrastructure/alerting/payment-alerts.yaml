@@ -1,0 +1,384 @@
+# =============================================================================
+# Stripe Payment Alert Rules
+# =============================================================================
+# Alert configurations for payment monitoring
+# Uses Prometheus alerting format
+# =============================================================================
+
+groups:
+  - name: payment_critical
+    rules:
+      # ---------------------------------------------------------------------
+      # CRITICAL: Payment Processing Down
+      # ---------------------------------------------------------------------
+      - alert: PaymentProcessingDown
+        expr: |
+          sum(rate(payment_transactions_total{status="succeeded"}[5m])) == 0
+          AND
+          sum(rate(payment_transactions_total[5m])) > 0
+        for: 5m
+        labels:
+          severity: critical
+          team: payments
+          pagerduty: payments-critical
+        annotations:
+          summary: "Payment processing appears to be down"
+          description: "No successful payments in the last 5 minutes while attempts are being made"
+          runbook_url: "https://docs.skillancer.io/runbooks/payment-processing-down"
+          dashboard_url: "https://grafana.skillancer.io/d/payments/overview"
+
+      # ---------------------------------------------------------------------
+      # CRITICAL: High Payment Failure Rate
+      # ---------------------------------------------------------------------
+      - alert: PaymentFailureRateHigh
+        expr: |
+          (
+            sum(rate(payment_failures_total[5m]))
+            /
+            sum(rate(payment_transactions_total[5m]))
+          ) > 0.15
+        for: 3m
+        labels:
+          severity: critical
+          team: payments
+          pagerduty: payments-critical
+        annotations:
+          summary: "Payment failure rate exceeds 15%"
+          description: "{{ $value | humanizePercentage }} of payments are failing"
+          runbook_url: "https://docs.skillancer.io/runbooks/high-payment-failures"
+          
+      # ---------------------------------------------------------------------
+      # CRITICAL: Stripe API Outage
+      # ---------------------------------------------------------------------
+      - alert: StripeAPIDown
+        expr: |
+          sum(rate(stripe_api_errors_total{status_code=~"5.."}[5m])) 
+          / 
+          sum(rate(stripe_api_latency_seconds_count[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          team: payments
+          pagerduty: payments-critical
+        annotations:
+          summary: "Stripe API is returning 5xx errors"
+          description: "More than 50% of Stripe API calls are failing with server errors"
+          runbook_url: "https://docs.skillancer.io/runbooks/stripe-api-outage"
+
+      # ---------------------------------------------------------------------
+      # CRITICAL: Webhook Processing Halted
+      # ---------------------------------------------------------------------
+      - alert: WebhookProcessingHalted
+        expr: |
+          rate(stripe_webhook_events_total{status="processed"}[10m]) == 0
+          AND
+          stripe_webhook_queue_depth > 50
+        for: 5m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "Webhook processing has stopped"
+          description: "No webhooks processed in 10 minutes with queue depth {{ $value }}"
+          runbook_url: "https://docs.skillancer.io/runbooks/webhook-processing-halted"
+
+      # ---------------------------------------------------------------------
+      # CRITICAL: Dead Letter Queue Growing
+      # ---------------------------------------------------------------------
+      - alert: WebhookDLQGrowing
+        expr: |
+          delta(stripe_webhook_dlq_size[1h]) > 100
+        for: 15m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "Webhook dead letter queue is growing rapidly"
+          description: "DLQ has grown by {{ $value }} events in the last hour"
+          runbook_url: "https://docs.skillancer.io/runbooks/webhook-dlq-recovery"
+
+  - name: payment_warning
+    rules:
+      # ---------------------------------------------------------------------
+      # WARNING: Elevated Payment Failures
+      # ---------------------------------------------------------------------
+      - alert: PaymentFailureRateElevated
+        expr: |
+          (
+            sum(rate(payment_failures_total[15m]))
+            /
+            sum(rate(payment_transactions_total[15m]))
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "Payment failure rate above 5%"
+          description: "{{ $value | humanizePercentage }} of payments failing over 15 minutes"
+
+      # ---------------------------------------------------------------------
+      # WARNING: Stripe API Latency High
+      # ---------------------------------------------------------------------
+      - alert: StripeAPILatencyHigh
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(stripe_api_latency_seconds_bucket[5m])) by (le, endpoint)
+          ) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "Stripe API p95 latency exceeds 5 seconds"
+          description: "{{ $labels.endpoint }} endpoint p95 latency: {{ $value | humanizeDuration }}"
+
+      # ---------------------------------------------------------------------
+      # WARNING: Stripe Rate Limiting
+      # ---------------------------------------------------------------------
+      - alert: StripeRateLimitHits
+        expr: |
+          sum(rate(stripe_rate_limit_hits_total[5m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "Hitting Stripe rate limits"
+          description: "{{ $value }} rate limit hits per second"
+          runbook_url: "https://docs.skillancer.io/runbooks/stripe-rate-limiting"
+
+      # ---------------------------------------------------------------------
+      # WARNING: High Chargeback Rate
+      # ---------------------------------------------------------------------
+      - alert: ChargebackRateHigh
+        expr: |
+          (
+            sum(rate(payment_disputes_total{type="chargeback"}[7d]))
+            /
+            sum(rate(payment_transactions_total{status="succeeded"}[7d]))
+          ) > 0.01
+        for: 1h
+        labels:
+          severity: warning
+          team: payments
+          team: fraud
+        annotations:
+          summary: "Chargeback rate exceeds 1%"
+          description: "7-day chargeback rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.skillancer.io/runbooks/high-chargebacks"
+
+      # ---------------------------------------------------------------------
+      # WARNING: Webhook Queue Backlog
+      # ---------------------------------------------------------------------
+      - alert: WebhookQueueBacklog
+        expr: |
+          stripe_webhook_queue_depth > 200
+        for: 10m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "Webhook queue has significant backlog"
+          description: "{{ $value }} events in queue"
+
+      # ---------------------------------------------------------------------
+      # WARNING: Payout Failures
+      # ---------------------------------------------------------------------
+      - alert: PayoutFailuresHigh
+        expr: |
+          (
+            sum(rate(payouts_processed_total{status="failed"}[1h]))
+            /
+            sum(rate(payouts_processed_total[1h]))
+          ) > 0.05
+        for: 30m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "Payout failure rate above 5%"
+          description: "{{ $value | humanizePercentage }} of payouts failing"
+
+      # ---------------------------------------------------------------------
+      # WARNING: Large Escrow Pending Release
+      # ---------------------------------------------------------------------
+      - alert: EscrowReleaseSlow
+        expr: |
+          histogram_quantile(0.90, 
+            sum(rate(escrow_release_latency_hours_bucket[24h])) by (le)
+          ) > 72
+        for: 6h
+        labels:
+          severity: warning
+          team: payments
+          team: ops
+        annotations:
+          summary: "Escrow releases taking too long"
+          description: "90th percentile release time is {{ $value | humanizeDuration }}"
+
+      # ---------------------------------------------------------------------
+      # WARNING: Blocked Transaction Spike
+      # ---------------------------------------------------------------------
+      - alert: FraudBlockSpike
+        expr: |
+          sum(rate(blocked_transactions_total[1h])) 
+          / 
+          sum(rate(payment_transactions_total[1h])) > 0.1
+        for: 30m
+        labels:
+          severity: warning
+          team: payments
+          team: fraud
+        annotations:
+          summary: "Unusually high fraud block rate"
+          description: "{{ $value | humanizePercentage }} of transactions being blocked"
+
+  - name: payment_info
+    rules:
+      # ---------------------------------------------------------------------
+      # INFO: Subscription Churn Elevated
+      # ---------------------------------------------------------------------
+      - alert: SubscriptionChurnElevated
+        expr: |
+          (
+            sum(rate(subscription_churn_total[7d]))
+            /
+            avg(active_subscriptions_total)
+          ) * 30 > 0.05
+        for: 1d
+        labels:
+          severity: info
+          team: payments
+          team: growth
+        annotations:
+          summary: "Monthly subscription churn rate above 5%"
+          description: "Projected monthly churn: {{ $value | humanizePercentage }}"
+
+      # ---------------------------------------------------------------------
+      # INFO: Low Payment Volume
+      # ---------------------------------------------------------------------
+      - alert: PaymentVolumeLow
+        expr: |
+          sum(rate(payment_volume_cents_total[1h])) < 10000
+        for: 2h
+        labels:
+          severity: info
+          team: payments
+        annotations:
+          summary: "Payment volume unusually low"
+          description: "Less than $100/hour in payment volume"
+
+      # ---------------------------------------------------------------------
+      # INFO: New Error Code Detected
+      # ---------------------------------------------------------------------
+      - alert: NewPaymentErrorCode
+        expr: |
+          count(
+            count by (error_code) (payment_failures_total) 
+            unless 
+            count by (error_code) (payment_failures_total offset 1d)
+          ) > 0
+        for: 5m
+        labels:
+          severity: info
+          team: payments
+        annotations:
+          summary: "New payment error code detected"
+          description: "A payment error code seen for the first time"
+
+  - name: payment_reconciliation
+    rules:
+      # ---------------------------------------------------------------------
+      # WARNING: Reconciliation Discrepancy
+      # ---------------------------------------------------------------------
+      - alert: ReconciliationDiscrepancy
+        expr: |
+          abs(
+            sum(payment_volume_cents_total) - sum(stripe_reported_volume_cents)
+          ) > 100000
+        for: 30m
+        labels:
+          severity: warning
+          team: payments
+          team: finance
+        annotations:
+          summary: "Reconciliation discrepancy detected"
+          description: "Difference of ${{ $value | humanize }} between internal and Stripe records"
+          runbook_url: "https://docs.skillancer.io/runbooks/reconciliation-issues"
+
+      # ---------------------------------------------------------------------
+      # CRITICAL: Large Reconciliation Gap
+      # ---------------------------------------------------------------------
+      - alert: ReconciliationGapCritical
+        expr: |
+          abs(
+            sum(payment_volume_cents_total) - sum(stripe_reported_volume_cents)
+          ) > 1000000
+        for: 15m
+        labels:
+          severity: critical
+          team: payments
+          team: finance
+          pagerduty: payments-critical
+        annotations:
+          summary: "Critical reconciliation gap detected"
+          description: "Difference of ${{ $value | humanize }} - immediate investigation required"
+          runbook_url: "https://docs.skillancer.io/runbooks/reconciliation-issues"
+
+  - name: payment_slo
+    rules:
+      # ---------------------------------------------------------------------
+      # SLO: Payment Success Rate
+      # ---------------------------------------------------------------------
+      - alert: PaymentSuccessRateSLOBreach
+        expr: |
+          (
+            sum(rate(payment_transactions_total{status="succeeded"}[30d]))
+            /
+            sum(rate(payment_transactions_total[30d]))
+          ) < 0.99
+        for: 1h
+        labels:
+          severity: critical
+          team: payments
+          slo: payment-success-rate
+        annotations:
+          summary: "Payment success rate SLO breach"
+          description: "30-day success rate {{ $value | humanizePercentage }} is below 99% SLO"
+
+      # ---------------------------------------------------------------------
+      # SLO: Payment Processing Latency
+      # ---------------------------------------------------------------------
+      - alert: PaymentLatencySLOBreach
+        expr: |
+          histogram_quantile(0.99, 
+            sum(rate(payment_processing_latency_seconds_bucket[1h])) by (le)
+          ) > 10
+        for: 30m
+        labels:
+          severity: warning
+          team: payments
+          slo: payment-latency
+        annotations:
+          summary: "Payment latency SLO at risk"
+          description: "p99 latency {{ $value | humanizeDuration }} exceeds 10s target"
+
+      # ---------------------------------------------------------------------
+      # SLO: Webhook Processing
+      # ---------------------------------------------------------------------
+      - alert: WebhookProcessingSLOBreach
+        expr: |
+          (
+            sum(rate(stripe_webhook_events_total{status="processed"}[1h]))
+            /
+            sum(rate(stripe_webhook_events_total[1h]))
+          ) < 0.999
+        for: 15m
+        labels:
+          severity: warning
+          team: payments
+          slo: webhook-processing
+        annotations:
+          summary: "Webhook processing success rate below SLO"
+          description: "{{ $value | humanizePercentage }} success rate, target is 99.9%"

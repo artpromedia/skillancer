@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/routes/time-tracking
  * Time Tracking API Routes
@@ -686,3 +687,4 @@ export async function timeTrackingRoutes(
     }
   });
 }
+

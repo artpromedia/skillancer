@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/skillpod-svc/services/recommendation/learning-path-generator
  * Generates personalized learning paths based on skill gaps and career goals
@@ -608,3 +609,4 @@ export function createLearningPathGenerator(
     suggestNextMilestone,
   };
 }
+

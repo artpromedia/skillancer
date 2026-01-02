@@ -58,11 +58,7 @@ export class ApiClient {
   /**
    * Make POST request
    */
-  async post<T>(
-    url: string,
-    data?: unknown,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.post<T>(url, data, config);
     return response.data;
   }
@@ -70,11 +66,7 @@ export class ApiClient {
   /**
    * Make PUT request
    */
-  async put<T>(
-    url: string,
-    data?: unknown,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.put<T>(url, data, config);
     return response.data;
   }
@@ -82,11 +74,7 @@ export class ApiClient {
   /**
    * Make PATCH request
    */
-  async patch<T>(
-    url: string,
-    data?: unknown,
-    config?: AxiosRequestConfig
-  ): Promise<T> {
+  async patch<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.patch<T>(url, data, config);
     return response.data;
   }
@@ -106,3 +94,12 @@ export class ApiClient {
 export function createApiClient(config: ApiClientConfig): ApiClient {
   return new ApiClient(config);
 }
+
+/**
+ * Default singleton API client instance
+ * Uses environment variables for configuration
+ */
+export const apiClient = new ApiClient({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:3001',
+  timeout: 30000,
+});

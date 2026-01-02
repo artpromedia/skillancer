@@ -12,16 +12,16 @@
  */
 
 import { useToast } from '@skillancer/ui';
-import { Button } from '@skillancer/ui/components/button';
+import { Button } from '@skillancer/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@skillancer/ui/components/select';
-import { Switch } from '@skillancer/ui/components/switch';
-import { cn } from '@skillancer/ui/lib/utils';
+} from '@skillancer/ui/select';
+import { Switch } from '@skillancer/ui/switch';
+import { cn } from '@skillancer/ui';
 import {
   AlertCircle,
   Loader2,

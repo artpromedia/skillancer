@@ -26,6 +26,7 @@ import {
   Shield,
   ShieldCheck,
   Star,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -35,12 +36,22 @@ import type { FreelancerProfile, VerificationLevel } from '@/lib/api/freelancers
 // Types
 // ============================================================================
 
+interface GuildMembership {
+  id: string;
+  name: string;
+  slug: string;
+  role: string;
+  combinedRating: number;
+}
+
 interface ProfileHeaderProps {
   profile: FreelancerProfile;
   isOwnProfile?: boolean;
   onHireClick?: () => void;
   onMessageClick?: () => void;
   className?: string;
+  /** Guilds the freelancer is a member of */
+  guilds?: GuildMembership[];
 }
 
 // ============================================================================
@@ -99,6 +110,7 @@ export function ProfileHeader({
   onHireClick,
   onMessageClick,
   className,
+  guilds = [],
 }: ProfileHeaderProps) {
   const verificationInfo = getVerificationInfo(profile.verificationLevel);
   const availabilityInfo = getAvailabilityInfo(profile.availability);
@@ -217,6 +229,20 @@ export function ProfileHeader({
                   Payment Verified
                 </Badge>
               )}
+              {/* Guild Memberships */}
+              {guilds.length > 0 &&
+                guilds.map((guild) => (
+                  <Link key={guild.id} href={`/guilds/${guild.slug}`}>
+                    <Badge
+                      className="cursor-pointer gap-1 rounded-full bg-purple-50 text-purple-700 hover:bg-purple-100"
+                      variant="outline"
+                    >
+                      <Users className="h-3 w-3" />
+                      {guild.name}
+                      {guild.role === 'LEAD' && <span className="text-xs">★</span>}
+                    </Badge>
+                  </Link>
+                ))}
             </div>
 
             {/* Availability and rate */}

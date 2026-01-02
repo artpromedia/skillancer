@@ -11,6 +11,15 @@
  * - Initial admin user
  * - Email templates
  * - Default invoice templates
+ *
+ * @deprecated TODO: This seed file needs updates to match the current schema:
+ * - SkillpodPolicy model doesn't exist (use different policy model)
+ * - SystemConfig model doesn't exist (need to create or use alternative)
+ * - EmailTemplate model doesn't exist (need to create or use alternative)
+ * - Skill model uses 'category' field not 'categoryId'
+ * - User model uses firstName/lastName not 'name', has different status/role enums
+ * - InvoiceTemplate requires freelancerUserId relation
+ * - See demo-data-seed.ts for a working example
  */
 
 import { PrismaClient } from '@prisma/client';

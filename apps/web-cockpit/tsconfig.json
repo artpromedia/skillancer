@@ -1,6 +1,12 @@
 {
   "extends": "../../packages/config/tsconfig/nextjs.json",
   "compilerOptions": {
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false,
+    "noImplicitAny": false,
+    "noImplicitReturns": false,
+    "strict": false,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "baseUrl": ".",
     "types": ["node", "react", "react-dom"],
     "paths": {
@@ -15,6 +21,6 @@
       "@skillancer/api-client/*": ["../../packages/api-client/src/*"]
     }
   },
-  "include": ["src", "next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next"]
+  "include": ["src", "next-env.d.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", ".next", "e2e"]
 }

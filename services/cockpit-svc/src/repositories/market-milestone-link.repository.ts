@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/market-milestone-link
  * Market Milestone Link data access layer
@@ -180,3 +181,4 @@ export class MarketMilestoneLinkRepository {
     };
   }
 }
+

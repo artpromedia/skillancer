@@ -111,7 +111,7 @@ export class TimerNotifications {
     if (stored) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const parsed: NotificationConfig = JSON.parse(stored);
+        const parsed: TimerNotificationConfig = JSON.parse(stored);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.config = { ...DEFAULT_CONFIG, ...parsed };
       } catch (e) {

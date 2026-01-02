@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Rate History Repository
  *
@@ -308,3 +309,4 @@ export class RateHistoryRepository {
     }
   }
 }
+

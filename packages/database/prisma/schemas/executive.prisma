@@ -1,0 +1,2241 @@
+// Executive Profile & Vetting Models
+// 
+// This schema defines the data models for the Fractional Executive Suite,
+// including executive profiles, vetting pipeline, references, and background checks.
+
+// =============================================================================
+// EXECUTIVE PROFILE
+// =============================================================================
+
+model ExecutiveProfile {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Executive Identity
+  executiveType         ExecutiveType
+  headline              String   // "Fractional CTO | 3x Startup Exit | Enterprise Scale"
+  bio                   String?  @db.Text
+  yearsExecutiveExp     Int
+  totalYearsExp         Int
+  
+  // Expertise
+  industries            String[]
+  specializations       String[]
+  companyStages         CompanyStage[]
+  companySizes          String[]  // "1-10", "11-50", "51-200", "201-1000", "1000+"
+  
+  // Vetting Status
+  vettingStatus         VettingStatus @default(PENDING)
+  vettingStage          VettingStage @default(APPLICATION)
+  vettingStartedAt      DateTime?
+  vettingCompletedAt    DateTime?
+  vettingNotes          String?  @db.Text
+  vettingScore          Int?      // 0-100
+  
+  // Background Verification
+  backgroundCheckStatus BackgroundCheckStatus @default(NOT_STARTED)
+  backgroundCheckId     String?   // External provider reference (Checkr)
+  backgroundCheckDate   DateTime?
+  
+  // References
+  referencesRequired    Int      @default(3)
+  referencesVerified    Int      @default(0)
+  
+  // LinkedIn Verification
+  linkedinUrl           String?
+  linkedinVerified      Boolean  @default(false)
+  linkedinData          Json?    // Cached LinkedIn profile data
+  linkedinAccessToken   String?  // Encrypted OAuth token
+  linkedinTokenExpiry   DateTime?
+  linkedinLastVerified  DateTime?
+  
+  // Capacity & Availability
+  maxClients            Int      @default(5)
+  currentClients        Int      @default(0)
+  hoursPerWeekMin       Int      @default(5)
+  hoursPerWeekMax       Int      @default(20)
+  availableFrom         DateTime?
+  timezone              String?
+  
+  // Pricing
+  monthlyRetainerMin    Decimal? @db.Decimal(10, 2)
+  monthlyRetainerMax    Decimal? @db.Decimal(10, 2)
+  hourlyRateMin         Decimal? @db.Decimal(10, 2)
+  hourlyRateMax         Decimal? @db.Decimal(10, 2)
+  currency              String   @default("USD")
+  
+  // Display & Discovery
+  featuredExecutive     Boolean  @default(false)
+  featuredOrder         Int?
+  profileCompleteness   Int      @default(0) // 0-100
+  searchable            Boolean  @default(false) // Only true after vetting approval
+  profilePhotoUrl       String?
+  resumeUrl             String?
+  
+  // Internal
+  assignedReviewer      String?  // Admin user ID
+  lastActivityAt        DateTime?
+  
+  // Relations
+  executiveHistory      ExecutiveHistory[]
+  references            ExecutiveReference[]
+  interviews            VettingInterview[]
+  engagements           ExecutiveEngagement[]
+  toolConfigs           ExecutiveToolConfig[]
+  subscription          ExecutiveSubscription?
+  vettingEvents         VettingEvent[]
+  matches               ExecutiveMatch[]
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([executiveType, vettingStatus])
+  @@index([vettingStatus, vettingStage])
+  @@index([industries])
+  @@index([specializations])
+  @@index([searchable, featuredExecutive])
+  @@index([assignedReviewer])
+}
+
+// =============================================================================
+// EXECUTIVE HISTORY
+// =============================================================================
+
+model ExecutiveHistory {
+  id                String   @id @default(uuid())
+  executiveId       String
+  executive         ExecutiveProfile @relation(fields: [executiveId], references: [id], onDelete: Cascade)
+  
+  // Position Details
+  title             String   // "Chief Technology Officer"
+  company           String
+  companyLinkedinUrl String?
+  companyWebsite    String?
+  companyVerified   Boolean  @default(false)
+  
+  // Tenure
+  startDate         DateTime
+  endDate           DateTime?
+  isCurrent         Boolean  @default(false)
+  
+  // Context
+  companyStage      CompanyStage?
+  companySize       String?
+  industry          String?
+  
+  // Achievements
+  description       String?  @db.Text
+  achievements      String[] // Key accomplishments
+  teamSize          Int?     // Number of direct/indirect reports
+  budgetManaged     Decimal? @db.Decimal(12, 2) // Budget responsibility
+  
+  // Verification
+  verified          Boolean  @default(false)
+  verificationMethod String?  // "linkedin", "reference", "manual"
+  verifiedBy        String?  // Admin user ID
+  verifiedAt        DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([executiveId])
+  @@index([company])
+}
+
+// =============================================================================
+// EXECUTIVE REFERENCES
+// =============================================================================
+
+model ExecutiveReference {
+  id                String   @id @default(uuid())
+  executiveId       String
+  executive         ExecutiveProfile @relation(fields: [executiveId], references: [id], onDelete: Cascade)
+  
+  // Reference Person
+  name              String
+  title             String
+  company           String
+  email             String
+  phone             String?
+  linkedinUrl       String?
+  
+  // Relationship
+  relationship      ReferenceRelationship
+  yearsKnown        Int
+  workedTogetherAt  String?  // Company name where they worked together
+  
+  // Request Tracking
+  status            ReferenceStatus @default(PENDING)
+  requestToken      String?  @unique // JWT token for submission
+  requestTokenExpiry DateTime?
+  requestSentAt     DateTime?
+  reminderSentAt    DateTime?
+  reminderCount     Int      @default(0)
+  completedAt       DateTime?
+  
+  // Reference Response
+  rating            Int?      // 1-10 overall rating
+  wouldRecommend    Boolean?
+  leadershipRating  Int?      // 1-10
+  technicalRating   Int?      // 1-10 (if applicable)
+  communicationRating Int?    // 1-10
+  strategicRating   Int?      // 1-10
+  strengths         String[]
+  areasForGrowth    String[]
+  comments          String?  @db.Text
+  additionalContext String?  @db.Text
+  
+  // Scoring
+  referenceScore    Int?      // 0-100 calculated score
+  
+  // Internal Verification
+  verified          Boolean  @default(false)
+  verifiedBy        String?  // Admin user ID
+  verificationNotes String?  @db.Text
+  flagged           Boolean  @default(false)
+  flagReason        String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([executiveId, status])
+  @@index([requestToken])
+  @@index([email])
+}
+
+// =============================================================================
+// VETTING INTERVIEWS
+// =============================================================================
+
+model VettingInterview {
+  id                String   @id @default(uuid())
+  executiveId       String
+  executive         ExecutiveProfile @relation(fields: [executiveId], references: [id], onDelete: Cascade)
+  
+  // Interview Details
+  scheduledAt       DateTime
+  duration          Int      @default(45) // minutes
+  interviewer       String   // Admin user ID
+  interviewerName   String?  // Denormalized for display
+  interviewType     InterviewType
+  
+  // Meeting Details
+  meetingUrl        String?  // Zoom/Google Meet link
+  calendlyEventId   String?  // Calendly reference
+  
+  // Outcome
+  status            InterviewStatus @default(SCHEDULED)
+  conductedAt       DateTime?
+  actualDuration    Int?     // Actual duration in minutes
+  recordingUrl      String?
+  transcriptUrl     String?
+  
+  // Assessment - Structured Scoring
+  communicationScore    Int?  // 1-10
+  leadershipScore       Int?  // 1-10
+  technicalExpertiseScore Int? // 1-10
+  strategicThinkingScore Int?  // 1-10
+  cultureFitScore       Int?  // 1-10
+  executivePresenceScore Int? // 1-10
+  
+  // Overall Assessment
+  overallScore      Int?     // 0-100 weighted average
+  recommendation    InterviewRecommendation?
+  notes             String?  @db.Text
+  strengthsObserved String[]
+  concernsNoted     String[]
+  
+  // Follow-up
+  followUpRequired  Boolean  @default(false)
+  followUpNotes     String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([executiveId])
+  @@index([interviewer])
+  @@index([scheduledAt])
+  @@index([status])
+}
+
+// =============================================================================
+// VETTING EVENTS (Audit Trail)
+// =============================================================================
+
+model VettingEvent {
+  id                String   @id @default(uuid())
+  executiveId       String
+  executive         ExecutiveProfile @relation(fields: [executiveId], references: [id], onDelete: Cascade)
+  
+  // Event Details
+  eventType         VettingEventType
+  fromStage         VettingStage?
+  toStage           VettingStage?
+  fromStatus        VettingStatus?
+  toStatus          VettingStatus?
+  
+  // Actor
+  actorId           String?  // User who triggered event (null for system)
+  actorType         String   // "system", "admin", "executive"
+  
+  // Details
+  description       String
+  metadata          Json?    // Additional event-specific data
+  notes             String?  @db.Text
+  
+  createdAt         DateTime @default(now())
+  
+  @@index([executiveId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// EXECUTIVE ENGAGEMENTS (Placeholder for future sprints)
+// =============================================================================
+
+model ExecutiveEngagement {
+  id                    String   @id @default(uuid())
+  
+  // Parties
+  executiveId           String
+  executive             ExecutiveProfile @relation(fields: [executiveId], references: [id], onDelete: Cascade)
+  clientTenantId        String
+  clientContactId       String   // Primary contact user at client
+  
+  // Engagement Identity
+  title                 String   // "Fractional CTO Engagement"
+  role                  ExecutiveType
+  description           String?  @db.Text
+  isMarketplaceEngagement Boolean @default(false)
+  
+  // Status & Lifecycle
+  status                EngagementStatus @default(PROPOSAL)
+  proposalSentAt        DateTime?
+  startDate             DateTime?
+  endDate               DateTime?
+  renewalDate           DateTime?
+  terminatedAt          DateTime?
+  terminationReason     String?
+  
+  // Time Commitment
+  hoursPerWeek          Int
+  hoursPerWeekMin       Int?      // For flexible engagements
+  hoursPerWeekMax       Int?
+  
+  // Financials
+  billingModel          BillingModel @default(RETAINER)
+  monthlyRetainer       Decimal? @db.Decimal(10, 2)
+  hourlyRate            Decimal? @db.Decimal(10, 2)
+  currency              String   @default("USD")
+  billingCycle          EngagementBillingCycle @default(MONTHLY)
+  paymentTerms          Int      @default(30) // NET days
+  
+  // Contract
+  contractId            String?
+  scopeOfWork           String?  @db.Text
+  
+  // Workspace
+  workspace             ExecutiveWorkspace?
+  
+  // Integrations
+  connectedIntegrations ExecutiveIntegration[]
+  
+  // Time Tracking
+  timeEntries           ExecutiveTimeEntry[]
+  totalHoursLogged      Decimal  @default(0) @db.Decimal(10, 2)
+  lastActivityAt        DateTime?
+  
+  // Deliverables & Milestones
+  milestones            ExecutiveMilestone[]
+  
+  // Technical Roadmap
+  roadmap               TechnicalRoadmap?
+  
+  // CFO Tool Suite
+  cashFlowForecasts     CashFlowForecast[]
+  boardDecks            BoardDeck[]
+  investorUpdates       InvestorUpdate[]
+  budgets               Budget[]
+  
+  // CMO Tool Suite
+  contentCalendar       ContentCalendar?
+  
+  // CISO Tool Suite
+  complianceAssessments ComplianceAssessment[]
+  complianceFrameworks  ComplianceFramework[]
+  securityRisks         SecurityRisk[]
+  securityIncidents     SecurityIncident[]
+  
+  // COO Tool Suite
+  objectives            Objective[]
+  teamMembers           TeamMember[]
+  sops                  SOP[]
+  meetingNotes          MeetingNote[]
+  actionItems           ActionItem[]
+  orgChart              OrgChart?
+  
+  // CHRO Tool Suite
+  hrComplianceItems     HRComplianceItem[] @relation("HRComplianceItems")
+  headcountPlans        HeadcountPlan[] @relation("HeadcountPlans")
+  
+  // CPO Tool Suite
+  prds                  PRD[]
+  featurePrioritization FeaturePrioritization?
+  
+  // Platform Fees
+  platformFees          PlatformFeeRecord[]
+  
+  // Communication
+  meetingCadence        String?   // "Weekly 1:1", "Bi-weekly team standup"
+  communicationChannels String[]  // "Slack", "Email", "Platform"
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([executiveId, status])
+  @@index([clientTenantId, status])
+  @@index([status])
+}
+
+// =============================================================================
+// EXECUTIVE WORKSPACE
+// =============================================================================
+
+model ExecutiveWorkspace {
+  id                    String   @id @default(uuid())
+  engagementId          String   @unique
+  engagement            ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  // Dashboard Configuration
+  dashboardLayout       Json?    // Widget positions and sizes
+  enabledWidgets        String[] // Which widgets are active
+  widgetConfigs         Json?    // Per-widget configuration
+  
+  // SkillPod Integration
+  skillpodEnabled       Boolean  @default(true)
+  skillpodPolicyId      String?
+  
+  // Branding (client's branding in workspace)
+  clientLogo            String?
+  primaryColor          String?
+  workspaceName         String?  // Custom name for this engagement
+  
+  // Quick Access
+  pinnedDocuments       Json[]   // { name, url, type }
+  pinnedLinks           Json[]   // { name, url }
+  favoriteActions       String[] // Quick action IDs
+  
+  // Notes & Context
+  executiveNotes        String?  @db.Text // Private notes about client
+  clientContext         String?  @db.Text // Key info about client
+  
+  // Recent Activity
+  recentFiles           Json[]   // Recently accessed files
+  recentTools           String[] // Recently used integrations
+  
+  // Integration Hub
+  workspaceIntegrations WorkspaceIntegration[]
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// =============================================================================
+// EXECUTIVE TIME ENTRY
+// =============================================================================
+
+model ExecutiveTimeEntry {
+  id                    String   @id @default(uuid())
+  engagementId          String
+  engagement            ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  executiveId           String
+  
+  // Time Details
+  date                  DateTime @db.Date
+  hours                 Decimal  @db.Decimal(4, 2)
+  description           String
+  
+  // Categorization
+  category              ExecutiveTimeCategory @default(ADVISORY)
+  billable              Boolean  @default(true)
+  
+  // SkillPod Link
+  skillpodSessionId     String?  // If time tracked in SkillPod
+  
+  // Approval
+  status                TimeEntryStatus @default(PENDING)
+  approvedBy            String?
+  approvedAt            DateTime?
+  rejectionReason       String?
+  
+  // Invoicing
+  invoiceId             String?
+  invoicedAt            DateTime?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([engagementId, date])
+  @@index([executiveId, date])
+  @@index([status])
+}
+
+// =============================================================================
+// EXECUTIVE MILESTONE
+// =============================================================================
+
+model ExecutiveMilestone {
+  id                    String   @id @default(uuid())
+  engagementId          String
+  engagement            ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  // Milestone Details
+  title                 String
+  description           String?  @db.Text
+  dueDate               DateTime?
+  
+  // Status
+  status                ExecutiveMilestoneStatus @default(NOT_STARTED)
+  deliverables          Json[]   // { name, type, url }
+  
+  // Ordering
+  orderIndex            Int      @default(0)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([engagementId])
+}
+
+// =============================================================================
+// EXECUTIVE INTEGRATION (Connected tools per engagement)
+// =============================================================================
+
+model ExecutiveIntegration {
+  id                    String   @id @default(uuid())
+  engagementId          String
+  engagement            ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  // Integration Details
+  integrationType       String   // "slack", "github", "jira", etc.
+  integrationName       String   // Display name
+  
+  // Connection
+  status                ExecutiveIntegrationStatus @default(PENDING)
+  connectedAt           DateTime?
+  lastSyncAt            DateTime?
+  
+  // Config
+  config                Json?    // Integration-specific config
+  accessToken           String?  // Encrypted
+  refreshToken          String?  // Encrypted
+  tokenExpiry           DateTime?
+  
+  // Metadata
+  externalAccountId     String?  // ID in external system
+  externalAccountName   String?  // Name in external system
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@unique([engagementId, integrationType])
+  @@index([engagementId])
+}
+
+// =============================================================================
+// EXECUTIVE TOOL CONFIGS (For Executive Suite tools)
+// =============================================================================
+
+model ExecutiveToolConfig {
+  id                String   @id @default(uuid())
+  executiveId       String
+  executive         ExecutiveProfile @relation(fields: [executiveId], references: [id], onDelete: Cascade)
+  
+  toolId            String   // "board-updates", "okr-tracker", etc.
+  enabled           Boolean  @default(true)
+  config            Json?    // Tool-specific configuration
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([executiveId, toolId])
+  @@index([executiveId])
+}
+
+// =============================================================================
+// EXECUTIVE SUBSCRIPTION & BILLING
+// =============================================================================
+
+model ExecutiveSubscription {
+  id                    String   @id @default(uuid())
+  executiveId           String   @unique
+  executive             ExecutiveProfile @relation(fields: [executiveId], references: [id], onDelete: Cascade)
+  
+  tier                  ExecutiveTier @default(BASIC)
+  billingCycle          SubscriptionBillingCycle @default(MONTHLY)
+  
+  // Pricing
+  monthlyPrice          Decimal? @db.Decimal(10, 2)
+  
+  // Stripe Integration
+  stripeSubscriptionId  String?
+  stripeCustomerId      String?
+  
+  // Tier-based Limits
+  maxClients            Int      @default(3)
+  skillpodHoursIncluded Int      @default(20)
+  skillpodHoursUsed     Int      @default(0)
+  teamMembersIncluded   Int      @default(1)
+  teamMembersUsed       Int      @default(0)
+  
+  // Add-ons
+  addons                ExecutiveAddon[]
+  
+  // Status
+  status                ExecutiveSubscriptionStatus @default(ACTIVE)
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean  @default(false)
+  cancelledAt           DateTime?
+  cancelReason          String?
+  
+  // Trial
+  trialStart            DateTime?
+  trialEnd              DateTime?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([tier])
+  @@index([status])
+  @@index([stripeSubscriptionId])
+}
+
+model ExecutiveAddon {
+  id                String   @id @default(uuid())
+  subscriptionId    String
+  subscription      ExecutiveSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  addonType         AddonType
+  quantity          Int      @default(1)
+  
+  pricePerUnit      Decimal  @db.Decimal(10, 2)
+  stripeItemId      String?
+  
+  activatedAt       DateTime @default(now())
+  deactivatedAt     DateTime?
+  
+  createdAt         DateTime @default(now())
+  
+  @@index([subscriptionId])
+  @@index([addonType])
+}
+
+// =============================================================================
+// EXECUTIVE MATCH REQUESTS (Client Discovery)
+// =============================================================================
+
+model ExecutiveMatchRequest {
+  id                String   @id @default(uuid())
+  
+  // Client Info
+  clientName        String
+  clientEmail       String
+  clientCompany     String
+  clientTitle       String?
+  
+  // Company Details
+  companyStage      CompanyStage?
+  companySize       String?      // "1-10", "11-50", etc.
+  industry          String?
+  
+  // Requirements
+  executiveType     ExecutiveType
+  requirements      Json         // Detailed requirements
+  hoursPerWeek      Int
+  budgetRangeMin    Decimal?  @db.Decimal(10, 2)
+  budgetRangeMax    Decimal?  @db.Decimal(10, 2)
+  timeline          String?      // "Immediately", "Within 30 days", etc.
+  specificNeeds     String?   @db.Text
+  
+  // Status
+  status            MatchRequestStatus @default(PENDING)
+  reviewedBy        String?      // Admin user ID
+  reviewedAt        DateTime?
+  notes             String?   @db.Text
+  
+  // Matches
+  matches           ExecutiveMatch[]
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([status])
+  @@index([executiveType])
+  @@index([clientEmail])
+}
+
+model ExecutiveMatch {
+  id                String   @id @default(uuid())
+  requestId         String
+  request           ExecutiveMatchRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  executiveId       String
+  executive         ExecutiveProfile @relation(fields: [executiveId], references: [id])
+  
+  // Scoring
+  matchScore        Int         // 0-100
+  matchReasons      Json        // { "industryMatch": true, "stageMatch": true, ... }
+  
+  // Status
+  status            MatchStatus @default(SUGGESTED)
+  
+  // Client Actions
+  clientViewed      Boolean  @default(false)
+  clientViewedAt    DateTime?
+  clientInterested  Boolean?
+  clientNotes       String?
+  
+  // Executive Actions
+  executiveNotified Boolean  @default(false)
+  executiveResponse ExecutiveMatchResponse?
+  executiveResponseAt DateTime?
+  
+  // Intro
+  introScheduledAt  DateTime?
+  introCompletedAt  DateTime?
+  introNotes        String?  @db.Text
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([requestId, executiveId])
+  @@index([requestId])
+  @@index([executiveId])
+  @@index([status])
+}
+
+// =============================================================================
+// PLATFORM FEE TRACKING
+// =============================================================================
+
+model PlatformFeeRecord {
+  id                String   @id @default(uuid())
+  engagementId      String
+  engagement        ExecutiveEngagement @relation(fields: [engagementId], references: [id])
+  
+  // Fee Calculation
+  billingMonth      Int         // Month number of engagement (1, 2, 3, etc.)
+  periodStart       DateTime
+  periodEnd         DateTime
+  
+  grossAmount       Decimal  @db.Decimal(10, 2)
+  feePercentage     Decimal  @db.Decimal(5, 2)    // 15, 10, or 5
+  feeAmount         Decimal  @db.Decimal(10, 2)
+  netAmount         Decimal  @db.Decimal(10, 2)   // Amount paid to executive
+  
+  // Payment Status
+  status            PlatformFeeStatus @default(PENDING)
+  stripePaymentId   String?
+  paidAt            DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([engagementId])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+}
+
+// =============================================================================
+// SUBSCRIPTION & MATCHING ENUMS
+// =============================================================================
+
+enum ExecutiveTier {
+  BASIC       // $199/mo - 3 clients, 20 hours, tool bundles as add-ons
+  PRO         // $499/mo - Unlimited clients, 100 hours, all tools, 3 team members
+  ENTERPRISE  // Custom - Everything + white-label, unlimited hours, dedicated CSM
+}
+
+enum SubscriptionBillingCycle {
+  MONTHLY
+  ANNUAL
+}
+
+enum ExecutiveSubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  PAUSED
+  TRIALING
+}
+
+enum AddonType {
+  TOOL_BUNDLE_CTO
+  TOOL_BUNDLE_CFO
+  TOOL_BUNDLE_CMO
+  TOOL_BUNDLE_CISO
+  TOOL_BUNDLE_COO
+  TOOL_BUNDLE_CHRO
+  TOOL_BUNDLE_CPO
+  EXTRA_SKILLPOD_HOURS
+  EXTRA_TEAM_MEMBER
+  CLIENT_WHITE_LABEL
+}
+
+enum MatchRequestStatus {
+  PENDING
+  MATCHING
+  MATCHES_SENT
+  INTRO_SCHEDULED
+  ENGAGED
+  CLOSED
+  EXPIRED
+}
+
+enum MatchStatus {
+  SUGGESTED
+  CLIENT_VIEWED
+  CLIENT_INTERESTED
+  INTRO_REQUESTED
+  INTRO_COMPLETED
+  ENGAGED
+  DECLINED
+}
+
+enum ExecutiveMatchResponse {
+  ACCEPTED
+  DECLINED
+  PENDING
+}
+
+enum PlatformFeeStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum ExecutiveType {
+  FRACTIONAL_CTO
+  FRACTIONAL_CFO
+  FRACTIONAL_CMO
+  FRACTIONAL_CISO
+  FRACTIONAL_COO
+  FRACTIONAL_CHRO
+  FRACTIONAL_CPO
+  FRACTIONAL_CRO
+  FRACTIONAL_CLO
+  FRACTIONAL_CDO
+  BOARD_ADVISOR
+  INTERIM_EXECUTIVE
+}
+
+enum VettingStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+  WITHDRAWN
+}
+
+enum VettingStage {
+  APPLICATION
+  AUTOMATED_SCREENING
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  REFERENCE_CHECK
+  BACKGROUND_CHECK
+  FINAL_REVIEW
+  COMPLETE
+}
+
+enum BackgroundCheckStatus {
+  NOT_STARTED
+  PENDING
+  IN_PROGRESS
+  PASSED
+  FAILED
+  REQUIRES_REVIEW
+}
+
+enum CompanyStage {
+  PRE_SEED
+  SEED
+  SERIES_A
+  SERIES_B
+  SERIES_C_PLUS
+  GROWTH
+  PUBLIC
+  ENTERPRISE
+}
+
+enum ReferenceRelationship {
+  REPORTED_TO      // Executive reported to this person
+  PEER             // Worked alongside as peer
+  DIRECT_REPORT    // This person reported to executive
+  CLIENT           // External client
+  BOARD_MEMBER     // Board relationship
+  INVESTOR         // Investor relationship
+}
+
+enum ReferenceStatus {
+  PENDING          // Not yet requested
+  REQUESTED        // Email sent, awaiting response
+  COMPLETED        // Reference submitted
+  DECLINED         // Reference declined to respond
+  EXPIRED          // Request link expired
+}
+
+enum InterviewType {
+  SCREENING        // Initial 15-min call
+  COMPETENCY       // Deep-dive on role expertise (45 min)
+  FINAL            // Final approval interview (30 min)
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  NO_SHOW
+  RESCHEDULED
+  CANCELLED
+}
+
+enum InterviewRecommendation {
+  STRONG_YES
+  YES
+  MAYBE
+  NO
+  STRONG_NO
+}
+
+enum VettingEventType {
+  APPLICATION_SUBMITTED
+  SCREENING_STARTED
+  SCREENING_PASSED
+  SCREENING_FAILED
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  INTERVIEW_NO_SHOW
+  REFERENCE_ADDED
+  REFERENCE_REQUESTED
+  REFERENCE_COMPLETED
+  REFERENCE_DECLINED
+  BACKGROUND_CHECK_INITIATED
+  BACKGROUND_CHECK_COMPLETED
+  BACKGROUND_CHECK_FAILED
+  STAGE_ADVANCED
+  STATUS_CHANGED
+  APPROVED
+  REJECTED
+  SUSPENDED
+  REACTIVATED
+  NOTE_ADDED
+  REVIEWER_ASSIGNED
+}
+
+// =============================================================================
+// ENGAGEMENT & WORKSPACE ENUMS
+// =============================================================================
+
+enum EngagementStatus {
+  PROPOSAL         // Initial proposal stage
+  NEGOTIATING      // Terms being discussed
+  CONTRACT_SENT    // Awaiting signature
+  ACTIVE           // Ongoing engagement
+  PAUSED           // Temporarily paused
+  RENEWAL          // Up for renewal
+  COMPLETED        // Successfully completed
+  TERMINATED       // Ended early
+}
+
+enum BillingModel {
+  RETAINER         // Fixed monthly fee
+  HOURLY           // Pay per hour
+  HYBRID           // Retainer + hourly overage
+  PROJECT          // Fixed project fee
+}
+
+enum EngagementBillingCycle {
+  WEEKLY
+  BI_WEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
+enum ExecutiveTimeCategory {
+  ADVISORY         // Strategic advisory
+  MEETINGS         // Meetings and calls
+  EXECUTION        // Hands-on work
+  DOCUMENTATION    // Reports, docs, decks
+  RESEARCH         // Research and analysis
+  TRAVEL           // Travel time
+  OTHER            // Other
+}
+
+enum TimeEntryStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+  INVOICED
+}
+
+enum ExecutiveMilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum ExecutiveIntegrationStatus {
+  PENDING
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+// =============================================================================
+// TECHNICAL ROADMAP
+// =============================================================================
+
+model TechnicalRoadmap {
+  id              String   @id @default(uuid())
+  engagementId    String   @unique
+  engagement      ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String?  @db.Text
+  timeframe       String   // "2025", "Q1 2025", etc.
+  
+  initiatives     RoadmapInitiative[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model RoadmapInitiative {
+  id              String   @id @default(uuid())
+  roadmapId       String
+  roadmap         TechnicalRoadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String?  @db.Text
+  
+  // Timing
+  quarter         String?   // "Q1 2025"
+  startDate       DateTime?
+  endDate         DateTime?
+  
+  // Status
+  status          InitiativeStatus @default(PLANNED)
+  progress        Int      @default(0) // 0-100
+  
+  // Organization
+  category        String?  // "Infrastructure", "Feature", "Tech Debt"
+  priority        Int      @default(0)
+  sortOrder       Int      @default(0)
+  
+  // Assignments
+  ownerId         String?  // User ID
+  ownerName       String?  // Cached name for display
+  
+  // External Links
+  jiraEpicKey     String?
+  jiraEpicUrl     String?
+  githubIssueUrl  String?
+  
+  // Dependencies
+  dependsOn       String[] // Initiative IDs
+  
+  // Milestones
+  milestones      InitiativeMilestone[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([roadmapId, status])
+  @@index([roadmapId, quarter])
+}
+
+model InitiativeMilestone {
+  id              String   @id @default(uuid())
+  initiativeId    String
+  initiative      RoadmapInitiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  
+  title           String
+  dueDate         DateTime?
+  completed       Boolean  @default(false)
+  completedAt     DateTime?
+  
+  createdAt       DateTime @default(now())
+}
+
+enum InitiativeStatus {
+  PLANNED
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+// =============================================================================
+// CFO TOOL SUITE - CASH FLOW FORECASTING
+// =============================================================================
+
+model CashFlowForecast {
+  id                String   @id @default(uuid())
+  engagementId      String
+  engagement        ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  // Assumptions
+  startingCash      Decimal  @db.Decimal(14, 2)
+  startDate         DateTime
+  
+  // Revenue Assumptions
+  // { type: "growth", baseAmount: 50000, growthRate: 0.05 }
+  revenueAssumptions    Json
+  
+  // Expense Assumptions
+  // { fixed: [...], variable: [...] }
+  expenseAssumptions    Json
+  
+  // One-time Items
+  // [{ description: "...", amount: 50000, date: "...", type: "in/out" }]
+  oneTimeItems          Json[]
+  
+  // Calculated Projections
+  weeklyProjections     Json[]
+  runwayMonths          Int?
+  zeroCashDate          DateTime?
+  
+  // Scenarios
+  scenarios             Json[]
+  
+  // Metadata
+  name                  String?
+  isActive              Boolean  @default(true)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([engagementId])
+  @@index([engagementId, isActive])
+}
+
+// =============================================================================
+// CFO TOOL SUITE - BOARD DECK
+// =============================================================================
+
+model BoardDeck {
+  id                String   @id @default(uuid())
+  engagementId      String
+  engagement        ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  title             String
+  period            String   // "Q1 2025", "January 2025"
+  templateId        String?
+  
+  // Content
+  slides            Json[]
+  
+  // Metadata
+  status            DeckStatus @default(DRAFT)
+  generatedAt       DateTime?
+  
+  // Files
+  pdfUrl            String?
+  googleSlidesUrl   String?
+  pptxUrl           String?
+  
+  // Sharing
+  shareToken        String?  @unique
+  sharedAt          DateTime?
+  expiresAt         DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([engagementId])
+  @@index([engagementId, status])
+}
+
+enum DeckStatus {
+  DRAFT
+  GENERATED
+  SENT
+  ARCHIVED
+}
+
+// =============================================================================
+// CFO TOOL SUITE - INVESTOR UPDATE
+// =============================================================================
+
+model InvestorUpdate {
+  id                String   @id @default(uuid())
+  engagementId      String
+  engagement        ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  period            String   // "January 2025", "Q1 2025"
+  subject           String
+  
+  // Structured Content
+  // { tldr, keyMetrics, wins, challenges, asks, financialSnapshot }
+  content           Json
+  
+  // Delivery
+  status            UpdateStatus @default(DRAFT)
+  scheduledFor      DateTime?
+  sentAt            DateTime?
+  recipients        String[]
+  
+  // Tracking
+  shareToken        String?  @unique
+  openCount         Int      @default(0)
+  lastOpenedAt      DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([engagementId])
+  @@index([engagementId, status])
+}
+
+enum UpdateStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+}
+
+// =============================================================================
+// CFO TOOL SUITE - BUDGET
+// =============================================================================
+
+model Budget {
+  id                String   @id @default(uuid())
+  engagementId      String
+  engagement        ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  name              String   // "2025 Operating Budget"
+  fiscalYear        Int
+  
+  // Categories with monthly budgets
+  // [{ category: "Payroll", monthly: [10000, 10000, ...] }]
+  categories        Json[]
+  
+  // Totals (calculated)
+  totalBudget       Decimal  @db.Decimal(14, 2)
+  
+  // Status
+  status            BudgetStatus @default(DRAFT)
+  approvedAt        DateTime?
+  approvedBy        String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([engagementId])
+  @@index([engagementId, fiscalYear])
+}
+
+enum BudgetStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  ARCHIVED
+}
+
+// =============================================================================
+// CMO TOOL SUITE - CONTENT CALENDAR
+// =============================================================================
+
+model ContentCalendar {
+  id              String   @id @default(uuid())
+  engagementId    String   @unique
+  engagement      ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  items           ContentItem[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ContentItem {
+  id              String   @id @default(uuid())
+  calendarId      String
+  calendar        ContentCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String?  @db.Text
+  contentType     MarketingContentType
+  channel         String[]
+  
+  scheduledDate   DateTime?
+  publishedDate   DateTime?
+  
+  status          ContentStatus @default(IDEA)
+  assigneeId      String?
+  
+  draftUrl        String?
+  publishedUrl    String?
+  
+  metadata        Json?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([calendarId, scheduledDate])
+  @@index([calendarId, status])
+}
+
+enum MarketingContentType {
+  BLOG_POST
+  SOCIAL_POST
+  EMAIL
+  VIDEO
+  PODCAST
+  WEBINAR
+  EBOOK
+  CASE_STUDY
+  PRESS_RELEASE
+  OTHER
+}
+
+enum ContentStatus {
+  IDEA
+  DRAFT
+  REVIEW
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+// =============================================================================
+// CISO TOOL SUITE - COMPLIANCE
+// =============================================================================
+
+model ComplianceFramework {
+  id              String   @id @default(uuid())
+  engagementId    String
+  engagement      ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  framework       FrameworkType
+  targetDate      DateTime?
+  
+  controls        ComplianceControl[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([engagementId, framework])
+  @@index([engagementId])
+}
+
+model ComplianceControl {
+  id                  String   @id @default(uuid())
+  frameworkId         String
+  framework           ComplianceFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  
+  controlId           String   // e.g., "CC1.1"
+  title               String
+  description         String?  @db.Text
+  category            String?
+  
+  status              ControlStatus @default(NOT_STARTED)
+  implementationNotes String?  @db.Text
+  ownerId             String?
+  
+  evidence            ComplianceEvidence[]
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([frameworkId, status])
+}
+
+model ComplianceEvidence {
+  id              String   @id @default(uuid())
+  controlId       String
+  control         ComplianceControl @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  
+  title           String
+  type            ComplianceEvidenceType
+  url             String?
+  fileKey         String?
+  
+  uploadedAt      DateTime @default(now())
+  uploadedBy      String
+  
+  @@index([controlId])
+}
+
+enum FrameworkType {
+  SOC2_TYPE1
+  SOC2_TYPE2
+  HIPAA
+  PCI_DSS
+  ISO27001
+  GDPR
+  NIST_CSF
+  CIS_CONTROLS
+  CUSTOM
+}
+
+enum ControlStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  IMPLEMENTED
+  NOT_APPLICABLE
+  FAILED
+}
+
+enum ComplianceEvidenceType {
+  DOCUMENT
+  SCREENSHOT
+  POLICY
+  LOG
+  CERTIFICATE
+  EXTERNAL_LINK
+}
+
+// =============================================================================
+// CISO TOOL SUITE - RISK REGISTER
+// =============================================================================
+
+model SecurityRisk {
+  id              String   @id @default(uuid())
+  engagementId    String
+  engagement      ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String?  @db.Text
+  category        RiskCategory
+  
+  likelihood      Int      // 1-5
+  impact          Int      // 1-5
+  riskScore       Int      // calculated: likelihood * impact
+  
+  status          RiskStatus @default(OPEN)
+  ownerId         String?
+  mitigationPlan  String?  @db.Text
+  targetDate      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([engagementId, status])
+  @@index([engagementId, riskScore])
+}
+
+enum RiskCategory {
+  OPERATIONAL
+  TECHNICAL
+  COMPLIANCE
+  FINANCIAL
+  REPUTATIONAL
+  STRATEGIC
+}
+
+enum RiskStatus {
+  OPEN
+  MITIGATING
+  ACCEPTED
+  TRANSFERRED
+  CLOSED
+}
+
+// =============================================================================
+// CISO TOOL SUITE - INCIDENT RESPONSE
+// =============================================================================
+
+model SecurityIncident {
+  id              String   @id @default(uuid())
+  engagementId    String
+  engagement      ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String?  @db.Text
+  severity        IncidentSeverity
+  status          IncidentStatus @default(DETECTED)
+  
+  detectedAt      DateTime
+  containedAt     DateTime?
+  resolvedAt      DateTime?
+  
+  assignedTo      String?
+  affectedSystems String[]
+  
+  timeline        Json[]   // Event log
+  postMortem      String?  @db.Text
+  lessonsLearned  String[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([engagementId, status])
+  @@index([engagementId, severity])
+}
+
+enum IncidentSeverity {
+  P1_CRITICAL
+  P2_HIGH
+  P3_MEDIUM
+  P4_LOW
+}
+
+enum IncidentStatus {
+  DETECTED
+  TRIAGED
+  CONTAINMENT
+  ERADICATION
+  RECOVERY
+  POST_INCIDENT
+  CLOSED
+}
+
+// =============================================================================
+// COO TOOL SUITE - OKR SYSTEM
+// =============================================================================
+
+model Objective {
+  id                String   @id @default(uuid())
+  engagementId      String
+  engagement        ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  title             String
+  description       String?  @db.Text
+  ownerId           String
+  
+  timeframe         String   // "Q1 2026", "2026", etc.
+  startDate         DateTime?
+  endDate           DateTime?
+  
+  status            OKRStatus @default(NOT_STARTED)
+  progress          Int      @default(0) // 0-100
+  confidence        Int?     // 0-100, last check-in confidence
+  
+  // Alignment
+  parentObjectiveId String?
+  parentObjective   Objective? @relation("ObjectiveHierarchy", fields: [parentObjectiveId], references: [id])
+  childObjectives   Objective[] @relation("ObjectiveHierarchy")
+  
+  keyResults        KeyResult[]
+  checkIns          OKRCheckIn[]
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([engagementId, timeframe])
+  @@index([engagementId, status])
+  @@index([ownerId])
+}
+
+model KeyResult {
+  id            String   @id @default(uuid())
+  objectiveId   String
+  objective     Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  
+  title         String
+  description   String?  @db.Text
+  ownerId       String
+  
+  targetValue   Decimal  @db.Decimal(15, 2)
+  currentValue  Decimal  @default(0) @db.Decimal(15, 2)
+  startValue    Decimal  @default(0) @db.Decimal(15, 2)
+  unit          String   // "%", "count", "dollars", "NPS", etc.
+  
+  status        OKRStatus @default(NOT_STARTED)
+  progress      Int      @default(0) // 0-100
+  
+  updates       KeyResultUpdate[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([objectiveId])
+  @@index([ownerId])
+}
+
+model KeyResultUpdate {
+  id            String   @id @default(uuid())
+  keyResultId   String
+  keyResult     KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  
+  previousValue Decimal  @db.Decimal(15, 2)
+  newValue      Decimal  @db.Decimal(15, 2)
+  notes         String?  @db.Text
+  
+  recordedBy    String
+  recordedAt    DateTime @default(now())
+  
+  @@index([keyResultId])
+}
+
+model OKRCheckIn {
+  id            String   @id @default(uuid())
+  objectiveId   String
+  objective     Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  
+  notes         String   @db.Text
+  confidence    Int      // 0-100
+  blockers      String[]
+  wins          String[]
+  
+  createdBy     String
+  createdAt     DateTime @default(now())
+  
+  @@index([objectiveId])
+}
+
+enum OKRStatus {
+  NOT_STARTED
+  ON_TRACK
+  AT_RISK
+  BEHIND
+  ACHIEVED
+  CANCELLED
+}
+
+// =============================================================================
+// COO TOOL SUITE - CAPACITY PLANNING
+// =============================================================================
+
+model TeamMember {
+  id            String   @id @default(uuid())
+  engagementId  String
+  engagement    ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  name          String
+  email         String?
+  role          String
+  department    String?
+  
+  weeklyCapacityHours Decimal @default(40) @db.Decimal(5, 2)
+  externalUserId String?  // Link to Asana/Linear/etc user ID
+  externalSource String?  // "asana", "linear", "monday"
+  
+  allocations   ResourceAllocation[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([engagementId])
+  @@unique([engagementId, externalUserId, externalSource])
+}
+
+model ResourceAllocation {
+  id            String   @id @default(uuid())
+  teamMemberId  String
+  teamMember    TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  
+  projectName   String
+  projectId     String?   // External project ID
+  projectSource String?   // "asana", "monday", "linear"
+  
+  allocatedHours Decimal  @db.Decimal(5, 2)
+  weekStartDate DateTime @db.Date
+  weekEndDate   DateTime @db.Date
+  
+  notes         String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([teamMemberId])
+  @@index([weekStartDate, weekEndDate])
+}
+
+// =============================================================================
+// COO TOOL SUITE - SOP LIBRARY
+// =============================================================================
+
+model SOP {
+  id            String   @id @default(uuid())
+  engagementId  String
+  engagement    ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  title         String
+  category      String
+  description   String?  @db.Text
+  
+  status        SOPStatus @default(DRAFT)
+  currentVersionId String?
+  
+  ownerId       String
+  reviewDate    DateTime?
+  
+  versions      SOPVersion[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([engagementId, category])
+  @@index([engagementId, status])
+}
+
+model SOPVersion {
+  id            String   @id @default(uuid())
+  sopId         String
+  sop           SOP @relation(fields: [sopId], references: [id], onDelete: Cascade)
+  
+  version       Int
+  content       String   @db.Text // Markdown content
+  changelog     String?  @db.Text
+  
+  publishedAt   DateTime?
+  publishedBy   String?
+  
+  createdAt     DateTime @default(now())
+  
+  @@index([sopId])
+  @@unique([sopId, version])
+}
+
+enum SOPStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+// =============================================================================
+// COO TOOL SUITE - MEETING NOTES & ACTION ITEMS
+// =============================================================================
+
+model MeetingNote {
+  id            String   @id @default(uuid())
+  engagementId  String
+  engagement    ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  title         String
+  meetingDate   DateTime
+  attendees     String[]
+  
+  agenda        String?  @db.Text
+  notes         String   @db.Text
+  decisions     String[]
+  
+  actionItems   ActionItem[]
+  
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([engagementId, meetingDate])
+}
+
+model ActionItem {
+  id            String   @id @default(uuid())
+  meetingNoteId String?
+  meetingNote   MeetingNote? @relation(fields: [meetingNoteId], references: [id], onDelete: SetNull)
+  
+  engagementId  String
+  engagement    ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  title         String
+  description   String?  @db.Text
+  assigneeId    String
+  
+  status        ActionItemStatus @default(TODO)
+  priority      String   @default("MEDIUM") // HIGH, MEDIUM, LOW
+  dueDate       DateTime?
+  completedAt   DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([engagementId, status])
+  @@index([assigneeId, status])
+  @@index([meetingNoteId])
+}
+
+enum ActionItemStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+// =============================================================================
+// COO TOOL SUITE - ORG CHART & RACI
+// =============================================================================
+
+model OrgChart {
+  id            String   @id @default(uuid())
+  engagementId  String   @unique
+  engagement    ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  name          String
+  description   String?
+  
+  positions     OrgPosition[]
+  raciMatrices  RACIMatrix[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model OrgPosition {
+  id            String   @id @default(uuid())
+  orgChartId    String
+  orgChart      OrgChart @relation(fields: [orgChartId], references: [id], onDelete: Cascade)
+  
+  title         String
+  department    String?
+  personName    String?
+  personEmail   String?
+  
+  parentPositionId String?
+  parentPosition   OrgPosition? @relation("PositionHierarchy", fields: [parentPositionId], references: [id])
+  childPositions   OrgPosition[] @relation("PositionHierarchy")
+  
+  level         Int      @default(0)
+  sortOrder     Int      @default(0)
+  
+  raciAssignments RACIAssignment[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([orgChartId])
+  @@index([parentPositionId])
+}
+
+model RACIMatrix {
+  id            String   @id @default(uuid())
+  orgChartId    String
+  orgChart      OrgChart @relation(fields: [orgChartId], references: [id], onDelete: Cascade)
+  
+  name          String
+  description   String?
+  
+  rows          RACIRow[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([orgChartId])
+}
+
+model RACIRow {
+  id            String   @id @default(uuid())
+  raciMatrixId  String
+  raciMatrix    RACIMatrix @relation(fields: [raciMatrixId], references: [id], onDelete: Cascade)
+  
+  activity      String
+  description   String?
+  
+  assignments   RACIAssignment[]
+  
+  sortOrder     Int      @default(0)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([raciMatrixId])
+}
+
+model RACIAssignment {
+  id            String   @id @default(uuid())
+  raciRowId     String
+  raciRow       RACIRow @relation(fields: [raciRowId], references: [id], onDelete: Cascade)
+  
+  positionId    String
+  position      OrgPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  
+  role          RACIRole
+  
+  createdAt     DateTime @default(now())
+  
+  @@unique([raciRowId, positionId])
+  @@index([raciRowId])
+  @@index([positionId])
+}
+
+enum RACIRole {
+  RESPONSIBLE    // Does the work
+  ACCOUNTABLE    // Ultimately accountable, approves
+  CONSULTED      // Input required before decision
+  INFORMED       // Kept in the loop after decision
+}
+
+// =============================================================================
+// CHRO TOOL SUITE - HR COMPLIANCE
+// =============================================================================
+
+model HRComplianceItem {
+  id              String   @id @default(uuid())
+  engagementId    String
+  engagement      ExecutiveEngagement @relation("HRComplianceItems", fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String?  @db.Text
+  category        HRComplianceCategory
+  jurisdiction    String   // "Federal", "CA", "NY", etc.
+  
+  dueDate         DateTime?
+  frequency       ComplianceFrequency
+  status          ComplianceItemStatus @default(NOT_STARTED)
+  
+  ownerId         String?
+  affectedCount   Int?     // Number of affected employees
+  
+  notes           String?  @db.Text
+  attachments     Json[]
+  
+  completedAt     DateTime?
+  completedBy     String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([engagementId, status])
+  @@index([engagementId, dueDate])
+}
+
+enum HRComplianceCategory {
+  TRAINING
+  FILING
+  POLICY
+  AUDIT
+  BENEFITS
+  SAFETY
+  OTHER
+}
+
+enum ComplianceFrequency {
+  ONE_TIME
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  AS_NEEDED
+}
+
+enum ComplianceItemStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETE
+  OVERDUE
+  NOT_APPLICABLE
+}
+
+// =============================================================================
+// CHRO TOOL SUITE - HEADCOUNT PLANNING
+// =============================================================================
+
+model HeadcountPlan {
+  id              String   @id @default(uuid())
+  engagementId    String
+  engagement      ExecutiveEngagement @relation("HeadcountPlans", fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  year            Int
+  
+  // { department: string, q1: number, q2: number, q3: number, q4: number }[]
+  departmentPlans Json
+  
+  plannedHires    PlannedHire[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([engagementId, year])
+  @@index([engagementId])
+}
+
+model PlannedHire {
+  id              String   @id @default(uuid())
+  planId          String
+  plan            HeadcountPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  
+  title           String
+  department      String
+  level           String?
+  targetQuarter   String   // "Q1", "Q2", "Q3", "Q4"
+  
+  status          HireStatus @default(PLANNED)
+  actualHireDate  DateTime?
+  
+  salaryBudget    Decimal? @db.Decimal(12, 2)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([planId])
+  @@index([planId, status])
+}
+
+enum HireStatus {
+  PLANNED
+  APPROVED
+  RECRUITING
+  OFFER_EXTENDED
+  FILLED
+  CANCELLED
+}
+
+// =============================================================================
+// CPO TOOL SUITE - PRODUCT REQUIREMENT DOCUMENTS (PRD)
+// =============================================================================
+
+model PRD {
+  id              String   @id @default(uuid())
+  engagementId    String
+  engagement      ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  // PRD Identity
+  title           String
+  status          PRDStatus @default(DRAFT)
+  
+  // PRD Content
+  overview        String?   @db.Text
+  problemStatement String?  @db.Text
+  goals           Json      @default("[]")    // Array of { goal, metric, target }
+  userStories     Json      @default("[]")    // Array of { as, iWant, soThat, acceptanceCriteria }
+  requirements    Json      @default("[]")    // Array of { type: 'functional'|'non-functional', description, priority }
+  successMetrics  Json      @default("[]")    // Array of { metric, baseline, target, source }
+  timeline        Json?                        // { phases: [{ name, startDate, endDate, milestones }] }
+  openQuestions   String[]  @default([])
+  appendix        String?   @db.Text
+  
+  // Ownership & Review
+  ownerId         String?
+  reviewers       String[]  @default([])
+  
+  // Template Info
+  templateId      String?                      // If created from template
+  
+  // Relations
+  comments        PRDComment[]
+  versions        PRDVersion[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([engagementId, status])
+  @@index([ownerId])
+}
+
+model PRDComment {
+  id              String   @id @default(uuid())
+  prdId           String
+  prd             PRD      @relation(fields: [prdId], references: [id], onDelete: Cascade)
+  
+  // Comment Details
+  section         String   // Which section this comment is on
+  content         String   @db.Text
+  authorId        String
+  
+  // Resolution
+  resolved        Boolean  @default(false)
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  
+  // Threading
+  parentId        String?
+  parent          PRDComment? @relation("PRDCommentReplies", fields: [parentId], references: [id])
+  replies         PRDComment[] @relation("PRDCommentReplies")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([prdId, section])
+  @@index([prdId, resolved])
+}
+
+model PRDVersion {
+  id              String   @id @default(uuid())
+  prdId           String
+  prd             PRD      @relation(fields: [prdId], references: [id], onDelete: Cascade)
+  
+  // Version Info
+  version         Int
+  content         Json     // Full PRD snapshot
+  changedBy       String
+  changeNote      String?
+  
+  // Diff from previous (optional optimization)
+  changes         Json?    // List of changed fields
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([prdId, version])
+  @@index([prdId])
+}
+
+model PRDTemplate {
+  id              String   @id @default(uuid())
+  
+  // Template Identity
+  name            String
+  description     String?
+  category        String?  // "B2B SaaS", "Consumer", "Platform", etc.
+  
+  // Template Content
+  content         Json     // Template structure with placeholders
+  
+  // Visibility
+  isSystem        Boolean  @default(false)  // Built-in templates
+  createdBy       String?                   // Executive who created it (null for system)
+  isPublic        Boolean  @default(false)  // Shared with all executives
+  
+  // Usage Stats
+  useCount        Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([isSystem])
+  @@index([createdBy])
+}
+
+// =============================================================================
+// CPO TOOL SUITE - FEATURE PRIORITIZATION
+// =============================================================================
+
+model FeaturePrioritization {
+  id              String   @id @default(uuid())
+  engagementId    String   @unique
+  engagement      ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  // Framework Configuration
+  framework       PrioritizationFramework @default(RICE)
+  customWeights   Json?    // For CUSTOM framework: { criteria: [{ name, weight }] }
+  
+  // Scoring Criteria Configuration
+  impactLevels    Json?    // Custom impact level definitions
+  effortLevels    Json?    // Custom effort level definitions
+  
+  // Features
+  features        PrioritizedFeature[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PrioritizedFeature {
+  id                  String   @id @default(uuid())
+  prioritizationId    String
+  prioritization      FeaturePrioritization @relation(fields: [prioritizationId], references: [id], onDelete: Cascade)
+  
+  // Feature Details
+  title               String
+  description         String?  @db.Text
+  category            String?  // "Core", "Growth", "Platform", etc.
+  
+  // RICE Scores
+  reach               Int?                    // Users affected per quarter
+  impact              Decimal? @db.Decimal(4, 2)  // 0.25, 0.5, 1, 2, 3
+  confidence          Int?                    // 0-100%
+  effort              Decimal? @db.Decimal(6, 2)  // Person-weeks
+  
+  // ICE Scores (alternative)
+  iceImpact           Int?     // 1-10
+  iceConfidence       Int?     // 1-10
+  iceEase             Int?     // 1-10
+  
+  // Value/Effort (alternative)
+  valueScore          Int?     // 1-10
+  effortScore         Int?     // 1-10
+  
+  // Custom Scores
+  customScores        Json?    // For custom frameworks
+  
+  // Calculated Results
+  score               Decimal? @db.Decimal(10, 4)
+  rank                Int?
+  tier                String?  // "Must Have", "Should Have", "Nice to Have", "Won't Have"
+  
+  // External Source
+  externalId          String?  // ID in Productboard, Aha!, etc.
+  externalSource      String?  // "productboard", "aha", "linear"
+  externalUrl         String?  // Link to external tool
+  
+  // Status
+  status              FeatureStatus @default(BACKLOG)
+  roadmapQuarter      String?  // "Q1 2026"
+  
+  // Relations to PRD
+  relatedPrdId        String?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([prioritizationId, rank])
+  @@index([prioritizationId, status])
+  @@index([externalId, externalSource])
+}
+
+// =============================================================================
+// CPO TOOL SUITE - ENUMS
+// =============================================================================
+
+enum PRDStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  IN_DEVELOPMENT
+  SHIPPED
+  ARCHIVED
+}
+
+enum PrioritizationFramework {
+  RICE          // Reach, Impact, Confidence, Effort
+  ICE           // Impact, Confidence, Ease
+  VALUE_EFFORT  // Value vs Effort matrix
+  KANO          // Kano Model
+  MOSCOW        // Must/Should/Could/Won't
+  CUSTOM        // Custom weighted criteria
+}
+
+enum FeatureStatus {
+  IDEA
+  BACKLOG
+  PLANNED
+  IN_PROGRESS
+  SHIPPED
+  DEPRECATED
+}
+
+// =============================================================================
+// STUB MODELS (Placeholders for future implementation)
+// =============================================================================
+
+model ComplianceAssessment {
+  id              String   @id @default(uuid())
+  engagementId    String
+  engagement      ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String?  @db.Text
+  status          String   @default("PENDING")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([engagementId])
+}
+
+model WorkspaceIntegration {
+  id              String   @id @default(uuid())
+  workspaceId     String
+  workspace       ExecutiveWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  integrationType String
+  status          String   @default("PENDING")
+  config          Json?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([workspaceId])
+}

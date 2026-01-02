@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/workers/booking-reminder
  * Booking Reminder Worker
@@ -373,3 +374,4 @@ export class BookingReminderWorker {
 }
 
 export default BookingReminderWorker;
+

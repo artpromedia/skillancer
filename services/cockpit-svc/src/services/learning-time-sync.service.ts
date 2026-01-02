@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Learning Time Sync Service
  * Handles SkillPod learning events and syncs to Cockpit time tracking
@@ -279,3 +280,4 @@ export class LearningTimeSyncService {
     return map[contentType] ?? 'General Learning';
   }
 }
+

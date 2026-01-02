@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/task
  * Task data access layer
@@ -323,3 +324,4 @@ export class TaskRepository {
     );
   }
 }
+

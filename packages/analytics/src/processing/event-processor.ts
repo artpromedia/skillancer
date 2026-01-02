@@ -23,7 +23,7 @@ export interface EventProcessorConfig {
   batchTimeoutMs: number;
 }
 
-interface ProcessedEvent extends AnalyticsEvent {
+type ProcessedEvent = AnalyticsEvent & {
   receivedAt: Date;
   eventDate: string;
   eventHour: number;
@@ -33,7 +33,7 @@ interface ProcessedEvent extends AnalyticsEvent {
   deviceCategory: string;
   platform: string;
   geo?: { country: string; region: string; city: string };
-}
+};
 
 interface Logger {
   info: (msg: string, meta?: Record<string, unknown>) => void;

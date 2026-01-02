@@ -42,19 +42,25 @@ export function createUserRoutes(config: UserRoutesConfig): Router {
 
   router.get('/search', requirePermission('users:view'), async (req, res, next) => {
     try {
+      const adminId = (req as any).adminUser?.id;
       const { query, status, role, verified, createdAfter, createdBefore, limit, offset } =
         req.query;
 
-      const results = await userService.searchUsers({
-        query: query as string,
-        status: status as any,
-        role: role as any,
-        verified: verified === 'true' ? true : verified === 'false' ? false : undefined,
-        createdAfter: createdAfter ? new Date(createdAfter as string) : undefined,
-        createdBefore: createdBefore ? new Date(createdBefore as string) : undefined,
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined,
-      });
+      const results = await userService.searchUsers(
+        {
+          query: query as string,
+          status: status as any,
+          accountType: role as any,
+          emailVerified: verified === 'true' ? true : verified === 'false' ? false : undefined,
+          createdAfter: createdAfter ? new Date(createdAfter as string) : undefined,
+          createdBefore: createdBefore ? new Date(createdBefore as string) : undefined,
+          limit: limit ? parseInt(limit as string) : undefined,
+          page: offset
+            ? Math.floor(parseInt(offset as string) / (limit ? parseInt(limit as string) : 20)) + 1
+            : undefined,
+        },
+        adminId
+      );
 
       res.json(results);
     } catch (error) {
@@ -64,7 +70,8 @@ export function createUserRoutes(config: UserRoutesConfig): Router {
 
   router.get('/:id', requirePermission('users:view'), async (req, res, next) => {
     try {
-      const user = await userService.getUserDetails(req.params.id);
+      const adminId = (req as any).adminUser?.id;
+      const user = await userService.getUserDetails(req.params.id, adminId);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -76,8 +83,9 @@ export function createUserRoutes(config: UserRoutesConfig): Router {
 
   router.get('/:id/stats', requirePermission('users:view'), async (req, res, next) => {
     try {
-      const stats = await userService.getUserStats(req.params.id);
-      res.json({ data: stats });
+      const adminId = (req as any).adminUser?.id;
+      const userDetails = await userService.getUserDetails(req.params.id, adminId);
+      res.json({ data: userDetails.stats });
     } catch (error) {
       next(error);
     }
@@ -90,12 +98,15 @@ export function createUserRoutes(config: UserRoutesConfig): Router {
       const { reason, duration, notifyUser } = req.body;
       const adminId = (req as any).adminUser?.id;
 
-      await userService.banUser(req.params.id, {
-        reason,
-        duration,
-        bannedBy: adminId,
-        notifyUser,
-      });
+      await userService.banUser(
+        req.params.id,
+        {
+          reason,
+          duration,
+          notifyUser,
+        },
+        adminId
+      );
 
       res.json({ success: true, message: 'User banned successfully' });
     } catch (error) {
@@ -108,7 +119,7 @@ export function createUserRoutes(config: UserRoutesConfig): Router {
       const { reason } = req.body;
       const adminId = (req as any).adminUser?.id;
 
-      await userService.unbanUser(req.params.id, adminId, reason);
+      await userService.unbanUser(req.params.id, reason, adminId);
       res.json({ success: true, message: 'User unbanned successfully' });
     } catch (error) {
       next(error);
@@ -147,10 +158,10 @@ export function createUserRoutes(config: UserRoutesConfig): Router {
 
   router.post('/:id/notes', requirePermission('users:edit'), async (req, res, next) => {
     try {
-      const { content, isInternal } = req.body;
+      const { content } = req.body;
       const adminId = (req as any).adminUser?.id;
 
-      await userService.addAdminNote(req.params.id, adminId, content, isInternal);
+      await userService.addAdminNote(req.params.id, content, adminId);
       res.status(201).json({ success: true, message: 'Note added successfully' });
     } catch (error) {
       next(error);
@@ -176,8 +187,8 @@ export function createUserRoutes(config: UserRoutesConfig): Router {
       const { format, filters } = req.body;
       const adminId = (req as any).adminUser?.id;
 
-      const { url, expiresAt } = await userService.exportUsers(format, filters, adminId);
-      res.json({ data: { url, expiresAt } });
+      const result = await userService.exportUsers(filters, format, adminId);
+      res.json({ data: result });
     } catch (error) {
       next(error);
     }

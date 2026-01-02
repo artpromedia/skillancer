@@ -8,10 +8,14 @@ export {
   SystemHealthService,
   type SystemHealth,
   type ServiceHealth,
-  type InfrastructureHealth,
-  type Alert,
+  type SystemAlert,
   type Incident,
+  type HealthEndpoint,
 } from './system-health-service.js';
+
+// Type aliases for backwards compatibility
+export type { SystemAlert as Alert } from './system-health-service.js';
+// InfrastructureHealth is part of SystemHealth.infrastructure, not a separate export
 
 export {
   QueueManagementService,

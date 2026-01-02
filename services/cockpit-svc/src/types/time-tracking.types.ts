@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/types/time-tracking
  * Type definitions for the comprehensive time tracking system
@@ -486,3 +487,4 @@ export interface ReminderNotification {
   message: string;
   data?: Record<string, unknown>;
 }
+

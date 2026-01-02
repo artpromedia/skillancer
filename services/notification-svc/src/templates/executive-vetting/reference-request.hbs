@@ -1,0 +1,77 @@
+{{! Reference Request Email (sent to reference) }}
+
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Reference Request</title>
+  </head>
+  <body
+    style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"
+  >
+    <div style='text-align: center; margin-bottom: 30px;'>
+      <img src='{{logoUrl}}' alt='Skillancer' style='height: 40px;' />
+    </div>
+
+    <h1 style='color: #1a1a2e; font-size: 24px; margin-bottom: 20px;'>
+      {{executiveName}}
+      Listed You as a Reference
+    </h1>
+
+    <p>Hi {{referenceName}},</p>
+
+    <p>
+      <strong>{{executiveName}}</strong>
+      is applying to join
+      <strong>Skillancer Executive Suite</strong>, a network of vetted fractional executives.
+      They've listed you as a professional reference based on your time working together at
+      <strong>{{workedTogetherAt}}</strong>.
+    </p>
+
+    <div style='background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 24px 0;'>
+      <p style='margin: 0 0 8px 0;'><strong>Your Relationship:</strong> {{relationship}}</p>
+      <p style='margin: 0;'><strong>Years Known:</strong> {{yearsKnown}}</p>
+    </div>
+
+    <p>
+      We'd greatly appreciate 5-10 minutes of your time to share your perspective on
+      {{executiveFirstName}}'s leadership abilities and professional character.
+    </p>
+
+    <div style='text-align: center; margin: 30px 0;'>
+      <a
+        href='{{referenceUrl}}'
+        style='display: inline-block; background: #4f46e5; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;'
+      >
+        Provide Reference
+      </a>
+    </div>
+
+    <p style='color: #666; font-size: 14px;'>
+      <strong>Your response is confidential</strong>
+      and will not be shared directly with
+      {{executiveFirstName}}.
+    </p>
+
+    <p style='color: #666; font-size: 14px;'>
+      This link expires in 14 days. If you're unable to provide a reference, simply ignore this
+      email.
+    </p>
+
+    <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;' />
+
+    <p style='color: #999; font-size: 12px;'>
+      <strong>About Skillancer Executive Suite:</strong>
+      We connect companies with vetted fractional executives (CTOs, CFOs, CMOs, etc.) for strategic
+      leadership on a flexible basis.
+    </p>
+
+    <p style='color: #999; font-size: 12px; text-align: center;'>
+      ©
+      {{year}}
+      Skillancer. All rights reserved.<br />
+      Questions? Contact
+      <a href='mailto:references@skillancer.com' style='color: #999;'>references@skillancer.com</a>
+    </p>
+  </body>
+</html>

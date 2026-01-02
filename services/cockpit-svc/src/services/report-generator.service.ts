@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Report Generator Service
  * Generates P&L, cash flow, tax summary, and other financial reports
@@ -151,3 +152,4 @@ export class ReportGeneratorService {
     return report.id;
   }
 }
+

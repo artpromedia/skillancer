@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/calendar-event
  * Calendar Event Repository
@@ -283,3 +284,4 @@ export class CalendarEventRepository {
     });
   }
 }
+

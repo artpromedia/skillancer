@@ -19,7 +19,7 @@ import {
   TrendingDown,
   Minus,
 } from 'lucide-react';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 // ============================================================================
 // Types

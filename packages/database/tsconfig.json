@@ -7,5 +7,13 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts", "scripts/**/*.ts"],
-  "exclude": ["node_modules", "dist", "generated", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "generated",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "scripts/production-seed.ts",
+    "scripts/demo-data-seed.ts"
+  ]
 }

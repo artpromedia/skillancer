@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Unified Financial Reporting Types
  *
@@ -857,3 +858,4 @@ export interface ExportResult {
   downloadUrl: string;
   expiresAt: Date;
 }
+

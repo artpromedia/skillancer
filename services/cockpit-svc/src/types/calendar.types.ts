@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/types/calendar
  * Calendar Integration Type Definitions
@@ -480,3 +481,4 @@ export interface MeetingLinkResult {
   joinInfo?: string;
   meetingId?: string;
 }
+

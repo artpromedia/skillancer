@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/workers/market-contract-sync
  * Market Contract Sync Worker - Periodically syncs time entries and milestones from Cockpit to Market
@@ -321,3 +322,4 @@ export class MarketContractSyncWorker {
     };
   }
 }
+

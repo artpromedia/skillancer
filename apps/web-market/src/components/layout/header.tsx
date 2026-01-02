@@ -35,6 +35,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useCallback } from 'react';
 
 import { SearchBar } from '@/components/search/search-bar';
+import { Logo } from '@/components/brand';
 
 // Navigation configuration
 const mainNavItems = [
@@ -50,36 +51,32 @@ const mainNavItems = [
   },
   {
     label: 'Find Talent',
-    href: '/talent',
+    href: '/freelancers',
     items: [
-      { label: 'Browse Talent', href: '/talent', description: 'Find skilled freelancers' },
+      { label: 'Browse Talent', href: '/freelancers', description: 'Find skilled freelancers' },
       { label: 'Post a Job', href: '/jobs/post', description: 'Create a new job posting' },
       { label: 'My Jobs', href: '/client/jobs', description: 'Manage your job postings' },
       { label: 'Hired', href: '/client/contracts', description: 'Active contracts & hires' },
     ],
   },
   {
-    label: 'Why Skillancer',
+    label: 'Products',
     href: '/about',
     items: [
-      { label: 'How It Works', href: '/how-it-works', description: 'Learn the platform basics' },
-      { label: 'SmartMatch', href: '/smartmatch', description: 'Our AI-powered matching' },
-      { label: 'Trust & Safety', href: '/trust', description: 'Secure payments & verification' },
-      { label: 'Success Stories', href: '/success-stories', description: 'Client testimonials' },
+      { label: 'SkillPod VDI', href: '/skillpod', description: 'Secure virtual desktop for work' },
+      { label: 'Cockpit Dashboard', href: '/cockpit', description: 'Project management dashboard' },
+      { label: 'SmartMatch AI', href: '/smartmatch', description: 'AI-powered job matching' },
+      { label: 'Skill Verification', href: '/verification', description: 'Verify your skills' },
     ],
   },
   {
-    label: 'Enterprise',
-    href: '/enterprise',
+    label: 'Resources',
+    href: '/about',
     items: [
-      {
-        label: 'Enterprise Solutions',
-        href: '/enterprise',
-        description: 'For large organizations',
-      },
-      { label: 'Managed Services', href: '/enterprise/managed', description: 'Dedicated support' },
-      { label: 'Compliance', href: '/enterprise/compliance', description: 'Security & compliance' },
-      { label: 'Contact Sales', href: '/enterprise/contact', description: 'Talk to our team' },
+      { label: 'How It Works', href: '/how-it-works', description: 'Learn the platform basics' },
+      { label: 'About Us', href: '/about', description: 'Our mission and story' },
+      { label: 'Trust & Safety', href: '/trust', description: 'Secure payments & verification' },
+      { label: 'Success Stories', href: '/success-stories', description: 'Client testimonials' },
     ],
   },
 ];
@@ -111,15 +108,7 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <Link
-            className="hover:text-primary flex items-center gap-2 text-xl font-bold transition-colors"
-            href="/"
-          >
-            <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center rounded-lg">
-              S
-            </div>
-            <span className="hidden sm:inline-block">Skillancer</span>
-          </Link>
+          <Logo size="md" />
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex lg:items-center lg:gap-1">

@@ -317,50 +317,60 @@ export default function CockpitHome() {
             stats={[
               {
                 id: 'hours',
-                title: 'Hours This Week',
+                label: 'Hours This Week',
                 value: formatHours(stats.hoursThisWeek),
-                previousValue: formatHours(stats.hoursLastWeek),
-                change:
+                trend:
                   stats.hoursLastWeek > 0
-                    ? ((stats.hoursThisWeek - stats.hoursLastWeek) / stats.hoursLastWeek) * 100
-                    : 0,
-                icon: Clock,
+                    ? {
+                        direction: stats.hoursThisWeek >= stats.hoursLastWeek ? 'up' : 'down',
+                        value: Math.round(
+                          ((stats.hoursThisWeek - stats.hoursLastWeek) / stats.hoursLastWeek) * 100
+                        ),
+                      }
+                    : undefined,
+                icon: 'clock',
                 color: 'blue',
-                href: '/time',
               },
               {
                 id: 'earnings',
-                title: 'Earnings This Month',
+                label: 'Earnings This Month',
                 value: formatCurrency(stats.earningsThisMonth),
-                previousValue: formatCurrency(stats.earningsLastMonth),
-                change:
+                trend:
                   stats.earningsLastMonth > 0
-                    ? ((stats.earningsThisMonth - stats.earningsLastMonth) /
-                        stats.earningsLastMonth) *
-                      100
-                    : 0,
-                icon: DollarSign,
+                    ? {
+                        direction:
+                          stats.earningsThisMonth >= stats.earningsLastMonth ? 'up' : 'down',
+                        value: Math.round(
+                          ((stats.earningsThisMonth - stats.earningsLastMonth) /
+                            stats.earningsLastMonth) *
+                            100
+                        ),
+                      }
+                    : undefined,
+                icon: 'dollar',
                 color: 'green',
-                href: '/finances',
               },
               {
                 id: 'projects',
-                title: 'Active Projects',
+                label: 'Active Projects',
                 value: stats.activeProjects.toString(),
-                change: stats.activeProjectsChange,
-                changeLabel: 'new this month',
-                icon: Briefcase,
+                trend:
+                  stats.activeProjectsChange !== 0
+                    ? {
+                        direction: stats.activeProjectsChange > 0 ? 'up' : 'down',
+                        value: Math.abs(stats.activeProjectsChange),
+                        label: 'new this month',
+                      }
+                    : undefined,
+                icon: 'briefcase',
                 color: 'purple',
-                href: '/projects',
               },
               {
                 id: 'invoices',
-                title: 'Pending Invoices',
+                label: 'Pending Invoices',
                 value: stats.pendingInvoices.toString(),
-                subValue: formatCurrency(stats.pendingInvoicesAmount),
-                icon: FileText,
+                icon: 'invoice',
                 color: 'orange',
-                href: '/invoices?status=pending',
               },
             ]}
           />

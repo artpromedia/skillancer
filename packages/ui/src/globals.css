@@ -4,70 +4,117 @@
 
 @layer base {
   :root {
-    /* Skillancer Brand Colors */
-    --primary: 216 55% 24%; /* #1B365D */
-    --primary-foreground: 0 0% 100%;
-    
-    --secondary: 210 49% 36%; /* #2E5A88 */
-    --secondary-foreground: 0 0% 100%;
-    
-    --accent: 207 38% 47%; /* #4A7BA7 */
-    --accent-foreground: 0 0% 100%;
+    /* ===== Skillancer Brand Colors ===== */
 
-    /* Base Colors */
-    --background: 0 0% 100%;
-    --foreground: 216 55% 24%;
+    /* Primary - Emerald Green (Main CTAs, Success, Verified) */
+    --primary: 160 84% 39%; /* #10b981 */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Blue (Links, Secondary CTAs) */
+    --secondary: 217 91% 60%; /* #3b82f6 */
+    --secondary-foreground: 0 0% 100%;
+
+    /* Accent - Blue Light */
+    --accent: 214 95% 93%; /* #dbeafe */
+    --accent-foreground: 221 83% 53%; /* #2563eb */
+
+    /* ===== Semantic Colors ===== */
+    --success: 160 84% 39%; /* #10b981 - Same as primary */
+    --success-foreground: 0 0% 100%;
+
+    --info: 217 91% 60%; /* #3b82f6 - Same as secondary */
+    --info-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%; /* #f59e0b */
+    --warning-foreground: 0 0% 100%;
+
+    /* ===== Base Colors (Slate Gray Scale) ===== */
+    --background: 210 40% 98%; /* #f8fafc - gray-50 */
+    --foreground: 222 47% 11%; /* #1e293b - gray-900 */
 
     /* Card */
-    --card: 0 0% 100%;
-    --card-foreground: 216 55% 24%;
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 222 47% 11%; /* #1e293b */
 
     /* Popover */
     --popover: 0 0% 100%;
-    --popover-foreground: 216 55% 24%;
+    --popover-foreground: 222 47% 11%;
 
     /* Muted */
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 40% 96%; /* #f1f5f9 - gray-100 */
+    --muted-foreground: 215 16% 47%; /* #64748b - gray-500 */
 
     /* Destructive */
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 60%; /* #ef4444 */
     --destructive-foreground: 0 0% 100%;
 
     /* Border & Input */
-    --border: 214 32% 91%;
+    --border: 214 32% 91%; /* #e2e8f0 - gray-200 */
     --input: 214 32% 91%;
-    --ring: 216 55% 24%;
+    --ring: 217 91% 60%; /* Blue focus ring */
 
     /* Radius */
     --radius: 0.5rem;
+
+    /* ===== Extended Palette ===== */
+    --green: 160 84% 39%; /* #10b981 */
+    --green-dark: 161 94% 30%; /* #059669 */
+    --green-light: 149 80% 90%; /* #d1fae5 */
+
+    --blue: 217 91% 60%; /* #3b82f6 */
+    --blue-dark: 221 83% 53%; /* #2563eb */
+    --blue-light: 214 95% 93%; /* #dbeafe */
+
+    --slate-50: 210 40% 98%;
+    --slate-100: 210 40% 96%;
+    --slate-200: 214 32% 91%;
+    --slate-300: 213 27% 84%;
+    --slate-400: 215 20% 65%;
+    --slate-500: 215 16% 47%;
+    --slate-600: 215 19% 35%;
+    --slate-700: 215 25% 27%;
+    --slate-900: 222 47% 11%;
   }
 
   .dark {
-    /* Skillancer Brand Colors (Dark Mode) */
-    --primary: 207 38% 47%; /* Lighter for dark mode */
-    --primary-foreground: 216 55% 12%;
-    
-    --secondary: 210 49% 50%;
-    --secondary-foreground: 216 55% 12%;
-    
-    --accent: 207 38% 60%;
-    --accent-foreground: 216 55% 12%;
+    /* ===== Skillancer Dark Mode ===== */
 
-    /* Base Colors */
-    --background: 216 55% 8%;
-    --foreground: 210 40% 98%;
+    /* Primary - Emerald Green */
+    --primary: 160 84% 39%; /* Keep green the same */
+    --primary-foreground: 222 47% 11%;
+
+    /* Secondary - Blue */
+    --secondary: 217 91% 60%;
+    --secondary-foreground: 222 47% 11%;
+
+    /* Accent - Blue Dark */
+    --accent: 215 25% 27%;
+    --accent-foreground: 214 95% 93%;
+
+    /* ===== Semantic Colors ===== */
+    --success: 160 84% 39%;
+    --success-foreground: 222 47% 11%;
+
+    --info: 217 91% 60%;
+    --info-foreground: 222 47% 11%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+
+    /* ===== Base Colors ===== */
+    --background: 222 47% 5%; /* #0f172a - Very dark slate */
+    --foreground: 210 40% 96%; /* #f1f5f9 */
 
     /* Card */
-    --card: 216 55% 12%;
-    --card-foreground: 210 40% 98%;
+    --card: 222 47% 11%; /* #1e293b */
+    --card-foreground: 210 40% 96%;
 
     /* Popover */
-    --popover: 216 55% 12%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 96%;
 
     /* Muted */
-    --muted: 216 55% 18%;
+    --muted: 222 47% 11%;
     --muted-foreground: 215 20% 65%;
 
     /* Destructive */
@@ -75,9 +122,9 @@
     --destructive-foreground: 0 0% 100%;
 
     /* Border & Input */
-    --border: 216 55% 20%;
-    --input: 216 55% 20%;
-    --ring: 207 38% 47%;
+    --border: 215 25% 27%; /* #334155 */
+    --input: 215 25% 27%;
+    --ring: 217 91% 60%;
   }
 }
 
@@ -85,10 +132,12 @@
   * {
     @apply border-border;
   }
-  
+
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 
   /* Improve font rendering */
@@ -100,7 +149,7 @@
 
   /* Focus styles */
   :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply ring-ring ring-offset-background outline-none ring-2 ring-offset-2;
   }
 
   /* Selection colors */
@@ -115,7 +164,7 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
@@ -146,7 +195,7 @@
 
   /* Gradient text */
   .text-gradient {
-    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 bg-clip-text text-transparent;
   }
 
   /* Glass effect */
@@ -154,12 +203,47 @@
     @apply bg-background/80 backdrop-blur-sm;
   }
 
-  /* Skillancer card shadow */
+  /* ===== Skillancer Shadow System ===== */
+  .shadow-skillancer-sm {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
   .shadow-skillancer {
-    box-shadow: 0 4px 6px -1px rgba(27, 54, 93, 0.1), 0 2px 4px -1px rgba(27, 54, 93, 0.06);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   }
 
   .shadow-skillancer-lg {
-    box-shadow: 0 10px 15px -3px rgba(27, 54, 93, 0.1), 0 4px 6px -2px rgba(27, 54, 93, 0.05);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  }
+
+  .shadow-skillancer-xl {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Green glow for CTAs */
+  .shadow-green-glow {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  /* Blue glow for secondary */
+  .shadow-blue-glow {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  /* ===== Hover Effects ===== */
+  .hover-lift {
+    @apply transition-transform duration-200 ease-out;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .hover-lift-sm:hover {
+    transform: translateY(-1px);
+  }
+
+  /* ===== Focus Ring ===== */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500/20;
   }
 }

@@ -3,6 +3,7 @@ export { CoverLetterEditor } from './cover-letter-editor';
 export { MilestoneBuilder } from './milestone-builder';
 export { ProposalForm } from './proposal-form';
 export { BidBoostModal } from './bid-boost-modal';
+export { BidAmountInput } from './bid-amount-input';
 
 // Client proposal review components
 export { ProposalList } from './proposal-list';

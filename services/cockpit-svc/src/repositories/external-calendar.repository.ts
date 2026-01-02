@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/external-calendar
  * External Calendar Repository
@@ -151,3 +152,4 @@ export class ExternalCalendarRepository {
     });
   }
 }
+

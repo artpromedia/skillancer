@@ -95,7 +95,7 @@ export function createModerationRoutes(config: ModerationRoutesConfig): Router {
         const { notes } = req.body;
         const adminId = (req as any).adminUser?.id;
 
-        await moderationService.approveContent(req.params.id, adminId, notes);
+        await moderationService.approveContentById(req.params.id, adminId, notes);
         res.json({ success: true, message: 'Content approved' });
       } catch (error) {
         next(error);
@@ -111,7 +111,7 @@ export function createModerationRoutes(config: ModerationRoutesConfig): Router {
         const { reason, violationTypes, notes, notifyUser } = req.body;
         const adminId = (req as any).adminUser?.id;
 
-        await moderationService.rejectContent(req.params.id, adminId, {
+        await moderationService.rejectContentById(req.params.id, adminId, {
           reason,
           violationTypes,
           notes,
@@ -132,7 +132,7 @@ export function createModerationRoutes(config: ModerationRoutesConfig): Router {
         const { changes, deadline } = req.body;
         const adminId = (req as any).adminUser?.id;
 
-        await moderationService.requestChanges(req.params.id, adminId, changes, deadline);
+        await moderationService.requestChangesById(req.params.id, adminId, changes, deadline);
         res.json({ success: true, message: 'Changes requested' });
       } catch (error) {
         next(error);
@@ -148,7 +148,7 @@ export function createModerationRoutes(config: ModerationRoutesConfig): Router {
         const { reason, priority } = req.body;
         const adminId = (req as any).adminUser?.id;
 
-        await moderationService.escalateContent(req.params.id, adminId, reason, priority);
+        await moderationService.escalateContentById(req.params.id, adminId, reason, priority);
         res.json({ success: true, message: 'Content escalated' });
       } catch (error) {
         next(error);
@@ -212,7 +212,8 @@ export function createModerationRoutes(config: ModerationRoutesConfig): Router {
 
   router.get('/stats', requirePermission('reports:view'), async (req, res, next) => {
     try {
-      const stats = await moderationService.getModerationStats();
+      const adminId = (req as any).adminUser?.id;
+      const stats = await moderationService.getModerationStats(adminId);
       res.json({ data: stats });
     } catch (error) {
       next(error);

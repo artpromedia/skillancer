@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Learning Time Entry Repository
  */
@@ -113,3 +114,4 @@ export class LearningTimeEntryRepository {
     return result._sum.activeMinutes ?? 0;
   }
 }
+

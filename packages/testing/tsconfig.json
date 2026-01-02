@@ -3,6 +3,12 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "downlevelIteration": true,
+    "skipLibCheck": true,
     "types": ["node", "jest"],
     "esModuleInterop": true
   },

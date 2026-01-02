@@ -405,3 +405,11 @@ export function removeScreenshotProtectionCSS(): void {
     style.remove();
   }
 }
+
+/**
+ * Initialize screenshot detection
+ * Alias for screenshotDetection.initialize()
+ */
+export function initializeScreenshotDetection(): void {
+  screenshotDetection.initialize();
+}

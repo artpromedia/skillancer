@@ -23,8 +23,8 @@ export {
 // ============================================================================
 
 // Button
-export { Button, buttonVariants } from './components/Button';
-export type { ButtonProps } from './components/Button';
+export { Button, buttonVariants } from './components/button';
+export type { ButtonProps } from './components/button';
 
 // Input
 export { Input } from './components/input';
@@ -61,8 +61,33 @@ export {
   DialogDescription,
 } from './components/dialog';
 
+// AlertDialog
+export {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from './components/alert-dialog';
+
+// Popover
+export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './components/popover';
+
+// Collapsible
+export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './components/collapsible';
+
 // Toast (Sonner)
 export { Toaster, toast } from './components/sonner';
+
+// useToast hook (Sonner wrapper)
+export { useToast } from './components/use-toast';
+export type { ToastOptions, ToastReturn } from './components/use-toast';
 
 // Avatar
 export { Avatar, AvatarImage, AvatarFallback } from './components/avatar';
@@ -115,6 +140,18 @@ export { Separator } from './components/separator';
 
 // Scroll Area
 export { ScrollArea, ScrollBar } from './components/scroll-area';
+
+// Checkbox
+export { Checkbox } from './components/checkbox';
+
+// Alert
+export { Alert, AlertTitle, AlertDescription } from './components/alert';
+
+// Switch
+export { Switch } from './components/switch';
+
+// Radio Group
+export { RadioGroup, RadioGroupItem } from './components/radio-group';
 
 // ============================================================================
 // Custom Skillancer Components

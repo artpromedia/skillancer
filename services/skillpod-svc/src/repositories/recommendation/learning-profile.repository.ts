@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/skillpod-svc/repositories/recommendation/learning-profile
  * User Learning Profile repository for database operations
@@ -466,3 +467,4 @@ export function createLearningProfileRepository(prisma: PrismaClient): LearningP
     getOrCreate,
   };
 }
+

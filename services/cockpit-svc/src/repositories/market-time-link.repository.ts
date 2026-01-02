@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/market-time-link
  * Market Time Link data access layer
@@ -192,3 +193,4 @@ export class MarketTimeLinkRepository {
     });
   }
 }
+

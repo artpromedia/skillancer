@@ -577,11 +577,22 @@ export class UserManagementService {
 
   async bulkUpdateUsers(
     userIds: string[],
-    action: 'verify_email' | 'suspend' | 'activate',
+    updates: { action?: 'verify_email' | 'suspend' | 'activate'; reason?: string } | string,
     adminUserId: string,
-    reason: string
+    reason?: string
   ): Promise<{ success: number; failed: number; errors: string[] }> {
     await this.adminService.requirePermission(adminUserId, 'users:write');
+
+    // Handle both old and new signature
+    let action: 'verify_email' | 'suspend' | 'activate';
+    let updateReason: string;
+    if (typeof updates === 'string') {
+      action = updates as 'verify_email' | 'suspend' | 'activate';
+      updateReason = reason || '';
+    } else {
+      action = updates.action || 'activate';
+      updateReason = updates.reason || reason || '';
+    }
 
     let success = 0;
     let failed = 0;
@@ -594,10 +605,10 @@ export class UserManagementService {
             await this.verifyUser(userId, adminUserId, 'email');
             break;
           case 'suspend':
-            await this.updateUser(userId, { status: 'suspended' }, adminUserId, reason);
+            await this.updateUser(userId, { status: 'suspended' }, adminUserId, updateReason);
             break;
           case 'activate':
-            await this.updateUser(userId, { status: 'active' }, adminUserId, reason);
+            await this.updateUser(userId, { status: 'active' }, adminUserId, updateReason);
             break;
         }
         success++;
@@ -613,7 +624,7 @@ export class UserManagementService {
       resource: { type: 'user', id: 'bulk', name: 'Bulk Update' },
       details: {
         metadata: { action, userCount: userIds.length, success, failed },
-        reason,
+        reason: updateReason,
       },
     });
 

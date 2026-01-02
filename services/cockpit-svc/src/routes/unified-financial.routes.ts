@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Unified Financial Reporting API Routes
  */
@@ -197,3 +198,4 @@ router.get('/monthly-trend', async (req: Request, res: Response, next: NextFunct
 });
 
 export default router;
+

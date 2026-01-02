@@ -136,7 +136,10 @@ function auditLog(
     userId: session?.userId || 'anonymous',
     email: session?.email || 'unknown',
     role: session?.role || 'none',
-    ipAddress: request.ip || request.headers.get('x-forwarded-for') || 'unknown',
+    ipAddress:
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown',
     userAgent: request.headers.get('user-agent'),
     details,
   };
@@ -167,7 +170,9 @@ function checkIpWhitelist(request: NextRequest): boolean {
     return true;
   }
 
-  const clientIp = request.ip || request.headers.get('x-forwarded-for')?.split(',')[0];
+  const clientIp =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip');
 
   if (!clientIp) {
     return false;

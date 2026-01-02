@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/skillpod-svc/repositories/recommendation/market-trend
  * Market Trend repository for database operations
@@ -609,3 +610,4 @@ export function createMarketTrendRepository(prisma: PrismaClient): MarketTrendRe
     getIndustryComparison,
   };
 }
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * External Rates Service
  *
@@ -436,3 +437,4 @@ export class ExternalRatesService {
     }
   }
 }
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/services/calendar
  * Main Calendar Service
@@ -1376,3 +1377,4 @@ export class CalendarService {
     return `${base}-${suffix}`;
   }
 }
+

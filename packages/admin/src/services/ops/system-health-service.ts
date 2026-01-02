@@ -298,17 +298,17 @@ export class SystemHealthService {
     const uptime = process.uptime();
 
     // Get from metrics store
-    const [rpm, errorRate, avgResponse] = await Promise.all([
-      this.redis.get('metrics:rpm') || '0',
-      this.redis.get('metrics:error_rate') || '0',
-      this.redis.get('metrics:avg_response_time') || '0',
+    const [rpmValue, errorRateValue, avgResponseValue] = await Promise.all([
+      this.redis.get('metrics:rpm'),
+      this.redis.get('metrics:error_rate'),
+      this.redis.get('metrics:avg_response_time'),
     ]);
 
     return {
       uptime,
-      requestsPerMinute: parseFloat(rpm),
-      errorRate: parseFloat(errorRate),
-      avgResponseTime: parseFloat(avgResponse),
+      requestsPerMinute: parseFloat(rpmValue ?? '0'),
+      errorRate: parseFloat(errorRateValue ?? '0'),
+      avgResponseTime: parseFloat(avgResponseValue ?? '0'),
     };
   }
 

@@ -123,7 +123,7 @@ export function ImportTimeEntries({
   onClose,
   onImport,
   projectId,
-  _clientId,
+  // clientId is part of props but not currently used in this component
 }: ImportTimeEntriesProps) {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');

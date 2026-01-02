@@ -30,7 +30,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 
 // ============================================================================
 // Types
@@ -652,7 +652,7 @@ function ListView({ entries }: Readonly<{ entries: TimeEntry[] }>) {
 // Main Time Tracking Page
 // ============================================================================
 
-export default function TimeTrackingPage() {
+function TimeTrackingPageContent() {
   const searchParams = useSearchParams();
   const [viewMode, setViewMode] = useState<ViewMode>('timesheet');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -824,5 +824,14 @@ export default function TimeTrackingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrap in Suspense boundary for useSearchParams
+export default function TimeTrackingPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading...</div>}>
+      <TimeTrackingPageContent />
+    </Suspense>
   );
 }

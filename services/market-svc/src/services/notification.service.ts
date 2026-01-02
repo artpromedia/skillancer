@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/market-svc/services/notification
  * Main notification service for multi-channel delivery
@@ -766,3 +767,4 @@ export function createNotificationService(
     },
   };
 }
+

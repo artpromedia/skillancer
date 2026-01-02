@@ -5,6 +5,24 @@
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
+// Extend Fastify schema to include swagger/OpenAPI properties
+declare module 'fastify' {
+  interface FastifySchema {
+    tags?: string[];
+    summary?: string;
+    description?: string;
+    produces?: string[];
+    consumes?: string[];
+    security?: Record<string, string[]>[];
+  }
+
+  // Extend FastifyInstance with authenticate decorators from auth plugin
+  interface FastifyInstance {
+    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    optionalAuth: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  }
+}
+
 // Re-export config types
 export type { GatewayConfig } from '../config/index.js';
 export type { ServiceRoute, AuthMode } from '../config/routes.js';
@@ -131,10 +149,7 @@ export interface ErrorResponse {
 /**
  * Prehandler function type
  */
-export type PreHandler = (
-  request: FastifyRequest,
-  reply: FastifyReply
-) => Promise<void>;
+export type PreHandler = (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 
 /**
  * Dashboard data structure (BFF response)

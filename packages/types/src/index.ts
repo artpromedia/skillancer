@@ -54,3 +54,6 @@ export * from './credential';
 
 // Recommendation integration types (Market → SkillPod)
 export * from './recommendation';
+
+// Executive types (PRD, prioritization, CPO dashboard)
+export * from './executive';

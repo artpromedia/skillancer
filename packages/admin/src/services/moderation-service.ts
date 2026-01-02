@@ -71,33 +71,63 @@ export class ModerationService {
   async getModerationQueue(
     filters: {
       type?: string;
+      contentType?: string;
       status?: string;
       priority?: string;
       assignedTo?: string;
       page?: number;
       limit?: number;
+      offset?: number;
     },
-    adminUserId: string
+    adminUserId?: string
   ): Promise<{ items: ModerationQueueItem[]; total: number }> {
-    await this.adminService.requirePermission(adminUserId, 'content:read');
+    if (adminUserId) {
+      await this.adminService.requirePermission(adminUserId, 'content:read');
+    }
 
     const where: Record<string, unknown> = {};
-    if (filters.type) where.type = filters.type;
+    const type = filters.type || filters.contentType;
+    if (type) where.type = type;
     if (filters.status) where.status = filters.status;
     if (filters.priority) where.priority = filters.priority;
     if (filters.assignedTo) where.assignedTo = filters.assignedTo;
+
+    const limit = filters.limit || 20;
+    const offset = filters.offset ?? ((filters.page || 1) - 1) * limit;
 
     const [items, total] = await Promise.all([
       (this.prisma as any).moderationQueue.findMany({
         where,
         orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
-        skip: ((filters.page || 1) - 1) * (filters.limit || 20),
-        take: filters.limit || 20,
+        skip: offset,
+        take: limit,
       }),
       (this.prisma as any).moderationQueue.count({ where }),
     ]);
 
     return { items: items as ModerationQueueItem[], total };
+  }
+
+  // Public accessor method for routes
+  async getQueueItem(itemId: string, adminUserId?: string): Promise<ModerationQueueItem | null> {
+    if (adminUserId) {
+      await this.adminService.requirePermission(adminUserId, 'content:read');
+    }
+    return (this.prisma as any).moderationQueue.findUnique({
+      where: { id: itemId },
+    });
+  }
+
+  // Public method for assigning to moderator
+  async assignToModerator(itemId: string, moderatorId: string): Promise<void> {
+    await (this.prisma as any).moderationQueue.update({
+      where: { id: itemId },
+      data: {
+        assignedTo: moderatorId,
+        status: 'in_review',
+        updatedAt: new Date(),
+      },
+    });
   }
 
   async getModerationItem(
@@ -206,6 +236,74 @@ export class ModerationService {
       resource: { type: item.type, id: item.contentId, name: item.contentTitle },
       details: {
         metadata: { decision: decision.action, reason: decision.reason },
+      },
+    });
+  }
+
+  // Public method for approving content from routes
+  async approveContentById(itemId: string, adminUserId: string, notes?: string): Promise<void> {
+    await this.adminService.requirePermission(adminUserId, 'content:moderate');
+    const item = await this.getQueueItem(itemId);
+    if (!item) throw new Error('Moderation item not found');
+    await this.approveContent(item, adminUserId);
+    await this.recordDecision(itemId, adminUserId, 'approve', notes);
+  }
+
+  // Public method for rejecting content from routes
+  async rejectContentById(
+    itemId: string,
+    adminUserId: string,
+    details: { reason: string; violationTypes?: string[]; notes?: string; notifyUser?: boolean }
+  ): Promise<void> {
+    await this.adminService.requirePermission(adminUserId, 'content:moderate');
+    const item = await this.getQueueItem(itemId);
+    if (!item) throw new Error('Moderation item not found');
+    await this.rejectContent(item, details.reason, adminUserId);
+    await this.recordDecision(itemId, adminUserId, 'reject', details.notes, details.reason);
+  }
+
+  // Public method for requesting changes from routes
+  async requestChangesById(
+    itemId: string,
+    adminUserId: string,
+    changes: string,
+    deadline?: Date
+  ): Promise<void> {
+    await this.adminService.requirePermission(adminUserId, 'content:moderate');
+    const item = await this.getQueueItem(itemId);
+    if (!item) throw new Error('Moderation item not found');
+    await this.requestChanges(item, changes, adminUserId);
+    await this.recordDecision(itemId, adminUserId, 'request_changes', changes);
+  }
+
+  // Public method for escalating content from routes
+  async escalateContentById(
+    itemId: string,
+    adminUserId: string,
+    reason: string,
+    priority?: string
+  ): Promise<void> {
+    await this.adminService.requirePermission(adminUserId, 'content:moderate');
+    const item = await this.getQueueItem(itemId);
+    if (!item) throw new Error('Moderation item not found');
+    await this.escalateContent(item, reason, adminUserId);
+    await this.recordDecision(itemId, adminUserId, 'escalate', undefined, reason);
+  }
+
+  private async recordDecision(
+    itemId: string,
+    moderatorId: string,
+    action: string,
+    notes?: string,
+    reason?: string
+  ): Promise<void> {
+    await (this.prisma as any).moderationHistory.create({
+      data: {
+        moderationQueueId: itemId,
+        moderatorId,
+        action,
+        reason,
+        internalNotes: notes,
       },
     });
   }

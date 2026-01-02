@@ -135,6 +135,19 @@ export function createSecurityServices(config: SecurityServicesConfig): Security
   };
 }
 
+// ==================== Vulnerability Management ====================
+export {
+  VulnerabilityScanner,
+  vulnerabilityScanner,
+  Vulnerability,
+  VulnerabilitySeverity,
+  VulnerabilityStatus,
+  VulnerabilitySource,
+  ScanResult,
+  ScanType,
+  DependencyVulnerability,
+} from './vulnerability-scanner';
+
 export default {
   createSecurityServices,
 };

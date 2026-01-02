@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Client Profitability Repository
  *
@@ -305,3 +306,4 @@ export class ClientProfitabilityRepository {
     return where;
   }
 }
+

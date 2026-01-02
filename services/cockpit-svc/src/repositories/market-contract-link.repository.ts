@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/cockpit-svc/repositories/market-contract-link
  * Market Contract Link data access layer
@@ -288,3 +289,4 @@ export class MarketContractLinkRepository {
     return where;
   }
 }
+

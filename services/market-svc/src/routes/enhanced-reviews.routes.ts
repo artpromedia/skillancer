@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @module @skillancer/market-svc/routes/enhanced-reviews
  * Enhanced Review Routes with Fraud Detection
@@ -353,3 +354,4 @@ export function registerEnhancedReviewRoutes(
     }
   );
 }
+

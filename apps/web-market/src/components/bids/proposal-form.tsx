@@ -43,18 +43,28 @@ import {
 
 import { CoverLetterEditor } from './cover-letter-editor';
 import { MilestoneBuilder } from './milestone-builder';
+import { ProposalAssistant } from '@/components/ai/proposal-assistant';
 
 import type { MilestoneData, UseProposalFormReturn } from '@/hooks/use-proposal-form';
 import type { ContractType, ProposalTemplate, QualityScore } from '@/lib/api/bids';
-
 
 // ============================================================================
 // Types
 // ============================================================================
 
+interface GuildOption {
+  id: string;
+  name: string;
+  slug: string;
+  logo: string | null;
+  memberCount: number;
+  combinedRating: number;
+}
+
 interface ProposalFormProps {
   jobId: string;
   jobTitle: string;
+  jobDescription: string;
   jobBudget: {
     type: ContractType;
     minAmount?: number;
@@ -65,6 +75,10 @@ interface ProposalFormProps {
   form: UseProposalFormReturn;
   onCancel?: () => void;
   className?: string;
+  /** User's guilds for guild proposal option */
+  userGuilds?: GuildOption[];
+  /** Callback when submitting as guild */
+  onGuildProposal?: (guildId: string) => void;
 }
 
 interface AttachmentPreview {
@@ -143,12 +157,15 @@ function StepIndicator({
 function CoverLetterStep({
   form,
   jobSkills,
+  jobDescription,
 }: Readonly<{
   form: UseProposalFormReturn;
   jobSkills: string[];
+  jobDescription: string;
 }>) {
   const [templates, setTemplates] = useState<ProposalTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [showAIAssistant, setShowAIAssistant] = useState(true);
 
   // Load templates
   useEffect(() => {
@@ -169,8 +186,43 @@ function CoverLetterStep({
     [templates, form]
   );
 
+  // Handle AI suggestion
+  const handleAISuggestion = useCallback(
+    (suggestion: string) => {
+      const currentText = form.formData.coverLetter;
+      const newText = currentText ? `${currentText}\n\n${suggestion}` : suggestion;
+      form.setField('coverLetter', newText);
+    },
+    [form]
+  );
+
   return (
     <div className="space-y-6">
+      {/* AI Assistant Toggle */}
+      <div className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 p-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-purple-600" />
+          <span className="font-medium text-purple-900">AI Writing Assistant</span>
+        </div>
+        <Button
+          size="sm"
+          variant={showAIAssistant ? 'default' : 'outline'}
+          onClick={() => setShowAIAssistant(!showAIAssistant)}
+        >
+          {showAIAssistant ? 'Hide' : 'Show'}
+        </Button>
+      </div>
+
+      {/* AI Proposal Assistant */}
+      {showAIAssistant && (
+        <ProposalAssistant
+          jobDescription={jobDescription}
+          proposalText={form.formData.coverLetter}
+          onSuggestionApply={handleAISuggestion}
+          className="mb-4"
+        />
+      )}
+
       {/* Template selection */}
       {templates.length > 0 && (
         <div>
@@ -814,22 +866,33 @@ function QualityScoreCard({ score }: Readonly<{ score: QualityScore }>) {
 export function ProposalForm({
   jobId: _jobId,
   jobTitle,
+  jobDescription,
   jobBudget,
   jobSkills,
   form,
   onCancel,
   className,
+  userGuilds = [],
+  onGuildProposal,
 }: Readonly<ProposalFormProps>) {
   const { steps, currentStep, goToStep, nextStep, prevStep, isSubmitting, isSaving, lastSavedAt } =
     form;
 
+  // Guild proposal state
+  const [proposalMode, setProposalMode] = useState<'individual' | 'guild'>('individual');
+  const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
+
   // Handle submit
   const handleSubmit = useCallback(async () => {
+    if (proposalMode === 'guild' && selectedGuildId && onGuildProposal) {
+      onGuildProposal(selectedGuildId);
+      return;
+    }
     const proposalId = await form.submit();
     if (proposalId) {
       // Redirect handled by parent
     }
-  }, [form]);
+  }, [form, proposalMode, selectedGuildId, onGuildProposal]);
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -856,6 +919,65 @@ export function ProposalForm({
         )}
       </div>
 
+      {/* Guild vs Individual Proposal Selector */}
+      {userGuilds.length > 0 && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="pt-4">
+            <div className="mb-3 flex items-center gap-4">
+              <Label className="font-medium text-blue-900">Apply as:</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={proposalMode === 'individual' ? 'default' : 'outline'}
+                  onClick={() => {
+                    setProposalMode('individual');
+                    setSelectedGuildId(null);
+                  }}
+                >
+                  Individual
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={proposalMode === 'guild' ? 'default' : 'outline'}
+                  onClick={() => setProposalMode('guild')}
+                >
+                  Guild Team
+                </Button>
+              </div>
+            </div>
+            {proposalMode === 'guild' && (
+              <div className="space-y-2">
+                <Label className="text-sm text-blue-800">Select your guild:</Label>
+                <Select value={selectedGuildId || ''} onValueChange={setSelectedGuildId}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Choose a guild..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {userGuilds.map((guild) => (
+                      <SelectItem key={guild.id} value={guild.id}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{guild.name}</span>
+                          <span className="text-muted-foreground text-xs">
+                            ({guild.memberCount} members • ★{guild.combinedRating.toFixed(1)})
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedGuildId && (
+                  <p className="text-xs text-blue-700">
+                    You'll be able to compose your team after submitting the initial proposal.
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Step indicator */}
       <StepIndicator currentStep={currentStep} steps={steps} onStepClick={goToStep} />
 
@@ -866,7 +988,9 @@ export function ProposalForm({
           <p className="text-muted-foreground text-sm">{steps[currentStep]?.description}</p>
         </CardHeader>
         <CardContent>
-          {currentStep === 0 && <CoverLetterStep form={form} jobSkills={jobSkills} />}
+          {currentStep === 0 && (
+            <CoverLetterStep form={form} jobSkills={jobSkills} jobDescription={jobDescription} />
+          )}
           {currentStep === 1 && <PricingStep form={form} jobBudget={jobBudget} />}
           {currentStep === 2 && <MilestonesStep form={form} />}
           {currentStep === 3 && <AttachmentsStep form={form} />}
