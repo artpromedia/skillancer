@@ -6,6 +6,7 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
 import '../../features/contracts/presentation/screens/contract_detail_screen.dart';
 import '../../features/contracts/presentation/screens/contracts_screen.dart';
+import '../../features/executive/executive.dart';
 import '../../features/jobs/presentation/screens/job_detail_screen.dart';
 import '../../features/jobs/presentation/screens/job_filters_screen.dart';
 import '../../features/jobs/presentation/screens/jobs_screen.dart';
@@ -48,6 +49,13 @@ class AppRoutes {
   static const String editProfile = '/profile/edit';
   static const String notifications = '/notifications';
   static const String settings = '/settings';
+
+  // Executive Suite routes
+  static const String executive = '/executive';
+  static const String executiveProfile = '/executive/profile';
+  static const String executiveBrowse = '/executive/browse';
+  static const String executiveEngagement = '/executive/engagement/:engagementId';
+  static const String executiveView = '/executive/view/:profileId';
 }
 
 /// Router provider
@@ -213,6 +221,46 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.notifications,
         name: 'notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+
+      // Executive Suite routes
+      GoRoute(
+        path: AppRoutes.executive,
+        name: 'executive',
+        builder: (context, state) => const ExecutiveDashboardScreen(),
+        routes: [
+          GoRoute(
+            path: 'profile',
+            name: 'executiveProfile',
+            builder: (context, state) => const ExecutiveProfileScreen(),
+          ),
+          GoRoute(
+            path: 'browse',
+            name: 'executiveBrowse',
+            builder: (context, state) => const ExecutiveMarketplaceScreen(),
+          ),
+          GoRoute(
+            path: 'view/:profileId',
+            name: 'executiveView',
+            builder: (context, state) {
+              final profileId = state.pathParameters['profileId']!;
+              return ExecutiveProfileScreen(profileId: profileId);
+            },
+          ),
+          GoRoute(
+            path: 'engagement/:engagementId',
+            name: 'executiveEngagement',
+            builder: (context, state) {
+              final engagementId = state.pathParameters['engagementId']!;
+              return EngagementDetailScreen(engagementId: engagementId);
+            },
+          ),
+          GoRoute(
+            path: 'engagements',
+            name: 'executiveEngagements',
+            builder: (context, state) => const ExecutiveDashboardScreen(),
+          ),
+        ],
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
