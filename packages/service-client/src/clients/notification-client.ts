@@ -394,6 +394,177 @@ export class NotificationServiceClient extends BaseServiceClient {
 
     return this.get('notifications/stats', { searchParams });
   }
+
+  // ==========================================================================
+  // Transactional Email Helpers
+  // ==========================================================================
+
+  /**
+   * Send welcome email to new user
+   */
+  async sendWelcomeEmail(userId: string, email: string, name: string): Promise<{ messageId: string }> {
+    return this.post('emails/templates/welcome/send', {
+      to: email,
+      variables: { userId, name, loginUrl: `${process.env.APP_URL}/login` },
+    });
+  }
+
+  /**
+   * Send email verification
+   */
+  async sendEmailVerification(
+    userId: string,
+    email: string,
+    verificationToken: string
+  ): Promise<{ messageId: string }> {
+    const verifyUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
+    return this.post('emails/templates/email-verification/send', {
+      to: email,
+      variables: { userId, verifyUrl },
+    });
+  }
+
+  /**
+   * Send password reset email
+   */
+  async sendPasswordReset(
+    email: string,
+    resetToken: string
+  ): Promise<{ messageId: string }> {
+    const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetToken}`;
+    return this.post('emails/templates/password-reset/send', {
+      to: email,
+      variables: { resetUrl },
+    });
+  }
+
+  /**
+   * Send invoice created notification
+   */
+  async sendInvoiceCreated(
+    email: string,
+    data: {
+      invoiceNumber: string;
+      clientName: string;
+      amount: string;
+      dueDate: string;
+      viewUrl: string;
+    }
+  ): Promise<{ messageId: string }> {
+    return this.post('emails/templates/invoice-created/send', {
+      to: email,
+      variables: data,
+    });
+  }
+
+  /**
+   * Send invoice paid notification
+   */
+  async sendInvoicePaid(
+    email: string,
+    data: {
+      invoiceNumber: string;
+      amount: string;
+      paymentMethod: string;
+    }
+  ): Promise<{ messageId: string }> {
+    return this.post('emails/templates/invoice-paid/send', {
+      to: email,
+      variables: data,
+    });
+  }
+
+  /**
+   * Send payment received notification
+   */
+  async sendPaymentReceived(
+    userId: string,
+    email: string,
+    data: {
+      amount: string;
+      description: string;
+      date: string;
+    }
+  ): Promise<{ messageId: string }> {
+    return this.post('emails/templates/payment-received/send', {
+      to: email,
+      variables: { userId, ...data },
+    });
+  }
+
+  /**
+   * Send contract invitation
+   */
+  async sendContractInvitation(
+    email: string,
+    data: {
+      contractTitle: string;
+      clientName: string;
+      contractUrl: string;
+      expiresAt: string;
+    }
+  ): Promise<{ messageId: string }> {
+    return this.post('emails/templates/contract-invitation/send', {
+      to: email,
+      variables: data,
+    });
+  }
+
+  /**
+   * Send proposal received notification
+   */
+  async sendProposalReceived(
+    email: string,
+    data: {
+      jobTitle: string;
+      freelancerName: string;
+      proposalAmount: string;
+      proposalUrl: string;
+    }
+  ): Promise<{ messageId: string }> {
+    return this.post('emails/templates/proposal-received/send', {
+      to: email,
+      variables: data,
+    });
+  }
+
+  /**
+   * Send security alert
+   */
+  async sendSecurityAlert(
+    userId: string,
+    email: string,
+    data: {
+      alertType: string;
+      description: string;
+      ipAddress?: string;
+      location?: string;
+      timestamp: string;
+    }
+  ): Promise<{ messageId: string }> {
+    return this.post('emails/templates/security-alert/send', {
+      to: email,
+      variables: { userId, ...data },
+    });
+  }
+
+  /**
+   * Send milestone completed notification
+   */
+  async sendMilestoneCompleted(
+    email: string,
+    data: {
+      milestoneName: string;
+      contractTitle: string;
+      amount: string;
+      reviewUrl: string;
+    }
+  ): Promise<{ messageId: string }> {
+    return this.post('emails/templates/milestone-completed/send', {
+      to: email,
+      variables: data,
+    });
+  }
 }
 
 // Export singleton instance

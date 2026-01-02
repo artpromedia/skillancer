@@ -3,6 +3,8 @@
  * Authentication routes for email/password auth
  */
 
+import { NotificationServiceClient } from '@skillancer/service-client';
+
 import { InvalidTokenError as _InvalidTokenError } from '../errors/index.js';
 import {
   getClientIp,
@@ -53,6 +55,16 @@ function getDeviceInfo(request: FastifyRequest): DeviceInfo {
 // ROUTE HANDLERS
 // =============================================================================
 
+// Notification client singleton
+let notificationClient: NotificationServiceClient | null = null;
+
+function getNotificationClient(): NotificationServiceClient {
+  if (!notificationClient) {
+    notificationClient = new NotificationServiceClient();
+  }
+  return notificationClient;
+}
+
 /**
  * POST /auth/register - Register new user
  */
@@ -65,11 +77,32 @@ async function registerHandler(
 
   const { user, verificationToken } = await authService.register(data);
 
-  // TODO: Send verification email via notification service
-  request.log.info(
-    { userId: user.id, token: verificationToken },
-    'User registered, verification email pending'
-  );
+  // Send verification email via notification service
+  try {
+    await getNotificationClient().sendEmailVerification(
+      user.id,
+      user.email,
+      verificationToken
+    );
+    request.log.info({ userId: user.id }, 'Verification email sent');
+  } catch (error) {
+    // Log error but don't fail registration
+    request.log.error(
+      { userId: user.id, error: error instanceof Error ? error.message : 'Unknown error' },
+      'Failed to send verification email'
+    );
+  }
+
+  // Send welcome email
+  try {
+    await getNotificationClient().sendWelcomeEmail(
+      user.id,
+      user.email,
+      user.firstName
+    );
+  } catch {
+    // Welcome email is non-critical
+  }
 
   void reply.status(201).send({
     success: true,
@@ -219,9 +252,17 @@ async function forgotPasswordHandler(
 
   const token = await authService.forgotPassword(data.email);
 
-  // TODO: Send password reset email via notification service
+  // Send password reset email via notification service
   if (token) {
-    request.log.info({ email: data.email, token }, 'Password reset requested');
+    try {
+      await getNotificationClient().sendPasswordReset(data.email, token);
+      request.log.info({ email: data.email }, 'Password reset email sent');
+    } catch (error) {
+      request.log.error(
+        { email: data.email, error: error instanceof Error ? error.message : 'Unknown error' },
+        'Failed to send password reset email'
+      );
+    }
   }
 
   // Always return success to prevent email enumeration
@@ -285,9 +326,25 @@ async function resendVerificationHandler(
 
   const token = await authService.resendVerificationEmail(data.email);
 
-  // TODO: Send verification email via notification service
+  // Send verification email via notification service
   if (token) {
-    request.log.info({ email: data.email, token }, 'Verification email resent');
+    try {
+      // We need to get the user ID for the email - but we don't expose it to prevent enumeration
+      // The notification service will handle this by looking up the user
+      await getNotificationClient().sendEmail({
+        to: data.email,
+        templateId: 'email-verification',
+        data: {
+          verifyUrl: `${process.env.APP_URL}/verify-email?token=${token}`,
+        },
+      });
+      request.log.info({ email: data.email }, 'Verification email resent');
+    } catch (error) {
+      request.log.error(
+        { email: data.email, error: error instanceof Error ? error.message : 'Unknown error' },
+        'Failed to resend verification email'
+      );
+    }
   }
 
   // Always return success to prevent email enumeration
