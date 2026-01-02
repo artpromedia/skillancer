@@ -76,9 +76,22 @@ export {
   CORSConfig,
 } from './middleware';
 
+// ==================== Brute Force Protection Module ====================
+export {
+  BruteForceProtection,
+  initializeBruteForceProtection,
+  getBruteForceProtection,
+  resetBruteForceProtection,
+  type BruteForceConfig,
+  type LoginAttemptResult,
+  type LockoutInfo,
+  type NotificationCallback,
+} from './brute-force';
+
 // ==================== Factory Function ====================
 
 import { AuditService } from './audit';
+import { BruteForceProtection, type BruteForceConfig } from './brute-force';
 import { ComplianceReportingService } from './compliance';
 import { DataProtectionService } from './data-protection';
 import { ThreatDetectionService } from './threat-detection';
@@ -97,6 +110,7 @@ export interface SecurityServicesConfig {
   encryptionKey?: string;
   siemEndpoint?: string;
   geoipEnabled?: boolean;
+  bruteForceConfig?: Partial<BruteForceConfig>;
 }
 
 export interface SecurityServices {
@@ -104,13 +118,14 @@ export interface SecurityServices {
   dataProtectionService: DataProtectionService;
   threatDetectionService: ThreatDetectionService;
   complianceReportingService: ComplianceReportingService;
+  bruteForceProtection: BruteForceProtection;
 }
 
 /**
  * Create all security services with shared dependencies
  */
 export function createSecurityServices(config: SecurityServicesConfig): SecurityServices {
-  const { prisma, redis, logger, encryptionKey, geoipEnabled } = config;
+  const { prisma, redis, logger, encryptionKey, geoipEnabled, bruteForceConfig } = config;
 
   // Create services
   const auditService = new AuditService(prisma, redis, logger);
@@ -127,11 +142,14 @@ export function createSecurityServices(config: SecurityServicesConfig): Security
     logger
   );
 
+  const bruteForceProtection = new BruteForceProtection(redis, bruteForceConfig);
+
   return {
     auditService,
     dataProtectionService,
     threatDetectionService,
     complianceReportingService,
+    bruteForceProtection,
   };
 }
 

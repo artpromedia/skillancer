@@ -375,9 +375,324 @@ export async function emergencyDisable(flagIds: string[], reason: string): Promi
     }
   }
 
-  // TODO: Persist to database/feature flag service
-  // TODO: Send alert to on-call
-  // TODO: Update status page
+  // Persist to Redis if available
+  const service = getFeatureFlagService();
+  if (service) {
+    await service.emergencyDisable(flagIds, reason);
+  }
+}
+
+// =============================================================================
+// Feature Flag Service (Database & Redis Persistence)
+// =============================================================================
+
+import type { Redis } from 'ioredis';
+
+export interface FeatureFlagServiceConfig {
+  redis: Redis;
+  environment: string;
+  cacheExpirationSeconds?: number;
+  onFlagChange?: (flagId: string, enabled: boolean) => void;
+}
+
+export interface PersistedFeatureFlag extends FeatureFlag {
+  overrideEnabled?: boolean;
+  overrideSource?: 'database' | 'emergency' | 'api';
+}
+
+/**
+ * Feature Flag Service with Redis persistence
+ *
+ * This service bridges the static flag definitions with runtime overrides.
+ * Static definitions provide defaults, while Redis stores runtime changes.
+ */
+export class FeatureFlagService {
+  private readonly redis: Redis;
+  private readonly environment: string;
+  private readonly cacheExpiration: number;
+  private readonly onFlagChange?: (flagId: string, enabled: boolean) => void;
+
+  private static readonly KEY_PREFIX = 'feature:flag:';
+  private static readonly OVERRIDE_PREFIX = 'feature:override:';
+  private static readonly EMERGENCY_KEY = 'feature:emergency:disabled';
+
+  constructor(config: FeatureFlagServiceConfig) {
+    this.redis = config.redis;
+    this.environment = config.environment;
+    this.cacheExpiration = config.cacheExpirationSeconds ?? 300;
+    this.onFlagChange = config.onFlagChange;
+  }
+
+  /**
+   * Sync static flags to Redis on startup
+   */
+  async syncFlags(): Promise<void> {
+    const pipeline = this.redis.pipeline();
+
+    for (const [key, flag] of Object.entries(ALL_FLAGS)) {
+      const redisKey = `${FeatureFlagService.KEY_PREFIX}${this.environment}:${flag.id}`;
+      pipeline.set(redisKey, JSON.stringify(flag), 'EX', this.cacheExpiration);
+    }
+
+    await pipeline.exec();
+    console.log(`[FeatureFlags] Synced ${Object.keys(ALL_FLAGS).length} flags to Redis`);
+  }
+
+  /**
+   * Check if a feature is enabled with Redis override support
+   */
+  async isEnabled(
+    flagId: string,
+    context?: {
+      userId?: string;
+      userGroups?: string[];
+    }
+  ): Promise<boolean> {
+    // Check emergency disabled list first
+    const emergencyDisabled = await this.redis.sismember(
+      FeatureFlagService.EMERGENCY_KEY,
+      flagId
+    );
+    if (emergencyDisabled) {
+      return false;
+    }
+
+    // Check for runtime override
+    const overrideKey = `${FeatureFlagService.OVERRIDE_PREFIX}${this.environment}:${flagId}`;
+    const override = await this.redis.get(overrideKey);
+    if (override !== null) {
+      return override === 'true';
+    }
+
+    // Fall back to static evaluation
+    return isFeatureEnabled(flagId, {
+      ...context,
+      environment: this.environment,
+    });
+  }
+
+  /**
+   * Get flag details including overrides
+   */
+  async getFlag(flagId: string): Promise<PersistedFeatureFlag | null> {
+    const staticFlag = ALL_FLAGS[flagId];
+    if (!staticFlag) return null;
+
+    const overrideKey = `${FeatureFlagService.OVERRIDE_PREFIX}${this.environment}:${flagId}`;
+    const override = await this.redis.get(overrideKey);
+
+    const emergencyDisabled = await this.redis.sismember(
+      FeatureFlagService.EMERGENCY_KEY,
+      flagId
+    );
+
+    return {
+      ...staticFlag,
+      enabled: emergencyDisabled ? false : (override !== null ? override === 'true' : staticFlag.enabled),
+      overrideEnabled: override !== null ? override === 'true' : undefined,
+      overrideSource: emergencyDisabled ? 'emergency' : (override !== null ? 'api' : undefined),
+    };
+  }
+
+  /**
+   * Get all flags with current state
+   */
+  async getAllFlags(): Promise<PersistedFeatureFlag[]> {
+    const flags: PersistedFeatureFlag[] = [];
+
+    for (const flagId of Object.keys(ALL_FLAGS)) {
+      const flag = await this.getFlag(flagId);
+      if (flag) flags.push(flag);
+    }
+
+    return flags;
+  }
+
+  /**
+   * Set runtime override for a flag
+   */
+  async setOverride(flagId: string, enabled: boolean, expiresInSeconds?: number): Promise<void> {
+    if (!ALL_FLAGS[flagId]) {
+      throw new Error(`Unknown feature flag: ${flagId}`);
+    }
+
+    const overrideKey = `${FeatureFlagService.OVERRIDE_PREFIX}${this.environment}:${flagId}`;
+
+    if (expiresInSeconds) {
+      await this.redis.setex(overrideKey, expiresInSeconds, String(enabled));
+    } else {
+      await this.redis.set(overrideKey, String(enabled));
+    }
+
+    // Update in-memory state
+    ALL_FLAGS[flagId].enabled = enabled;
+    ALL_FLAGS[flagId].updatedAt = new Date();
+
+    this.onFlagChange?.(flagId, enabled);
+    console.log(`[FeatureFlags] Override set: ${flagId} = ${enabled}`);
+  }
+
+  /**
+   * Remove runtime override
+   */
+  async clearOverride(flagId: string): Promise<void> {
+    const overrideKey = `${FeatureFlagService.OVERRIDE_PREFIX}${this.environment}:${flagId}`;
+    await this.redis.del(overrideKey);
+
+    // Restore in-memory state
+    const staticFlag = CORE_FEATURES[flagId] ||
+      NEW_FEATURES[flagId] ||
+      EXPERIMENTAL_FEATURES[flagId] ||
+      OPERATIONS_FLAGS[flagId];
+
+    if (staticFlag) {
+      ALL_FLAGS[flagId].enabled = staticFlag.enabled;
+    }
+
+    console.log(`[FeatureFlags] Override cleared: ${flagId}`);
+  }
+
+  /**
+   * Emergency disable flags
+   */
+  async emergencyDisable(flagIds: string[], reason: string): Promise<void> {
+    const pipeline = this.redis.pipeline();
+
+    for (const flagId of flagIds) {
+      pipeline.sadd(FeatureFlagService.EMERGENCY_KEY, flagId);
+      // Update in-memory
+      if (ALL_FLAGS[flagId]) {
+        ALL_FLAGS[flagId].enabled = false;
+      }
+    }
+
+    // Store reason for audit
+    pipeline.hset('feature:emergency:reasons', Date.now().toString(), JSON.stringify({
+      flagIds,
+      reason,
+      timestamp: new Date().toISOString(),
+    }));
+
+    await pipeline.exec();
+
+    // Notify
+    for (const flagId of flagIds) {
+      this.onFlagChange?.(flagId, false);
+    }
+
+    console.error(`[FeatureFlags] EMERGENCY DISABLE: ${flagIds.join(', ')} - ${reason}`);
+  }
+
+  /**
+   * Remove emergency disable
+   */
+  async clearEmergencyDisable(flagIds: string[]): Promise<void> {
+    for (const flagId of flagIds) {
+      await this.redis.srem(FeatureFlagService.EMERGENCY_KEY, flagId);
+
+      // Restore state
+      const staticFlag = ALL_FLAGS[flagId];
+      if (staticFlag) {
+        const overrideKey = `${FeatureFlagService.OVERRIDE_PREFIX}${this.environment}:${flagId}`;
+        const override = await this.redis.get(overrideKey);
+        ALL_FLAGS[flagId].enabled = override !== null ? override === 'true' : staticFlag.enabled;
+      }
+    }
+
+    console.log(`[FeatureFlags] Emergency disable cleared: ${flagIds.join(', ')}`);
+  }
+
+  /**
+   * Get emergency disabled flags
+   */
+  async getEmergencyDisabled(): Promise<string[]> {
+    return this.redis.smembers(FeatureFlagService.EMERGENCY_KEY);
+  }
+
+  /**
+   * Update rollout percentage
+   */
+  async setRolloutPercentage(flagId: string, percentage: number): Promise<void> {
+    if (!ALL_FLAGS[flagId]) {
+      throw new Error(`Unknown feature flag: ${flagId}`);
+    }
+
+    if (percentage < 0 || percentage > 100) {
+      throw new Error('Rollout percentage must be between 0 and 100');
+    }
+
+    ALL_FLAGS[flagId].rolloutPercentage = percentage;
+    ALL_FLAGS[flagId].updatedAt = new Date();
+
+    // Persist to Redis
+    const redisKey = `${FeatureFlagService.KEY_PREFIX}${this.environment}:${flagId}`;
+    await this.redis.set(redisKey, JSON.stringify(ALL_FLAGS[flagId]), 'EX', this.cacheExpiration);
+
+    console.log(`[FeatureFlags] Rollout updated: ${flagId} = ${percentage}%`);
+  }
+
+  /**
+   * Add user to target group
+   */
+  async addToTargetGroup(flagId: string, group: string): Promise<void> {
+    if (!ALL_FLAGS[flagId]) {
+      throw new Error(`Unknown feature flag: ${flagId}`);
+    }
+
+    if (!ALL_FLAGS[flagId].targetGroups) {
+      ALL_FLAGS[flagId].targetGroups = [];
+    }
+
+    if (!ALL_FLAGS[flagId].targetGroups!.includes(group)) {
+      ALL_FLAGS[flagId].targetGroups!.push(group);
+      ALL_FLAGS[flagId].updatedAt = new Date();
+
+      const redisKey = `${FeatureFlagService.KEY_PREFIX}${this.environment}:${flagId}`;
+      await this.redis.set(redisKey, JSON.stringify(ALL_FLAGS[flagId]), 'EX', this.cacheExpiration);
+    }
+  }
+
+  /**
+   * Remove user from target group
+   */
+  async removeFromTargetGroup(flagId: string, group: string): Promise<void> {
+    if (!ALL_FLAGS[flagId]) {
+      throw new Error(`Unknown feature flag: ${flagId}`);
+    }
+
+    if (ALL_FLAGS[flagId].targetGroups) {
+      ALL_FLAGS[flagId].targetGroups = ALL_FLAGS[flagId].targetGroups!.filter(g => g !== group);
+      ALL_FLAGS[flagId].updatedAt = new Date();
+
+      const redisKey = `${FeatureFlagService.KEY_PREFIX}${this.environment}:${flagId}`;
+      await this.redis.set(redisKey, JSON.stringify(ALL_FLAGS[flagId]), 'EX', this.cacheExpiration);
+    }
+  }
+}
+
+// Singleton instance
+let featureFlagServiceInstance: FeatureFlagService | null = null;
+
+/**
+ * Initialize the feature flag service
+ */
+export function initializeFeatureFlagService(config: FeatureFlagServiceConfig): FeatureFlagService {
+  featureFlagServiceInstance = new FeatureFlagService(config);
+  return featureFlagServiceInstance;
+}
+
+/**
+ * Get the feature flag service instance
+ */
+export function getFeatureFlagService(): FeatureFlagService | null {
+  return featureFlagServiceInstance;
+}
+
+/**
+ * Reset the feature flag service (for testing)
+ */
+export function resetFeatureFlagService(): void {
+  featureFlagServiceInstance = null;
 }
 
 export default {
@@ -389,4 +704,8 @@ export default {
   isFeatureEnabled,
   getEnabledFlags,
   emergencyDisable,
+  FeatureFlagService,
+  initializeFeatureFlagService,
+  getFeatureFlagService,
+  resetFeatureFlagService,
 };
