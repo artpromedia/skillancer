@@ -9,4 +9,3 @@ export {
   type AnalyticsClientConfig,
   type AnalyticsMiddleware,
 } from './analytics-client.js';
-
