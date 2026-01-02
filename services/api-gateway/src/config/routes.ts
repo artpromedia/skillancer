@@ -111,6 +111,59 @@ export function getServiceRoutes(): ServiceRoute[] {
       serviceName: 'notification',
       description: 'Notification service - alerts, messages',
     },
+    // Moat Services
+    {
+      prefix: '/api/executive',
+      upstream: config.services.executive,
+      stripPrefix: true,
+      timeout: 30000,
+      retries: 2,
+      auth: 'required',
+      serviceName: 'executive',
+      description: 'Executive Suite - high-value client engagements, dedicated workspaces, integration hub',
+    },
+    {
+      prefix: '/api/financial',
+      upstream: config.services.financial,
+      stripPrefix: true,
+      timeout: 60000, // Longer timeout for financial operations
+      retries: 0, // No retries for financial operations
+      auth: 'required',
+      serviceName: 'financial',
+      rateLimit: { max: 30, timeWindow: '1 minute' },
+      description: 'Financial Services - Skillancer Cards, invoice financing, tax vault, business banking',
+    },
+    {
+      prefix: '/api/talent-graph',
+      upstream: config.services.talentGraph,
+      stripPrefix: true,
+      timeout: 30000,
+      retries: 2,
+      auth: 'required',
+      serviceName: 'talent-graph',
+      description: 'Talent Graph - work relationships, warm introductions, team reunions',
+    },
+    {
+      prefix: '/api/intelligence',
+      upstream: config.services.intelligence,
+      stripPrefix: true,
+      timeout: 45000, // Longer for ML predictions
+      retries: 1,
+      auth: 'required',
+      serviceName: 'intelligence',
+      description: 'Outcome Intelligence - engagement outcomes, success predictions, risk alerts, benchmarks',
+    },
+    {
+      prefix: '/api/copilot',
+      upstream: config.services.copilot,
+      stripPrefix: true,
+      timeout: 60000, // Longer for AI operations
+      retries: 1,
+      auth: 'required',
+      serviceName: 'copilot',
+      rateLimit: { max: 50, timeWindow: '1 minute' },
+      description: 'AI Copilot - proposal drafts, rate suggestions, profile optimization, market insights',
+    },
   ];
 }
 
