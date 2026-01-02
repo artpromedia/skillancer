@@ -40,7 +40,7 @@ const consentSchema = z.object({
 
 const dsrSchema = z.object({
   userId: z.string(),
-  type: z.enum(['access', 'deletion', 'portability', 'rectification', 'restriction', 'objection']),
+  type: z.enum(['access', 'deletion', 'portability', 'rectification', 'restriction']),
   details: z.record(z.any()).optional(),
 });
 
@@ -49,6 +49,7 @@ const retentionPolicySchema = z.object({
   dataType: z.string(),
   retentionDays: z.number().min(1),
   action: z.enum(['delete', 'anonymize', 'archive']),
+  isActive: z.boolean().default(true),
   criteria: z.record(z.any()).optional(),
 });
 
@@ -224,12 +225,16 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
     requireAdmin,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const startDate = req.query.startDate
-          ? new Date(req.query.startDate as string)
-          : new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
+        const severity = req.query.severity as string | undefined;
+        const acknowledged =
+          req.query.acknowledged === 'true'
+            ? true
+            : req.query.acknowledged === 'false'
+              ? false
+              : undefined;
+        const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
 
-        const alerts = await auditService.getSecurityAlerts(startDate, endDate);
+        const alerts = await auditService.getSecurityAlerts(severity, acknowledged, limit);
 
         res.json({ alerts, total: alerts.length });
       } catch (error) {
@@ -348,7 +353,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
 
         // Audit log
         await auditService.logComplianceEvent(
-          'consent_recorded',
+          data.granted ? 'consent_granted' : 'consent_withdrawn',
           {
             type: 'user',
             id: req.user?.id || 'system',
@@ -502,8 +507,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
           | 'deletion'
           | 'portability'
           | 'rectification'
-          | 'restriction'
-          | 'objection';
+          | 'restriction';
         const userId = req.body.userId as string;
 
         if (!dsrType || !userId) {
@@ -526,7 +530,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
 
         // Audit log
         await auditService.logComplianceEvent(
-          'dsr_processed',
+          'data_subject_request',
           {
             type: 'admin',
             id: req.user?.id || 'system',
@@ -535,7 +539,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
           {
             target: { type: 'user', id: userId },
             regulations: ['GDPR', 'CCPA'],
-            metadata: { dsrId, dsrType, result: result.success },
+            metadata: { dsrId, dsrType, processed: true, result: result.success },
           }
         );
 
@@ -584,7 +588,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
 
         // Audit log
         await auditService.logComplianceEvent(
-          'retention_policy_created',
+          'data_retention_applied',
           {
             type: 'admin',
             id: req.user?.id || 'system',
@@ -593,7 +597,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
           {
             target: { type: 'retention_policy', id: policy.id },
             regulations: ['GDPR'],
-            metadata: { policy },
+            metadata: { action: 'policy_created', policy },
           }
         );
 
@@ -618,7 +622,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
 
         // Audit log
         await auditService.logComplianceEvent(
-          'retention_policy_executed',
+          'data_retention_applied',
           {
             type: 'admin',
             id: req.user?.id || 'system',
@@ -627,7 +631,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
           {
             target: { type: 'retention_policy', id: req.params.id },
             regulations: ['GDPR'],
-            metadata: { result },
+            metadata: { action: 'policy_executed', result },
           }
         );
 
@@ -676,14 +680,14 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
 
         // Audit log
         await auditService.logSecurityAlert(
-          'ip_blocked',
+          'suspicious_activity',
+          'high',
           {
             type: 'admin',
             id: req.user?.id || 'system',
             ipAddress: req.ip || 'unknown',
           },
-          'high',
-          { ip, reason, duration }
+          { metadata: { action: 'ip_blocked', ip, reason, duration } }
         );
 
         res.status(201).json({ success: true, message: `IP ${ip} blocked` });
@@ -705,18 +709,18 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
       try {
         const ip = req.params.ip;
 
-        await threatDetectionService.unblockIP(ip);
+        await threatDetectionService.unblockIP(ip, req.user?.id || 'system');
 
         // Audit log
         await auditService.logSecurityAlert(
-          'ip_unblocked',
+          'suspicious_activity',
+          'medium',
           {
             type: 'admin',
             id: req.user?.id || 'system',
             ipAddress: req.ip || 'unknown',
           },
-          'medium',
-          { ip }
+          { metadata: { action: 'ip_unblocked', ip } }
         );
 
         res.json({ success: true, message: `IP ${ip} unblocked` });

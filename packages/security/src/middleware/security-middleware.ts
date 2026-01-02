@@ -140,33 +140,36 @@ export function createSecurityMiddleware(
 
     try {
       const analysis = await threatDetectionService.analyzeRequest({
-        ip: clientIP,
-        userAgent: req.headers['user-agent'],
+        ipAddress: clientIP,
         method: req.method,
         path: req.path,
         query: req.query as Record<string, string>,
-        body: req.body,
+        body: typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
         headers: req.headers as Record<string, string>,
         userId: req.user?.id,
       });
 
+      // Map ThreatIndicator[] to string[] for security context
+      const threatDescriptions = analysis.threats.map((t) => t.description);
+      const blockReason = analysis.threats.find((t) => t.recommendedAction === 'block')?.type;
+
       // Update security context
       if (req.securityContext) {
-        req.securityContext.threats = analysis.threats;
-        req.securityContext.riskLevel = analysis.blocked ? 'critical' : 'low';
+        req.securityContext.threats = threatDescriptions;
+        req.securityContext.riskLevel = analysis.shouldBlock ? 'critical' : 'low';
       }
 
-      if (analysis.blocked) {
+      if (analysis.shouldBlock) {
         logger.warn('Request blocked by threat detection', {
           ip: clientIP,
           path: req.path,
-          threats: analysis.threats,
-          reason: analysis.blockReason,
+          threats: threatDescriptions,
+          reason: blockReason,
         });
 
         // Audit log
         await auditService.logSecurityAlert(
-          'request_blocked',
+          'suspicious_activity',
           {
             type: req.user ? 'user' : 'anonymous',
             id: req.user?.id || 'anonymous',
@@ -177,14 +180,14 @@ export function createSecurityMiddleware(
           {
             path: req.path,
             method: req.method,
-            threats: analysis.threats,
-            reason: analysis.blockReason,
+            threats: threatDescriptions,
+            reason: blockReason,
           }
         );
 
         res.status(403).json({
           error: 'Request blocked',
-          code: analysis.blockReason || 'THREAT_DETECTED',
+          code: blockReason || 'THREAT_DETECTED',
         });
         return;
       }
@@ -389,27 +392,30 @@ export function createLoginSecurityMiddleware(
     try {
       // Analyze login risk
       const riskAnalysis = await threatDetectionService.analyzeLogin({
-        userId: email, // Use email as identifier before authentication
-        ip: clientIP,
+        email,
+        ipAddress: clientIP,
         userAgent: req.headers['user-agent'],
+        success: false, // Not yet determined
         timestamp: new Date(),
-        loginMethod: 'password',
       });
 
       // Store risk analysis for use in auth handler
       (req as any).loginRiskAnalysis = riskAnalysis;
 
-      if (riskAnalysis.blocked) {
+      // Map factors to reasons for easier consumption
+      const reasons = riskAnalysis.factors.map((f) => f.description);
+
+      if (riskAnalysis.shouldBlock) {
         logger.warn('Login blocked by threat detection', {
           email,
           ip: clientIP,
-          riskLevel: riskAnalysis.riskLevel,
-          reasons: riskAnalysis.reasons,
+          riskLevel: riskAnalysis.level,
+          reasons,
         });
 
         // Audit log
         await auditService.logAuthentication(
-          'login_blocked',
+          'login_failure',
           {
             type: 'anonymous',
             id: email,
@@ -418,8 +424,9 @@ export function createLoginSecurityMiddleware(
           },
           'failure',
           {
-            riskLevel: riskAnalysis.riskLevel,
-            reasons: riskAnalysis.reasons,
+            riskLevel: riskAnalysis.level,
+            reasons,
+            blocked: true,
           }
         );
 
@@ -432,9 +439,9 @@ export function createLoginSecurityMiddleware(
       }
 
       // Add warnings to response headers for client handling
-      if (riskAnalysis.riskLevel !== 'low') {
-        res.setHeader('X-Login-Risk', riskAnalysis.riskLevel);
-        res.setHeader('X-MFA-Required', riskAnalysis.requireMFA.toString());
+      if (riskAnalysis.level !== 'low') {
+        res.setHeader('X-Login-Risk', riskAnalysis.level);
+        res.setHeader('X-MFA-Required', riskAnalysis.requiresMFA.toString());
       }
 
       next();

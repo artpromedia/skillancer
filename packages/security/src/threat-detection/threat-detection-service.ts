@@ -140,6 +140,39 @@ export interface RequestAnalysis {
   userId?: string;
 }
 
+// Type aliases for compatibility
+export type LoginRiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+export interface LoginRiskAnalysis {
+  score: number;
+  level: LoginRiskLevel;
+  factors: RiskFactor[];
+  recommendations: string[];
+  requiresMFA: boolean;
+  requiresVerification: boolean;
+  shouldBlock: boolean;
+  reasons: string[];
+}
+
+export interface BlockedIP {
+  ipAddress: string;
+  reason: string;
+  blockedAt: Date;
+  expiresAt?: Date;
+  blockedBy?: string;
+}
+
+export interface KnownDevice {
+  id: string;
+  userId: string;
+  fingerprint: string;
+  userAgent: string;
+  firstSeen: Date;
+  lastSeen: Date;
+  trustScore: number;
+  isVerified: boolean;
+}
+
 export interface Logger {
   info(message: string, meta?: Record<string, any>): void;
   warn(message: string, meta?: Record<string, any>): void;
