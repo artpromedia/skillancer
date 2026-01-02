@@ -1,0 +1,1581 @@
+// ============================================================================
+// SKILLANCER COMPETITIVE MOAT FEATURES
+// Extended schema for platform defensibility features
+// ============================================================================
+
+// ============================================================================
+// EXECUTIVE SUITE - Fractional Executive Marketplace
+// ============================================================================
+
+enum ExecutiveType {
+  FRACTIONAL_CTO
+  FRACTIONAL_CFO
+  FRACTIONAL_CMO
+  FRACTIONAL_CISO
+  FRACTIONAL_COO
+  FRACTIONAL_CHRO
+  FRACTIONAL_CPO
+  FRACTIONAL_CRO
+  BOARD_ADVISOR
+  INTERIM_EXECUTIVE
+}
+
+enum ExecutiveVettingStatus {
+  PENDING
+  APPLICATION_REVIEW
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  REFERENCE_CHECK
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum BackgroundCheckStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PASSED
+  FAILED
+  EXPIRED
+}
+
+enum ExecutiveEngagementStatus {
+  PROPOSAL
+  NEGOTIATING
+  PENDING_APPROVAL
+  ACTIVE
+  PAUSED
+  COMPLETED
+  TERMINATED
+}
+
+enum ExecutiveBillingCycle {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
+enum ExecutiveTier {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+model ExecutiveProfile {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String   @unique @map("user_id") @db.Uuid
+
+  // Executive Details
+  executiveType         ExecutiveType @map("executive_type")
+  headline              String   @db.VarChar(500)
+  executiveSummary      String?  @map("executive_summary") @db.Text
+  yearsExecutiveExp     Int      @map("years_executive_exp")
+  industries            String[] @default([])
+  specializations       String[] @default([])
+  companyStagesExpertise String[] @default([]) @map("company_stages_expertise") // startup, growth, enterprise
+
+  // Past Executive Roles
+  pastRoles             Json?    @map("past_roles") // Array of {title, company, duration, achievements}
+  notableAchievements   String[] @default([]) @map("notable_achievements")
+  boardExperience       Boolean  @default(false) @map("board_experience")
+  publicCompanyExp      Boolean  @default(false) @map("public_company_exp")
+
+  // Vetting Status
+  vettingStatus         ExecutiveVettingStatus @default(PENDING) @map("vetting_status")
+  vettingStartedAt      DateTime? @map("vetting_started_at")
+  vettingCompletedAt    DateTime? @map("vetting_completed_at")
+  vettingNotes          String?  @map("vetting_notes") @db.Text
+  interviewScore        Int?     @map("interview_score") // 1-100
+  interviewNotes        String?  @map("interview_notes") @db.Text
+
+  // Background Check
+  backgroundCheckStatus BackgroundCheckStatus @default(NOT_STARTED) @map("background_check_status")
+  backgroundCheckDate   DateTime? @map("background_check_date")
+  backgroundCheckExpiry DateTime? @map("background_check_expiry")
+
+  // References
+  referencesProvided    Int      @default(0) @map("references_provided")
+  referencesVerified    Int      @default(0) @map("references_verified")
+  referenceScore        Decimal? @map("reference_score") @db.Decimal(3, 2) // Average 1-5
+
+  // Capacity & Availability
+  maxClients            Int      @default(5) @map("max_clients")
+  currentClientCount    Int      @default(0) @map("current_client_count")
+  hoursPerWeekAvailable Int      @default(20) @map("hours_per_week_available")
+  availableFrom         DateTime? @map("available_from")
+
+  // Pricing
+  monthlyRetainerMin    Decimal? @map("monthly_retainer_min") @db.Decimal(10, 2)
+  monthlyRetainerMax    Decimal? @map("monthly_retainer_max") @db.Decimal(10, 2)
+  hourlyRateMin         Decimal? @map("hourly_rate_min") @db.Decimal(10, 2)
+  hourlyRateMax         Decimal? @map("hourly_rate_max") @db.Decimal(10, 2)
+  equityOpenTo          Boolean  @default(false) @map("equity_open_to")
+
+  // Verification
+  linkedinUrl           String?  @map("linkedin_url") @db.VarChar(500)
+  linkedinVerified      Boolean  @default(false) @map("linkedin_verified")
+  executiveEmailDomain  String?  @map("executive_email_domain") @db.VarChar(255)
+  emailDomainVerified   Boolean  @default(false) @map("email_domain_verified")
+
+  // Platform Status
+  featuredExecutive     Boolean  @default(false) @map("featured_executive")
+  searchable            Boolean  @default(true)
+  profileViews          Int      @default(0) @map("profile_views")
+  responseRate          Decimal? @map("response_rate") @db.Decimal(5, 2)
+  avgResponseTime       Int?     @map("avg_response_time") // in hours
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation("UserExecutiveProfile", fields: [userId], references: [id], onDelete: Cascade)
+  engagements           ExecutiveEngagement[]
+  references            ExecutiveReference[]
+  toolConfigs           ExecutiveToolConfig[]
+
+  @@index([executiveType])
+  @@index([vettingStatus])
+  @@index([featuredExecutive])
+  @@index([industries])
+  @@map("executive_profiles")
+}
+
+model ExecutiveReference {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  executiveProfileId    String   @map("executive_profile_id") @db.Uuid
+
+  // Reference Details
+  referenceName         String   @map("reference_name") @db.VarChar(255)
+  referenceTitle        String   @map("reference_title") @db.VarChar(255)
+  referenceCompany      String   @map("reference_company") @db.VarChar(255)
+  referenceEmail        String   @map("reference_email") @db.VarChar(255)
+  referencePhone        String?  @map("reference_phone") @db.VarChar(50)
+  relationshipType      String   @map("relationship_type") @db.VarChar(100) // direct_report, peer, board_member, client
+
+  // Verification
+  verificationStatus    String   @default("PENDING") @map("verification_status") // PENDING, CONTACTED, VERIFIED, FAILED
+  verificationDate      DateTime? @map("verification_date")
+  verificationNotes     String?  @map("verification_notes") @db.Text
+  rating                Int?     // 1-5
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  executiveProfile      ExecutiveProfile @relation(fields: [executiveProfileId], references: [id], onDelete: Cascade)
+
+  @@index([executiveProfileId])
+  @@map("executive_references")
+}
+
+model ExecutiveEngagement {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  executiveProfileId    String   @map("executive_profile_id") @db.Uuid
+  clientTenantId        String   @map("client_tenant_id") @db.Uuid
+  clientUserId          String   @map("client_user_id") @db.Uuid
+
+  // Engagement Details
+  role                  ExecutiveType
+  title                 String   @db.VarChar(255) // e.g., "Fractional CTO - Series A Scale"
+  description           String?  @db.Text
+  status                ExecutiveEngagementStatus @default(PROPOSAL)
+  startDate             DateTime? @map("start_date")
+  endDate               DateTime? @map("end_date")
+  expectedEndDate       DateTime? @map("expected_end_date")
+  hoursPerWeek          Int      @map("hours_per_week")
+
+  // Financials
+  monthlyRetainer       Decimal? @map("monthly_retainer") @db.Decimal(10, 2)
+  hourlyRate            Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  billingCycle          ExecutiveBillingCycle @default(MONTHLY) @map("billing_cycle")
+  equityPercentage      Decimal? @map("equity_percentage") @db.Decimal(5, 3)
+
+  // SkillPod Workspace
+  skillpodPolicyId      String?  @map("skillpod_policy_id") @db.Uuid
+  workspaceConfig       Json?    @map("workspace_config")
+
+  // Goals & OKRs
+  objectives            Json?    // Array of objectives with key results
+  successMetrics        Json?    @map("success_metrics")
+
+  // Activity Tracking
+  totalHoursLogged      Decimal  @default(0) @map("total_hours_logged") @db.Decimal(10, 2)
+  lastActivityAt        DateTime? @map("last_activity_at")
+
+  // Approval Chain
+  approvalStatus        String?  @map("approval_status") // PENDING, APPROVED, REJECTED
+  approvedBy            String[] @default([]) @map("approved_by")
+  approvedAt            DateTime? @map("approved_at")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  executiveProfile      ExecutiveProfile @relation(fields: [executiveProfileId], references: [id])
+  clientTenant          Tenant   @relation("TenantExecutiveEngagements", fields: [clientTenantId], references: [id])
+  clientUser            User     @relation("ClientExecutiveEngagements", fields: [clientUserId], references: [id])
+  integrations          ExecutiveIntegration[]
+  workspace             ExecutiveWorkspace?
+  timeEntries           ExecutiveTimeEntry[]
+  milestones            ExecutiveMilestone[]
+
+  @@index([executiveProfileId])
+  @@index([clientTenantId])
+  @@index([status])
+  @@map("executive_engagements")
+}
+
+model ExecutiveWorkspace {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  engagementId          String   @unique @map("engagement_id") @db.Uuid
+
+  // Dashboard Configuration
+  dashboardLayout       Json?    @map("dashboard_layout")
+  enabledWidgets        String[] @default([]) @map("enabled_widgets")
+  widgetSettings        Json?    @map("widget_settings")
+
+  // Branding
+  clientLogoUrl         String?  @map("client_logo_url") @db.VarChar(500)
+  primaryColor          String?  @map("primary_color") @db.VarChar(7)
+
+  // Quick Access
+  pinnedDocuments       String[] @default([]) @map("pinned_documents")
+  favoriteActions       String[] @default([]) @map("favorite_actions")
+  quickLinks            Json?    @map("quick_links")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  engagement            ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+
+  @@map("executive_workspaces")
+}
+
+model ExecutiveTimeEntry {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  engagementId          String   @map("engagement_id") @db.Uuid
+
+  // Time Details
+  date                  DateTime @db.Date
+  hours                 Decimal  @db.Decimal(4, 2)
+  description           String?  @db.Text
+  category              String?  @db.VarChar(100) // strategy, meetings, implementation, etc.
+
+  // Billing
+  billable              Boolean  @default(true)
+  billed                Boolean  @default(false)
+  invoiceId             String?  @map("invoice_id") @db.Uuid
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  engagement            ExecutiveEngagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@index([date])
+  @@map("executive_time_entries")
+}
+
+model ExecutiveMilestone {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  engagementId          String   @map("engagement_id") @db.Uuid
+
+  // Milestone Details
+  title                 String   @db.VarChar(255)
+  description           String?  @db.Text
+  dueDate               DateTime? @map("due_date")
+  completedAt           DateTime? @map("completed_at")
+  status                String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, BLOCKED
+
+  // Deliverables
+  deliverables          Json?    // Array of deliverable items
+  successCriteria       String?  @map("success_criteria") @db.Text
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  engagement            ExecutiveEngagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@map("executive_milestones")
+}
+
+// ============================================================================
+// INTEGRATION HUB - Third-Party Tool Integrations
+// ============================================================================
+
+enum IntegrationCategory {
+  ACCOUNTING
+  ANALYTICS
+  DEVTOOLS
+  SECURITY
+  HR
+  MARKETING
+  PRODUCTIVITY
+  COMMUNICATION
+  CLOUD
+  PROJECT_MANAGEMENT
+  CRM
+}
+
+enum IntegrationTier {
+  BASIC
+  PRO
+  ENTERPRISE
+  ADDON
+}
+
+enum IntegrationStatus {
+  PENDING
+  CONNECTED
+  EXPIRED
+  REVOKED
+  ERROR
+  REQUIRES_REAUTH
+}
+
+enum IntegrationAccessLevel {
+  READ_ONLY
+  READ_WRITE
+  ADMIN
+}
+
+model IntegrationType {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Integration Identity
+  slug                  String   @unique @db.VarChar(100)
+  name                  String   @db.VarChar(255)
+  description           String?  @db.Text
+  category              IntegrationCategory
+
+  // Applicable Executive Roles
+  applicableRoles       ExecutiveType[] @default([]) @map("applicable_roles")
+
+  // OAuth Configuration
+  oauthProvider         String?  @map("oauth_provider") @db.VarChar(100)
+  oauthAuthUrl          String?  @map("oauth_auth_url") @db.VarChar(500)
+  oauthTokenUrl         String?  @map("oauth_token_url") @db.VarChar(500)
+  oauthScopes           String[] @default([]) @map("oauth_scopes")
+
+  // API Configuration
+  apiBaseUrl            String?  @map("api_base_url") @db.VarChar(500)
+  apiVersion            String?  @map("api_version") @db.VarChar(20)
+
+  // Display
+  logoUrl               String?  @map("logo_url") @db.VarChar(500)
+  iconUrl               String?  @map("icon_url") @db.VarChar(500)
+  brandColor            String?  @map("brand_color") @db.VarChar(7)
+
+  // Tier & Pricing
+  tier                  IntegrationTier @default(PRO)
+  addonPriceMonthly     Decimal? @map("addon_price_monthly") @db.Decimal(10, 2)
+
+  // Supported Widgets
+  supportedWidgets      Json?    @map("supported_widgets") // Array of widget definitions
+
+  // Status
+  isActive              Boolean  @default(true) @map("is_active")
+  isBeta                Boolean  @default(false) @map("is_beta")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  integrations          ExecutiveIntegration[]
+
+  @@index([category])
+  @@index([tier])
+  @@map("integration_types")
+}
+
+model ExecutiveIntegration {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  engagementId          String   @map("engagement_id") @db.Uuid
+  integrationTypeId     String   @map("integration_type_id") @db.Uuid
+
+  // Connection Status
+  status                IntegrationStatus @default(PENDING)
+  accessLevel           IntegrationAccessLevel @default(READ_ONLY) @map("access_level")
+
+  // OAuth Tokens (encrypted)
+  accessToken           String?  @map("access_token") @db.Text
+  refreshToken          String?  @map("refresh_token") @db.Text
+  tokenExpiresAt        DateTime? @map("token_expires_at")
+
+  // API Key (for non-OAuth integrations)
+  apiKey                String?  @map("api_key") @db.Text // Encrypted
+
+  // Integration-specific config
+  config                Json?
+  accountId             String?  @map("account_id") @db.VarChar(255)
+  accountName           String?  @map("account_name") @db.VarChar(255)
+
+  // Sync State
+  lastSyncAt            DateTime? @map("last_sync_at")
+  lastSyncStatus        String?  @map("last_sync_status") // SUCCESS, PARTIAL, FAILED
+  lastSyncError         String?  @map("last_sync_error") @db.Text
+  syncEnabled           Boolean  @default(true) @map("sync_enabled")
+  syncFrequency         String   @default("HOURLY") @map("sync_frequency") // REALTIME, HOURLY, DAILY
+
+  // Data Cache
+  cachedData            Json?    @map("cached_data")
+  cacheExpiresAt        DateTime? @map("cache_expires_at")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  engagement            ExecutiveEngagement @relation(fields: [engagementId], references: [id])
+  integrationType       IntegrationType @relation(fields: [integrationTypeId], references: [id])
+
+  @@unique([engagementId, integrationTypeId])
+  @@index([status])
+  @@map("executive_integrations")
+}
+
+model ExecutiveToolConfig {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  executiveProfileId    String   @map("executive_profile_id") @db.Uuid
+
+  // Tool Bundle
+  bundleType            String   @map("bundle_type") @db.VarChar(50) // CTO, CFO, CMO, etc.
+  isEnabled             Boolean  @default(true) @map("is_enabled")
+
+  // Preferences
+  defaultWidgets        String[] @default([]) @map("default_widgets")
+  preferredIntegrations String[] @default([]) @map("preferred_integrations")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  executiveProfile      ExecutiveProfile @relation(fields: [executiveProfileId], references: [id])
+
+  @@unique([executiveProfileId, bundleType])
+  @@map("executive_tool_configs")
+}
+
+// ============================================================================
+// FINANCIAL SERVICES - Skillancer Card, Invoice Financing, Tax Vault
+// ============================================================================
+
+enum SkillancerCardStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  FROZEN
+  CANCELLED
+  EXPIRED
+}
+
+enum SkillancerCardType {
+  VIRTUAL
+  PHYSICAL
+}
+
+enum InvoiceFinancingStatus {
+  PENDING_REVIEW
+  APPROVED
+  FUNDED
+  COLLECTING
+  COLLECTED
+  DEFAULTED
+  CANCELLED
+}
+
+enum TaxVaultWithdrawalStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  REJECTED
+}
+
+model SkillancerCard {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+
+  // Card Details
+  cardType              SkillancerCardType @default(VIRTUAL) @map("card_type")
+  status                SkillancerCardStatus @default(PENDING_APPROVAL)
+  last4                 String?  @db.VarChar(4)
+  expiryMonth           Int?     @map("expiry_month")
+  expiryYear            Int?     @map("expiry_year")
+
+  // Stripe Issuing
+  stripeCardId          String?  @unique @map("stripe_card_id") @db.VarChar(255)
+  stripeCardholderId    String?  @map("stripe_cardholder_id") @db.VarChar(255)
+
+  // Limits
+  spendingLimitDaily    Decimal  @default(5000) @map("spending_limit_daily") @db.Decimal(10, 2)
+  spendingLimitMonthly  Decimal  @default(25000) @map("spending_limit_monthly") @db.Decimal(10, 2)
+
+  // Usage Tracking
+  spentToday            Decimal  @default(0) @map("spent_today") @db.Decimal(10, 2)
+  spentThisMonth        Decimal  @default(0) @map("spent_this_month") @db.Decimal(10, 2)
+  totalSpent            Decimal  @default(0) @map("total_spent") @db.Decimal(14, 2)
+
+  // Cashback
+  cashbackRate          Decimal  @default(1.5) @map("cashback_rate") @db.Decimal(4, 2)
+  cashbackEarned        Decimal  @default(0) @map("cashback_earned") @db.Decimal(10, 2)
+  cashbackPending       Decimal  @default(0) @map("cashback_pending") @db.Decimal(10, 2)
+
+  // Shipping (for physical cards)
+  shippingAddress       Json?    @map("shipping_address")
+  shippedAt             DateTime? @map("shipped_at")
+  activatedAt           DateTime? @map("activated_at")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation("UserSkillancerCards", fields: [userId], references: [id])
+  transactions          CardTransaction[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("skillancer_cards")
+}
+
+model CardTransaction {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  cardId                String   @map("card_id") @db.Uuid
+
+  // Transaction Details
+  stripeTransactionId   String?  @unique @map("stripe_transaction_id") @db.VarChar(255)
+  amount                Decimal  @db.Decimal(10, 2)
+  currency              String   @default("USD") @db.VarChar(3)
+
+  // Merchant Info
+  merchantName          String?  @map("merchant_name") @db.VarChar(255)
+  merchantCategory      String?  @map("merchant_category") @db.VarChar(100)
+  merchantCategoryCode  String?  @map("merchant_category_code") @db.VarChar(10)
+
+  // Status
+  status                String   @default("PENDING") // PENDING, APPROVED, DECLINED, REFUNDED
+  declineReason         String?  @map("decline_reason") @db.VarChar(255)
+
+  // Categorization
+  expenseCategory       String?  @map("expense_category") @db.VarChar(100)
+  isBusinessExpense     Boolean  @default(true) @map("is_business_expense")
+  taxDeductible         Boolean  @default(false) @map("tax_deductible")
+
+  // Cashback
+  cashbackAmount        Decimal? @map("cashback_amount") @db.Decimal(10, 2)
+
+  // Receipt
+  receiptUrl            String?  @map("receipt_url") @db.VarChar(500)
+  notes                 String?  @db.Text
+
+  transactionDate       DateTime @map("transaction_date")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  card                  SkillancerCard @relation(fields: [cardId], references: [id])
+
+  @@index([cardId])
+  @@index([transactionDate])
+  @@map("card_transactions")
+}
+
+model InvoiceFinancing {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+  invoiceId             String   @map("invoice_id") @db.Uuid
+
+  // Invoice Details
+  invoiceAmount         Decimal  @map("invoice_amount") @db.Decimal(14, 2)
+  invoiceDueDate        DateTime @map("invoice_due_date")
+  clientName            String   @map("client_name") @db.VarChar(255)
+
+  // Financing Terms
+  advancePercentage     Decimal  @default(80) @map("advance_percentage") @db.Decimal(5, 2)
+  advanceAmount         Decimal  @map("advance_amount") @db.Decimal(14, 2)
+  feePercentage         Decimal  @map("fee_percentage") @db.Decimal(5, 3)
+  feeAmount             Decimal  @map("fee_amount") @db.Decimal(10, 2)
+
+  // Status
+  status                InvoiceFinancingStatus @default(PENDING_REVIEW)
+  approvedAt            DateTime? @map("approved_at")
+  fundedAt              DateTime? @map("funded_at")
+  collectedAt           DateTime? @map("collected_at")
+
+  // Collection
+  amountCollected       Decimal? @map("amount_collected") @db.Decimal(14, 2)
+  remainderPaidAt       DateTime? @map("remainder_paid_at")
+
+  // Risk Assessment
+  riskScore             Int?     @map("risk_score") // 1-100
+  riskFactors           Json?    @map("risk_factors")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation("UserInvoiceFinancing", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("invoice_financing")
+}
+
+model TaxVault {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String   @unique @map("user_id") @db.Uuid
+
+  // Vault Balance
+  balance               Decimal  @default(0) @db.Decimal(14, 2)
+  currency              String   @default("USD") @db.VarChar(3)
+
+  // Auto-save Settings
+  autoSaveEnabled       Boolean  @default(true) @map("auto_save_enabled")
+  autoSavePercentage    Decimal  @default(25) @map("auto_save_percentage") @db.Decimal(5, 2)
+  autoSaveFromPayouts   Boolean  @default(true) @map("auto_save_from_payouts")
+  autoSaveFromContracts Boolean  @default(true) @map("auto_save_from_contracts")
+
+  // Tax Estimates
+  estimatedFederalTax   Decimal? @map("estimated_federal_tax") @db.Decimal(14, 2)
+  estimatedStateTax     Decimal? @map("estimated_state_tax") @db.Decimal(14, 2)
+  estimatedSelfEmploymentTax Decimal? @map("estimated_self_employment_tax") @db.Decimal(14, 2)
+  estimatedTotalTax     Decimal? @map("estimated_total_tax") @db.Decimal(14, 2)
+  taxYear               Int      @default(2024) @map("tax_year")
+
+  // Quarterly Payments
+  q1PaidAmount          Decimal? @map("q1_paid_amount") @db.Decimal(14, 2)
+  q1PaidDate            DateTime? @map("q1_paid_date")
+  q2PaidAmount          Decimal? @map("q2_paid_amount") @db.Decimal(14, 2)
+  q2PaidDate            DateTime? @map("q2_paid_date")
+  q3PaidAmount          Decimal? @map("q3_paid_amount") @db.Decimal(14, 2)
+  q3PaidDate            DateTime? @map("q3_paid_date")
+  q4PaidAmount          Decimal? @map("q4_paid_amount") @db.Decimal(14, 2)
+  q4PaidDate            DateTime? @map("q4_paid_date")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation("UserTaxVault", fields: [userId], references: [id])
+  deposits              TaxVaultDeposit[]
+  withdrawals           TaxVaultWithdrawal[]
+
+  @@map("tax_vaults")
+}
+
+model TaxVaultDeposit {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  taxVaultId            String   @map("tax_vault_id") @db.Uuid
+
+  amount                Decimal  @db.Decimal(14, 2)
+  source                String   @db.VarChar(50) // MANUAL, PAYOUT, CONTRACT
+  sourceReferenceId     String?  @map("source_reference_id") @db.Uuid
+
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  taxVault              TaxVault @relation(fields: [taxVaultId], references: [id])
+
+  @@index([taxVaultId])
+  @@map("tax_vault_deposits")
+}
+
+model TaxVaultWithdrawal {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  taxVaultId            String   @map("tax_vault_id") @db.Uuid
+
+  amount                Decimal  @db.Decimal(14, 2)
+  purpose               String   @db.VarChar(100) // QUARTERLY_PAYMENT, ANNUAL_PAYMENT, WITHDRAWAL
+  status                TaxVaultWithdrawalStatus @default(PENDING)
+
+  // Destination
+  destinationAccountId  String?  @map("destination_account_id") @db.Uuid
+
+  // Approval
+  approvedAt            DateTime? @map("approved_at")
+  completedAt           DateTime? @map("completed_at")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  taxVault              TaxVault @relation(fields: [taxVaultId], references: [id])
+
+  @@index([taxVaultId])
+  @@map("tax_vault_withdrawals")
+}
+
+// ============================================================================
+// TALENT GRAPH - Work Relationships & Warm Introductions
+// ============================================================================
+
+enum WorkRelationshipType {
+  WORKED_TOGETHER
+  MANAGED
+  MANAGED_BY
+  COLLABORATED
+  MENTORED
+  MENTORED_BY
+  REFERRED
+  REFERRED_BY
+}
+
+enum WarmIntroStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  COMPLETED
+}
+
+model WorkRelationship {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Users in relationship
+  userId                String   @map("user_id") @db.Uuid
+  relatedUserId         String   @map("related_user_id") @db.Uuid
+
+  // Relationship Details
+  relationshipType      WorkRelationshipType @map("relationship_type")
+  strength              Int      @default(50) // 1-100, based on interaction frequency
+
+  // Context
+  projectId             String?  @map("project_id") @db.Uuid
+  contractId            String?  @map("contract_id") @db.Uuid
+  companyName           String?  @map("company_name") @db.VarChar(255)
+
+  // Duration
+  startDate             DateTime? @map("start_date")
+  endDate               DateTime? @map("end_date")
+  durationMonths        Int?     @map("duration_months")
+
+  // Quality Indicators
+  wouldWorkAgain        Boolean? @map("would_work_again")
+  collaborationRating   Int?     @map("collaboration_rating") // 1-5
+
+  // Verification
+  isVerified            Boolean  @default(false) @map("is_verified")
+  verifiedAt            DateTime? @map("verified_at")
+  verifiedByContractId  String?  @map("verified_by_contract_id") @db.Uuid
+
+  // Last Interaction
+  lastInteractionAt     DateTime? @map("last_interaction_at")
+  interactionCount      Int      @default(0) @map("interaction_count")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation("UserWorkRelationships", fields: [userId], references: [id])
+  relatedUser           User     @relation("RelatedWorkRelationships", fields: [relatedUserId], references: [id])
+
+  @@unique([userId, relatedUserId, relationshipType])
+  @@index([userId])
+  @@index([relatedUserId])
+  @@index([strength])
+  @@map("work_relationships")
+}
+
+model WarmIntroduction {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Parties
+  requesterId           String   @map("requester_id") @db.Uuid
+  introducerId          String   @map("introducer_id") @db.Uuid
+  targetId              String   @map("target_id") @db.Uuid
+
+  // Request Details
+  message               String?  @db.Text
+  context               String?  @db.Text // Why they want the intro
+  status                WarmIntroStatus @default(PENDING)
+
+  // Job/Opportunity Context
+  jobId                 String?  @map("job_id") @db.Uuid
+  opportunityDescription String? @map("opportunity_description") @db.Text
+
+  // Response
+  introducerResponse    String?  @map("introducer_response") @db.Text
+  respondedAt           DateTime? @map("responded_at")
+
+  // Outcome
+  introductionMade      Boolean  @default(false) @map("introduction_made")
+  introductionMadeAt    DateTime? @map("introduction_made_at")
+  resultedInEngagement  Boolean  @default(false) @map("resulted_in_engagement")
+
+  expiresAt             DateTime @map("expires_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  requester             User     @relation("WarmIntroRequester", fields: [requesterId], references: [id])
+  introducer            User     @relation("WarmIntroIntroducer", fields: [introducerId], references: [id])
+  target                User     @relation("WarmIntroTarget", fields: [targetId], references: [id])
+
+  @@index([requesterId])
+  @@index([introducerId])
+  @@index([targetId])
+  @@index([status])
+  @@map("warm_introductions")
+}
+
+model TeamReunion {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Creator
+  createdById           String   @map("created_by_id") @db.Uuid
+
+  // Team Details
+  teamName              String   @map("team_name") @db.VarChar(255)
+  originalProjectId     String?  @map("original_project_id") @db.Uuid
+  originalContractId    String?  @map("original_contract_id") @db.Uuid
+
+  // Description
+  description           String?  @db.Text
+  proposedProject       String?  @map("proposed_project") @db.Text
+
+  // Status
+  status                String   @default("GATHERING") // GATHERING, READY, ACTIVE, COMPLETED
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  createdBy             User     @relation("TeamReunionCreator", fields: [createdById], references: [id])
+  members               TeamReunionMember[]
+
+  @@index([createdById])
+  @@map("team_reunions")
+}
+
+model TeamReunionMember {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  teamReunionId         String   @map("team_reunion_id") @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+
+  // Role in original team
+  originalRole          String?  @map("original_role") @db.VarChar(100)
+
+  // Response
+  status                String   @default("INVITED") // INVITED, ACCEPTED, DECLINED
+  respondedAt           DateTime? @map("responded_at")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  teamReunion           TeamReunion @relation(fields: [teamReunionId], references: [id])
+  user                  User     @relation("TeamReunionMembers", fields: [userId], references: [id])
+
+  @@unique([teamReunionId, userId])
+  @@index([userId])
+  @@map("team_reunion_members")
+}
+
+// ============================================================================
+// OUTCOME INTELLIGENCE - Engagement Success Prediction & Analytics
+// ============================================================================
+
+model EngagementOutcome {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Reference
+  contractId            String?  @map("contract_id") @db.Uuid
+  executiveEngagementId String?  @map("executive_engagement_id") @db.Uuid
+
+  // Parties
+  clientId              String   @map("client_id") @db.Uuid
+  freelancerId          String   @map("freelancer_id") @db.Uuid
+
+  // Outcome Metrics
+  completed             Boolean  @default(false)
+  completedOnTime       Boolean? @map("completed_on_time")
+  completedOnBudget     Boolean? @map("completed_on_budget")
+
+  // Ratings
+  clientRating          Decimal? @map("client_rating") @db.Decimal(3, 2)
+  freelancerRating      Decimal? @map("freelancer_rating") @db.Decimal(3, 2)
+
+  // Engagement Quality
+  communicationScore    Int?     @map("communication_score") // 1-100
+  deliveryQualityScore  Int?     @map("delivery_quality_score") // 1-100
+  overallSuccessScore   Int?     @map("overall_success_score") // 1-100
+
+  // Business Outcomes
+  repeatEngagement      Boolean  @default(false) @map("repeat_engagement")
+  referralGenerated     Boolean  @default(false) @map("referral_generated")
+  disputeOccurred       Boolean  @default(false) @map("dispute_occurred")
+  earlyTermination      Boolean  @default(false) @map("early_termination")
+  terminationReason     String?  @map("termination_reason") @db.VarChar(255)
+
+  // Financial
+  originalBudget        Decimal? @map("original_budget") @db.Decimal(14, 2)
+  finalAmount           Decimal? @map("final_amount") @db.Decimal(14, 2)
+  budgetVariance        Decimal? @map("budget_variance") @db.Decimal(14, 2)
+
+  // Timeline
+  originalDuration      Int?     @map("original_duration") // days
+  actualDuration        Int?     @map("actual_duration") // days
+  durationVariance      Int?     @map("duration_variance") // days
+
+  // ML Features (for training)
+  featureVector         Json?    @map("feature_vector")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  client                User     @relation("ClientOutcomes", fields: [clientId], references: [id])
+  freelancer            User     @relation("FreelancerOutcomes", fields: [freelancerId], references: [id])
+
+  @@index([clientId])
+  @@index([freelancerId])
+  @@index([overallSuccessScore])
+  @@map("engagement_outcomes")
+}
+
+model SuccessPrediction {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // What we're predicting for
+  jobId                 String?  @map("job_id") @db.Uuid
+  bidId                 String?  @map("bid_id") @db.Uuid
+  clientId              String   @map("client_id") @db.Uuid
+  freelancerId          String   @map("freelancer_id") @db.Uuid
+
+  // Prediction Scores
+  overallScore          Int      @map("overall_score") // 0-100 likelihood of success
+  confidenceLevel       Decimal  @map("confidence_level") @db.Decimal(5, 4) // 0-1
+
+  // Component Scores
+  skillMatchScore       Int?     @map("skill_match_score")
+  experienceMatchScore  Int?     @map("experience_match_score")
+  budgetAlignmentScore  Int?     @map("budget_alignment_score")
+  communicationPrediction Int?   @map("communication_prediction")
+  timelineFeasibility   Int?     @map("timeline_feasibility")
+
+  // Risk Factors
+  riskFactors           Json?    @map("risk_factors") // Array of identified risks
+  riskLevel             String   @default("LOW") @map("risk_level") // LOW, MEDIUM, HIGH
+
+  // Recommendations
+  recommendations       Json?    // Suggested actions to improve success
+
+  // Model Info
+  modelVersion          String   @map("model_version") @db.VarChar(50)
+
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  client                User     @relation("ClientPredictions", fields: [clientId], references: [id])
+  freelancer            User     @relation("FreelancerPredictions", fields: [freelancerId], references: [id])
+
+  @@index([jobId])
+  @@index([overallScore])
+  @@map("success_predictions")
+}
+
+model EngagementRiskAlert {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Reference
+  contractId            String?  @map("contract_id") @db.Uuid
+  executiveEngagementId String?  @map("executive_engagement_id") @db.Uuid
+
+  // Alert Details
+  alertType             String   @map("alert_type") @db.VarChar(100)
+  severity              String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  title                 String   @db.VarChar(255)
+  description           String   @db.Text
+
+  // Detection
+  detectedAt            DateTime @default(now()) @map("detected_at")
+  detectionSource       String   @map("detection_source") @db.VarChar(100) // ML_MODEL, RULE_ENGINE, MANUAL
+
+  // Resolution
+  status                String   @default("OPEN") // OPEN, ACKNOWLEDGED, RESOLVED, DISMISSED
+  acknowledgedAt        DateTime? @map("acknowledged_at")
+  acknowledgedBy        String?  @map("acknowledged_by") @db.Uuid
+  resolvedAt            DateTime? @map("resolved_at")
+  resolution            String?  @db.Text
+
+  // Actions Taken
+  actionsTaken          Json?    @map("actions_taken")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([contractId])
+  @@index([severity])
+  @@index([status])
+  @@map("engagement_risk_alerts")
+}
+
+// ============================================================================
+// EXCLUSIVE TALENT POOLS
+// ============================================================================
+
+enum TalentPoolType {
+  SKILLANCER_SELECT    // Top 5% by outcomes
+  VERIFIED_SPECIALISTS // Domain certified
+  SECURITY_CLEARED     // Active clearances
+  HIPAA_CERTIFIED      // Healthcare ready
+  STARTUP_VETERANS     // Exit experience
+  ENTERPRISE_EXPERTS   // Fortune 500 experience
+  RISING_STARS         // High-potential emerging talent
+}
+
+enum PoolMembershipStatus {
+  INVITED
+  APPLIED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+  GRADUATED
+}
+
+model TalentPool {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Pool Identity
+  slug                  String   @unique @db.VarChar(100)
+  name                  String   @db.VarChar(255)
+  description           String?  @db.Text
+  poolType              TalentPoolType @map("pool_type")
+
+  // Entry Criteria
+  entryCriteria         Json     @map("entry_criteria") // Structured criteria
+  minTrustScore         Int?     @map("min_trust_score")
+  minCompletedProjects  Int?     @map("min_completed_projects")
+  minRating             Decimal? @map("min_rating") @db.Decimal(3, 2)
+  requiredVerifications String[] @default([]) @map("required_verifications")
+
+  // Benefits
+  platformFeeDiscount   Decimal? @map("platform_fee_discount") @db.Decimal(5, 2) // percentage
+  featuredPlacement     Boolean  @default(false) @map("featured_placement")
+  prioritySupport       Boolean  @default(false) @map("priority_support")
+  exclusiveJobAccess    Boolean  @default(false) @map("exclusive_job_access")
+  badgeId               String?  @map("badge_id") @db.VarChar(100)
+
+  // Pool Stats
+  memberCount           Int      @default(0) @map("member_count")
+  applicationCount      Int      @default(0) @map("application_count")
+  acceptanceRate        Decimal? @map("acceptance_rate") @db.Decimal(5, 2)
+
+  // Status
+  isActive              Boolean  @default(true) @map("is_active")
+  isPublic              Boolean  @default(true) @map("is_public")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  memberships           TalentPoolMembership[]
+
+  @@index([poolType])
+  @@map("talent_pools")
+}
+
+model TalentPoolMembership {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  poolId                String   @map("pool_id") @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+
+  // Status
+  status                PoolMembershipStatus @default(APPLIED)
+  appliedAt             DateTime @default(now()) @map("applied_at")
+  reviewedAt            DateTime? @map("reviewed_at")
+  reviewedBy            String?  @map("reviewed_by") @db.Uuid
+  approvedAt            DateTime? @map("approved_at")
+
+  // Application
+  applicationNote       String?  @map("application_note") @db.Text
+  rejectionReason       String?  @map("rejection_reason") @db.Text
+
+  // Performance in Pool
+  poolRating            Decimal? @map("pool_rating") @db.Decimal(3, 2)
+  projectsCompleted     Int      @default(0) @map("projects_completed")
+  lastActiveAt          DateTime? @map("last_active_at")
+
+  // Expiration (for time-limited pools)
+  expiresAt             DateTime? @map("expires_at")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  pool                  TalentPool @relation(fields: [poolId], references: [id])
+  user                  User     @relation("UserTalentPoolMemberships", fields: [userId], references: [id])
+
+  @@unique([poolId, userId])
+  @@index([status])
+  @@map("talent_pool_memberships")
+}
+
+// ============================================================================
+// AI COPILOT
+// ============================================================================
+
+enum CopilotInteractionType {
+  PROPOSAL_GENERATION
+  RATE_SUGGESTION
+  JOB_POST_IMPROVEMENT
+  CONTRACT_REVIEW
+  MESSAGE_DRAFT
+  SCOPE_CLARIFICATION
+  MILESTONE_SUGGESTION
+  STATUS_UPDATE
+}
+
+model CopilotInteraction {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+
+  // Interaction Type
+  interactionType       CopilotInteractionType @map("interaction_type")
+
+  // Context
+  contextType           String?  @map("context_type") @db.VarChar(50) // job, proposal, contract, etc.
+  contextId             String?  @map("context_id") @db.Uuid
+
+  // Input/Output
+  userInput             String?  @map("user_input") @db.Text
+  contextData           Json?    @map("context_data")
+  aiResponse            String   @map("ai_response") @db.Text
+
+  // Model Info
+  modelUsed             String   @map("model_used") @db.VarChar(100)
+  tokensUsed            Int?     @map("tokens_used")
+
+  // User Feedback
+  wasHelpful            Boolean? @map("was_helpful")
+  wasUsed               Boolean? @map("was_used") // Did they use the suggestion
+  userFeedback          String?  @map("user_feedback") @db.Text
+
+  // Outcome Tracking (if suggestion was used)
+  resultedInSuccess     Boolean? @map("resulted_in_success")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  user                  User     @relation("UserCopilotInteractions", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([interactionType])
+  @@map("copilot_interactions")
+}
+
+model ProposalDraft {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+  jobId                 String   @map("job_id") @db.Uuid
+
+  // Generated Content
+  generatedCoverLetter  String   @map("generated_cover_letter") @db.Text
+  suggestedRate         Decimal? @map("suggested_rate") @db.Decimal(10, 2)
+  suggestedMilestones   Json?    @map("suggested_milestones")
+  keyPointsHighlighted  String[] @default([]) @map("key_points_highlighted")
+
+  // Confidence
+  matchScore            Int      @map("match_score") // 0-100
+  winProbability        Decimal? @map("win_probability") @db.Decimal(5, 4)
+
+  // Status
+  status                String   @default("DRAFT") // DRAFT, SUBMITTED, DISCARDED
+  submittedBidId        String?  @map("submitted_bid_id") @db.Uuid
+
+  // A/B Testing
+  variant               String?  @db.VarChar(50) // For testing different approaches
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation("UserProposalDrafts", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("proposal_drafts")
+}
+
+// ============================================================================
+// CLIENT GUARANTEES
+// ============================================================================
+
+enum GuaranteeType {
+  QUALITY_GUARANTEE
+  COMPLETION_INSURANCE
+  OUTCOME_WARRANTY
+  SATISFACTION_GUARANTEE
+}
+
+enum GuaranteeClaimStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  DENIED
+  PAID
+  REPLACEMENT_ASSIGNED
+}
+
+model ClientGuarantee {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId            String   @map("contract_id") @db.Uuid
+
+  // Guarantee Details
+  guaranteeType         GuaranteeType @map("guarantee_type")
+  coverageAmount        Decimal  @map("coverage_amount") @db.Decimal(14, 2)
+  coveragePercentage    Decimal? @map("coverage_percentage") @db.Decimal(5, 2)
+
+  // Terms
+  validFrom             DateTime @map("valid_from")
+  validUntil            DateTime @map("valid_until")
+  terms                 Json?    // Detailed terms and conditions
+
+  // Status
+  isActive              Boolean  @default(true) @map("is_active")
+  claimsMade            Int      @default(0) @map("claims_made")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  claims                GuaranteeClaim[]
+
+  @@index([contractId])
+  @@index([guaranteeType])
+  @@map("client_guarantees")
+}
+
+model GuaranteeClaim {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guaranteeId           String   @map("guarantee_id") @db.Uuid
+  claimantId            String   @map("claimant_id") @db.Uuid
+
+  // Claim Details
+  claimReason           String   @map("claim_reason") @db.Text
+  evidence              Json?    // Supporting documents/screenshots
+  requestedAmount       Decimal? @map("requested_amount") @db.Decimal(14, 2)
+  requestedAction       String?  @map("requested_action") @db.VarChar(100) // REFUND, REPLACEMENT, REDO
+
+  // Review
+  status                GuaranteeClaimStatus @default(PENDING)
+  reviewedBy            String?  @map("reviewed_by") @db.Uuid
+  reviewedAt            DateTime? @map("reviewed_at")
+  reviewNotes           String?  @map("review_notes") @db.Text
+
+  // Resolution
+  approvedAmount        Decimal? @map("approved_amount") @db.Decimal(14, 2)
+  resolutionType        String?  @map("resolution_type") @db.VarChar(100)
+  resolutionNotes       String?  @map("resolution_notes") @db.Text
+  replacementFreelancerId String? @map("replacement_freelancer_id") @db.Uuid
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  guarantee             ClientGuarantee @relation(fields: [guaranteeId], references: [id])
+  claimant              User     @relation("UserGuaranteeClaims", fields: [claimantId], references: [id])
+
+  @@index([guaranteeId])
+  @@index([status])
+  @@map("guarantee_claims")
+}
+
+// ============================================================================
+// CERTIFICATION PROGRAM
+// ============================================================================
+
+enum CertificationLevel {
+  VERIFIED
+  CERTIFIED
+  EXPERT
+  INSTRUCTOR
+}
+
+enum CertificationStatus {
+  PENDING
+  IN_PROGRESS
+  PASSED
+  FAILED
+  EXPIRED
+  REVOKED
+}
+
+model SkillancerCertification {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Certification Identity
+  slug                  String   @unique @db.VarChar(100)
+  name                  String   @db.VarChar(255)
+  description           String?  @db.Text
+  level                 CertificationLevel
+  category              String   @db.VarChar(100) // development, design, marketing, etc.
+
+  // Requirements
+  requirements          Json     // Structured requirements
+  requiredAssessments   String[] @default([]) @map("required_assessments")
+  requiredProjects      Int?     @map("required_projects")
+  requiredExperience    Int?     @map("required_experience") // months
+  portfolioRequired     Boolean  @default(false) @map("portfolio_required")
+
+  // Assessment
+  hasAssessment         Boolean  @default(true) @map("has_assessment")
+  assessmentDuration    Int?     @map("assessment_duration") // minutes
+  passingScore          Int?     @map("passing_score") // percentage
+  maxAttempts           Int      @default(3) @map("max_attempts")
+  retakeWaitDays        Int      @default(14) @map("retake_wait_days")
+
+  // Validity
+  validityMonths        Int?     @map("validity_months") // null = lifetime
+  renewalRequired       Boolean  @default(false) @map("renewal_required")
+
+  // Display
+  badgeImageUrl         String?  @map("badge_image_url") @db.VarChar(500)
+  certificateTemplate   String?  @map("certificate_template") @db.VarChar(100)
+
+  // Stats
+  totalCertified        Int      @default(0) @map("total_certified")
+  activeHolders         Int      @default(0) @map("active_holders")
+
+  isActive              Boolean  @default(true) @map("is_active")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  attempts              CertificationAttempt[]
+  holders               UserCertification[]
+
+  @@index([level])
+  @@index([category])
+  @@map("skillancer_certifications")
+}
+
+model CertificationAttempt {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  certificationId       String   @map("certification_id") @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+
+  // Attempt Details
+  attemptNumber         Int      @map("attempt_number")
+  status                CertificationStatus @default(IN_PROGRESS)
+
+  // Assessment Results
+  score                 Int?
+  maxScore              Int?     @map("max_score")
+  percentageScore       Decimal? @map("percentage_score") @db.Decimal(5, 2)
+
+  // Timing
+  startedAt             DateTime @default(now()) @map("started_at")
+  completedAt           DateTime? @map("completed_at")
+  timeSpentMinutes      Int?     @map("time_spent_minutes")
+
+  // Results
+  passed                Boolean?
+  feedback              String?  @db.Text
+  detailedResults       Json?    @map("detailed_results")
+
+  // Review (for portfolio/project requirements)
+  reviewedBy            String?  @map("reviewed_by") @db.Uuid
+  reviewedAt            DateTime? @map("reviewed_at")
+  reviewNotes           String?  @map("review_notes") @db.Text
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  certification         SkillancerCertification @relation(fields: [certificationId], references: [id])
+  user                  User     @relation("UserCertificationAttempts", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([certificationId])
+  @@map("certification_attempts")
+}
+
+model UserCertification {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+  certificationId       String   @map("certification_id") @db.Uuid
+
+  // Status
+  status                String   @default("ACTIVE") // ACTIVE, EXPIRED, REVOKED
+
+  // Dates
+  earnedAt              DateTime @map("earned_at")
+  expiresAt             DateTime? @map("expires_at")
+  lastRenewedAt         DateTime? @map("last_renewed_at")
+
+  // Certificate
+  certificateNumber     String   @unique @map("certificate_number") @db.VarChar(50)
+  certificateUrl        String?  @map("certificate_url") @db.VarChar(500)
+  verificationHash      String?  @map("verification_hash") @db.VarChar(64) // For blockchain verification
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation("UserCertifications", fields: [userId], references: [id])
+  certification         SkillancerCertification @relation(fields: [certificationId], references: [id])
+
+  @@unique([userId, certificationId])
+  @@index([status])
+  @@map("user_certifications")
+}
+
+// ============================================================================
+// EXECUTIVE SUBSCRIPTION & BILLING
+// ============================================================================
+
+enum ExecutiveAddonType {
+  TOOL_BUNDLE_CTO
+  TOOL_BUNDLE_CFO
+  TOOL_BUNDLE_CMO
+  TOOL_BUNDLE_CISO
+  TOOL_BUNDLE_COO
+  TOOL_BUNDLE_CHRO
+  TOOL_BUNDLE_CPO
+  EXTRA_SKILLPOD_HOURS
+  EXTRA_TEAM_MEMBER
+  CLIENT_WHITE_LABEL
+  PRIORITY_SUPPORT
+  API_ACCESS
+}
+
+model ExecutiveSubscription {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId                String   @unique @map("user_id") @db.Uuid
+
+  // Plan
+  tier                  ExecutiveTier @default(BASIC)
+  billingCycle          ExecutiveBillingCycle @default(MONTHLY) @map("billing_cycle")
+
+  // Stripe
+  stripeSubscriptionId  String?  @unique @map("stripe_subscription_id") @db.VarChar(255)
+  stripeCustomerId      String?  @map("stripe_customer_id") @db.VarChar(255)
+
+  // Limits
+  maxClients            Int      @default(3) @map("max_clients")
+  skillpodHoursIncluded Int      @default(20) @map("skillpod_hours_included")
+  skillpodHoursUsed     Int      @default(0) @map("skillpod_hours_used")
+  teamMembersIncluded   Int      @default(1) @map("team_members_included")
+
+  // Status
+  status                String   @default("ACTIVE") // ACTIVE, PAST_DUE, CANCELLED, PAUSED
+  currentPeriodStart    DateTime @map("current_period_start")
+  currentPeriodEnd      DateTime @map("current_period_end")
+  cancelAtPeriodEnd     Boolean  @default(false) @map("cancel_at_period_end")
+  cancelledAt           DateTime? @map("cancelled_at")
+
+  // Trial
+  trialEndsAt           DateTime? @map("trial_ends_at")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation("UserExecutiveSubscription", fields: [userId], references: [id])
+  addons                ExecutiveAddon[]
+  usageRecords          ExecutiveUsageRecord[]
+
+  @@map("executive_subscriptions")
+}
+
+model ExecutiveAddon {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  subscriptionId        String   @map("subscription_id") @db.Uuid
+
+  addonType             ExecutiveAddonType @map("addon_type")
+  quantity              Int      @default(1)
+
+  // Billing
+  pricePerUnit          Decimal  @map("price_per_unit") @db.Decimal(10, 2)
+  stripeItemId          String?  @map("stripe_item_id") @db.VarChar(255)
+
+  // Status
+  isActive              Boolean  @default(true) @map("is_active")
+  activatedAt           DateTime @default(now()) @map("activated_at")
+  cancelledAt           DateTime? @map("cancelled_at")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  subscription          ExecutiveSubscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([subscriptionId])
+  @@map("executive_addons")
+}
+
+model ExecutiveUsageRecord {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  subscriptionId        String   @map("subscription_id") @db.Uuid
+
+  // Usage Type
+  usageType             String   @map("usage_type") @db.VarChar(50) // SKILLPOD_HOURS, API_CALLS, etc.
+  quantity              Int
+
+  // Period
+  periodStart           DateTime @map("period_start")
+  periodEnd             DateTime @map("period_end")
+
+  // Billing
+  billed                Boolean  @default(false)
+  billedAt              DateTime? @map("billed_at")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  subscription          ExecutiveSubscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([subscriptionId])
+  @@index([periodStart, periodEnd])
+  @@map("executive_usage_records")
+}
+
+// ============================================================================
+// BENCHMARKING & INSIGHTS
+// ============================================================================
+
+model MarketBenchmark {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Scope
+  skill                 String?  @db.VarChar(100)
+  skillCategory         String?  @map("skill_category") @db.VarChar(100)
+  experienceLevel       String?  @map("experience_level") @db.VarChar(50)
+  region                String?  @db.VarChar(100)
+  industry              String?  @db.VarChar(100)
+
+  // Period
+  periodStart           DateTime @map("period_start")
+  periodEnd             DateTime @map("period_end")
+
+  // Rate Data
+  sampleSize            Int      @map("sample_size")
+  rateMin               Decimal  @map("rate_min") @db.Decimal(10, 2)
+  rateMax               Decimal  @map("rate_max") @db.Decimal(10, 2)
+  rateMedian            Decimal  @map("rate_median") @db.Decimal(10, 2)
+  rateMean              Decimal  @map("rate_mean") @db.Decimal(10, 2)
+  rate25thPercentile    Decimal  @map("rate_25th_percentile") @db.Decimal(10, 2)
+  rate75thPercentile    Decimal  @map("rate_75th_percentile") @db.Decimal(10, 2)
+
+  // Demand Data
+  demandScore           Int?     @map("demand_score") // 0-100
+  demandTrend           String?  @map("demand_trend") @db.VarChar(20) // INCREASING, STABLE, DECREASING
+  jobPostCount          Int?     @map("job_post_count")
+  avgTimeToHire         Int?     @map("avg_time_to_hire") // days
+
+  // Supply Data
+  freelancerCount       Int?     @map("freelancer_count")
+  avgAvailability       Decimal? @map("avg_availability") @db.Decimal(5, 2) // percentage
+
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@index([skill])
+  @@index([skillCategory])
+  @@index([periodStart, periodEnd])
+  @@map("market_benchmarks")
+}
+
+model InsightReport {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Report Identity
+  reportType            String   @map("report_type") @db.VarChar(100) // ANNUAL, QUARTERLY, SKILL_TREND, etc.
+  title                 String   @db.VarChar(255)
+  slug                  String   @unique @db.VarChar(100)
+
+  // Content
+  summary               String?  @db.Text
+  keyFindings           Json?    @map("key_findings")
+  fullReportUrl         String?  @map("full_report_url") @db.VarChar(500)
+
+  // Period
+  periodStart           DateTime @map("period_start")
+  periodEnd             DateTime @map("period_end")
+
+  // Access
+  isPublic              Boolean  @default(true) @map("is_public")
+  requiresSubscription  Boolean  @default(false) @map("requires_subscription")
+
+  // Stats
+  viewCount             Int      @default(0) @map("view_count")
+  downloadCount         Int      @default(0) @map("download_count")
+
+  publishedAt           DateTime? @map("published_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([reportType])
+  @@index([publishedAt])
+  @@map("insight_reports")
+}
