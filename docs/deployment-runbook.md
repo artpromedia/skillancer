@@ -307,14 +307,24 @@ BASE_URL="https://api.skillancer.com"
 
 echo "Testing critical endpoints..."
 
-# Health
-curl -s "$BASE_URL/health" | jq .
+# Health Dashboard (aggregated status)
+echo "=== Health Dashboard ==="
+curl -s "$BASE_URL/health/dashboard" | jq '{overall, summary, coreServices: (.coreServices | keys), moatServices: (.moatServices | keys)}'
+
+# Liveness & Readiness
+echo "=== Liveness ==="
+curl -s "$BASE_URL/health/live" | jq .
+
+echo "=== Readiness ==="
+curl -s "$BASE_URL/health/ready" | jq .
+
+# Circuit Breakers
+echo "=== Circuit Breakers ==="
+curl -s "$BASE_URL/health/circuits" | jq .
 
 # Auth
+echo "=== Auth Status ==="
 curl -s "$BASE_URL/api/v1/auth/status" | jq .
-
-# API
-curl -s "$BASE_URL/api/v1/status" | jq .
 
 echo "All checks complete!"
 ```

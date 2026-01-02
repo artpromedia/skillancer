@@ -121,6 +121,7 @@ This checklist covers all activities required for a successful Skillancer public
 
 ### Smoke Tests
 
+#### Core Platform
 - [ ] User registration flow
 - [ ] Email verification
 - [ ] Login/logout
@@ -131,8 +132,19 @@ This checklist covers all activities required for a successful Skillancer public
 - [ ] Contract creation
 - [ ] Payment flow (test mode)
 - [ ] SkillPod session start
+- [ ] Notification delivery (email)
 
-**Owner:** QA Lead  
+#### Moat Services
+- [ ] Executive profile creation
+- [ ] Client engagement setup
+- [ ] Financial card application flow
+- [ ] Talent graph connection request
+- [ ] Professional introduction flow
+- [ ] Intelligence analytics dashboard
+- [ ] Copilot proposal generation
+- [ ] Rate recommendation engine
+
+**Owner:** QA Lead
 **Sign-off:** ******\_****** Date: ****\_****
 
 ### Communication Ready
