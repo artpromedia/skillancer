@@ -3,6 +3,10 @@
  * Invoice PDF Service - PDF generation for invoices
  */
 
+import puppeteer from 'puppeteer';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
 import { pdfErrors } from '../errors/invoice.errors.js';
 import {
   InvoiceRepository,
@@ -29,14 +33,12 @@ function getClientDisplayName(client: Client | null | undefined): string {
   return parts.join(' ') || '';
 }
 
-// TODO: Import actual libraries when integrated
-// import puppeteer from 'puppeteer';
-// import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-
 export class InvoicePdfService {
   private readonly invoiceRepository: InvoiceRepository;
   private readonly templateRepository: InvoiceTemplateRepository;
   private readonly activityRepository: InvoiceActivityRepository;
+  private readonly s3Client: S3Client;
+  private readonly s3Bucket: string;
 
   constructor(
     private readonly prisma: PrismaClient,
@@ -45,6 +47,12 @@ export class InvoicePdfService {
     this.invoiceRepository = new InvoiceRepository(prisma);
     this.templateRepository = new InvoiceTemplateRepository(prisma);
     this.activityRepository = new InvoiceActivityRepository(prisma);
+
+    // Initialize S3 client
+    this.s3Client = new S3Client({
+      region: process.env.AWS_REGION || 'us-east-1',
+    });
+    this.s3Bucket = process.env.S3_BUCKET || 'skillancer-invoices';
   }
 
   /**
@@ -539,57 +547,102 @@ export class InvoicePdfService {
    * Convert HTML to PDF using Puppeteer
    */
   private async htmlToPdf(html: string): Promise<Buffer> {
-    // TODO: Integrate actual Puppeteer
-    // const browser = await puppeteer.launch({
-    //   headless: true,
-    //   args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    // });
-    //
-    // try {
-    //   const page = await browser.newPage();
-    //   await page.setContent(html, { waitUntil: 'networkidle0' });
-    //
-    //   const pdf = await page.pdf({
-    //     format: 'A4',
-    //     printBackground: true,
-    //     margin: {
-    //       top: '20mm',
-    //       right: '20mm',
-    //       bottom: '20mm',
-    //       left: '20mm',
-    //     },
-    //   });
-    //
-    //   return Buffer.from(pdf);
-    // } finally {
-    //   await browser.close();
-    // }
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+      ],
+    });
 
-    // Placeholder implementation
-    return Buffer.from(html);
+    try {
+      const page = await browser.newPage();
+
+      // Set content with timeout
+      await page.setContent(html, {
+        waitUntil: 'networkidle0',
+        timeout: 30000,
+      });
+
+      // Generate PDF
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20mm',
+          right: '20mm',
+          bottom: '20mm',
+          left: '20mm',
+        },
+        displayHeaderFooter: false,
+      });
+
+      this.logger.debug('PDF generated from HTML');
+
+      return Buffer.from(pdf);
+    } finally {
+      await browser.close();
+    }
   }
 
   /**
    * Upload PDF to S3
    */
   private async uploadPdf(pdfBuffer: Buffer, invoice: Invoice): Promise<string> {
-    // TODO: Integrate actual S3
-    // const s3 = new S3Client({ region: process.env.AWS_REGION });
-    //
-    // const key = `invoices/${invoice.freelancerUserId}/${invoice.id}/${invoice.invoiceNumber}.pdf`;
-    //
-    // await s3.send(new PutObjectCommand({
-    //   Bucket: process.env.S3_BUCKET,
-    //   Key: key,
-    //   Body: pdfBuffer,
-    //   ContentType: 'application/pdf',
-    //   ACL: 'private',
-    // }));
-    //
-    // return `https://${process.env.S3_BUCKET}.s3.amazonaws.com/${key}`;
+    const key = `invoices/${invoice.freelancerUserId}/${invoice.id}/${invoice.invoiceNumber}.pdf`;
 
-    // Placeholder URL
-    return `https://storage.skillancer.app/invoices/${invoice.id}/${invoice.invoiceNumber}.pdf`;
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: this.s3Bucket,
+        Key: key,
+        Body: pdfBuffer,
+        ContentType: 'application/pdf',
+        CacheControl: 'max-age=31536000', // 1 year cache
+        Metadata: {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          userId: invoice.freelancerUserId,
+        },
+      })
+    );
+
+    this.logger.debug({ key, bucket: this.s3Bucket }, 'PDF uploaded to S3');
+
+    // Return a presigned URL for secure access
+    return this.getSignedPdfUrl(key);
+  }
+
+  /**
+   * Get signed URL for PDF download
+   */
+  async getSignedPdfUrl(key: string, expiresIn: number = 3600): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.s3Bucket,
+      Key: key,
+    });
+
+    return getSignedUrl(this.s3Client, command, { expiresIn });
+  }
+
+  /**
+   * Get download URL for an invoice PDF
+   */
+  async getPdfDownloadUrl(invoiceId: string, userId: string): Promise<string> {
+    const invoice = await this.invoiceRepository.findById(invoiceId);
+
+    if (!invoice || invoice.freelancerUserId !== userId) {
+      throw pdfErrors.notFound(invoiceId);
+    }
+
+    if (!invoice.pdfUrl) {
+      throw pdfErrors.generationFailed('PDF has not been generated yet');
+    }
+
+    // Generate fresh signed URL
+    const key = `invoices/${invoice.freelancerUserId}/${invoice.id}/${invoice.invoiceNumber}.pdf`;
+    return this.getSignedPdfUrl(key);
   }
 
   /**

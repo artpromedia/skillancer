@@ -17,6 +17,12 @@ import {
   InvoiceSettingsRepository,
   InvoiceActivityRepository,
 } from '../repositories/index.js';
+import {
+  StripeProvider,
+  PayPalProvider,
+  createStripeProvider,
+  createPayPalProvider,
+} from './providers/index.js';
 
 import type { ProcessOnlinePaymentParams, OnlinePaymentResult } from '../types/invoice.types.js';
 import type { Invoice, InvoicePayment } from '@prisma/client';
@@ -28,6 +34,8 @@ export class InvoicePaymentService {
   private readonly paymentRepository: InvoicePaymentRepository;
   private readonly settingsRepository: InvoiceSettingsRepository;
   private readonly activityRepository: InvoiceActivityRepository;
+  private readonly stripeProvider: StripeProvider | null;
+  private readonly paypalProvider: PayPalProvider | null;
 
   constructor(
     private readonly prisma: PrismaClient,
@@ -37,6 +45,8 @@ export class InvoicePaymentService {
     this.paymentRepository = new InvoicePaymentRepository(prisma);
     this.settingsRepository = new InvoiceSettingsRepository(prisma);
     this.activityRepository = new InvoiceActivityRepository(prisma);
+    this.stripeProvider = createStripeProvider(logger);
+    this.paypalProvider = createPayPalProvider(logger);
   }
 
   /**
@@ -86,6 +96,10 @@ export class InvoicePaymentService {
     invoice: Invoice,
     amount: number
   ): Promise<OnlinePaymentResult> {
+    if (!this.stripeProvider) {
+      throw stripeErrors.notConfigured();
+    }
+
     const settings = await this.settingsRepository.findByUserId(invoice.freelancerUserId);
 
     if (!settings?.stripeAccountId) {
@@ -93,36 +107,30 @@ export class InvoicePaymentService {
     }
 
     try {
-      // TODO: Integrate with actual Stripe SDK
-      // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-      // const paymentIntent = await stripe.paymentIntents.create({
-      //   amount: Math.round(amount * 100), // Convert to cents
-      //   currency: invoice.currency.toLowerCase(),
-      //   transfer_data: {
-      //     destination: settings.stripeAccountId,
-      //   },
-      //   metadata: {
-      //     invoiceId: invoice.id,
-      //     invoiceNumber: invoice.invoiceNumber,
-      //   },
-      // });
-
-      // For now, create a placeholder payment intent ID
-      const paymentIntentId = `pi_placeholder_${Date.now()}`;
+      // Create payment intent using Stripe provider
+      const paymentIntent = await this.stripeProvider.createPaymentIntent({
+        amount,
+        currency: invoice.currency,
+        destinationAccountId: settings.stripeAccountId,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        customerEmail: invoice.clientEmail || undefined,
+        description: `Invoice ${invoice.invoiceNumber}`,
+      });
 
       // Save payment intent to invoice
-      await this.invoiceRepository.setStripePaymentIntent(invoice.id, paymentIntentId);
+      await this.invoiceRepository.setStripePaymentIntent(invoice.id, paymentIntent.id);
 
       // Create pending payment record
-      await this.paymentRepository.createPending(invoice.id, amount, 'STRIPE', paymentIntentId);
+      await this.paymentRepository.createPending(invoice.id, amount, 'STRIPE', paymentIntent.id);
 
       this.logger.info(
-        { invoiceId: invoice.id, amount, paymentIntentId },
+        { invoiceId: invoice.id, amount, paymentIntentId: paymentIntent.id },
         'Stripe payment initialized'
       );
 
       return {
-        clientSecret: `${paymentIntentId}_secret`, // Placeholder
+        clientSecret: paymentIntent.clientSecret,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -138,45 +146,44 @@ export class InvoicePaymentService {
     invoice: Invoice,
     amount: number
   ): Promise<OnlinePaymentResult> {
+    if (!this.paypalProvider) {
+      throw paypalErrors.notConfigured();
+    }
+
     const settings = await this.settingsRepository.findByUserId(invoice.freelancerUserId);
 
     if (!settings?.paypalEmail) {
       throw paypalErrors.notConfigured();
     }
 
-    try {
-      // TODO: Integrate with actual PayPal SDK
-      // const paypal = require('@paypal/checkout-server-sdk');
-      // const request = new paypal.orders.OrdersCreateRequest();
-      // request.prefer('return=representation');
-      // request.requestBody({
-      //   intent: 'CAPTURE',
-      //   purchase_units: [{
-      //     amount: {
-      //       currency_code: invoice.currency,
-      //       value: amount.toFixed(2),
-      //     },
-      //     description: `Invoice ${invoice.invoiceNumber}`,
-      //     payee: {
-      //       email_address: settings.paypalEmail,
-      //     },
-      //   }],
-      // });
-      // const order = await paypalClient.execute(request);
+    const baseUrl = process.env.APP_URL || 'https://skillancer.com';
 
-      // For now, create a placeholder order ID
-      const orderId = `pp_order_${Date.now()}`;
+    try {
+      // Create order using PayPal provider
+      const order = await this.paypalProvider.createOrder({
+        amount,
+        currency: invoice.currency,
+        payeeEmail: settings.paypalEmail,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        description: `Invoice ${invoice.invoiceNumber}`,
+        returnUrl: `${baseUrl}/invoices/${invoice.viewToken}/payment/success`,
+        cancelUrl: `${baseUrl}/invoices/${invoice.viewToken}/payment/cancel`,
+      });
 
       // Save order ID to invoice
-      await this.invoiceRepository.setPayPalOrder(invoice.id, orderId);
+      await this.invoiceRepository.setPayPalOrder(invoice.id, order.id);
 
       // Create pending payment record
-      await this.paymentRepository.createPending(invoice.id, amount, 'PAYPAL', orderId);
+      await this.paymentRepository.createPending(invoice.id, amount, 'PAYPAL', order.id);
 
-      this.logger.info({ invoiceId: invoice.id, amount, orderId }, 'PayPal payment initialized');
+      this.logger.info(
+        { invoiceId: invoice.id, amount, orderId: order.id },
+        'PayPal payment initialized'
+      );
 
       return {
-        approvalUrl: `https://www.paypal.com/checkoutnow?token=${orderId}`, // Placeholder
+        approvalUrl: order.approvalUrl,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -283,5 +290,110 @@ export class InvoicePaymentService {
     }
 
     return this.paymentRepository.findByInvoiceId(invoiceId);
+  }
+
+  /**
+   * Verify and process Stripe webhook with signature validation
+   */
+  async processStripeWebhook(payload: string | Buffer, signature: string): Promise<void> {
+    if (!this.stripeProvider) {
+      throw stripeErrors.notConfigured();
+    }
+
+    // Verify signature and parse event
+    const event = this.stripeProvider.verifyWebhookSignature(payload, signature);
+
+    this.logger.info({ eventType: event.type }, 'Processing Stripe webhook');
+
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        await this.handleStripeWebhook(event.data.object.id, 'succeeded');
+        break;
+      case 'payment_intent.payment_failed':
+        await this.handleStripeWebhook(event.data.object.id, 'failed');
+        break;
+      default:
+        this.logger.debug({ eventType: event.type }, 'Unhandled Stripe webhook event');
+    }
+  }
+
+  /**
+   * Verify and process PayPal webhook with signature validation
+   */
+  async processPayPalWebhook(
+    headers: Record<string, string>,
+    body: string
+  ): Promise<void> {
+    if (!this.paypalProvider) {
+      throw paypalErrors.notConfigured();
+    }
+
+    // Verify signature
+    const isValid = await this.paypalProvider.verifyWebhookSignature(headers, body);
+
+    if (!isValid) {
+      throw new InvoiceError(InvoiceErrorCode.PAYMENT_PROCESSING_FAILED, 'Invalid webhook signature');
+    }
+
+    // Parse event
+    const event = this.paypalProvider.parseWebhookEvent(body);
+
+    this.logger.info({ eventType: event.eventType }, 'Processing PayPal webhook');
+
+    switch (event.eventType) {
+      case 'CHECKOUT.ORDER.APPROVED':
+        // Capture the order when approved
+        if (event.resource.id) {
+          const capture = await this.paypalProvider.captureOrder(event.resource.id);
+          if (capture.status === 'COMPLETED') {
+            await this.handlePayPalWebhook(event.resource.id, 'COMPLETED');
+          }
+        }
+        break;
+      case 'PAYMENT.CAPTURE.COMPLETED':
+        await this.handlePayPalWebhook(event.resource.id, 'COMPLETED');
+        break;
+      case 'PAYMENT.CAPTURE.DENIED':
+        await this.handlePayPalWebhook(event.resource.id, 'DECLINED');
+        break;
+      default:
+        this.logger.debug({ eventType: event.eventType }, 'Unhandled PayPal webhook event');
+    }
+  }
+
+  /**
+   * Create Stripe connected account for freelancer
+   */
+  async createStripeAccount(
+    email: string,
+    country: string,
+    userId: string
+  ): Promise<{ accountId: string; onboardingUrl: string }> {
+    if (!this.stripeProvider) {
+      throw stripeErrors.notConfigured();
+    }
+
+    const baseUrl = process.env.APP_URL || 'https://skillancer.com';
+    const accountId = await this.stripeProvider.createConnectedAccount(email, country, { userId });
+    const onboardingUrl = await this.stripeProvider.createAccountLink(
+      accountId,
+      `${baseUrl}/settings/payments/refresh`,
+      `${baseUrl}/settings/payments/complete`
+    );
+
+    // Save account ID to settings
+    await this.settingsRepository.updateStripeAccount(userId, accountId);
+
+    return { accountId, onboardingUrl };
+  }
+
+  /**
+   * Check if Stripe account is fully onboarded
+   */
+  async isStripeAccountReady(accountId: string): Promise<boolean> {
+    if (!this.stripeProvider) {
+      return false;
+    }
+    return this.stripeProvider.isAccountOnboarded(accountId);
   }
 }
