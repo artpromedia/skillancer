@@ -1,0 +1,369 @@
+# =============================================================================
+# Skillancer Platform - Docker Compose for Local Development
+# =============================================================================
+#
+# Usage:
+#   docker-compose up -d                    # Start all services
+#   docker-compose up -d api-gateway        # Start specific service
+#   docker-compose logs -f api-gateway      # View logs
+#   docker-compose down                     # Stop all services
+#   docker-compose down -v                  # Stop and remove volumes
+#
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Infrastructure Services
+  # ===========================================================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: skillancer-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: skillancer
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: skillancer-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # Core Services
+  # ===========================================================================
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: skillancer-api-gateway
+    ports:
+      - '4000:4000'
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      JWT_SECRET: dev-jwt-secret-at-least-32-characters-long
+      AUTH_SERVICE_URL: http://auth-svc:3001
+      MARKET_SERVICE_URL: http://market-svc:3002
+      SKILLPOD_SERVICE_URL: http://skillpod-svc:3003
+      COCKPIT_SERVICE_URL: http://cockpit-svc:3004
+      BILLING_SERVICE_URL: http://billing-svc:3005
+      NOTIFICATION_SERVICE_URL: http://notification-svc:4006
+      EXECUTIVE_SERVICE_URL: http://executive-svc:3007
+      FINANCIAL_SERVICE_URL: http://financial-svc:3008
+      TALENT_GRAPH_SERVICE_URL: http://talent-graph-svc:3009
+      INTELLIGENCE_SERVICE_URL: http://intelligence-svc:3010
+      COPILOT_SERVICE_URL: http://copilot-svc:3011
+      REDIS_HOST: redis
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/health/live']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  auth-svc:
+    build:
+      context: .
+      dockerfile: services/auth-svc/Dockerfile
+    container_name: skillancer-auth-svc
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-jwt-secret-at-least-32-characters-long
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3001/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  market-svc:
+    build:
+      context: .
+      dockerfile: services/market-svc/Dockerfile
+    container_name: skillancer-market-svc
+    ports:
+      - '3002:3002'
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3002/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  skillpod-svc:
+    build:
+      context: .
+      dockerfile: services/skillpod-svc/Dockerfile
+    container_name: skillancer-skillpod-svc
+    ports:
+      - '3003:3003'
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3003/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  cockpit-svc:
+    build:
+      context: .
+      dockerfile: services/cockpit-svc/Dockerfile
+    container_name: skillancer-cockpit-svc
+    ports:
+      - '3004:3004'
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3004/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  billing-svc:
+    build:
+      context: .
+      dockerfile: services/billing-svc/Dockerfile
+    container_name: skillancer-billing-svc
+    ports:
+      - '3005:3005'
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3005/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  notification-svc:
+    build:
+      context: .
+      dockerfile: services/notification-svc/Dockerfile
+    container_name: skillancer-notification-svc
+    ports:
+      - '4006:4006'
+    environment:
+      NODE_ENV: development
+      PORT: 4006
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-placeholder}
+      SENDGRID_FROM_EMAIL: noreply@skillancer.com
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4006/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================================================
+  # Moat Services
+  # ===========================================================================
+
+  executive-svc:
+    build:
+      context: .
+      dockerfile: services/executive-svc/Dockerfile
+    container_name: skillancer-executive-svc
+    ports:
+      - '3007:3007'
+    environment:
+      NODE_ENV: development
+      PORT: 3007
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3007/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  financial-svc:
+    build:
+      context: .
+      dockerfile: services/financial-svc/Dockerfile
+    container_name: skillancer-financial-svc
+    ports:
+      - '3008:3008'
+    environment:
+      NODE_ENV: development
+      PORT: 3008
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3008/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  talent-graph-svc:
+    build:
+      context: .
+      dockerfile: services/talent-graph-svc/Dockerfile
+    container_name: skillancer-talent-graph-svc
+    ports:
+      - '3009:3009'
+    environment:
+      NODE_ENV: development
+      PORT: 3009
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3009/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  intelligence-svc:
+    build:
+      context: .
+      dockerfile: services/intelligence-svc/Dockerfile
+    container_name: skillancer-intelligence-svc
+    ports:
+      - '3010:3010'
+    environment:
+      NODE_ENV: development
+      PORT: 3010
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3010/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  copilot-svc:
+    build:
+      context: .
+      dockerfile: services/copilot-svc/Dockerfile
+    container_name: skillancer-copilot-svc
+    ports:
+      - '3011:3010'
+    environment:
+      NODE_ENV: development
+      PORT: 3010
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3010/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================================================
+  # Support Services
+  # ===========================================================================
+
+  audit-svc:
+    build:
+      context: .
+      dockerfile: services/audit-svc/Dockerfile
+    container_name: skillancer-audit-svc
+    ports:
+      - '3012:3012'
+    environment:
+      NODE_ENV: development
+      PORT: 3012
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skillancer?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3012/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# =============================================================================
+# Volumes
+# =============================================================================
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+
+networks:
+  default:
+    name: skillancer-network
+    driver: bridge

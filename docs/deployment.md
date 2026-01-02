@@ -125,16 +125,28 @@ Configure these secrets in GitHub repository settings:
 
 The following services are deployed:
 
-| Service          | Description                    |
-| ---------------- | ------------------------------ |
-| api-gateway      | API Gateway / Main entry point |
-| auth-svc         | Authentication service         |
-| market-svc       | Marketplace service            |
-| skillpod-svc     | SkillPod service               |
-| cockpit-svc      | Cockpit/Admin service          |
-| billing-svc      | Billing service                |
-| notification-svc | Notification service           |
-| audit-svc        | Audit logging service          |
+### Core Services
+
+| Service          | Port | Description                    |
+| ---------------- | ---- | ------------------------------ |
+| api-gateway      | 4000 | API Gateway / Main entry point |
+| auth-svc         | 3001 | Authentication service         |
+| market-svc       | 3002 | Marketplace service            |
+| skillpod-svc     | 3003 | SkillPod service               |
+| cockpit-svc      | 3004 | Cockpit/CRM service            |
+| billing-svc      | 3005 | Billing service                |
+| notification-svc | 4006 | Notification service           |
+| audit-svc        | 3012 | Audit logging service          |
+
+### Moat Services (Competitive Advantage Features)
+
+| Service          | Port | Description                              |
+| ---------------- | ---- | ---------------------------------------- |
+| executive-svc    | 3007 | Enterprise client management             |
+| financial-svc    | 3008 | Financial services (cards, financing)    |
+| talent-graph-svc | 3009 | Professional network and introductions   |
+| intelligence-svc | 3010 | Analytics, predictions, and benchmarking |
+| copilot-svc      | 3011 | AI-powered proposal and rate assistance  |
 
 ## Deployment Strategies
 
@@ -156,11 +168,38 @@ The following services are deployed:
 
 ### Endpoints Checked
 
-| Endpoint         | Expected | Description        |
-| ---------------- | -------- | ------------------ |
-| `/health`        | 200      | Basic health check |
-| `/ready`         | 200      | Readiness check    |
-| `/api/v1/status` | 200      | API status         |
+| Endpoint            | Expected | Description                            |
+| ------------------- | -------- | -------------------------------------- |
+| `/health`           | 200      | Basic health check                     |
+| `/health/live`      | 200      | Liveness probe (is process alive)      |
+| `/health/ready`     | 200      | Readiness probe (can handle traffic)   |
+| `/health/dashboard` | 200      | Aggregated health of all services      |
+| `/health/circuits`  | 200      | Circuit breaker status                 |
+| `/api/v1/status`    | 200      | API status                             |
+
+### Health Dashboard
+
+The `/health/dashboard` endpoint provides comprehensive health status:
+
+```json
+{
+  "overall": "healthy | degraded | critical | down",
+  "timestamp": "2026-01-02T00:00:00.000Z",
+  "uptime": 12345.67,
+  "version": "1.0.0",
+  "memory": { "heapUsed": 50, "heapTotal": 100, "rss": 150, "unit": "MB" },
+  "summary": { "total": 11, "healthy": 11, "unhealthy": 0, "healthPercentage": 100 },
+  "coreServices": { "auth": {...}, "market": {...}, ... },
+  "moatServices": { "executive": {...}, "financial": {...}, ... },
+  "circuitBreakers": { ... }
+}
+```
+
+Health thresholds:
+- **healthy**: 100% of services responding
+- **degraded**: 80-99% of services responding
+- **critical**: 50-79% of services responding
+- **down**: <50% of services responding
 
 ### Health Check Configuration
 
@@ -313,3 +352,80 @@ done
 1. Switch to read-only mode if possible
 2. Redirect traffic to maintenance page
 3. Contact DBA team
+
+## Local Development with Docker Compose
+
+For local development and testing, use Docker Compose:
+
+### Full Stack (All Services)
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f api-gateway
+
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes
+docker-compose down -v
+```
+
+### Development Mode (Infrastructure Only)
+
+For faster development with hot-reload on services:
+
+```bash
+# Start infrastructure only (postgres, redis)
+docker-compose -f docker-compose.dev.yml up -d
+
+# Run services locally with hot-reload
+pnpm --filter api-gateway dev
+pnpm --filter auth-svc dev
+```
+
+### Service URLs (Local)
+
+| Service          | URL                      |
+| ---------------- | ------------------------ |
+| API Gateway      | http://localhost:4000    |
+| Auth Service     | http://localhost:3001    |
+| Market Service   | http://localhost:3002    |
+| SkillPod Service | http://localhost:3003    |
+| Cockpit Service  | http://localhost:3004    |
+| Billing Service  | http://localhost:3005    |
+| Notification Svc | http://localhost:4006    |
+| Executive Svc    | http://localhost:3007    |
+| Financial Svc    | http://localhost:3008    |
+| Talent Graph Svc | http://localhost:3009    |
+| Intelligence Svc | http://localhost:3010    |
+| Copilot Service  | http://localhost:3011    |
+| PostgreSQL       | localhost:5432           |
+| Redis            | localhost:6379           |
+
+### Environment Configuration
+
+Each service has a `.env.example` file. Copy and configure:
+
+```bash
+# Copy all .env.example files
+for dir in services/*/; do
+  if [ -f "${dir}.env.example" ]; then
+    cp "${dir}.env.example" "${dir}.env"
+  fi
+done
+
+# Edit as needed
+vim services/api-gateway/.env
+```
+
+### Required Environment Variables
+
+| Variable        | Description                  | Example                                  |
+| --------------- | ---------------------------- | ---------------------------------------- |
+| DATABASE_URL    | PostgreSQL connection string | postgresql://user:pass@localhost:5432/db |
+| REDIS_URL       | Redis connection string      | redis://localhost:6379                   |
+| JWT_SECRET      | JWT signing secret (32+ chars) | your-secure-secret-here                |
+| SENDGRID_API_KEY| SendGrid API key             | SG.xxxxxx                                |

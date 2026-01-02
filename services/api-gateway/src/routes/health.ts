@@ -169,6 +169,137 @@ export function healthRoutes(
   );
 
   /**
+   * System-wide health dashboard
+   * Aggregates health from all services with detailed metrics
+   */
+  app.get(
+    '/health/dashboard',
+    {
+      schema: {
+        tags: ['health'],
+        summary: 'System health dashboard',
+        description: 'Returns comprehensive health status of all services including moat features',
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              overall: { type: 'string' },
+              timestamp: { type: 'string' },
+              uptime: { type: 'number' },
+              memory: { type: 'object' },
+              coreServices: { type: 'object' },
+              moatServices: { type: 'object' },
+              infrastructure: { type: 'object' },
+            },
+          },
+        },
+      },
+    },
+    async () => {
+      const serviceRoutes = getServiceRoutes();
+
+      // Categorize services
+      const coreServiceNames = ['auth', 'market', 'skillpod', 'cockpit', 'billing', 'notification'];
+      const moatServiceNames = ['executive', 'financial', 'talent-graph', 'intelligence', 'copilot'];
+
+      const checkService = async (route: typeof serviceRoutes[0]) => {
+        const startTime = Date.now();
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+          const response = await fetch(`${route.upstream}/health`, {
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+          const latency = Date.now() - startTime;
+
+          let details = {};
+          try {
+            details = await response.json();
+          } catch {
+            // Ignore JSON parse errors
+          }
+
+          return {
+            name: route.serviceName,
+            status: response.ok ? 'healthy' : 'degraded',
+            latency,
+            url: route.upstream,
+            details,
+          };
+        } catch (error) {
+          return {
+            name: route.serviceName,
+            status: 'unhealthy',
+            latency: Date.now() - startTime,
+            url: route.upstream,
+            error: error instanceof Error ? error.message : 'Connection failed',
+          };
+        }
+      };
+
+      // Check all services in parallel
+      const results = await Promise.all(serviceRoutes.map(checkService));
+
+      // Organize by category
+      const coreServices: Record<string, any> = {};
+      const moatServices: Record<string, any> = {};
+
+      results.forEach((result) => {
+        if (coreServiceNames.includes(result.name)) {
+          coreServices[result.name] = result;
+        } else if (moatServiceNames.includes(result.name)) {
+          moatServices[result.name] = result;
+        }
+      });
+
+      // Calculate overall status
+      const allResults = Object.values({ ...coreServices, ...moatServices });
+      const healthyCount = allResults.filter((r) => r.status === 'healthy').length;
+      const totalCount = allResults.length;
+      const healthPercentage = (healthyCount / totalCount) * 100;
+
+      let overall: 'healthy' | 'degraded' | 'critical' | 'down';
+      if (healthPercentage === 100) {
+        overall = 'healthy';
+      } else if (healthPercentage >= 80) {
+        overall = 'degraded';
+      } else if (healthPercentage >= 50) {
+        overall = 'critical';
+      } else {
+        overall = 'down';
+      }
+
+      // Memory usage
+      const memUsage = process.memoryUsage();
+
+      return {
+        overall,
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: config.service.version,
+        memory: {
+          heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+          heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+          rss: Math.round(memUsage.rss / 1024 / 1024),
+          unit: 'MB',
+        },
+        summary: {
+          total: totalCount,
+          healthy: healthyCount,
+          unhealthy: totalCount - healthyCount,
+          healthPercentage: Math.round(healthPercentage),
+        },
+        coreServices,
+        moatServices,
+        circuitBreakers: getAllCircuitBreakerStats(),
+      };
+    }
+  );
+
+  /**
    * Circuit breaker status
    */
   app.get(

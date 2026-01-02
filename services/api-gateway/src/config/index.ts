@@ -50,6 +50,12 @@ const configSchema = z.object({
     cockpit: z.string().url().default('http://localhost:3004'),
     billing: z.string().url().default('http://localhost:3005'),
     notification: z.string().url().default('http://localhost:3006'),
+    // Moat services
+    executive: z.string().url().default('http://localhost:3007'),
+    financial: z.string().url().default('http://localhost:3008'),
+    talentGraph: z.string().url().default('http://localhost:3009'),
+    intelligence: z.string().url().default('http://localhost:3010'),
+    copilot: z.string().url().default('http://localhost:3011'),
   }),
   circuitBreaker: z.object({
     timeout: z.coerce.number().default(30000),
@@ -126,6 +132,12 @@ export function getConfig(): Config {
       cockpit: process.env.COCKPIT_SERVICE_URL || 'http://localhost:3004',
       billing: process.env.BILLING_SERVICE_URL || 'http://localhost:3005',
       notification: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3006',
+      // Moat services
+      executive: process.env.EXECUTIVE_SERVICE_URL || 'http://localhost:3007',
+      financial: process.env.FINANCIAL_SERVICE_URL || 'http://localhost:3008',
+      talentGraph: process.env.TALENT_GRAPH_SERVICE_URL || 'http://localhost:3009',
+      intelligence: process.env.INTELLIGENCE_SERVICE_URL || 'http://localhost:3010',
+      copilot: process.env.COPILOT_SERVICE_URL || 'http://localhost:3011',
     },
     circuitBreaker: {
       timeout: process.env.CIRCUIT_BREAKER_TIMEOUT || 30000,
