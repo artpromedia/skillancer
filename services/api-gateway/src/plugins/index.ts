@@ -11,7 +11,9 @@ import { proxyPlugin } from './proxy.js';
 import { rateLimitPlugin } from './rate-limit.js';
 import { requestLoggerPlugin } from './request-logger.js';
 import { sensiblePlugin } from './sensible.js';
+import { sentryPlugin } from './sentry.js';
 import { swaggerPlugin } from './swagger.js';
+import { tracingPlugin, getTraceHeaders } from './tracing.js';
 
 import type { FastifyInstance } from 'fastify';
 
@@ -23,6 +25,8 @@ export interface PluginOptions {
   swagger?: boolean;
   requestLogger?: boolean;
   proxy?: boolean;
+  sentry?: boolean;
+  tracing?: boolean;
 }
 
 /**
@@ -32,6 +36,16 @@ export async function registerPlugins(
   app: FastifyInstance,
   options: PluginOptions = {}
 ): Promise<void> {
+  // OpenTelemetry tracing (register first to instrument all requests)
+  if (options.tracing !== false) {
+    await app.register(tracingPlugin);
+  }
+
+  // Sentry error tracking (register early to catch all errors)
+  if (options.sentry !== false) {
+    await app.register(sentryPlugin);
+  }
+
   // Always register sensible (provides useful utilities)
   await app.register(sensiblePlugin);
 
@@ -80,7 +94,10 @@ export {
   swaggerPlugin,
   requestLoggerPlugin,
   proxyPlugin,
+  sentryPlugin,
+  tracingPlugin,
 };
 
-// Re-export auth helpers
+// Re-export helpers
 export { requireAuth, optionalAuth } from './auth.js';
+export { getTraceHeaders } from './tracing.js';
