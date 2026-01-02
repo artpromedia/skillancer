@@ -1,18 +1,36 @@
 /**
- * Notification Routes
+ * Notification Routes with Zod Validation
  */
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { NotificationService } from '../services/notification.service.js';
 import { PrismaClient } from '@prisma/client';
+import { ZodError } from 'zod';
 import {
-  EmailNotificationInput,
-  PushNotificationInput,
-  NotificationChannel,
-} from '../types/notification.types.js';
+  SendEmailSchema,
+  SendPushSchema,
+  SendTemplatedEmailSchema,
+  SendMultiChannelSchema,
+  RegisterDeviceSchema,
+  UpdatePreferencesSchema,
+  GetHistoryQuerySchema,
+  GetStatsQuerySchema,
+} from '../schemas/notification.schemas.js';
 
 const prisma = new PrismaClient();
 const notificationService = new NotificationService(prisma);
+
+// Validation error handler
+function handleValidationError(error: ZodError, reply: FastifyReply) {
+  const errors = error.errors.map((e) => ({
+    field: e.path.join('.'),
+    message: e.message,
+  }));
+  return reply.status(400).send({
+    error: 'Validation Error',
+    details: errors,
+  });
+}
 
 export async function notificationRoutes(fastify: FastifyInstance) {
   // Send email notification
@@ -23,8 +41,17 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      const input = request.body as EmailNotificationInput;
-      const result = await notificationService.sendEmail({ ...input, userId });
+      const validation = SendEmailSchema.safeParse(request.body);
+      if (!validation.success) {
+        return handleValidationError(validation.error, reply);
+      }
+
+      const input = validation.data;
+      const result = await notificationService.sendEmail({
+        ...input,
+        userId,
+        channels: ['EMAIL'],
+      });
 
       return reply.status(result.status === 'SENT' ? 200 : 400).send(result);
     } catch (error: any) {
@@ -40,8 +67,17 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      const input = request.body as PushNotificationInput;
-      const result = await notificationService.sendPush({ ...input, userId });
+      const validation = SendPushSchema.safeParse(request.body);
+      if (!validation.success) {
+        return handleValidationError(validation.error, reply);
+      }
+
+      const input = validation.data;
+      const result = await notificationService.sendPush({
+        ...input,
+        userId,
+        channels: ['PUSH'],
+      });
 
       return reply.status(result.status === 'SENT' ? 200 : 400).send(result);
     } catch (error: any) {
@@ -57,17 +93,16 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      const { to, emailType, templateData, subject } = request.body as {
-        to: string;
-        emailType: string;
-        templateData: Record<string, unknown>;
-        subject?: string;
-      };
+      const validation = SendTemplatedEmailSchema.safeParse(request.body);
+      if (!validation.success) {
+        return handleValidationError(validation.error, reply);
+      }
 
+      const { to, emailType, templateData, subject } = validation.data;
       const result = await notificationService.sendTemplatedEmail(
         userId,
         to,
-        emailType as any,
+        emailType,
         templateData,
         { subject }
       );
@@ -86,15 +121,15 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      const { channels, email, push } = request.body as {
-        channels: NotificationChannel[];
-        email?: Omit<EmailNotificationInput, 'userId' | 'channels'>;
-        push?: Omit<PushNotificationInput, 'userId' | 'channels'>;
-      };
+      const validation = SendMultiChannelSchema.safeParse(request.body);
+      if (!validation.success) {
+        return handleValidationError(validation.error, reply);
+      }
 
+      const { channels, email, push } = validation.data;
       const results = await notificationService.sendMultiChannel(userId, channels, {
-        email,
-        push,
+        email: email as any,
+        push: push as any,
       });
 
       return reply.send({ results });
@@ -111,12 +146,12 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      const { token, platform, deviceId } = request.body as {
-        token: string;
-        platform: 'IOS' | 'ANDROID' | 'WEB';
-        deviceId: string;
-      };
+      const validation = RegisterDeviceSchema.safeParse(request.body);
+      if (!validation.success) {
+        return handleValidationError(validation.error, reply);
+      }
 
+      const { token, platform, deviceId } = validation.data;
       const device = await notificationService.registerDeviceToken(
         userId,
         token,
@@ -139,8 +174,11 @@ export async function notificationRoutes(fastify: FastifyInstance) {
       }
 
       const { deviceId } = request.params as { deviceId: string };
-      await notificationService.deactivateDeviceToken(userId, deviceId);
+      if (!deviceId || deviceId.length > 100) {
+        return reply.status(400).send({ error: 'Invalid device ID' });
+      }
 
+      await notificationService.deactivateDeviceToken(userId, deviceId);
       return reply.status(204).send();
     } catch (error: any) {
       return reply.status(500).send({ error: error.message });
@@ -175,9 +213,12 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      const preferences = request.body as any;
-      const updated = await notificationService.updateUserPreferences(userId, preferences);
+      const validation = UpdatePreferencesSchema.safeParse(request.body);
+      if (!validation.success) {
+        return handleValidationError(validation.error, reply);
+      }
 
+      const updated = await notificationService.updateUserPreferences(userId, validation.data);
       return reply.send(updated);
     } catch (error: any) {
       return reply.status(500).send({ error: error.message });
@@ -192,18 +233,17 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      const { channel, status, limit, offset } = request.query as {
-        channel?: NotificationChannel;
-        status?: string;
-        limit?: string;
-        offset?: string;
-      };
+      const validation = GetHistoryQuerySchema.safeParse(request.query);
+      if (!validation.success) {
+        return handleValidationError(validation.error, reply);
+      }
 
+      const { channel, status, limit, offset } = validation.data;
       const history = await notificationService.getNotificationHistory(userId, {
         channel,
-        status: status as any,
-        limit: limit ? parseInt(limit) : undefined,
-        offset: offset ? parseInt(offset) : undefined,
+        status,
+        limit,
+        offset,
       });
 
       return reply.send(history);
@@ -212,7 +252,7 @@ export async function notificationRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Get notification stats (admin only)
+  // Get notification stats
   fastify.get('/stats', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const user = (request as any).user;
@@ -220,14 +260,12 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      // Check if user is admin - simplified check
-      const { userId, tenantId, startDate, endDate } = request.query as {
-        userId?: string;
-        tenantId?: string;
-        startDate?: string;
-        endDate?: string;
-      };
+      const validation = GetStatsQuerySchema.safeParse(request.query);
+      if (!validation.success) {
+        return handleValidationError(validation.error, reply);
+      }
 
+      const { userId, tenantId, startDate, endDate } = validation.data;
       const stats = await notificationService.getNotificationStats(
         userId || user.id,
         tenantId,
