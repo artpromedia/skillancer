@@ -131,6 +131,7 @@ export default function Home() {
   const rotatingWords = [
     'Developers',
     'Designers',
+    'Executives',
     'Writers',
     'Marketers',
     'Data Scientists',
@@ -665,6 +666,82 @@ export default function Home() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Executive Suite - Full Width */}
+          <div className="mt-8 group relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-600 to-orange-700 p-8 text-white transition-transform hover:scale-[1.01]">
+            <div className="absolute right-0 top-0 h-64 w-64 translate-x-1/4 translate-y-[-25%] rounded-full bg-amber-500/30 blur-3xl" />
+            <div className="absolute left-0 bottom-0 h-48 w-48 translate-x-[-25%] translate-y-[25%] rounded-full bg-orange-400/20 blur-3xl" />
+            <div className="relative">
+              <div className="grid gap-8 lg:grid-cols-2 items-center">
+                <div>
+                  <div className="mb-6 flex items-center gap-4">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm">
+                      <Briefcase className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">Fractional Executive Suite</h3>
+                      <p className="text-amber-200">On-Demand C-Suite Leadership</p>
+                    </div>
+                  </div>
+                  <p className="mb-6 text-lg text-amber-100">
+                    Access vetted fractional CTOs, CFOs, CMOs, and more. Get enterprise-level leadership
+                    at a fraction of the cost. Perfect for startups and growing companies.
+                  </p>
+                  <ul className="mb-8 grid grid-cols-2 gap-3">
+                    {[
+                      'Pre-vetted executives',
+                      'LinkedIn verified',
+                      'Flexible engagements',
+                      'OKR tracking',
+                      'Industry expertise',
+                      'Background checked',
+                    ].map((feature) => (
+                      <li key={feature} className="flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-amber-300" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex flex-wrap gap-4">
+                    <Button
+                      asChild
+                      variant="secondary"
+                      className="bg-white text-amber-700 hover:bg-amber-50"
+                    >
+                      <Link href="/executives">
+                        Browse Executives
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="border-white/30 text-white hover:bg-white/10"
+                    >
+                      <Link href="/hire/onboarding">
+                        Request a Match
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+                <div className="hidden lg:block">
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { role: 'CTO', desc: 'Tech Strategy & Architecture' },
+                      { role: 'CFO', desc: 'Financial Planning & Fundraising' },
+                      { role: 'CMO', desc: 'Growth & Brand Strategy' },
+                      { role: 'COO', desc: 'Operations & Scaling' },
+                    ].map((exec) => (
+                      <div key={exec.role} className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+                        <div className="text-lg font-bold">Fractional {exec.role}</div>
+                        <div className="text-sm text-amber-200">{exec.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
