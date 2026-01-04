@@ -120,7 +120,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Executive Profile'],
         summary: 'Apply to become an executive',
-        body: createProfileSchema,
+        body: { type: 'object' },
       } as any,
     },
     async (request, reply) => {
@@ -166,7 +166,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Executive Profile'],
         summary: 'Update my executive profile',
-        body: updateProfileSchema,
+        body: { type: 'object' },
       } as any,
     },
     async (request, reply) => {
@@ -216,7 +216,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Executive Profile'],
         summary: 'Add employment history entry',
-        body: addHistorySchema,
+        body: { type: 'object' },
       } as any,
     },
     async (request, reply) => {
@@ -254,10 +254,8 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Executive Profile'],
         summary: 'Update employment history entry',
-        params: z.object({
-          historyId: z.string().uuid(),
-        }),
-        body: addHistorySchema.partial(),
+        params: { type: 'object' },
+        body: { type: 'object' },
       } as any,
     },
     async (request, reply) => {
@@ -295,9 +293,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Executive Profile'],
         summary: 'Delete employment history entry',
-        params: z.object({
-          historyId: z.string().uuid(),
-        }),
+        params: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -346,10 +342,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Executive Profile'],
         summary: 'LinkedIn OAuth callback',
-        querystring: z.object({
-          code: z.string(),
-          state: z.string(),
-        }),
+        querystring: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -374,9 +367,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Executive Profile'],
         summary: 'Get executive profile (public)',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
+        params: { type: 'object' },
       },
     },
     async (request, reply) => {

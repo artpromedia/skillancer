@@ -7,9 +7,9 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { structlog } from '@skillancer/logger';
+import { createLogger } from '@skillancer/logger';
 
-const logger = structlog.get('data-aggregation');
+const logger = createLogger({ service: 'data-aggregation' });
 const prisma = new PrismaClient();
 
 // ============================================================================

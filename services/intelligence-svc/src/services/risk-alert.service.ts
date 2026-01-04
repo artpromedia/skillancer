@@ -1,10 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import {
+import type {
   RiskAlertCreateInput,
   RiskAlertUpdateInput,
   RiskCategory,
   RiskLevel,
-} from '../types/intelligence.types';
+} from '../types/intelligence.types.js';
 
 export class RiskAlertService {
   constructor(private prisma: PrismaClient) {}
@@ -45,11 +45,14 @@ export class RiskAlertService {
   /**
    * Get alerts for a contract
    */
-  async getContractAlerts(contractId: string, options?: {
-    resolved?: boolean;
-    acknowledged?: boolean;
-    riskLevel?: RiskLevel;
-  }) {
+  async getContractAlerts(
+    contractId: string,
+    options?: {
+      resolved?: boolean;
+      acknowledged?: boolean;
+      riskLevel?: RiskLevel;
+    }
+  ) {
     const { resolved, acknowledged, riskLevel } = options || {};
 
     const where: any = { contractId };
@@ -59,10 +62,7 @@ export class RiskAlertService {
 
     const alerts = await this.prisma.engagementRiskAlert.findMany({
       where,
-      orderBy: [
-        { riskLevel: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ riskLevel: 'desc' }, { createdAt: 'desc' }],
     });
 
     return alerts;
@@ -136,13 +136,16 @@ export class RiskAlertService {
   /**
    * Auto-generate alerts based on project metrics
    */
-  async analyzeAndGenerateAlerts(contractId: string, metrics: {
-    daysSinceLastActivity?: number;
-    milestoneDelays?: number;
-    budgetOverrun?: number;
-    communicationGaps?: number;
-    scopeChanges?: number;
-  }) {
+  async analyzeAndGenerateAlerts(
+    contractId: string,
+    metrics: {
+      daysSinceLastActivity?: number;
+      milestoneDelays?: number;
+      budgetOverrun?: number;
+      communicationGaps?: number;
+      scopeChanges?: number;
+    }
+  ) {
     const alerts: RiskAlertCreateInput[] = [];
 
     // Inactivity alert
@@ -177,10 +180,7 @@ export class RiskAlertService {
         riskLevel: level as RiskLevel,
         title: 'Milestone Delays Detected',
         description: `${metrics.milestoneDelays} milestone(s) are past their due date`,
-        indicators: [
-          `${metrics.milestoneDelays} overdue milestones`,
-          'Project timeline at risk',
-        ],
+        indicators: [`${metrics.milestoneDelays} overdue milestones`, 'Project timeline at risk'],
         suggestedActions: [
           'Review milestone scope and adjust deadlines if needed',
           'Identify and address blockers',
@@ -220,10 +220,7 @@ export class RiskAlertService {
         riskLevel: 'MEDIUM',
         title: 'Communication Gap Detected',
         description: `${metrics.communicationGaps} days without client communication`,
-        indicators: [
-          'No client responses to messages',
-          'Pending questions unanswered',
-        ],
+        indicators: ['No client responses to messages', 'Pending questions unanswered'],
         suggestedActions: [
           'Send a follow-up message',
           'Try alternative communication channels',
@@ -256,9 +253,7 @@ export class RiskAlertService {
     }
 
     // Create all alerts
-    const createdAlerts = await Promise.all(
-      alerts.map((alert) => this.createAlert(alert))
-    );
+    const createdAlerts = await Promise.all(alerts.map((alert) => this.createAlert(alert)));
 
     return createdAlerts;
   }

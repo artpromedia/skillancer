@@ -1,12 +1,12 @@
 import { PrismaClient } from '@prisma/client';
-import {
+import type {
   SkillancerCardCreateInput,
   SkillancerCardUpdateInput,
   CardTransactionInput,
   CardBalance,
   TransactionSummary,
   CardStatus,
-} from '../types/financial.types';
+} from '../types/financial.types.js';
 
 export class SkillancerCardService {
   constructor(private prisma: PrismaClient) {}
@@ -194,9 +194,7 @@ export class SkillancerCardService {
 
     // Calculate cashback (1% default rate)
     const cashbackRate = 0.01;
-    const cashbackAmount = input.transactionType === 'PURCHASE'
-      ? input.amount * cashbackRate
-      : 0;
+    const cashbackAmount = input.transactionType === 'PURCHASE' ? input.amount * cashbackRate : 0;
 
     const transaction = await this.prisma.cardTransaction.create({
       data: {

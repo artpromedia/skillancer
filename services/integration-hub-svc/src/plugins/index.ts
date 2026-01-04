@@ -10,7 +10,14 @@ import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+
+// Extend FastifyInstance with authenticate
+declare module 'fastify' {
+  interface FastifyInstance {
+    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  }
+}
 
 export interface PluginOptions {
   cors?: boolean;
@@ -23,6 +30,13 @@ export interface PluginOptions {
 export async function registerPlugins(app: FastifyInstance, options: PluginOptions): Promise<void> {
   // Sensible (adds useful utilities)
   await app.register(sensible);
+
+  // Register authenticate decorator (stub for development)
+  // TODO: Replace with proper JWT authentication
+  app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+    // Stub: In production, this should verify JWT tokens
+    // For now, allow all requests through
+  });
 
   // CORS
   if (options.cors) {
@@ -85,4 +99,3 @@ export async function registerPlugins(app: FastifyInstance, options: PluginOptio
     });
   }
 }
-

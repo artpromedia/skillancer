@@ -6,13 +6,18 @@ import {
   WebhookResult,
   WidgetDefinition,
 } from './base.connector';
-import { IntegrationCategory, ExecutiveType } from './base.connector';
+import type { ExecutiveType } from '@skillancer/database';
+import type { IntegrationCategory } from '../types/index.js';
 
 export class JiraConnector extends BaseConnector {
   readonly id = 'jira';
   readonly name = 'Jira';
-  readonly category = IntegrationCategory.DEVTOOLS;
-  readonly applicableRoles = [ExecutiveType.CTO, ExecutiveType.COO, ExecutiveType.CPO];
+  readonly category: IntegrationCategory = 'DEVTOOLS';
+  readonly applicableRoles: ExecutiveType[] = [
+    'FRACTIONAL_CTO',
+    'FRACTIONAL_COO',
+    'FRACTIONAL_CPO',
+  ];
 
   readonly oauthConfig = {
     authorizationUrl: 'https://auth.atlassian.com/authorize',
@@ -432,4 +437,3 @@ interface VelocityPoint {
 }
 
 export const jiraConnector = new JiraConnector();
-

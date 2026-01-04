@@ -2,7 +2,7 @@
  * Webhook Routes for delivery tracking
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { NotificationService } from '../services/notification.service.js';
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
@@ -104,10 +104,7 @@ function verifySendGridSignature(request: FastifyRequest): boolean {
       .update(payload)
       .digest('base64');
 
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    );
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
   } catch {
     return false;
   }

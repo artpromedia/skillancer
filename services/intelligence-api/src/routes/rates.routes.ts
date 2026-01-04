@@ -3,7 +3,7 @@
  * Sprint M10: Talent Intelligence API
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { rateAnalyticsService } from '../services/rate-analytics';
 

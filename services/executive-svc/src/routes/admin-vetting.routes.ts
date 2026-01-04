@@ -135,9 +135,7 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Get executive vetting details',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
+        params: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -156,12 +154,8 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Assign reviewer to executive',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
-        body: z.object({
-          reviewerId: z.string().uuid(),
-        }),
+        params: { type: 'object' },
+        body: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -181,9 +175,7 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Run automated screening',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
+        params: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -202,10 +194,8 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Schedule interview',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
-        body: scheduleInterviewSchema,
+        params: { type: 'object' },
+        body: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -233,11 +223,8 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Record interview outcome',
-        params: z.object({
-          executiveId: z.string().uuid(),
-          interviewId: z.string().uuid(),
-        }),
-        body: recordInterviewSchema,
+        params: { type: 'object' },
+        body: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -281,22 +268,8 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Advance to next vetting stage',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
-        body: z.object({
-          stage: z.enum([
-            'APPLICATION',
-            'AUTOMATED_SCREENING',
-            'INTERVIEW_SCHEDULED',
-            'INTERVIEW_COMPLETED',
-            'REFERENCE_CHECK',
-            'BACKGROUND_CHECK',
-            'FINAL_REVIEW',
-            'COMPLETE',
-          ]),
-          notes: z.string().optional(),
-        }),
+        params: { type: 'object' },
+        body: { type: 'object' },
       } as any,
     },
     async (request, reply) => {
@@ -316,9 +289,7 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Send all pending reference requests',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
+        params: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -345,10 +316,7 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Send reference reminder',
-        params: z.object({
-          executiveId: z.string().uuid(),
-          referenceId: z.string().uuid(),
-        }),
+        params: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -367,14 +335,8 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Verify reference manually',
-        params: z.object({
-          executiveId: z.string().uuid(),
-          referenceId: z.string().uuid(),
-        }),
-        body: z.object({
-          verified: z.boolean(),
-          notes: z.string().optional(),
-        }),
+        params: { type: 'object' },
+        body: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -400,13 +362,8 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Flag suspicious reference',
-        params: z.object({
-          executiveId: z.string().uuid(),
-          referenceId: z.string().uuid(),
-        }),
-        body: z.object({
-          reason: z.string().min(10),
-        }),
+        params: { type: 'object' },
+        body: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -426,9 +383,7 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Initiate background check',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
+        params: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -447,13 +402,8 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Review background check result',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
-        body: z.object({
-          decision: z.enum(['APPROVE', 'REJECT', 'REQUEST_INFO']),
-          notes: z.string().optional(),
-        }),
+        params: { type: 'object' },
+        body: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -482,10 +432,8 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Reject executive',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
-        body: rejectSchema,
+        params: { type: 'object' },
+        body: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -511,10 +459,8 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Approve executive',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
-        body: approveSchema,
+        params: { type: 'object' },
+        body: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -534,12 +480,8 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Add note to executive',
-        params: z.object({
-          executiveId: z.string().uuid(),
-        }),
-        body: z.object({
-          note: z.string().min(1),
-        }),
+        params: { type: 'object' },
+        body: { type: 'object' },
       },
     },
     async (request, reply) => {

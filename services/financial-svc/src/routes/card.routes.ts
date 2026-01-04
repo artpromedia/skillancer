@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { SkillancerCardService } from '../services/skillancer-card.service';
 import { PrismaClient } from '@prisma/client';
 
@@ -121,48 +121,54 @@ export async function cardRoutes(fastify: FastifyInstance) {
   });
 
   // Get transactions
-  fastify.get('/cards/:cardId/transactions', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { cardId } = request.params as { cardId: string };
-      const { startDate, endDate, type, page, limit } = request.query as {
-        startDate?: string;
-        endDate?: string;
-        type?: string;
-        page?: string;
-        limit?: string;
-      };
+  fastify.get(
+    '/cards/:cardId/transactions',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { cardId } = request.params as { cardId: string };
+        const { startDate, endDate, type, page, limit } = request.query as {
+          startDate?: string;
+          endDate?: string;
+          type?: string;
+          page?: string;
+          limit?: string;
+        };
 
-      const result = await cardService.getTransactions(
-        cardId,
-        startDate ? new Date(startDate) : undefined,
-        endDate ? new Date(endDate) : undefined,
-        type,
-        page ? parseInt(page) : 1,
-        limit ? parseInt(limit) : 50
-      );
+        const result = await cardService.getTransactions(
+          cardId,
+          startDate ? new Date(startDate) : undefined,
+          endDate ? new Date(endDate) : undefined,
+          type,
+          page ? parseInt(page) : 1,
+          limit ? parseInt(limit) : 50
+        );
 
-      return reply.send(result);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
+        return reply.send(result);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Record transaction (webhook/internal)
-  fastify.post('/cards/:cardId/transactions', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { cardId } = request.params as { cardId: string };
-      const input = request.body as any;
+  fastify.post(
+    '/cards/:cardId/transactions',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { cardId } = request.params as { cardId: string };
+        const input = request.body as any;
 
-      const transaction = await cardService.recordTransaction({
-        cardId,
-        ...input,
-      });
+        const transaction = await cardService.recordTransaction({
+          cardId,
+          ...input,
+        });
 
-      return reply.status(201).send(transaction);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+        return reply.status(201).send(transaction);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get transaction summary
   fastify.get('/cards/:cardId/summary', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -174,7 +180,9 @@ export async function cardRoutes(fastify: FastifyInstance) {
       };
 
       const now = new Date();
-      const start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
+      const start = startDate
+        ? new Date(startDate)
+        : new Date(now.getFullYear(), now.getMonth(), 1);
       const end = endDate ? new Date(endDate) : now;
 
       const summary = await cardService.getTransactionSummary(cardId, start, end);
@@ -186,16 +194,19 @@ export async function cardRoutes(fastify: FastifyInstance) {
   });
 
   // Redeem cashback
-  fastify.post('/cards/:cardId/redeem-cashback', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { cardId } = request.params as { cardId: string };
-      const { amount } = request.body as { amount: number };
+  fastify.post(
+    '/cards/:cardId/redeem-cashback',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { cardId } = request.params as { cardId: string };
+        const { amount } = request.body as { amount: number };
 
-      const transaction = await cardService.redeemCashback(cardId, amount);
+        const transaction = await cardService.redeemCashback(cardId, amount);
 
-      return reply.send(transaction);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+        return reply.send(transaction);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 }

@@ -3,11 +3,11 @@
  * Sprint M10: Talent Intelligence API
  */
 
-import { FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 import { createHash } from 'crypto';
-import { structlog } from '@skillancer/logger';
+import { createLogger } from '@skillancer/logger';
 
-const logger = structlog.get('api-key-auth');
+const logger = createLogger({ serviceName: 'api-key-auth' });
 
 // ============================================================================
 // Types

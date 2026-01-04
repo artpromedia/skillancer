@@ -6,24 +6,25 @@ import {
   WebhookResult,
   WidgetDefinition,
 } from './base.connector';
-import { IntegrationCategory, ExecutiveType } from './base.connector';
+import type { ExecutiveType } from '@skillancer/database';
+import type { IntegrationCategory } from '../types/index.js';
 
 export class NotionConnector extends BaseConnector {
   readonly id = 'notion';
   readonly name = 'Notion';
-  readonly category = IntegrationCategory.PRODUCTIVITY;
-  readonly applicableRoles = [
-    ExecutiveType.CTO,
-    ExecutiveType.CFO,
-    ExecutiveType.COO,
-    ExecutiveType.CMO,
-    ExecutiveType.CPO,
-    ExecutiveType.CHRO,
-    ExecutiveType.CLO,
-    ExecutiveType.CISO,
-    ExecutiveType.CDO,
-    ExecutiveType.CSO,
-    ExecutiveType.CRO,
+  readonly category: IntegrationCategory = 'PRODUCTIVITY';
+  readonly applicableRoles: ExecutiveType[] = [
+    'FRACTIONAL_CTO',
+    'FRACTIONAL_CFO',
+    'FRACTIONAL_COO',
+    'FRACTIONAL_CMO',
+    'FRACTIONAL_CPO',
+    'FRACTIONAL_CHRO',
+    'FRACTIONAL_CLO',
+    'FRACTIONAL_CISO',
+    'FRACTIONAL_CDO',
+    'FRACTIONAL_CSO',
+    'FRACTIONAL_CRO',
   ];
 
   readonly oauthConfig = {
@@ -276,4 +277,3 @@ interface NotionBlock {
 }
 
 export const notionConnector = new NotionConnector();
-

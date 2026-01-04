@@ -3,9 +3,9 @@
  * Sprint M10: Talent Intelligence API
  */
 
-import { structlog } from '@skillancer/logger';
+import { createLogger } from '@skillancer/logger';
 
-const logger = structlog.get('demand-analytics');
+const logger = createLogger({ service: 'demand-analytics' });
 
 // ============================================================================
 // Types

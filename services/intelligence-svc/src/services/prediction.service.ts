@@ -1,12 +1,12 @@
 import { PrismaClient } from '@prisma/client';
-import {
+import type {
   SuccessPredictionInput,
   PredictionResult,
   RiskFactor,
   RiskCategory,
   RiskLevel,
   PredictionConfidence,
-} from '../types/intelligence.types';
+} from '../types/intelligence.types.js';
 
 export class PredictionService {
   constructor(private prisma: PrismaClient) {}
@@ -160,17 +160,14 @@ export class PredictionService {
   private async getHistoricalData(input: SuccessPredictionInput) {
     const outcomes = await this.prisma.engagementOutcome.findMany({
       where: {
-        OR: [
-          { freelancerId: input.freelancerId },
-          { clientId: input.clientId },
-        ],
+        OR: [{ freelancerId: input.freelancerId }, { clientId: input.clientId }],
       },
       take: 100,
       orderBy: { createdAt: 'desc' },
     });
 
-    const successfulOutcomes = outcomes.filter(
-      (o) => ['EXCEPTIONAL', 'SUCCESSFUL', 'SATISFACTORY'].includes(o.rating)
+    const successfulOutcomes = outcomes.filter((o) =>
+      ['EXCEPTIONAL', 'SUCCESSFUL', 'SATISFACTORY'].includes(o.rating)
     );
 
     return {
@@ -187,13 +184,12 @@ export class PredictionService {
       take: 50,
     });
 
-    const successful = outcomes.filter(
-      (o) => ['EXCEPTIONAL', 'SUCCESSFUL', 'SATISFACTORY'].includes(o.rating)
+    const successful = outcomes.filter((o) =>
+      ['EXCEPTIONAL', 'SUCCESSFUL', 'SATISFACTORY'].includes(o.rating)
     );
 
-    const avgScore = outcomes.length > 0
-      ? outcomes.reduce((s, o) => s + Number(o.score), 0) / outcomes.length
-      : 0;
+    const avgScore =
+      outcomes.length > 0 ? outcomes.reduce((s, o) => s + Number(o.score), 0) / outcomes.length : 0;
 
     return {
       totalProjects: outcomes.length,
@@ -210,8 +206,8 @@ export class PredictionService {
       take: 50,
     });
 
-    const successful = outcomes.filter(
-      (o) => ['EXCEPTIONAL', 'SUCCESSFUL', 'SATISFACTORY'].includes(o.rating)
+    const successful = outcomes.filter((o) =>
+      ['EXCEPTIONAL', 'SUCCESSFUL', 'SATISFACTORY'].includes(o.rating)
     );
 
     return {

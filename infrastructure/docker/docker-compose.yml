@@ -78,6 +78,27 @@ services:
     restart: unless-stopped
 
   # ===========================================
+  # MongoDB (Audit Service)
+  # ===========================================
+  mongodb:
+    image: mongo:7-jammy
+    container_name: skillancer-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: skillancer
+      MONGO_INITDB_ROOT_PASSWORD: skillancer_dev
+      MONGO_INITDB_DATABASE: skillancer_audit
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ===========================================
   # Elasticsearch (Search)
   # ===========================================
   elasticsearch:
@@ -114,7 +135,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://skillancer:skillancer_dev@postgres:5432/skillancer_dev
       REDIS_URL: redis://redis:6379
       MODEL_PATH: /app/models
-      DEBUG: "true"
+      DEBUG: 'true'
     ports:
       - '8082:8080'
     depends_on:
@@ -195,6 +216,8 @@ volumes:
     name: skillancer_redis_data
   localstack_data:
     name: skillancer_localstack_data
+  mongodb_data:
+    name: skillancer_mongodb_data
   pgadmin_data:
     name: skillancer_pgadmin_data
   minio_data:

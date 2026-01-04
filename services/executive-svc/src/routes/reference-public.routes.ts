@@ -68,10 +68,7 @@ export async function referencePublicRoutes(app: FastifyInstance): Promise<void>
         summary: 'Submit reference response',
         description:
           'Submit a reference for an executive. No authentication required - uses secure token.',
-        params: z.object({
-          token: z.string().min(10),
-        }),
-        body: referenceResponseSchema,
+        params: { type: 'object' },
       },
     },
     async (request, reply) => {

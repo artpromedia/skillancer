@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { CopilotService } from '../services/copilot.service';
 import { PrismaClient } from '@prisma/client';
 
@@ -40,18 +40,21 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   });
 
   // Update proposal draft
-  fastify.patch('/proposals/draft/:draftId', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { draftId } = request.params as { draftId: string };
-      const { content } = request.body as { content: string };
+  fastify.patch(
+    '/proposals/draft/:draftId',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { draftId } = request.params as { draftId: string };
+        const { content } = request.body as { content: string };
 
-      const draft = await copilotService.updateProposalDraft(draftId, content);
+        const draft = await copilotService.updateProposalDraft(draftId, content);
 
-      return reply.send(draft);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+        return reply.send(draft);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get user's proposal drafts
   fastify.get('/proposals/drafts', async (request: FastifyRequest, reply: FastifyReply) => {

@@ -7,10 +7,10 @@
  * statistical validity.
  */
 
-import { structlog } from '@skillancer/logger';
+import { createLogger } from '@skillancer/logger';
 import * as crypto from 'crypto';
 
-const logger = structlog.get('data-anonymizer');
+const logger = createLogger({ service: 'data-anonymizer' });
 
 // ============================================================================
 // Types

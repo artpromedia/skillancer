@@ -1,9 +1,9 @@
 import { PrismaClient } from '@prisma/client';
-import {
+import type {
   TeamReunionCreateInput,
   TeamReunionMemberInput,
-  TeamReunionStatus,
-} from '../types/talent-graph.types';
+} from '../types/talent-graph.types.js';
+import { TeamReunionStatus } from '../types/talent-graph.types.js';
 
 export class TeamReunionService {
   constructor(private prisma: PrismaClient) {}
@@ -163,7 +163,12 @@ export class TeamReunionService {
   /**
    * Respond to team reunion invitation
    */
-  async respondToInvitation(teamReunionId: string, userId: string, accept: boolean, message?: string) {
+  async respondToInvitation(
+    teamReunionId: string,
+    userId: string,
+    accept: boolean,
+    message?: string
+  ) {
     const membership = await this.prisma.teamReunionMember.findFirst({
       where: {
         teamReunionId,
@@ -510,8 +515,8 @@ export class TeamReunionService {
   // Helper methods
   private calculateWorkDuration(startDate: Date, endDate: Date | null): string {
     const end = endDate || new Date();
-    const months = (end.getFullYear() - startDate.getFullYear()) * 12 +
-      (end.getMonth() - startDate.getMonth());
+    const months =
+      (end.getFullYear() - startDate.getFullYear()) * 12 + (end.getMonth() - startDate.getMonth());
 
     if (months >= 12) {
       const years = Math.floor(months / 12);

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { integrationService } from '../services/integration.service';
 import { oauthService } from '../services/oauth.service';
@@ -398,4 +398,3 @@ declare module 'fastify' {
 }
 
 export default integrationRoutes;
-

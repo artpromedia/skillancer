@@ -11,7 +11,7 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
-import { structlog } from '@skillancer/logger';
+import { createLogger } from '@skillancer/logger';
 
 import { apiKeyAuth } from './middleware/api-key-auth';
 import { usageMetering } from './middleware/usage-metering';
@@ -20,7 +20,7 @@ import { availabilityRoutes } from './routes/availability.routes';
 import { demandRoutes } from './routes/demand.routes';
 import { workforceRoutes } from './routes/workforce.routes';
 
-const logger = structlog.get('intelligence-api');
+const logger = createLogger({ service: 'intelligence-api' });
 
 // ============================================================================
 // App Configuration

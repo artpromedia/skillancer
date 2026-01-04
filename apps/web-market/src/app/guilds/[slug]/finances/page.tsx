@@ -56,7 +56,7 @@ interface RevenueSplit {
 
 export default function GuildFinancesPage() {
   const params = useParams();
-  const guildId = params.id as string;
+  const guildId = params.slug as string;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'splits'>('overview');
   const [treasury, setTreasury] = useState<TreasuryData | null>(null);

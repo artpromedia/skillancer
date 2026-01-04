@@ -3,7 +3,7 @@
  * Sprint M10: Talent Intelligence API
  */
 
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { workforceAnalyticsService } from '../services/workforce-analytics';
 

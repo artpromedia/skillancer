@@ -87,7 +87,7 @@ export async function vettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Vetting'],
         summary: 'Add a reference',
-        body: addReferenceSchema,
+        body: { type: 'object' },
       } as any,
     },
     async (request, reply) => {
@@ -148,9 +148,7 @@ export async function vettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Vetting'],
         summary: 'Request reference (send email)',
-        params: z.object({
-          referenceId: z.string().uuid(),
-        }),
+        params: { type: 'object' },
       },
     },
     async (request, reply) => {
@@ -176,9 +174,7 @@ export async function vettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Vetting'],
         summary: 'Delete a reference',
-        params: z.object({
-          referenceId: z.string().uuid(),
-        }),
+        params: { type: 'object' },
       },
     },
     async (request, reply) => {

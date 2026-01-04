@@ -63,7 +63,11 @@ const mainNavItems = [
     label: 'Products',
     href: '/about',
     items: [
-      { label: 'Fractional Executives', href: '/executives', description: 'On-demand C-suite leadership' },
+      {
+        label: 'Fractional Executives',
+        href: '/executives',
+        description: 'On-demand C-suite leadership',
+      },
       { label: 'SkillPod VDI', href: '/skillpod', description: 'Secure virtual desktop for work' },
       { label: 'Cockpit Dashboard', href: '/cockpit', description: 'Project management dashboard' },
       { label: 'SmartMatch AI', href: '/smartmatch', description: 'AI-powered job matching' },

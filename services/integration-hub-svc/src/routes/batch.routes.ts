@@ -3,7 +3,7 @@
  * Batch API Routes - Fetch multiple widgets/integrations in single request
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { connectorRegistry } from '../connectors/registry.js';
 import { smartCache } from '../cache/smart-cache.service.js';

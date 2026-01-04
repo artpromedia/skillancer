@@ -64,6 +64,7 @@
     "bullmq": "^5.65.1",
     "got": "^14.6.5",
     "ioredis": "^5.8.2",
+    "meilisearch": "^0.54.0",
     "pino": "^9.14.0"
   },
   "devDependencies": {

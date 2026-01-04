@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { OutcomeService } from '../services/outcome.service';
 import { PredictionService } from '../services/prediction.service';
 import { RiskAlertService } from '../services/risk-alert.service';
@@ -38,71 +38,86 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
   });
 
   // Get contract outcomes
-  fastify.get('/contracts/:contractId/outcomes', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { contractId } = request.params as { contractId: string };
-      const outcomes = await outcomeService.getContractOutcomes(contractId);
-      return reply.send(outcomes);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
+  fastify.get(
+    '/contracts/:contractId/outcomes',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { contractId } = request.params as { contractId: string };
+        const outcomes = await outcomeService.getContractOutcomes(contractId);
+        return reply.send(outcomes);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get freelancer outcomes
-  fastify.get('/freelancers/:freelancerId/outcomes', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { freelancerId } = request.params as { freelancerId: string };
-      const { outcomeType, rating, page, limit } = request.query as any;
-      const result = await outcomeService.getFreelancerOutcomes(freelancerId, {
-        outcomeType,
-        rating,
-        page: page ? parseInt(page) : 1,
-        limit: limit ? parseInt(limit) : 20,
-      });
-      return reply.send(result);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
+  fastify.get(
+    '/freelancers/:freelancerId/outcomes',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { freelancerId } = request.params as { freelancerId: string };
+        const { outcomeType, rating, page, limit } = request.query as any;
+        const result = await outcomeService.getFreelancerOutcomes(freelancerId, {
+          outcomeType,
+          rating,
+          page: page ? parseInt(page) : 1,
+          limit: limit ? parseInt(limit) : 20,
+        });
+        return reply.send(result);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get client outcomes
-  fastify.get('/clients/:clientId/outcomes', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { clientId } = request.params as { clientId: string };
-      const { outcomeType, rating, page, limit } = request.query as any;
-      const result = await outcomeService.getClientOutcomes(clientId, {
-        outcomeType,
-        rating,
-        page: page ? parseInt(page) : 1,
-        limit: limit ? parseInt(limit) : 20,
-      });
-      return reply.send(result);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
+  fastify.get(
+    '/clients/:clientId/outcomes',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { clientId } = request.params as { clientId: string };
+        const { outcomeType, rating, page, limit } = request.query as any;
+        const result = await outcomeService.getClientOutcomes(clientId, {
+          outcomeType,
+          rating,
+          page: page ? parseInt(page) : 1,
+          limit: limit ? parseInt(limit) : 20,
+        });
+        return reply.send(result);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get freelancer analytics
-  fastify.get('/freelancers/:freelancerId/analytics', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { freelancerId } = request.params as { freelancerId: string };
-      const analytics = await outcomeService.getFreelancerAnalytics(freelancerId);
-      return reply.send(analytics);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
+  fastify.get(
+    '/freelancers/:freelancerId/analytics',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { freelancerId } = request.params as { freelancerId: string };
+        const analytics = await outcomeService.getFreelancerAnalytics(freelancerId);
+        return reply.send(analytics);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get client analytics
-  fastify.get('/clients/:clientId/analytics', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { clientId } = request.params as { clientId: string };
-      const analytics = await outcomeService.getClientAnalytics(clientId);
-      return reply.send(analytics);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
+  fastify.get(
+    '/clients/:clientId/analytics',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { clientId } = request.params as { clientId: string };
+        const analytics = await outcomeService.getClientAnalytics(clientId);
+        return reply.send(analytics);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get outcome statistics
   fastify.get('/outcomes/stats', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -129,61 +144,73 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
   });
 
   // Get prediction for contract
-  fastify.get('/contracts/:contractId/prediction', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { contractId } = request.params as { contractId: string };
-      const prediction = await predictionService.getPrediction(contractId);
-      if (!prediction) {
-        return reply.status(404).send({ error: 'Prediction not found' });
+  fastify.get(
+    '/contracts/:contractId/prediction',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { contractId } = request.params as { contractId: string };
+        const prediction = await predictionService.getPrediction(contractId);
+        if (!prediction) {
+          return reply.status(404).send({ error: 'Prediction not found' });
+        }
+        return reply.send(prediction);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
       }
-      return reply.send(prediction);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
     }
-  });
+  );
 
   // Update prediction
-  fastify.post('/contracts/:contractId/prediction/refresh', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { contractId } = request.params as { contractId: string };
-      const prediction = await predictionService.updatePrediction(contractId);
-      return reply.send(prediction);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+  fastify.post(
+    '/contracts/:contractId/prediction/refresh',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { contractId } = request.params as { contractId: string };
+        const prediction = await predictionService.updatePrediction(contractId);
+        return reply.send(prediction);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get freelancer predictions
-  fastify.get('/freelancers/:freelancerId/predictions', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { freelancerId } = request.params as { freelancerId: string };
-      const { page, limit } = request.query as any;
-      const result = await predictionService.getFreelancerPredictions(
-        freelancerId,
-        page ? parseInt(page) : 1,
-        limit ? parseInt(limit) : 20
-      );
-      return reply.send(result);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
+  fastify.get(
+    '/freelancers/:freelancerId/predictions',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { freelancerId } = request.params as { freelancerId: string };
+        const { page, limit } = request.query as any;
+        const result = await predictionService.getFreelancerPredictions(
+          freelancerId,
+          page ? parseInt(page) : 1,
+          limit ? parseInt(limit) : 20
+        );
+        return reply.send(result);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get client predictions
-  fastify.get('/clients/:clientId/predictions', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { clientId } = request.params as { clientId: string };
-      const { page, limit } = request.query as any;
-      const result = await predictionService.getClientPredictions(
-        clientId,
-        page ? parseInt(page) : 1,
-        limit ? parseInt(limit) : 20
-      );
-      return reply.send(result);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
+  fastify.get(
+    '/clients/:clientId/predictions',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { clientId } = request.params as { clientId: string };
+        const { page, limit } = request.query as any;
+        const result = await predictionService.getClientPredictions(
+          clientId,
+          page ? parseInt(page) : 1,
+          limit ? parseInt(limit) : 20
+        );
+        return reply.send(result);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // === Risk Alert Routes ===
 
@@ -213,20 +240,24 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
   });
 
   // Get contract alerts
-  fastify.get('/contracts/:contractId/alerts', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { contractId } = request.params as { contractId: string };
-      const { resolved, acknowledged, riskLevel } = request.query as any;
-      const alerts = await riskAlertService.getContractAlerts(contractId, {
-        resolved: resolved === 'true' ? true : resolved === 'false' ? false : undefined,
-        acknowledged: acknowledged === 'true' ? true : acknowledged === 'false' ? false : undefined,
-        riskLevel,
-      });
-      return reply.send(alerts);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
+  fastify.get(
+    '/contracts/:contractId/alerts',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { contractId } = request.params as { contractId: string };
+        const { resolved, acknowledged, riskLevel } = request.query as any;
+        const alerts = await riskAlertService.getContractAlerts(contractId, {
+          resolved: resolved === 'true' ? true : resolved === 'false' ? false : undefined,
+          acknowledged:
+            acknowledged === 'true' ? true : acknowledged === 'false' ? false : undefined,
+          riskLevel,
+        });
+        return reply.send(alerts);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Acknowledge alert
   fastify.post('/alerts/:id/acknowledge', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -262,16 +293,19 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
   });
 
   // Analyze and generate alerts
-  fastify.post('/contracts/:contractId/analyze', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { contractId } = request.params as { contractId: string };
-      const metrics = request.body as any;
-      const alerts = await riskAlertService.analyzeAndGenerateAlerts(contractId, metrics);
-      return reply.send({ alerts });
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+  fastify.post(
+    '/contracts/:contractId/analyze',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { contractId } = request.params as { contractId: string };
+        const metrics = request.body as any;
+        const alerts = await riskAlertService.analyzeAndGenerateAlerts(contractId, metrics);
+        return reply.send({ alerts });
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get alert statistics
   fastify.get('/alerts/stats', async (request: FastifyRequest, reply: FastifyReply) => {

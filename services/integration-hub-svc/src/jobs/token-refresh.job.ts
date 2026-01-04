@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { prisma } from '../config';
+import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
 import { oauthService } from '../services/oauth.service';
 
@@ -110,4 +110,3 @@ export async function markExpiredTokens(): Promise<void> {
 }
 
 export default { runTokenRefreshJob, markExpiredTokens };
-

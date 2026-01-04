@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { roadmapService } from '../services/roadmap.service';
 import { InitiativeStatus } from '@prisma/client';
 import { z } from 'zod';

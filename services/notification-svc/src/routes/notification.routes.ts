@@ -2,7 +2,7 @@
  * Notification Routes with Zod Validation
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { NotificationService } from '../services/notification.service.js';
 import { PrismaClient } from '@prisma/client';
 import { ZodError } from 'zod';

@@ -1,12 +1,13 @@
 // @ts-nocheck
 import { BaseConnector, OAuthTokens, WidgetData, WidgetDefinition } from './base.connector';
-import { IntegrationCategory, ExecutiveType } from './base.connector';
+import type { ExecutiveType } from '@skillancer/database';
+import type { IntegrationCategory } from '../types/index.js';
 
 export class SnykConnector extends BaseConnector {
   readonly id = 'snyk';
   readonly name = 'Snyk';
-  readonly category = IntegrationCategory.SECURITY;
-  readonly applicableRoles = [ExecutiveType.CTO, ExecutiveType.CISO];
+  readonly category: IntegrationCategory = 'SECURITY';
+  readonly applicableRoles: ExecutiveType[] = ['FRACTIONAL_CTO', 'FRACTIONAL_CISO'];
 
   readonly oauthConfig = {
     authorizationUrl: 'https://app.snyk.io/oauth2/authorize',
@@ -371,4 +372,3 @@ interface SnykWebhookPayload {
 }
 
 export const snykConnector = new SnykConnector();
-

@@ -56,7 +56,7 @@ interface GuildDashboardData {
 
 export default function GuildDashboardPage() {
   const params = useParams();
-  const guildId = params.id as string;
+  const guildId = params.slug as string;
 
   const [data, setData] = useState<GuildDashboardData | null>(null);
   const [loading, setLoading] = useState(true);

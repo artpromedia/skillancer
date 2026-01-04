@@ -671,11 +671,11 @@ export default function Home() {
           </div>
 
           {/* Executive Suite - Full Width */}
-          <div className="mt-8 group relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-600 to-orange-700 p-8 text-white transition-transform hover:scale-[1.01]">
+          <div className="group relative mt-8 overflow-hidden rounded-3xl bg-gradient-to-br from-amber-600 to-orange-700 p-8 text-white transition-transform hover:scale-[1.01]">
             <div className="absolute right-0 top-0 h-64 w-64 translate-x-1/4 translate-y-[-25%] rounded-full bg-amber-500/30 blur-3xl" />
-            <div className="absolute left-0 bottom-0 h-48 w-48 translate-x-[-25%] translate-y-[25%] rounded-full bg-orange-400/20 blur-3xl" />
+            <div className="absolute bottom-0 left-0 h-48 w-48 translate-x-[-25%] translate-y-[25%] rounded-full bg-orange-400/20 blur-3xl" />
             <div className="relative">
-              <div className="grid gap-8 lg:grid-cols-2 items-center">
+              <div className="grid items-center gap-8 lg:grid-cols-2">
                 <div>
                   <div className="mb-6 flex items-center gap-4">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm">
@@ -687,8 +687,9 @@ export default function Home() {
                     </div>
                   </div>
                   <p className="mb-6 text-lg text-amber-100">
-                    Access vetted fractional CTOs, CFOs, CMOs, and more. Get enterprise-level leadership
-                    at a fraction of the cost. Perfect for startups and growing companies.
+                    Access vetted fractional CTOs, CFOs, CMOs, and more. Get enterprise-level
+                    leadership at a fraction of the cost. Perfect for startups and growing
+                    companies.
                   </p>
                   <ul className="mb-8 grid grid-cols-2 gap-3">
                     {[
@@ -721,9 +722,7 @@ export default function Home() {
                       variant="outline"
                       className="border-white/30 text-white hover:bg-white/10"
                     >
-                      <Link href="/hire/onboarding">
-                        Request a Match
-                      </Link>
+                      <Link href="/hire/onboarding">Request a Match</Link>
                     </Button>
                   </div>
                 </div>

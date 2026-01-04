@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { TaxVaultService } from '../services/tax-vault.service';
 import { PrismaClient } from '@prisma/client';
 
@@ -198,20 +198,23 @@ export async function taxVaultRoutes(fastify: FastifyInstance) {
   });
 
   // Internal: Auto-save from payment (called by payment service)
-  fastify.post('/internal/tax-vault/auto-save', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      // This endpoint should be protected by internal API key
-      const { userId, paymentAmount, paymentId } = request.body as {
-        userId: string;
-        paymentAmount: number;
-        paymentId: string;
-      };
+  fastify.post(
+    '/internal/tax-vault/auto-save',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        // This endpoint should be protected by internal API key
+        const { userId, paymentAmount, paymentId } = request.body as {
+          userId: string;
+          paymentAmount: number;
+          paymentId: string;
+        };
 
-      const deposit = await taxVaultService.autoSaveFromPayment(userId, paymentAmount, paymentId);
+        const deposit = await taxVaultService.autoSaveFromPayment(userId, paymentAmount, paymentId);
 
-      return reply.send({ success: true, deposit });
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+        return reply.send({ success: true, deposit });
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 }

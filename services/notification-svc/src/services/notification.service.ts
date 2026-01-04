@@ -6,7 +6,7 @@
 import { PrismaClient } from '@prisma/client';
 import { EmailService } from './email.service.js';
 import { PushService } from './push.service.js';
-import {
+import type {
   NotificationChannel,
   NotificationStatus,
   EmailNotificationInput,
@@ -117,12 +117,7 @@ export class NotificationService {
     // Send push notification
     let result;
     if (input.topic) {
-      result = await this.pushService.sendToTopic(
-        input.topic,
-        input.title,
-        input.body,
-        input.data
-      );
+      result = await this.pushService.sendToTopic(input.topic, input.title, input.body, input.data);
     } else if (input.condition) {
       result = await this.pushService.sendToCondition(
         input.condition,
@@ -324,33 +319,37 @@ export class NotificationService {
     });
 
     const data = {
-      emailPreferences: preferences.email || existing?.emailPreferences || {
-        enabled: true,
-        marketing: false,
-        contractUpdates: true,
-        messages: true,
-        payments: true,
-        weeklyDigest: true,
-        securityAlerts: true,
-      },
-      pushPreferences: preferences.push || existing?.pushPreferences || {
-        enabled: true,
-        messages: true,
-        contractUpdates: true,
-        payments: true,
-        reminders: true,
-      },
-      smsPreferences: preferences.sms || existing?.smsPreferences || {
-        enabled: false,
-        securityAlerts: true,
-        payments: false,
-      },
-      quietHours: preferences.quietHours || existing?.quietHours || {
-        enabled: false,
-        startTime: '22:00',
-        endTime: '08:00',
-        timezone: 'UTC',
-      },
+      emailPreferences: preferences.email ||
+        existing?.emailPreferences || {
+          enabled: true,
+          marketing: false,
+          contractUpdates: true,
+          messages: true,
+          payments: true,
+          weeklyDigest: true,
+          securityAlerts: true,
+        },
+      pushPreferences: preferences.push ||
+        existing?.pushPreferences || {
+          enabled: true,
+          messages: true,
+          contractUpdates: true,
+          payments: true,
+          reminders: true,
+        },
+      smsPreferences: preferences.sms ||
+        existing?.smsPreferences || {
+          enabled: false,
+          securityAlerts: true,
+          payments: false,
+        },
+      quietHours: preferences.quietHours ||
+        existing?.quietHours || {
+          enabled: false,
+          startTime: '22:00',
+          endTime: '08:00',
+          timezone: 'UTC',
+        },
     };
 
     const upserted = await this.prisma.notificationPreference.upsert({

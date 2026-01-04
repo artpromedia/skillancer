@@ -1,11 +1,11 @@
 import { PrismaClient } from '@prisma/client';
-import {
+import type {
   WorkRelationshipCreateInput,
   WorkRelationshipUpdateInput,
   RelationshipStrength,
   NetworkStats,
   ConnectionSuggestion,
-} from '../types/talent-graph.types';
+} from '../types/talent-graph.types.js';
 
 export class WorkRelationshipService {
   constructor(private prisma: PrismaClient) {}
@@ -100,21 +100,21 @@ export class WorkRelationshipService {
   /**
    * Get all relationships for a user
    */
-  async getUserRelationships(userId: string, options?: {
-    company?: string;
-    relationshipType?: string;
-    strength?: string;
-    verified?: boolean;
-    page?: number;
-    limit?: number;
-  }) {
+  async getUserRelationships(
+    userId: string,
+    options?: {
+      company?: string;
+      relationshipType?: string;
+      strength?: string;
+      verified?: boolean;
+      page?: number;
+      limit?: number;
+    }
+  ) {
     const { company, relationshipType, strength, verified, page = 1, limit = 50 } = options || {};
 
     const where: any = {
-      OR: [
-        { userId },
-        { relatedUserId: userId },
-      ],
+      OR: [{ userId }, { relatedUserId: userId }],
     };
 
     if (company) where.company = company;
@@ -350,10 +350,7 @@ export class WorkRelationshipService {
     // Find 2nd degree connections (friends of friends)
     const secondDegree = await this.prisma.workRelationship.findMany({
       where: {
-        OR: [
-          { userId: { in: [...connectedIds] } },
-          { relatedUserId: { in: [...connectedIds] } },
-        ],
+        OR: [{ userId: { in: [...connectedIds] } }, { relatedUserId: { in: [...connectedIds] } }],
       },
       include: {
         user: {
@@ -378,12 +375,15 @@ export class WorkRelationshipService {
     });
 
     // Build suggestion candidates
-    const candidates = new Map<string, {
-      user: any;
-      mutualCount: number;
-      sharedCompanies: Set<string>;
-      sharedSkills: Set<string>;
-    }>();
+    const candidates = new Map<
+      string,
+      {
+        user: any;
+        mutualCount: number;
+        sharedCompanies: Set<string>;
+        sharedSkills: Set<string>;
+      }
+    >();
 
     for (const rel of secondDegree) {
       const candidateId = rel.userId === userId ? rel.relatedUserId : rel.userId;
@@ -428,8 +428,10 @@ export class WorkRelationshipService {
         suggestionReason: this.getSuggestionReason(data),
       }))
       .sort((a, b) => {
-        const scoreA = a.mutualConnections * 3 + a.sharedCompanies.length * 2 + a.sharedSkills.length;
-        const scoreB = b.mutualConnections * 3 + b.sharedCompanies.length * 2 + b.sharedSkills.length;
+        const scoreA =
+          a.mutualConnections * 3 + a.sharedCompanies.length * 2 + a.sharedSkills.length;
+        const scoreB =
+          b.mutualConnections * 3 + b.sharedCompanies.length * 2 + b.sharedSkills.length;
         return scoreB - scoreA;
       })
       .slice(0, limit);

@@ -3,7 +3,7 @@
  * Real-time Routes - WebSocket config and REST fallback
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 
 const subscribeSchema = z.object({

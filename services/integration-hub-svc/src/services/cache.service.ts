@@ -7,7 +7,21 @@
 
 import { createHash } from 'crypto';
 import { logger } from '@skillancer/logger';
-import { redis } from '../plugins';
+
+// Stub redis client - TODO: Replace with actual cache package
+const redis = {
+  get: async (key: string) => null,
+  set: async (key: string, value: string, mode?: string, ttl?: number) => 'OK',
+  del: async (...keys: string[]) => 1,
+  exists: async (key: string) => 0,
+  keys: async (pattern: string) => [] as string[],
+  expire: async (key: string, ttl: number) => 1,
+  sadd: async (key: string, ...members: string[]) => 1,
+  smembers: async (key: string) => [] as string[],
+  hset: async (key: string, field: string, value: string) => 1,
+  hget: async (key: string, field: string) => null as string | null,
+  hgetall: async (key: string) => ({}) as Record<string, string>,
+};
 
 // Cache configuration
 interface CacheConfig {
@@ -323,4 +337,3 @@ class CacheService {
 }
 
 export const cacheService = new CacheService();
-

@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { InvoiceFinancingService } from '../services/invoice-financing.service';
 import { PrismaClient } from '@prisma/client';
 
@@ -100,62 +100,75 @@ export async function financingRoutes(fastify: FastifyInstance) {
   });
 
   // Admin: Approve financing
-  fastify.post('/admin/financing/:id/approve', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const user = (request as any).user;
-      if (!user?.roles?.includes('ADMIN')) {
-        return reply.status(403).send({ error: 'Admin access required' });
+  fastify.post(
+    '/admin/financing/:id/approve',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const user = (request as any).user;
+        if (!user?.roles?.includes('ADMIN')) {
+          return reply.status(403).send({ error: 'Admin access required' });
+        }
+
+        const { id } = request.params as { id: string };
+        const { approvedAmount, feePercentage } = request.body as {
+          approvedAmount: number;
+          feePercentage?: number;
+        };
+
+        const financing = await financingService.approveFinancing(
+          id,
+          approvedAmount,
+          feePercentage
+        );
+
+        return reply.send(financing);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
       }
-
-      const { id } = request.params as { id: string };
-      const { approvedAmount, feePercentage } = request.body as {
-        approvedAmount: number;
-        feePercentage?: number;
-      };
-
-      const financing = await financingService.approveFinancing(id, approvedAmount, feePercentage);
-
-      return reply.send(financing);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
     }
-  });
+  );
 
   // Admin: Reject financing
-  fastify.post('/admin/financing/:id/reject', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const user = (request as any).user;
-      if (!user?.roles?.includes('ADMIN')) {
-        return reply.status(403).send({ error: 'Admin access required' });
+  fastify.post(
+    '/admin/financing/:id/reject',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const user = (request as any).user;
+        if (!user?.roles?.includes('ADMIN')) {
+          return reply.status(403).send({ error: 'Admin access required' });
+        }
+
+        const { id } = request.params as { id: string };
+        const { reason } = request.body as { reason: string };
+
+        const financing = await financingService.rejectFinancing(id, reason);
+
+        return reply.send(financing);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
       }
-
-      const { id } = request.params as { id: string };
-      const { reason } = request.body as { reason: string };
-
-      const financing = await financingService.rejectFinancing(id, reason);
-
-      return reply.send(financing);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
     }
-  });
+  );
 
   // Admin: Mark as funded
-  fastify.post('/admin/financing/:id/fund', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const user = (request as any).user;
-      if (!user?.roles?.includes('ADMIN')) {
-        return reply.status(403).send({ error: 'Admin access required' });
+  fastify.post(
+    '/admin/financing/:id/fund',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const user = (request as any).user;
+        if (!user?.roles?.includes('ADMIN')) {
+          return reply.status(403).send({ error: 'Admin access required' });
+        }
+
+        const { id } = request.params as { id: string };
+        const financing = await financingService.markFunded(id);
+
+        return reply.send(financing);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
       }
-
-      const { id } = request.params as { id: string };
-      const financing = await financingService.markFunded(id);
-
-      return reply.send(financing);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
     }
-  });
+  );
 
   // Record repayment (webhook/internal)
   fastify.post('/financing/:id/repayment', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -193,21 +206,24 @@ export async function financingRoutes(fastify: FastifyInstance) {
   });
 
   // Admin: Mark as defaulted
-  fastify.post('/admin/financing/:id/default', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const user = (request as any).user;
-      if (!user?.roles?.includes('ADMIN')) {
-        return reply.status(403).send({ error: 'Admin access required' });
+  fastify.post(
+    '/admin/financing/:id/default',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const user = (request as any).user;
+        if (!user?.roles?.includes('ADMIN')) {
+          return reply.status(403).send({ error: 'Admin access required' });
+        }
+
+        const { id } = request.params as { id: string };
+        const { reason } = request.body as { reason: string };
+
+        const financing = await financingService.markDefaulted(id, reason);
+
+        return reply.send(financing);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
       }
-
-      const { id } = request.params as { id: string };
-      const { reason } = request.body as { reason: string };
-
-      const financing = await financingService.markDefaulted(id, reason);
-
-      return reply.send(financing);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
     }
-  });
+  );
 }

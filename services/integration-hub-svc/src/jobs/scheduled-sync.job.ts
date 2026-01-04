@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { prisma } from '../config';
+import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
 import { integrationService } from '../services/integration.service';
 
@@ -163,4 +163,3 @@ export async function syncByIntegrationType(integrationTypeSlug: string): Promis
 }
 
 export default { runScheduledSyncJob, syncByIntegrationType };
-

@@ -143,4 +143,24 @@ export type {
 } from './resource-pool.service.js';
 
 // Learning Recommendation services
-export * from './recommendation/index.js';
+export {
+  createSignalProcessor,
+  createSignalProcessor as createSignalProcessorService,
+  type SignalProcessor,
+  type SignalProcessorConfig,
+  type ProcessedSignalResult,
+  type DetectedGap,
+  createRecommendationEngine,
+  createRecommendationEngine as createRecommendationEngineService,
+  type RecommendationEngine,
+  type RecommendationEngineConfig,
+  type GenerateRecommendationsParams,
+  type GeneratedRecommendation,
+  type RecommendationScores,
+  createLearningPathGenerator,
+  createLearningPathGenerator as createLearningPathGeneratorService,
+  type LearningPathGenerator,
+  type LearningPathGeneratorConfig,
+  type GeneratePathParams,
+  type GeneratedPath,
+} from './recommendation/index.js';

@@ -4,9 +4,9 @@
  */
 
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { structlog } from '@skillancer/logger';
+import { createLogger } from '@skillancer/logger';
 
-const logger = structlog.get('usage-metering');
+const logger = createLogger({ service: 'usage-metering' });
 
 // ============================================================================
 // Types

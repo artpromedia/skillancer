@@ -2,9 +2,10 @@
  * Email Service using SendGrid
  */
 
-import sgMail, { MailDataRequired } from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
+import type { MailDataRequired } from '@sendgrid/mail';
 import { getConfig, EMAIL_TEMPLATES } from '../config/index.js';
-import {
+import type {
   EmailNotificationInput,
   EmailSendResult,
   EmailType,
@@ -94,9 +95,7 @@ export class EmailService {
   /**
    * Send bulk emails
    */
-  async sendBulkEmails(
-    inputs: EmailNotificationInput[]
-  ): Promise<EmailSendResult[]> {
+  async sendBulkEmails(inputs: EmailNotificationInput[]): Promise<EmailSendResult[]> {
     this.ensureInitialized();
     const config = getConfig();
 
@@ -259,7 +258,10 @@ export class EmailService {
    * Strip HTML tags from content
    */
   private stripHtml(html: string): string {
-    return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    return html
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   /**

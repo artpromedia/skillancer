@@ -1,11 +1,11 @@
 import { PrismaClient } from '@prisma/client';
-import {
+import type {
   WarmIntroductionRequestInput,
   WarmIntroductionResponseInput,
   IntroductionStatus,
   IntroductionPath,
   IntroductionPathStep,
-} from '../types/talent-graph.types';
+} from '../types/talent-graph.types.js';
 
 export class WarmIntroductionService {
   constructor(private prisma: PrismaClient) {}
@@ -289,7 +289,12 @@ export class WarmIntroductionService {
   /**
    * Get introduction history for a user
    */
-  async getIntroductionHistory(userId: string, role?: 'requester' | 'target' | 'introducer', page = 1, limit = 20) {
+  async getIntroductionHistory(
+    userId: string,
+    role?: 'requester' | 'target' | 'introducer',
+    page = 1,
+    limit = 20
+  ) {
     const where: any = {};
 
     if (role === 'requester') {
@@ -299,11 +304,7 @@ export class WarmIntroductionService {
     } else if (role === 'introducer') {
       where.introducerId = userId;
     } else {
-      where.OR = [
-        { requesterId: userId },
-        { targetUserId: userId },
-        { introducerId: userId },
-      ];
+      where.OR = [{ requesterId: userId }, { targetUserId: userId }, { introducerId: userId }];
     }
 
     const [introductions, total] = await Promise.all([
@@ -374,12 +375,14 @@ export class WarmIntroductionService {
       const connectedUser = rel.userId === userId ? rel.relatedUser : rel.user;
 
       if (connectedId === targetUserId) {
-        paths.push([{
-          userId: connectedId,
-          name: `${connectedUser.firstName} ${connectedUser.lastName}`,
-          relationshipType: rel.relationshipType as any,
-          company: rel.company,
-        }]);
+        paths.push([
+          {
+            userId: connectedId,
+            name: `${connectedUser.firstName} ${connectedUser.lastName}`,
+            relationshipType: rel.relationshipType as any,
+            company: rel.company,
+          },
+        ]);
       }
     }
 
@@ -422,9 +425,10 @@ export class WarmIntroductionService {
           },
           {
             userId: targetUserId,
-            name: rel.userId === targetUserId
-              ? `${rel.user.firstName} ${rel.user.lastName}`
-              : `${rel.relatedUser.firstName} ${rel.relatedUser.lastName}`,
+            name:
+              rel.userId === targetUserId
+                ? `${rel.user.firstName} ${rel.user.lastName}`
+                : `${rel.relatedUser.firstName} ${rel.relatedUser.lastName}`,
             relationshipType: rel.relationshipType as any,
             company: rel.company,
           },

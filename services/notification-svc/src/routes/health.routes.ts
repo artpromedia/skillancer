@@ -2,7 +2,7 @@
  * Health Check Routes for Notification Service
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { PushService } from '../services/push.service.js';
 

@@ -8,7 +8,12 @@
 import { getStripeService } from './stripe.service.js';
 import { getStripePriceId, type ProductType, type BillingIntervalType } from '../config/plans.js';
 import { BillingError } from '../errors/index.js';
-import { getSubscriptionRepository } from '../repositories/index.js';
+
+// TODO: Implement subscription repository
+const getSubscriptionRepository = () => ({
+  findByUserId: async (_userId: string) => null,
+  findByStripeSubscriptionId: async (_id: string) => null,
+});
 
 // =============================================================================
 // TYPES

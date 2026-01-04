@@ -6,13 +6,14 @@ import {
   WebhookResult,
   WidgetDefinition,
 } from './base.connector';
-import { IntegrationCategory, ExecutiveType } from './base.connector';
+import type { ExecutiveType } from '@skillancer/database';
+import type { IntegrationCategory } from '../types/index.js';
 
 export class GitLabConnector extends BaseConnector {
   readonly id = 'gitlab';
   readonly name = 'GitLab';
-  readonly category = IntegrationCategory.DEVTOOLS;
-  readonly applicableRoles = [ExecutiveType.CTO, ExecutiveType.CPO];
+  readonly category: IntegrationCategory = 'DEVTOOLS';
+  readonly applicableRoles: ExecutiveType[] = ['FRACTIONAL_CTO', 'FRACTIONAL_CPO'];
 
   readonly oauthConfig = {
     authorizationUrl: 'https://gitlab.com/oauth/authorize',
@@ -385,4 +386,3 @@ interface GitLabWebhookPayload {
 }
 
 export const gitlabConnector = new GitLabConnector();
-

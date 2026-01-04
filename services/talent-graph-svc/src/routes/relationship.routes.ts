@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { WorkRelationshipService } from '../services/work-relationship.service';
 import { PrismaClient } from '@prisma/client';
 
@@ -79,40 +79,46 @@ export async function relationshipRoutes(fastify: FastifyInstance) {
   });
 
   // Verify relationship
-  fastify.post('/relationships/:id/verify', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        return reply.status(401).send({ error: 'Unauthorized' });
+  fastify.post(
+    '/relationships/:id/verify',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = (request as any).user?.id;
+        if (!userId) {
+          return reply.status(401).send({ error: 'Unauthorized' });
+        }
+
+        const { id } = request.params as { id: string };
+        const relationship = await relationshipService.verifyRelationship(id, userId);
+
+        return reply.send(relationship);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
       }
-
-      const { id } = request.params as { id: string };
-      const relationship = await relationshipService.verifyRelationship(id, userId);
-
-      return reply.send(relationship);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
     }
-  });
+  );
 
   // Add endorsement
-  fastify.post('/relationships/:id/endorse', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        return reply.status(401).send({ error: 'Unauthorized' });
+  fastify.post(
+    '/relationships/:id/endorse',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = (request as any).user?.id;
+        if (!userId) {
+          return reply.status(401).send({ error: 'Unauthorized' });
+        }
+
+        const { id } = request.params as { id: string };
+        const { endorsement } = request.body as { endorsement: string };
+
+        const relationship = await relationshipService.addEndorsement(id, endorsement, userId);
+
+        return reply.send(relationship);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
       }
-
-      const { id } = request.params as { id: string };
-      const { endorsement } = request.body as { endorsement: string };
-
-      const relationship = await relationshipService.addEndorsement(id, endorsement, userId);
-
-      return reply.send(relationship);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
     }
-  });
+  );
 
   // Delete relationship
   fastify.delete('/relationships/:id', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -148,21 +154,27 @@ export async function relationshipRoutes(fastify: FastifyInstance) {
   });
 
   // Get mutual connections
-  fastify.get('/network/mutual/:targetUserId', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        return reply.status(401).send({ error: 'Unauthorized' });
+  fastify.get(
+    '/network/mutual/:targetUserId',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = (request as any).user?.id;
+        if (!userId) {
+          return reply.status(401).send({ error: 'Unauthorized' });
+        }
+
+        const { targetUserId } = request.params as { targetUserId: string };
+        const mutualConnections = await relationshipService.getMutualConnections(
+          userId,
+          targetUserId
+        );
+
+        return reply.send(mutualConnections);
+      } catch (error: any) {
+        return reply.status(500).send({ error: error.message });
       }
-
-      const { targetUserId } = request.params as { targetUserId: string };
-      const mutualConnections = await relationshipService.getMutualConnections(userId, targetUserId);
-
-      return reply.send(mutualConnections);
-    } catch (error: any) {
-      return reply.status(500).send({ error: error.message });
     }
-  });
+  );
 
   // Get connection suggestions
   fastify.get('/network/suggestions', async (request: FastifyRequest, reply: FastifyReply) => {

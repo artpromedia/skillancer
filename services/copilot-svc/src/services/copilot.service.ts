@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import {
+import type {
   CopilotInteractionInput,
   CopilotResponse,
   ProposalDraftInput,
@@ -15,7 +15,7 @@ import {
   Suggestion,
   SuggestionType,
   InteractionType,
-} from '../types/copilot.types';
+} from '../types/copilot.types.js';
 
 export class CopilotService {
   constructor(private prisma: PrismaClient) {}
@@ -66,16 +66,19 @@ export class CopilotService {
     });
 
     // Log interaction
-    await this.logInteraction({
-      userId: input.userId,
-      interactionType: InteractionType.PROPOSAL_DRAFT,
-      inputContext: input as any,
-    }, {
-      content: coverLetter,
-      confidence: estimatedWinRate,
-      tokensUsed: coverLetter.length / 4, // Approximate
-      processingTime: Date.now() - startTime,
-    });
+    await this.logInteraction(
+      {
+        userId: input.userId,
+        interactionType: InteractionType.PROPOSAL_DRAFT,
+        inputContext: input as any,
+      },
+      {
+        content: coverLetter,
+        confidence: estimatedWinRate,
+        tokensUsed: coverLetter.length / 4, // Approximate
+        processingTime: Date.now() - startTime,
+      }
+    );
 
     return {
       draftId: draft.id,
@@ -105,7 +108,10 @@ export class CopilotService {
     const factors = this.analyzeRateFactors(input, marketData, userHistory);
 
     // Calculate final rate suggestion
-    const rateAdjustment = factors.reduce((adj, f) => adj + (f.impact === 'POSITIVE' ? f.weight : -f.weight), 0);
+    const rateAdjustment = factors.reduce(
+      (adj, f) => adj + (f.impact === 'POSITIVE' ? f.weight : -f.weight),
+      0
+    );
     const baseRate = marketData.averageRate;
     const adjustedRate = baseRate * (1 + rateAdjustment);
 
@@ -124,16 +130,19 @@ export class CopilotService {
     const recommendations = this.generateRateRecommendations(input, marketData, factors);
 
     // Log interaction
-    await this.logInteraction({
-      userId: input.userId,
-      interactionType: InteractionType.RATE_SUGGEST,
-      inputContext: input as any,
-    }, {
-      content: JSON.stringify(suggestedHourlyRate),
-      confidence: 0.8,
-      tokensUsed: 100,
-      processingTime: Date.now() - startTime,
-    });
+    await this.logInteraction(
+      {
+        userId: input.userId,
+        interactionType: InteractionType.RATE_SUGGEST,
+        inputContext: input as any,
+      },
+      {
+        content: JSON.stringify(suggestedHourlyRate),
+        confidence: 0.8,
+        tokensUsed: 100,
+        processingTime: Date.now() - startTime,
+      }
+    );
 
     return {
       suggestedHourlyRate,
@@ -171,16 +180,19 @@ export class CopilotService {
     const { covered, missing } = this.identifyKeyPoints(input, contextAnalysis);
 
     // Log interaction
-    await this.logInteraction({
-      userId: input.userId,
-      interactionType: InteractionType.MESSAGE_ASSIST,
-      inputContext: input as any,
-    }, {
-      content: suggestedMessage,
-      confidence: 0.75,
-      tokensUsed: suggestedMessage.length / 4,
-      processingTime: Date.now() - startTime,
-    });
+    await this.logInteraction(
+      {
+        userId: input.userId,
+        interactionType: InteractionType.MESSAGE_ASSIST,
+        inputContext: input as any,
+      },
+      {
+        content: suggestedMessage,
+        confidence: 0.75,
+        tokensUsed: suggestedMessage.length / 4,
+        processingTime: Date.now() - startTime,
+      }
+    );
 
     return {
       suggestedMessage,
@@ -216,16 +228,19 @@ export class CopilotService {
     const improvements = this.generateProfileImprovements(input, completenessScore);
 
     // Log interaction
-    await this.logInteraction({
-      userId: input.userId,
-      interactionType: InteractionType.PROFILE_OPTIMIZE,
-      inputContext: input as any,
-    }, {
-      content: optimizedSummary,
-      confidence: 0.85,
-      tokensUsed: 200,
-      processingTime: Date.now() - startTime,
-    });
+    await this.logInteraction(
+      {
+        userId: input.userId,
+        interactionType: InteractionType.PROFILE_OPTIMIZE,
+        inputContext: input as any,
+      },
+      {
+        content: optimizedSummary,
+        confidence: 0.85,
+        tokensUsed: 200,
+        processingTime: Date.now() - startTime,
+      }
+    );
 
     return {
       optimizedHeadline,
@@ -368,7 +383,10 @@ I'm excited to apply for the ${input.jobTitle} position. With my expertise in ${
     const body = `
 After reviewing your requirements, I understand you need ${this.summarizeRequirements(input.jobDescription)}. This aligns perfectly with my experience, particularly in:
 
-${matchedSkills.slice(0, 4).map((s) => `• ${s}`).join('\n')}
+${matchedSkills
+  .slice(0, 4)
+  .map((s) => `• ${s}`)
+  .join('\n')}
 
 ${input.emphasis ? `I'd particularly like to emphasize my strength in ${input.emphasis.join(' and ')}.` : ''}`;
 
@@ -430,7 +448,11 @@ ${userName}`;
     return points;
   }
 
-  private estimateWinRate(skillMatch: number, rate: { optimal: number }, input: ProposalDraftInput): number {
+  private estimateWinRate(
+    skillMatch: number,
+    rate: { optimal: number },
+    input: ProposalDraftInput
+  ): number {
     let winRate = 0.3; // Base rate
 
     // Skill match bonus
@@ -471,7 +493,10 @@ ${userName}`;
     return improvements;
   }
 
-  private async getMarketRates(skills: string[], industry?: string): Promise<{
+  private async getMarketRates(
+    skills: string[],
+    industry?: string
+  ): Promise<{
     averageRate: number;
     p25: number;
     p75: number;
@@ -498,9 +523,10 @@ ${userName}`;
     });
 
     return {
-      averageRate: contracts.length > 0
-        ? contracts.reduce((s, c) => s + Number(c.suggestedRate), 0) / contracts.length
-        : 0,
+      averageRate:
+        contracts.length > 0
+          ? contracts.reduce((s, c) => s + Number(c.suggestedRate), 0) / contracts.length
+          : 0,
       count: contracts.length,
     };
   }
@@ -548,7 +574,11 @@ ${userName}`;
     return factors;
   }
 
-  private generateRateRecommendations(input: RateSuggestionInput, marketData: any, factors: any[]): string[] {
+  private generateRateRecommendations(
+    input: RateSuggestionInput,
+    marketData: any,
+    factors: any[]
+  ): string[] {
     const recommendations: string[] = [];
 
     recommendations.push('Consider offering package deals for long-term engagements');
@@ -572,11 +602,16 @@ ${userName}`;
 
   private generateMessage(input: MessageAssistInput, context: any): string {
     const intents: Record<string, string> = {
-      NEGOTIATE: 'I appreciate your offer. After considering the scope, I believe a rate of X would be fair given the complexity involved.',
-      CLARIFY: 'Thank you for the details. Could you please clarify the following points so I can provide a more accurate estimate?',
-      DECLINE: 'Thank you for considering me for this project. Unfortunately, I won\'t be able to take this on at this time.',
-      ACCEPT: 'I\'m pleased to accept this project! I\'m excited to get started and deliver great results.',
-      FOLLOW_UP: 'I wanted to follow up on our previous conversation. Please let me know if you have any updates.',
+      NEGOTIATE:
+        'I appreciate your offer. After considering the scope, I believe a rate of X would be fair given the complexity involved.',
+      CLARIFY:
+        'Thank you for the details. Could you please clarify the following points so I can provide a more accurate estimate?',
+      DECLINE:
+        "Thank you for considering me for this project. Unfortunately, I won't be able to take this on at this time.",
+      ACCEPT:
+        "I'm pleased to accept this project! I'm excited to get started and deliver great results.",
+      FOLLOW_UP:
+        'I wanted to follow up on our previous conversation. Please let me know if you have any updates.',
     };
 
     return intents[input.intent || 'FOLLOW_UP'];
@@ -596,7 +631,10 @@ ${userName}`;
     };
   }
 
-  private identifyKeyPoints(input: MessageAssistInput, context: any): { covered: string[]; missing: string[] } {
+  private identifyKeyPoints(
+    input: MessageAssistInput,
+    context: any
+  ): { covered: string[]; missing: string[] } {
     return {
       covered: ['Project understanding', 'Timeline discussion'],
       missing: ['Budget confirmation', 'Next steps'],
@@ -618,12 +656,16 @@ ${userName}`;
   }
 
   private generateOptimizedSummary(input: ProfileOptimizeInput): string {
-    return `Experienced professional specializing in ${input.skills.slice(0, 3).join(', ')}. ` +
+    return (
+      `Experienced professional specializing in ${input.skills.slice(0, 3).join(', ')}. ` +
       `With ${input.experience.length} years of experience, I help businesses achieve their goals through ` +
-      `innovative solutions and dedicated service. Ready to bring value to your next project.`;
+      `innovative solutions and dedicated service. Ready to bring value to your next project.`
+    );
   }
 
-  private async analyzeSkills(input: ProfileOptimizeInput): Promise<{ toHighlight: string[]; toAdd: string[] }> {
+  private async analyzeSkills(
+    input: ProfileOptimizeInput
+  ): Promise<{ toHighlight: string[]; toAdd: string[] }> {
     return {
       toHighlight: input.skills.slice(0, 5),
       toAdd: ['Communication', 'Project Management', 'Problem Solving'],
@@ -664,7 +706,10 @@ ${userName}`;
     return improvements;
   }
 
-  private async analyzeDemand(skills: string[], industry?: string): Promise<{
+  private async analyzeDemand(
+    skills: string[],
+    industry?: string
+  ): Promise<{
     level: 'HIGH' | 'MEDIUM' | 'LOW';
     trend: 'RISING' | 'STABLE' | 'FALLING';
     competition: 'HIGH' | 'MEDIUM' | 'LOW';
@@ -679,7 +724,10 @@ ${userName}`;
     };
   }
 
-  private async analyzeSkillTrends(skills: string[], industry?: string): Promise<{
+  private async analyzeSkillTrends(
+    skills: string[],
+    industry?: string
+  ): Promise<{
     gaps: string[];
     emerging: string[];
   }> {

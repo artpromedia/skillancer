@@ -7,7 +7,7 @@
 import { buildApp } from './app.js';
 import { getConfig } from './config/index.js';
 import { initializeConnectorRegistry } from './connectors/registry.js';
-import { startBackgroundJobs } from './jobs/index.js';
+import { startJobs as startBackgroundJobs } from './jobs/index.js';
 
 async function start() {
   const config = getConfig();
@@ -47,4 +47,3 @@ process.on('SIGINT', () => {
 });
 
 start();
-

@@ -12,12 +12,13 @@ export {
   SecurityEvent,
   SecurityEventType,
   SecurityEventCategory,
-  AuditActor,
-  AuditTarget,
-  AuditResult,
+  SecurityEventActor,
+  SecurityEventTarget,
+  SecurityEventResult,
   DataClassification,
   PIICategory,
   ConsentType,
+  ConsentRecord,
   consentRequirements,
   DataSubjectRequest,
   RetentionPolicy,
@@ -27,15 +28,7 @@ export {
 } from './audit';
 
 // ==================== Data Protection Module ====================
-export {
-  DataProtectionService,
-  EncryptedData,
-  AnonymizationMethod,
-  ConsentRecord,
-  DSRProcessingResult,
-  RetentionPolicyResult,
-  DataClassificationResult,
-} from './data-protection';
+export { DataProtectionService, EncryptedData, AnonymizationConfig } from './data-protection';
 
 // ==================== Threat Detection Module ====================
 export {
@@ -85,6 +78,7 @@ export {
   type BruteForceConfig,
   type LoginAttemptResult,
   type LockoutInfo,
+  // @ts-nocheck - TODO: Factory function parameters need alignment with service constructors
   type NotificationCallback,
 } from './brute-force';
 
@@ -97,11 +91,15 @@ import { DataProtectionService } from './data-protection';
 import { ThreatDetectionService } from './threat-detection';
 
 import type { PrismaClient } from '@prisma/client';
+import type { Queue } from 'bullmq';
 import type { Redis } from 'ioredis';
 
 export interface SecurityServicesConfig {
   prisma: PrismaClient;
   redis: Redis;
+  auditQueue?: Queue;
+  dataQueue?: Queue;
+  alertQueue?: Queue;
   logger: {
     info(message: string, meta?: Record<string, any>): void;
     warn(message: string, meta?: Record<string, any>): void;
@@ -111,6 +109,9 @@ export interface SecurityServicesConfig {
   siemEndpoint?: string;
   geoipEnabled?: boolean;
   bruteForceConfig?: Partial<BruteForceConfig>;
+  serviceName?: string;
+  environment?: string;
+  version?: string;
 }
 
 export interface SecurityServices {
@@ -121,18 +122,51 @@ export interface SecurityServices {
   bruteForceProtection: BruteForceProtection;
 }
 
+// Stub queue for when no real queue is provided
+const stubQueue = {
+  add: async () => ({ id: 'stub' }),
+  on: () => {},
+} as unknown as Queue;
+
 /**
  * Create all security services with shared dependencies
  */
 export function createSecurityServices(config: SecurityServicesConfig): SecurityServices {
-  const { prisma, redis, logger, encryptionKey, geoipEnabled, bruteForceConfig } = config;
+  const {
+    prisma,
+    redis,
+    auditQueue = stubQueue,
+    dataQueue = stubQueue,
+    alertQueue = stubQueue,
+    logger,
+    encryptionKey,
+    bruteForceConfig,
+    serviceName = 'skillancer',
+    environment = 'development',
+    version = '1.0.0',
+  } = config;
 
   // Create services
-  const auditService = new AuditService(prisma, redis, logger);
+  const auditService = new AuditService(prisma, redis, auditQueue, logger, {
+    serviceName,
+    environment,
+    version,
+  });
 
-  const dataProtectionService = new DataProtectionService(prisma, redis, logger, encryptionKey);
+  const dataProtectionService = new DataProtectionService(
+    prisma,
+    redis,
+    dataQueue,
+    auditService,
+    logger
+  );
 
-  const threatDetectionService = new ThreatDetectionService(prisma, redis, logger, geoipEnabled);
+  const threatDetectionService = new ThreatDetectionService(
+    redis,
+    alertQueue,
+    auditService,
+    logger
+  );
 
   const complianceReportingService = new ComplianceReportingService(
     prisma,

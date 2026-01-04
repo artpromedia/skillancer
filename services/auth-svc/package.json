@@ -29,6 +29,7 @@
     "@skillancer/cache": "workspace:*",
     "@skillancer/database": "workspace:*",
     "@skillancer/logger": "workspace:*",
+    "@skillancer/service-client": "workspace:*",
     "@skillancer/types": "workspace:*",
     "@skillancer/utils": "workspace:*",
     "bcrypt": "^5.1.1",

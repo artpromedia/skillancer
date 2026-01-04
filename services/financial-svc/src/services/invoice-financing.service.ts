@@ -1,10 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import {
+import type {
   InvoiceFinancingCreateInput,
   InvoiceFinancingUpdateInput,
   FinancingEligibility,
-  FinancingStatus,
-} from '../types/financial.types';
+} from '../types/financial.types.js';
+import { FinancingStatus } from '../types/financial.types.js';
 
 export class InvoiceFinancingService {
   constructor(private prisma: PrismaClient) {}

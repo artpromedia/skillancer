@@ -1,11 +1,11 @@
 import { PrismaClient } from '@prisma/client';
-import {
+import type {
   EngagementOutcomeCreateInput,
   OutcomeType,
   OutcomeRating,
   FreelancerAnalytics,
   ClientAnalytics,
-} from '../types/intelligence.types';
+} from '../types/intelligence.types.js';
 
 export class OutcomeService {
   constructor(private prisma: PrismaClient) {}
@@ -78,12 +78,15 @@ export class OutcomeService {
   /**
    * Get freelancer outcomes
    */
-  async getFreelancerOutcomes(freelancerId: string, options?: {
-    outcomeType?: OutcomeType;
-    rating?: OutcomeRating;
-    page?: number;
-    limit?: number;
-  }) {
+  async getFreelancerOutcomes(
+    freelancerId: string,
+    options?: {
+      outcomeType?: OutcomeType;
+      rating?: OutcomeRating;
+      page?: number;
+      limit?: number;
+    }
+  ) {
     const { outcomeType, rating, page = 1, limit = 20 } = options || {};
 
     const where: any = { freelancerId };
@@ -123,12 +126,15 @@ export class OutcomeService {
   /**
    * Get client outcomes
    */
-  async getClientOutcomes(clientId: string, options?: {
-    outcomeType?: OutcomeType;
-    rating?: OutcomeRating;
-    page?: number;
-    limit?: number;
-  }) {
+  async getClientOutcomes(
+    clientId: string,
+    options?: {
+      outcomeType?: OutcomeType;
+      rating?: OutcomeRating;
+      page?: number;
+      limit?: number;
+    }
+  ) {
     const { outcomeType, rating, page = 1, limit = 20 } = options || {};
 
     const where: any = { clientId };
@@ -189,8 +195,8 @@ export class OutcomeService {
     }
 
     const totalProjects = outcomes.length;
-    const successfulOutcomes = outcomes.filter(
-      (o) => ['EXCEPTIONAL', 'SUCCESSFUL', 'SATISFACTORY'].includes(o.rating)
+    const successfulOutcomes = outcomes.filter((o) =>
+      ['EXCEPTIONAL', 'SUCCESSFUL', 'SATISFACTORY'].includes(o.rating)
     );
     const successRate = (successfulOutcomes.length / totalProjects) * 100;
 
@@ -218,9 +224,8 @@ export class OutcomeService {
     const clientIds = outcomes.map((o) => o.clientId);
     const uniqueClients = new Set(clientIds);
     const repeatClients = clientIds.length - uniqueClients.size;
-    const repeatClientRate = uniqueClients.size > 0
-      ? (repeatClients / (clientIds.length - repeatClients)) * 100
-      : 0;
+    const repeatClientRate =
+      uniqueClients.size > 0 ? (repeatClients / (clientIds.length - repeatClients)) * 100 : 0;
 
     // Analyze strengths and improvements
     const strengthAreas: string[] = [];
@@ -244,8 +249,10 @@ export class OutcomeService {
 
     let recentTrend: 'IMPROVING' | 'STABLE' | 'DECLINING' = 'STABLE';
     if (previousOutcomes.length >= 3) {
-      const recentAvg = recentOutcomes.reduce((s, o) => s + Number(o.score), 0) / recentOutcomes.length;
-      const previousAvg = previousOutcomes.reduce((s, o) => s + Number(o.score), 0) / previousOutcomes.length;
+      const recentAvg =
+        recentOutcomes.reduce((s, o) => s + Number(o.score), 0) / recentOutcomes.length;
+      const previousAvg =
+        previousOutcomes.reduce((s, o) => s + Number(o.score), 0) / previousOutcomes.length;
 
       if (recentAvg > previousAvg + 0.5) recentTrend = 'IMPROVING';
       else if (recentAvg < previousAvg - 0.5) recentTrend = 'DECLINING';
@@ -292,9 +299,10 @@ export class OutcomeService {
     const freelancerIds = outcomes.map((o) => o.freelancerId);
     const uniqueFreelancers = new Set(freelancerIds);
     const repeatFreelancers = freelancerIds.length - uniqueFreelancers.size;
-    const freelancerRetentionRate = uniqueFreelancers.size > 0
-      ? (repeatFreelancers / (freelancerIds.length - repeatFreelancers)) * 100
-      : 0;
+    const freelancerRetentionRate =
+      uniqueFreelancers.size > 0
+        ? (repeatFreelancers / (freelancerIds.length - repeatFreelancers)) * 100
+        : 0;
 
     // Calculate communication and scope scores from metrics
     let communicationTotal = 0;
@@ -314,14 +322,10 @@ export class OutcomeService {
       }
     }
 
-    const communicationScore = communicationCount > 0
-      ? communicationTotal / communicationCount
-      : 0;
+    const communicationScore = communicationCount > 0 ? communicationTotal / communicationCount : 0;
 
     // Scope stability is inverse of scope changes (fewer changes = more stable)
-    const avgScopeChanges = scopeChangeCount > 0
-      ? scopeChangesTotal / scopeChangeCount
-      : 0;
+    const avgScopeChanges = scopeChangeCount > 0 ? scopeChangesTotal / scopeChangeCount : 0;
     const scopeStabilityScore = Math.max(0, 100 - avgScopeChanges * 20);
 
     return {

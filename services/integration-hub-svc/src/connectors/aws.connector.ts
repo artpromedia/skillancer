@@ -1,12 +1,13 @@
 // @ts-nocheck
 import { BaseConnector, OAuthTokens, WidgetData, WidgetDefinition } from './base.connector';
-import { IntegrationCategory, ExecutiveType } from './base.connector';
+import type { ExecutiveType } from '@skillancer/database';
+import type { IntegrationCategory } from '../types/index.js';
 
 export class AWSConnector extends BaseConnector {
   readonly id = 'aws';
   readonly name = 'Amazon Web Services';
-  readonly category = IntegrationCategory.CLOUD;
-  readonly applicableRoles = [ExecutiveType.CTO, ExecutiveType.CFO];
+  readonly category: IntegrationCategory = 'CLOUD';
+  readonly applicableRoles: ExecutiveType[] = ['FRACTIONAL_CTO', 'FRACTIONAL_CFO'];
 
   readonly oauthConfig = null; // AWS uses IAM credentials, not OAuth
 
@@ -360,4 +361,3 @@ class AWSCostExplorerClient {
 }
 
 export const awsConnector = new AWSConnector();
-

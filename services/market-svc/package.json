@@ -16,6 +16,7 @@
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
+    "@skillancer/audit-client": "workspace:*",
     "@skillancer/database": "workspace:*",
     "@skillancer/cache": "workspace:*",
     "@skillancer/logger": "workspace:*",

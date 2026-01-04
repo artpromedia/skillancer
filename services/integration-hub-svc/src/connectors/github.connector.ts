@@ -6,13 +6,14 @@ import {
   WebhookResult,
   WidgetDefinition,
 } from './base.connector';
-import { IntegrationCategory, ExecutiveType } from './base.connector';
+import type { ExecutiveType } from '@skillancer/database';
+import type { IntegrationCategory } from '../types/index.js';
 
 export class GitHubConnector extends BaseConnector {
   readonly id = 'github';
   readonly name = 'GitHub';
-  readonly category = IntegrationCategory.DEVTOOLS;
-  readonly applicableRoles = [ExecutiveType.CTO, ExecutiveType.CPO];
+  readonly category: IntegrationCategory = 'DEVTOOLS';
+  readonly applicableRoles: ExecutiveType[] = ['FRACTIONAL_CTO', 'FRACTIONAL_CPO'];
 
   readonly oauthConfig = {
     authorizationUrl: 'https://github.com/login/oauth/authorize',
@@ -464,4 +465,3 @@ interface GitHubWebhookPayload {
 }
 
 export const githubConnector = new GitHubConnector();
-

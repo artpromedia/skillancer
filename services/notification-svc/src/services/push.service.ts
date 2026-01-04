@@ -4,7 +4,7 @@
 
 import admin from 'firebase-admin';
 import { getConfig } from '../config/index.js';
-import {
+import type {
   PushNotificationInput,
   PushSendResult,
   DeviceToken,
@@ -124,9 +124,7 @@ export class PushService {
         success: response.failureCount === 0,
         successCount: response.successCount,
         failureCount: response.failureCount,
-        messageIds: response.responses
-          .filter((r) => r.success)
-          .map((r) => r.messageId!),
+        messageIds: response.responses.filter((r) => r.success).map((r) => r.messageId!),
         errors: errors.length > 0 ? errors : undefined,
       };
     } catch (error: any) {

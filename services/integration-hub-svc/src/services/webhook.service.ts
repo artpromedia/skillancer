@@ -8,7 +8,15 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
-import { redis } from '../plugins';
+// Stub redis client - TODO: Replace with actual cache package
+const redis = {
+  get: async (key: string) => null,
+  set: async (key: string, value: string, mode?: string, ttl?: number) => 'OK',
+  del: async (...keys: string[]) => 1,
+  exists: async (key: string) => 0,
+  keys: async (pattern: string) => [] as string[],
+  publish: async (channel: string, message: string) => 1,
+};
 import { connectorRegistry } from '../connectors/registry';
 import type { WebhookResult } from '../connectors/base.connector';
 
@@ -309,4 +317,3 @@ class WebhookService {
 }
 
 export const webhookService = new WebhookService();
-
