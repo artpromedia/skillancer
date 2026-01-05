@@ -7,9 +7,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "echo 'Build skipped - pending export fixes' && exit 0",
+    "build": "tsc --project tsconfig.json",
     "start": "node dist/index.js",
-    "typecheck": "echo Typecheck skipped && exit 0",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "test": "vitest run",
     "test:watch": "vitest"

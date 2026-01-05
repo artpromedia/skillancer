@@ -15,7 +15,7 @@
   },
   "scripts": {
     "lint": "eslint src --ext .ts,.tsx",
-    "typecheck": "echo Typecheck skipped - pending fixes && exit 0"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@faker-js/faker": "^8.4.1",

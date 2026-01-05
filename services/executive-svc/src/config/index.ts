@@ -15,9 +15,9 @@ const configSchema = z.object({
   apiBaseUrl: z.string().default('http://localhost:3008'),
   corsOrigins: z.string().transform((val) => val.split(',')).default('http://localhost:3000'),
 
-  // Auth
-  jwtSecret: z.string().default('dev-jwt-secret-change-in-production'),
-  cookieSecret: z.string().default('dev-cookie-secret-change-in-production'),
+  // Auth - Required in production, optional with dev defaults for development
+  jwtSecret: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
+  cookieSecret: z.string().min(32, 'COOKIE_SECRET must be at least 32 characters'),
 
   // Database
   databaseUrl: z.string().default('postgresql://postgres:postgres@localhost:5432/skillancer'),
@@ -48,8 +48,8 @@ const configSchema = z.object({
   vettingAutoAdvanceScore: z.coerce.number().default(70),
   vettingReferencesRequired: z.coerce.number().default(3),
 
-  // Reference Token
-  referenceTokenSecret: z.string().default('dev-reference-token-secret'),
+  // Reference Token - Required in production
+  referenceTokenSecret: z.string().min(32, 'REFERENCE_TOKEN_SECRET must be at least 32 characters'),
   referenceTokenExpiryDays: z.coerce.number().default(14),
 });
 

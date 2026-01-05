@@ -5,10 +5,10 @@
   "description": "Skillancer Market - Hybrid talent marketplace (Next.js)",
   "scripts": {
     "dev": "next dev --port 3001",
-    "build": "echo 'Build skipped - 19 missing exports' && exit 0",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
-    "typecheck": "echo Typecheck skipped - pending type fixes && exit 0",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf .next dist node_modules",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -5,10 +5,10 @@
   "description": "SkillPod - Browser-based VDI admin/viewer (Next.js)",
   "scripts": {
     "dev": "next dev --port 3003",
-    "build": "echo 'Build skipped - type errors' && exit 0",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
-    "typecheck": "echo Typecheck skipped - pending type fixes && exit 0",
+    "typecheck": "tsc --noEmit",
     "clean": "rm -rf .next dist node_modules"
   },
   "dependencies": {
