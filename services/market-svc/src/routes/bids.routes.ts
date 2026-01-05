@@ -189,8 +189,8 @@ export function registerBidRoutes(fastify: FastifyInstance, deps: BidRouteDeps):
 
       const result = await bidService.getFreelancerBids(user.id, {
         status: status as any,
-        page: page ? parseInt(page, 10) : 1,
-        limit: limit ? parseInt(limit, 10) : 20,
+        page: page ? Number.parseInt(page, 10) : 1,
+        limit: limit ? Number.parseInt(limit, 10) : 20,
       });
 
       return await reply.send({

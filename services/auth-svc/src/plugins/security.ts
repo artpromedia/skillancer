@@ -261,8 +261,8 @@ async function validateSession(
     return { valid: false, reason: 'session_user_mismatch' };
   }
 
-  const createdAt = parseInt(sessionData['createdAt'] || '0', 10);
-  const lastActivity = parseInt(sessionData['lastActivity'] || '0', 10);
+  const createdAt = Number.parseInt(sessionData['createdAt'] || '0', 10);
+  const lastActivity = Number.parseInt(sessionData['lastActivity'] || '0', 10);
   const now = Date.now();
 
   // Check absolute timeout
@@ -354,7 +354,7 @@ async function checkLockout(
     };
   }
 
-  const failures = parseInt((await redis.get(failuresKey)) || '0', 10);
+  const failures = Number.parseInt((await redis.get(failuresKey)) || '0', 10);
   return {
     isLocked: false,
     failureCount: failures,

@@ -381,7 +381,7 @@ function TeamSetupStep({
           type="number"
           min="1"
           value={data.estimatedUsers}
-          onChange={(e) => onChange({ ...data, estimatedUsers: parseInt(e.target.value) || 1 })}
+          onChange={(e) => onChange({ ...data, estimatedUsers: Number.parseInt(e.target.value) || 1 })}
         />
         <p className="text-muted-foreground text-sm">
           This helps us recommend the right plan for you.
@@ -501,7 +501,7 @@ function SecurityConfigStep({
           <Label>Session Timeout (minutes)</Label>
           <Select
             value={data.sessionTimeout.toString()}
-            onValueChange={(v) => onChange({ ...data, sessionTimeout: parseInt(v) })}
+            onValueChange={(v) => onChange({ ...data, sessionTimeout: Number.parseInt(v) })}
           >
             <SelectTrigger>
               <SelectValue />
@@ -520,7 +520,7 @@ function SecurityConfigStep({
           <Label>Data Retention (days)</Label>
           <Select
             value={data.dataRetentionDays.toString()}
-            onValueChange={(v) => onChange({ ...data, dataRetentionDays: parseInt(v) })}
+            onValueChange={(v) => onChange({ ...data, dataRetentionDays: Number.parseInt(v) })}
           >
             <SelectTrigger>
               <SelectValue />

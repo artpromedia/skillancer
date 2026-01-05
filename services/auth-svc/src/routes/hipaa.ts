@@ -520,8 +520,8 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
         endDate: endDate ? new Date(endDate) : undefined,
         userId,
         phiCategory,
-        page: page ? parseInt(page, 10) : undefined,
-        limit: limit ? parseInt(limit, 10) : undefined,
+        page: page ? Number.parseInt(page, 10) : undefined,
+        limit: limit ? Number.parseInt(limit, 10) : undefined,
       });
 
       const logs = result.logs.map((log) => ({
@@ -720,8 +720,8 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
         severity: severity as BreachSeverity | undefined,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
-        page: page ? parseInt(page, 10) : undefined,
-        limit: limit ? parseInt(limit, 10) : undefined,
+        page: page ? Number.parseInt(page, 10) : undefined,
+        limit: limit ? Number.parseInt(limit, 10) : undefined,
       });
 
       return reply.status(200).send(result);

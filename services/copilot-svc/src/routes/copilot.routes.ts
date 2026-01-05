@@ -148,7 +148,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
       const history = await copilotService.getInteractionHistory(
         userId,
         type as any,
-        limit ? parseInt(limit) : 50
+        limit ? Number.parseInt(limit) : 50
       );
 
       return reply.send(history);

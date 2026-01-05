@@ -31,7 +31,7 @@ import { acquireMigrationLock, getMigrationLockStatus } from '../src/migration-l
 // CONFIGURATION
 // ============================================================================
 
-const LOCK_TIMEOUT_MS = parseInt(process.env.LOCK_TIMEOUT_MS || '30000', 10);
+const LOCK_TIMEOUT_MS = Number.parseInt(process.env.LOCK_TIMEOUT_MS || '30000', 10);
 const DATABASE_URL = process.env.DATABASE_URL;
 
 // ============================================================================

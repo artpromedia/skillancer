@@ -247,7 +247,7 @@ export class EncryptionService {
         return false;
       }
 
-      const timestamp = parseInt(timestampElement.split('=')[1]!, 10);
+      const timestamp = Number.parseInt(timestampElement.split('=')[1]!, 10);
       const signature = signatureElement.split('=')[1]!;
 
       // Check timestamp tolerance

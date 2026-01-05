@@ -203,7 +203,7 @@ export function createOpsRoutes(config: OpsRoutesConfig): Router {
       const { pattern, limit } = req.query;
       const keys = await cacheService.scanKeys(
         (pattern as string) || '*',
-        limit ? parseInt(limit as string) : undefined
+        limit ? Number.parseInt(limit as string) : undefined
       );
       res.json({ data: keys });
     } catch (error) {
@@ -277,7 +277,7 @@ export function createOpsRoutes(config: OpsRoutesConfig): Router {
     requirePermission('system:manage'),
     async (req, res, next) => {
       try {
-        const cancelled = await dbService.cancelQuery(parseInt(req.params.pid));
+        const cancelled = await dbService.cancelQuery(Number.parseInt(req.params.pid));
         res.json({ success: cancelled });
       } catch (error) {
         next(error);
@@ -335,8 +335,8 @@ export function createOpsRoutes(config: OpsRoutesConfig): Router {
         service: service as string,
         environment: environment as string,
         status: status as string,
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined,
+        limit: limit ? Number.parseInt(limit as string) : undefined,
+        offset: offset ? Number.parseInt(offset as string) : undefined,
       });
       res.json(deployments);
     } catch (error) {

@@ -152,8 +152,8 @@ export function registerQuestionRoutes(fastify: FastifyInstance, deps: QuestionR
       const { page, limit } = request.query as { page?: string; limit?: string };
 
       const result = await questionService.getUserQuestions(user.id, {
-        page: page ? parseInt(page, 10) : 1,
-        limit: limit ? parseInt(limit, 10) : 20,
+        page: page ? Number.parseInt(page, 10) : 1,
+        limit: limit ? Number.parseInt(limit, 10) : 20,
       });
 
       return await reply.send({

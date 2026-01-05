@@ -171,7 +171,7 @@ export function isValidCreditCard(cardNumber: string): boolean {
 
   for (let i = cleaned.length - 1; i >= 0; i--) {
     const char = cleaned[i] ?? '0';
-    let digit = parseInt(char, 10);
+    let digit = Number.parseInt(char, 10);
 
     if (isEven) {
       digit *= 2;

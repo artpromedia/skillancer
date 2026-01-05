@@ -297,7 +297,7 @@ export default function ExecutiveApplyPage() {
                   min={3}
                   type="number"
                   value={formData.yearsExecutiveExp}
-                  onChange={(e) => updateFormData({ yearsExecutiveExp: parseInt(e.target.value) })}
+                  onChange={(e) => updateFormData({ yearsExecutiveExp: Number.parseInt(e.target.value) })}
                 />
                 <p className="mt-1 text-sm text-slate-500">Minimum 3 years required</p>
               </div>
@@ -392,7 +392,7 @@ export default function ExecutiveApplyPage() {
                       type="number"
                       value={formData.hoursPerWeekMin}
                       onChange={(e) =>
-                        updateFormData({ hoursPerWeekMin: parseInt(e.target.value) })
+                        updateFormData({ hoursPerWeekMin: Number.parseInt(e.target.value) })
                       }
                     />
                     <span className="text-slate-500">to</span>
@@ -403,7 +403,7 @@ export default function ExecutiveApplyPage() {
                       type="number"
                       value={formData.hoursPerWeekMax}
                       onChange={(e) =>
-                        updateFormData({ hoursPerWeekMax: parseInt(e.target.value) })
+                        updateFormData({ hoursPerWeekMax: Number.parseInt(e.target.value) })
                       }
                     />
                     <span className="text-slate-500">hrs/week</span>
@@ -422,7 +422,7 @@ export default function ExecutiveApplyPage() {
                       step={25}
                       type="number"
                       value={formData.hourlyRateMin}
-                      onChange={(e) => updateFormData({ hourlyRateMin: parseInt(e.target.value) })}
+                      onChange={(e) => updateFormData({ hourlyRateMin: Number.parseInt(e.target.value) })}
                     />
                     <span className="text-slate-500">to $</span>
                     <input
@@ -431,7 +431,7 @@ export default function ExecutiveApplyPage() {
                       step={25}
                       type="number"
                       value={formData.hourlyRateMax}
-                      onChange={(e) => updateFormData({ hourlyRateMax: parseInt(e.target.value) })}
+                      onChange={(e) => updateFormData({ hourlyRateMax: Number.parseInt(e.target.value) })}
                     />
                   </div>
                 </div>

@@ -54,7 +54,7 @@ export function getConfig(): Config {
 
 export function validateConfig(): Config {
   const rawConfig = {
-    port: parseInt(process.env.PORT || '4006', 10),
+    port: Number.parseInt(process.env.PORT || '4006', 10),
     host: process.env.HOST || '0.0.0.0',
     nodeEnv: process.env.NODE_ENV || 'development',
     logLevel: process.env.LOG_LEVEL || 'info',
@@ -67,12 +67,12 @@ export function validateConfig(): Config {
     firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
     firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
-    rateLimitTimeWindow: parseInt(process.env.RATE_LIMIT_TIME_WINDOW || '60000', 10),
-    batchSize: parseInt(process.env.BATCH_SIZE || '100', 10),
-    batchDelayMs: parseInt(process.env.BATCH_DELAY_MS || '1000', 10),
-    maxRetries: parseInt(process.env.MAX_RETRIES || '3', 10),
-    retryDelayMs: parseInt(process.env.RETRY_DELAY_MS || '5000', 10),
+    rateLimitMax: Number.parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+    rateLimitTimeWindow: Number.parseInt(process.env.RATE_LIMIT_TIME_WINDOW || '60000', 10),
+    batchSize: Number.parseInt(process.env.BATCH_SIZE || '100', 10),
+    batchDelayMs: Number.parseInt(process.env.BATCH_DELAY_MS || '1000', 10),
+    maxRetries: Number.parseInt(process.env.MAX_RETRIES || '3', 10),
+    retryDelayMs: Number.parseInt(process.env.RETRY_DELAY_MS || '5000', 10),
   };
 
   config = configSchema.parse(rawConfig);

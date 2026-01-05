@@ -129,8 +129,8 @@ router.get('/:guildId/treasury/transactions', async (req, res, next) => {
       status: req.query.status
         ? ((req.query.status as string).split(',') as ('PENDING' | 'COMPLETED')[])
         : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
-      offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
+      limit: req.query.limit ? Number.parseInt(req.query.limit as string) : undefined,
+      offset: req.query.offset ? Number.parseInt(req.query.offset as string) : undefined,
     };
 
     const result = await guildTreasuryService.listTransactions(guildId, options);
@@ -189,8 +189,8 @@ router.get('/:guildId/splits', async (req, res, next) => {
       status: req.query.status
         ? ((req.query.status as string).split(',') as ('PENDING' | 'APPROVED' | 'COMPLETED')[])
         : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
-      offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
+      limit: req.query.limit ? Number.parseInt(req.query.limit as string) : undefined,
+      offset: req.query.offset ? Number.parseInt(req.query.offset as string) : undefined,
     };
 
     const result = await revenueSplitService.listGuildRevenueSplits(guildId, options);

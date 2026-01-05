@@ -234,17 +234,17 @@ export class GoogleAdsConnector extends BaseConnector {
     return (response.results || []).map((row: any) => ({
       campaignId: row.campaign.id,
       metrics: {
-        impressions: parseInt(row.metrics.impressions || '0'),
-        clicks: parseInt(row.metrics.clicks || '0'),
+        impressions: Number.parseInt(row.metrics.impressions || '0'),
+        clicks: Number.parseInt(row.metrics.clicks || '0'),
         ctr: parseFloat(row.metrics.ctr || '0'),
-        averageCpc: parseInt(row.metrics.averageCpc || '0') / 1000000,
-        cost: parseInt(row.metrics.costMicros || '0') / 1000000,
+        averageCpc: Number.parseInt(row.metrics.averageCpc || '0') / 1000000,
+        cost: Number.parseInt(row.metrics.costMicros || '0') / 1000000,
         conversions: parseFloat(row.metrics.conversions || '0'),
         conversionValue: parseFloat(row.metrics.conversionsValue || '0'),
         roas:
           row.metrics.costMicros > 0
             ? parseFloat(row.metrics.conversionsValue || '0') /
-              (parseInt(row.metrics.costMicros) / 1000000)
+              (Number.parseInt(row.metrics.costMicros) / 1000000)
             : undefined,
       },
     }));
@@ -274,9 +274,9 @@ export class GoogleAdsConnector extends BaseConnector {
 
     return (response.results || []).map((row: any) => ({
       searchTerm: row.searchTermView.searchTerm,
-      impressions: parseInt(row.metrics.impressions || '0'),
-      clicks: parseInt(row.metrics.clicks || '0'),
-      cost: parseInt(row.metrics.costMicros || '0') / 1000000,
+      impressions: Number.parseInt(row.metrics.impressions || '0'),
+      clicks: Number.parseInt(row.metrics.clicks || '0'),
+      cost: Number.parseInt(row.metrics.costMicros || '0') / 1000000,
       conversions: parseFloat(row.metrics.conversions || '0'),
     }));
   }
@@ -357,17 +357,17 @@ export class GoogleAdsConnector extends BaseConnector {
     const dailyData: any[] = [];
 
     for (const row of response.results || []) {
-      totals.impressions += parseInt(row.metrics.impressions || '0');
-      totals.clicks += parseInt(row.metrics.clicks || '0');
-      totals.cost += parseInt(row.metrics.costMicros || '0') / 1000000;
+      totals.impressions += Number.parseInt(row.metrics.impressions || '0');
+      totals.clicks += Number.parseInt(row.metrics.clicks || '0');
+      totals.cost += Number.parseInt(row.metrics.costMicros || '0') / 1000000;
       totals.conversions += parseFloat(row.metrics.conversions || '0');
       totals.conversionValue += parseFloat(row.metrics.conversionsValue || '0');
 
       dailyData.push({
         date: row.segments.date,
-        impressions: parseInt(row.metrics.impressions || '0'),
-        clicks: parseInt(row.metrics.clicks || '0'),
-        cost: parseInt(row.metrics.costMicros || '0') / 1000000,
+        impressions: Number.parseInt(row.metrics.impressions || '0'),
+        clicks: Number.parseInt(row.metrics.clicks || '0'),
+        cost: Number.parseInt(row.metrics.costMicros || '0') / 1000000,
       });
     }
 

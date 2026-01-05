@@ -21,9 +21,9 @@ import { getContext } from '../request-context.js';
  */
 const getConnection = (): ConnectionOptions => ({
   host: process.env['REDIS_HOST'] || 'localhost',
-  port: parseInt(process.env['REDIS_PORT'] || '6379', 10),
+  port: Number.parseInt(process.env['REDIS_PORT'] || '6379', 10),
   password: process.env['REDIS_PASSWORD'],
-  db: parseInt(process.env['REDIS_QUEUE_DB'] || '1', 10),
+  db: Number.parseInt(process.env['REDIS_QUEUE_DB'] || '1', 10),
 });
 
 /**

@@ -341,7 +341,7 @@ export class BruteForceProtection {
       lockoutLevel,
       lockoutStart,
       lockoutEnd,
-      lastAttempt: lastAttempt ? new Date(parseInt(lastAttempt)) : new Date(),
+      lastAttempt: lastAttempt ? new Date(Number.parseInt(lastAttempt)) : new Date(),
       ipAddresses,
     };
   }
@@ -436,7 +436,7 @@ export class BruteForceProtection {
     let activeChallenges = 0;
     for (const key of attemptKeys) {
       const count = await this.redis.get(key);
-      if (count && parseInt(count) >= this.config.captchaThreshold) {
+      if (count && Number.parseInt(count) >= this.config.captchaThreshold) {
         activeChallenges++;
       }
     }
@@ -458,7 +458,7 @@ export class BruteForceProtection {
 
   private async getAttemptCount(key: string): Promise<number> {
     const count = await this.redis.get(`${key}:attempts`);
-    return count ? parseInt(count) : 0;
+    return count ? Number.parseInt(count) : 0;
   }
 
   private getLockoutLevel(attemptCount: number): 'none' | 'soft' | 'hard' | 'permanent' {

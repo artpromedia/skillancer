@@ -190,7 +190,7 @@ async function securityPluginImpl(
   if (sizeLimits) {
     app.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
       const contentLength = request.headers['content-length'];
-      if (contentLength && parseInt(contentLength, 10) > maxBodySize) {
+      if (contentLength && Number.parseInt(contentLength, 10) > maxBodySize) {
         request.log.warn(
           {
             type: 'request_too_large',

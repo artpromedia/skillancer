@@ -667,7 +667,7 @@ export abstract class PlatformConnector {
 
         // Handle rate limiting response
         if (response.status === 429) {
-          const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+          const retryAfter = Number.parseInt(response.headers.get('Retry-After') || '60', 10);
           logger.warn({ platform: this.platform, retryAfter }, 'Rate limited by platform');
           await this.sleep(retryAfter * 1000);
           continue;

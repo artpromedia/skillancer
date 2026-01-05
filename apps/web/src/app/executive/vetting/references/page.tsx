@@ -407,7 +407,7 @@ export default function ReferencesPage() {
                     type="number"
                     value={formData.yearsKnown}
                     onChange={(e) =>
-                      setFormData({ ...formData, yearsKnown: parseInt(e.target.value) })
+                      setFormData({ ...formData, yearsKnown: Number.parseInt(e.target.value) })
                     }
                   />
                 </div>

@@ -206,7 +206,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
     requireAdmin,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const limit = parseInt(req.query.limit as string) || 100;
+        const limit = Number.parseInt(req.query.limit as string) || 100;
         const events = await auditService.getActorActivity(req.params.id, limit);
 
         res.json({ events, total: events.length });
@@ -233,7 +233,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
             : req.query.acknowledged === 'false'
               ? false
               : undefined;
-        const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+        const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : 100;
 
         const alerts = await auditService.getSecurityAlerts(severity, acknowledged, limit);
 
@@ -481,7 +481,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
       try {
         const _status = req.query.status as string;
         const _type = req.query.type as string;
-        const _limit = parseInt(req.query.limit as string) || 50;
+        const _limit = Number.parseInt(req.query.limit as string) || 50;
 
         // Query from database - simplified for now
         res.json({ requests: [], total: 0, message: 'Use database query for full list' });
@@ -857,7 +857,7 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
         const type = req.query.type as any;
         const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
         const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
-        const limit = parseInt(req.query.limit as string) || 20;
+        const limit = Number.parseInt(req.query.limit as string) || 20;
 
         const reports = await complianceReportingService.getReports({
           type,

@@ -226,8 +226,8 @@ function CreateApiKeyDialog({
     mutation.mutate({
       name,
       scopes,
-      expiresInDays: expiresInDays ? parseInt(expiresInDays) : undefined,
-      rateLimit: parseInt(rateLimit),
+      expiresInDays: expiresInDays ? Number.parseInt(expiresInDays) : undefined,
+      rateLimit: Number.parseInt(rateLimit),
     });
   };
 

@@ -1033,7 +1033,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
   fastify.get('/mileage/summary', async (request, reply) => {
     try {
       const user = getUser(request);
-      const year = parseInt((request.query as any).year ?? new Date().getFullYear().toString(), 10);
+      const year = Number.parseInt((request.query as any).year ?? new Date().getFullYear().toString(), 10);
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59, 999);
 
@@ -1096,7 +1096,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
   fastify.get('/reports/tax', async (request, reply) => {
     try {
       const user = getUser(request);
-      const year = parseInt((request.query as any).year ?? new Date().getFullYear().toString(), 10);
+      const year = Number.parseInt((request.query as any).year ?? new Date().getFullYear().toString(), 10);
 
       const report = await reportsService.generateTaxReport(user.id, year);
 
@@ -1243,7 +1243,7 @@ export function registerFinanceRoutes(fastify: FastifyInstance, deps: FinanceRou
   fastify.get('/tax-profile/quarterly-estimates', async (request, reply) => {
     try {
       const user = getUser(request);
-      const year = parseInt((request.query as any).year ?? new Date().getFullYear().toString(), 10);
+      const year = Number.parseInt((request.query as any).year ?? new Date().getFullYear().toString(), 10);
 
       const estimates = await taxProfileRepo.getWithEstimates(user.id, year);
 

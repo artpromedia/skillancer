@@ -143,8 +143,8 @@ export async function taxVaultRoutes(fastify: FastifyInstance) {
 
       const result = await taxVaultService.getDeposits(
         vault.id,
-        page ? parseInt(page) : 1,
-        limit ? parseInt(limit) : 20
+        page ? Number.parseInt(page) : 1,
+        limit ? Number.parseInt(limit) : 20
       );
 
       return reply.send(result);
@@ -170,8 +170,8 @@ export async function taxVaultRoutes(fastify: FastifyInstance) {
 
       const result = await taxVaultService.getWithdrawals(
         vault.id,
-        page ? parseInt(page) : 1,
-        limit ? parseInt(limit) : 20
+        page ? Number.parseInt(page) : 1,
+        limit ? Number.parseInt(limit) : 20
       );
 
       return reply.send(result);
@@ -189,7 +189,7 @@ export async function taxVaultRoutes(fastify: FastifyInstance) {
       }
 
       const { year } = request.params as { year: string };
-      const report = await taxVaultService.getAnnualTaxReport(userId, parseInt(year));
+      const report = await taxVaultService.getAnnualTaxReport(userId, Number.parseInt(year));
 
       return reply.send(report);
     } catch (error: any) {

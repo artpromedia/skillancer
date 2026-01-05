@@ -43,10 +43,10 @@ router.get(
       return;
     }
 
-    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const year = req.query.year ? Number.parseInt(req.query.year as string) : new Date().getFullYear();
     const category = req.query.category as string | undefined;
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const limit = Number.parseInt(req.query.limit as string) || 50;
+    const offset = Number.parseInt(req.query.offset as string) || 0;
 
     const tracker = getDeductionTracker();
     const deductions = await tracker.getDeductions(userId, { year, category, limit, offset });
@@ -158,7 +158,7 @@ router.get(
       return;
     }
 
-    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const year = req.query.year ? Number.parseInt(req.query.year as string) : new Date().getFullYear();
 
     const tracker = getDeductionTracker();
     const categories = await tracker.getCategorySummary(userId, year);
@@ -180,9 +180,9 @@ router.get(
       return;
     }
 
-    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const year = req.query.year ? Number.parseInt(req.query.year as string) : new Date().getFullYear();
+    const limit = Number.parseInt(req.query.limit as string) || 50;
+    const offset = Number.parseInt(req.query.offset as string) || 0;
 
     const tracker = getDeductionTracker();
     const mileage = await tracker.getMileageLog(userId, { year, limit, offset });
@@ -265,7 +265,7 @@ router.get(
       return;
     }
 
-    const year = parseInt(req.params.year);
+    const year = Number.parseInt(req.params.year);
     if (isNaN(year)) {
       res.status(400).json({ error: 'Invalid year' });
       return;

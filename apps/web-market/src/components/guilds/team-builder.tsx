@@ -307,7 +307,7 @@ export default function TeamBuilder({
                       value={sm.allocation}
                       onChange={(e) =>
                         updateMember(sm.memberId, {
-                          allocation: parseInt(e.target.value) || 0,
+                          allocation: Number.parseInt(e.target.value) || 0,
                         })
                       }
                     />

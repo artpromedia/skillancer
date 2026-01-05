@@ -147,8 +147,8 @@ export async function introductionRoutes(fastify: FastifyInstance) {
       const result = await introductionService.getIntroductionHistory(
         userId,
         role,
-        page ? parseInt(page) : 1,
-        limit ? parseInt(limit) : 20
+        page ? Number.parseInt(page) : 1,
+        limit ? Number.parseInt(limit) : 20
       );
 
       return reply.send(result);

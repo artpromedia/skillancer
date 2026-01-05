@@ -208,7 +208,7 @@ test.describe('Receive Message - Real-time', () => {
         .first()
         .locator('[data-testid="unread-badge"]')
         .textContent();
-      expect(parseInt(unreadCount || '0')).toBeGreaterThan(0);
+      expect(Number.parseInt(unreadCount || '0')).toBeGreaterThan(0);
     }
   });
 });

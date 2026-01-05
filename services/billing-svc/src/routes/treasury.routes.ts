@@ -421,7 +421,7 @@ router.get('/payouts', authenticate, async (req: Request, res: Response, next: N
 
     const result = await payoutService.listPayouts(userId, {
       status: status as any,
-      limit: limit ? parseInt(limit as string) : undefined,
+      limit: limit ? Number.parseInt(limit as string) : undefined,
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
     });
@@ -466,7 +466,7 @@ router.post(
 router.get('/statements', authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
-    const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+    const year = req.query.year ? Number.parseInt(req.query.year as string) : undefined;
 
     const statements = await treasuryService.getStatements(userId, year);
 

@@ -1,5 +1,5 @@
 import { prisma } from '@skillancer/database';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // Headcount Planning Service for CHRO Suite

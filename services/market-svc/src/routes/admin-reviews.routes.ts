@@ -75,8 +75,8 @@ export function registerAdminReviewRoutes(
     async (request, reply) => {
       getAdmin(request);
       const { page: pageStr, limit: limitStr } = request.query;
-      const page = pageStr ? parseInt(pageStr, 10) : 1;
-      const limit = limitStr ? parseInt(limitStr, 10) : 20;
+      const page = pageStr ? Number.parseInt(pageStr, 10) : 1;
+      const limit = limitStr ? Number.parseInt(limitStr, 10) : 20;
 
       const queue = await moderationService.getModerationQueue({ page, limit });
 
@@ -132,8 +132,8 @@ export function registerAdminReviewRoutes(
     async (request, reply) => {
       getAdmin(request);
       const { page: pageStr, limit: limitStr } = request.query;
-      const page = pageStr ? parseInt(pageStr, 10) : 1;
-      const limit = limitStr ? parseInt(limitStr, 10) : 20;
+      const page = pageStr ? Number.parseInt(pageStr, 10) : 1;
+      const limit = limitStr ? Number.parseInt(limitStr, 10) : 20;
 
       const result = await moderationService.getPendingReports({ page, limit });
 
@@ -179,8 +179,8 @@ export function registerAdminReviewRoutes(
     async (request, reply) => {
       getAdmin(request);
       const { page: pageStr, limit: limitStr } = request.query;
-      const page = pageStr ? parseInt(pageStr, 10) : 1;
-      const limit = limitStr ? parseInt(limitStr, 10) : 20;
+      const page = pageStr ? Number.parseInt(pageStr, 10) : 1;
+      const limit = limitStr ? Number.parseInt(limitStr, 10) : 20;
 
       const result = await invitationService.getAllInvitations({ page, limit });
 

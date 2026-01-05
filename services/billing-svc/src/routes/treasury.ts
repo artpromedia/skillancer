@@ -120,7 +120,7 @@ router.get(
   '/balance/history',
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.id;
-    const days = parseInt(req.query.days as string) || 30;
+    const days = Number.parseInt(req.query.days as string) || 30;
     const balanceManager = getBalanceManager();
 
     const history = await balanceManager.getBalanceHistory(userId, days);
@@ -137,7 +137,7 @@ router.get(
   '/transactions',
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.id;
-    const limit = parseInt(req.query.limit as string) || 50;
+    const limit = Number.parseInt(req.query.limit as string) || 50;
     const startingAfter = req.query.starting_after as string | undefined;
     const treasuryService = getTreasuryService();
 
@@ -232,8 +232,8 @@ router.get(
   '/payouts',
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.id;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const page = Number.parseInt(req.query.page as string) || 1;
+    const limit = Number.parseInt(req.query.limit as string) || 20;
     const payoutService = getInstantPayoutService();
 
     const payouts = await payoutService.listPayouts(userId, { page, limit });
@@ -330,7 +330,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const month = req.query.month as string;
-    const year = parseInt(req.query.year as string) || new Date().getFullYear();
+    const year = Number.parseInt(req.query.year as string) || new Date().getFullYear();
     const treasuryService = getTreasuryService();
 
     const statements = await treasuryService.getStatements(userId, { month, year });

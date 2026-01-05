@@ -234,10 +234,10 @@ export abstract class BaseIntegrationService {
 
       // Extract rate limit headers
       const rateLimitRemaining = response.headers.get('X-RateLimit-Remaining')
-        ? parseInt(response.headers.get('X-RateLimit-Remaining')!, 10)
+        ? Number.parseInt(response.headers.get('X-RateLimit-Remaining')!, 10)
         : undefined;
       const rateLimitReset = response.headers.get('X-RateLimit-Reset')
-        ? new Date(parseInt(response.headers.get('X-RateLimit-Reset')!, 10) * 1000)
+        ? new Date(Number.parseInt(response.headers.get('X-RateLimit-Reset')!, 10) * 1000)
         : undefined;
 
       // Update rate limits in database

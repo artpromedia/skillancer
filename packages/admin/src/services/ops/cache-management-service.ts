@@ -116,22 +116,22 @@ export class CacheManagementService {
 
     const keyspace = parsed['db0'] || '';
     const keysMatch = keyspace.match(/keys=(\d+)/);
-    const totalKeys = keysMatch ? parseInt(keysMatch[1]) : 0;
+    const totalKeys = keysMatch ? Number.parseInt(keysMatch[1]) : 0;
 
-    const hits = parseInt(parsed['keyspace_hits'] || '0');
-    const misses = parseInt(parsed['keyspace_misses'] || '0');
+    const hits = Number.parseInt(parsed['keyspace_hits'] || '0');
+    const misses = Number.parseInt(parsed['keyspace_misses'] || '0');
     const hitRate = hits + misses > 0 ? hits / (hits + misses) : 0;
 
     return {
       memoryUsed: parsed['used_memory_human'] || '0B',
       memoryPeak: parsed['used_memory_peak_human'] || '0B',
-      connectedClients: parseInt(parsed['connected_clients'] || '0'),
+      connectedClients: Number.parseInt(parsed['connected_clients'] || '0'),
       totalKeys,
       hitRate,
-      evictedKeys: parseInt(parsed['evicted_keys'] || '0'),
-      expiredKeys: parseInt(parsed['expired_keys'] || '0'),
-      opsPerSecond: parseInt(parsed['instantaneous_ops_per_sec'] || '0'),
-      uptime: parseInt(parsed['uptime_in_seconds'] || '0'),
+      evictedKeys: Number.parseInt(parsed['evicted_keys'] || '0'),
+      expiredKeys: Number.parseInt(parsed['expired_keys'] || '0'),
+      opsPerSecond: Number.parseInt(parsed['instantaneous_ops_per_sec'] || '0'),
+      uptime: Number.parseInt(parsed['uptime_in_seconds'] || '0'),
     };
   }
 

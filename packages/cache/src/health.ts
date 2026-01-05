@@ -250,7 +250,7 @@ function parseRedisInfo(
     if (dbInfo) {
       const match = dbInfo.match(/keys=(\d+)/);
       if (match && match[1]) {
-        totalKeys += parseInt(match[1], 10);
+        totalKeys += Number.parseInt(match[1], 10);
       }
     }
   }
@@ -262,16 +262,16 @@ function parseRedisInfo(
     result.version = parsed['redis_version'];
   }
   if (parsed['used_memory']) {
-    result.usedMemory = parseInt(parsed['used_memory'], 10);
+    result.usedMemory = Number.parseInt(parsed['used_memory'], 10);
   }
   if (parsed['used_memory_human']) {
     result.usedMemoryHuman = parsed['used_memory_human'];
   }
   if (parsed['connected_clients']) {
-    result.connectedClients = parseInt(parsed['connected_clients'], 10);
+    result.connectedClients = Number.parseInt(parsed['connected_clients'], 10);
   }
   if (parsed['uptime_in_seconds']) {
-    result.uptimeSeconds = parseInt(parsed['uptime_in_seconds'], 10);
+    result.uptimeSeconds = Number.parseInt(parsed['uptime_in_seconds'], 10);
   }
   if (parsed['role']) {
     result.role = parsed['role'];

@@ -64,7 +64,7 @@ module.exports = function (plop) {
         message: 'Port number:',
         default: '3010',
         validate: (value) => {
-          const port = parseInt(value);
+          const port = Number.parseInt(value);
           if (isNaN(port) || port < 1000 || port > 65535) {
             return 'Port must be a number between 1000 and 65535';
           }

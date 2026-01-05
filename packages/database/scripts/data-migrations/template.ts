@@ -333,7 +333,7 @@ async function main(): Promise<void> {
   // Parse batch size
   const batchSizeArg = args.find((a) => a.startsWith('--batch-size='));
   if (batchSizeArg) {
-    const size = parseInt(batchSizeArg.split('=')[1]!, 10);
+    const size = Number.parseInt(batchSizeArg.split('=')[1]!, 10);
     if (!isNaN(size) && size > 0) {
       options.batchSize = size;
     }

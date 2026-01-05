@@ -112,8 +112,8 @@ export function createAdminRoutes(config: AdminRoutesConfig): Router {
         resourceType: resourceType as string,
         startDate: startDate ? new Date(startDate as string) : undefined,
         endDate: endDate ? new Date(endDate as string) : undefined,
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined,
+        limit: limit ? Number.parseInt(limit as string) : undefined,
+        offset: offset ? Number.parseInt(offset as string) : undefined,
       });
 
       res.json(logs);

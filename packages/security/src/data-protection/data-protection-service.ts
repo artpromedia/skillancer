@@ -249,7 +249,7 @@ export class DataProtectionService {
 
     // For numbers: 12345 -> 12000 -> 10000
     if (/^\d+$/.test(data)) {
-      const num = parseInt(data);
+      const num = Number.parseInt(data);
       const magnitude = Math.pow(10, level);
       return String(Math.floor(num / magnitude) * magnitude);
     }

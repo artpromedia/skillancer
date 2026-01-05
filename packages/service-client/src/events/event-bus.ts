@@ -25,8 +25,8 @@ const createRedisClient = (): Redis => {
     maxRetriesPerRequest: number;
   } = {
     host: process.env['REDIS_HOST'] || 'localhost',
-    port: parseInt(process.env['REDIS_PORT'] || '6379', 10),
-    db: parseInt(process.env['REDIS_EVENTS_DB'] || '2', 10),
+    port: Number.parseInt(process.env['REDIS_PORT'] || '6379', 10),
+    db: Number.parseInt(process.env['REDIS_EVENTS_DB'] || '2', 10),
     retryStrategy: (times: number) => {
       const delay = Math.min(times * 50, 2000);
       return delay;

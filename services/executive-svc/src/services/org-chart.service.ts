@@ -1,6 +1,6 @@
 import { prisma } from '@skillancer/database';
 import { RACIRole } from '@prisma/client';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 
 // Org Chart & RACI Service for COO Suite
 // Manages organizational structure and responsibility matrices

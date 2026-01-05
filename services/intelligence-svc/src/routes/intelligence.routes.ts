@@ -61,8 +61,8 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
         const result = await outcomeService.getFreelancerOutcomes(freelancerId, {
           outcomeType,
           rating,
-          page: page ? parseInt(page) : 1,
-          limit: limit ? parseInt(limit) : 20,
+          page: page ? Number.parseInt(page) : 1,
+          limit: limit ? Number.parseInt(limit) : 20,
         });
         return reply.send(result);
       } catch (error: any) {
@@ -81,8 +81,8 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
         const result = await outcomeService.getClientOutcomes(clientId, {
           outcomeType,
           rating,
-          page: page ? parseInt(page) : 1,
-          limit: limit ? parseInt(limit) : 20,
+          page: page ? Number.parseInt(page) : 1,
+          limit: limit ? Number.parseInt(limit) : 20,
         });
         return reply.send(result);
       } catch (error: any) {
@@ -183,8 +183,8 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
         const { page, limit } = request.query as any;
         const result = await predictionService.getFreelancerPredictions(
           freelancerId,
-          page ? parseInt(page) : 1,
-          limit ? parseInt(limit) : 20
+          page ? Number.parseInt(page) : 1,
+          limit ? Number.parseInt(limit) : 20
         );
         return reply.send(result);
       } catch (error: any) {
@@ -202,8 +202,8 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
         const { page, limit } = request.query as any;
         const result = await predictionService.getClientPredictions(
           clientId,
-          page ? parseInt(page) : 1,
-          limit ? parseInt(limit) : 20
+          page ? Number.parseInt(page) : 1,
+          limit ? Number.parseInt(limit) : 20
         );
         return reply.send(result);
       } catch (error: any) {

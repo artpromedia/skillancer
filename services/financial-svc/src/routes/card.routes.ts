@@ -139,8 +139,8 @@ export async function cardRoutes(fastify: FastifyInstance) {
           startDate ? new Date(startDate) : undefined,
           endDate ? new Date(endDate) : undefined,
           type,
-          page ? parseInt(page) : 1,
-          limit ? parseInt(limit) : 50
+          page ? Number.parseInt(page) : 1,
+          limit ? Number.parseInt(limit) : 50
         );
 
         return reply.send(result);

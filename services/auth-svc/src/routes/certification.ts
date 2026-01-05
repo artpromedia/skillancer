@@ -90,7 +90,7 @@ async function getExpiringCertificationsHandler(
 ): Promise<void> {
   const userId = getUserId(request);
   const { days } = request.query as { days?: string };
-  const daysAhead = days ? parseInt(days, 10) : 30;
+  const daysAhead = days ? Number.parseInt(days, 10) : 30;
   const certificationService = getCertificationService();
 
   const certifications = await certificationService.getExpiringCertifications(userId, daysAhead);

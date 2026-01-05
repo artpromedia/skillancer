@@ -293,19 +293,19 @@ export class GoogleAnalyticsConnector extends BaseConnector {
     ]);
 
     return {
-      activeUsers: parseInt(users.rows?.[0]?.metricValues[0]?.value || '0', 10),
+      activeUsers: Number.parseInt(users.rows?.[0]?.metricValues[0]?.value || '0', 10),
       pageviews: 0, // GA4 realtime doesn't have pageviews directly
       topPages: (pages.rows || []).map((row) => ({
         path: row.dimensionValues[0].value,
-        users: parseInt(row.metricValues[0].value, 10),
+        users: Number.parseInt(row.metricValues[0].value, 10),
       })),
       topSources: (sources.rows || []).map((row) => ({
         source: row.dimensionValues[0].value,
-        users: parseInt(row.metricValues[0].value, 10),
+        users: Number.parseInt(row.metricValues[0].value, 10),
       })),
       topCountries: (countries.rows || []).map((row) => ({
         country: row.dimensionValues[0].value,
-        users: parseInt(row.metricValues[0].value, 10),
+        users: Number.parseInt(row.metricValues[0].value, 10),
       })),
     };
   }
@@ -338,13 +338,13 @@ export class GoogleAnalyticsConnector extends BaseConnector {
     const previousMap = new Map(
       (previous.rows || []).map((row) => [
         row.dimensionValues[0].value,
-        parseInt(row.metricValues[0].value, 10),
+        Number.parseInt(row.metricValues[0].value, 10),
       ])
     );
 
     return (current.rows || []).map((row) => {
       const eventName = row.dimensionValues[0].value;
-      const conversions = parseInt(row.metricValues[0].value, 10);
+      const conversions = Number.parseInt(row.metricValues[0].value, 10);
       const previousConversions = previousMap.get(eventName) || 0;
       const trend =
         previousConversions > 0
@@ -427,13 +427,13 @@ export class GoogleAnalyticsConnector extends BaseConnector {
     const currentRow = current.rows?.[0];
     const previousRow = previous.rows?.[0];
 
-    const sessions = parseInt(currentRow?.metricValues[0]?.value || '0', 10);
-    const users = parseInt(currentRow?.metricValues[1]?.value || '0', 10);
-    const pageviews = parseInt(currentRow?.metricValues[2]?.value || '0', 10);
+    const sessions = Number.parseInt(currentRow?.metricValues[0]?.value || '0', 10);
+    const users = Number.parseInt(currentRow?.metricValues[1]?.value || '0', 10);
+    const pageviews = Number.parseInt(currentRow?.metricValues[2]?.value || '0', 10);
 
-    const prevSessions = parseInt(previousRow?.metricValues[0]?.value || '0', 10);
-    const prevUsers = parseInt(previousRow?.metricValues[1]?.value || '0', 10);
-    const prevPageviews = parseInt(previousRow?.metricValues[2]?.value || '0', 10);
+    const prevSessions = Number.parseInt(previousRow?.metricValues[0]?.value || '0', 10);
+    const prevUsers = Number.parseInt(previousRow?.metricValues[1]?.value || '0', 10);
+    const prevPageviews = Number.parseInt(previousRow?.metricValues[2]?.value || '0', 10);
 
     return {
       sessions,
@@ -449,8 +449,8 @@ export class GoogleAnalyticsConnector extends BaseConnector {
       bySource: (bySource.rows || []).map((row) => ({
         source: row.dimensionValues[0].value,
         medium: row.dimensionValues[1].value,
-        sessions: parseInt(row.metricValues[0].value, 10),
-        users: parseInt(row.metricValues[1].value, 10),
+        sessions: Number.parseInt(row.metricValues[0].value, 10),
+        users: Number.parseInt(row.metricValues[1].value, 10),
       })),
     };
   }
@@ -484,21 +484,21 @@ export class GoogleAnalyticsConnector extends BaseConnector {
     const previousMap = new Map(
       (previous.rows || []).map((row) => [
         row.dimensionValues[0].value,
-        parseInt(row.metricValues[0].value, 10),
+        Number.parseInt(row.metricValues[0].value, 10),
       ])
     );
 
     return (current.rows || []).map((row) => {
       const channel = row.dimensionValues[0].value;
-      const sessions = parseInt(row.metricValues[0].value, 10);
-      const conversions = parseInt(row.metricValues[3].value, 10);
+      const sessions = Number.parseInt(row.metricValues[0].value, 10);
+      const conversions = Number.parseInt(row.metricValues[3].value, 10);
       const prevSessions = previousMap.get(channel) || 0;
 
       return {
         channel,
         sessions,
-        users: parseInt(row.metricValues[1].value, 10),
-        newUsers: parseInt(row.metricValues[2].value, 10),
+        users: Number.parseInt(row.metricValues[1].value, 10),
+        newUsers: Number.parseInt(row.metricValues[2].value, 10),
         conversions,
         conversionRate: sessions > 0 ? (conversions / sessions) * 100 : 0,
         trend: this.calculateTrend(sessions, prevSessions),
@@ -525,8 +525,8 @@ export class GoogleAnalyticsConnector extends BaseConnector {
     );
 
     return (report.rows || []).map((row) => {
-      const pageviews = parseInt(row.metricValues[0].value, 10);
-      const conversions = parseInt(row.metricValues[3].value, 10);
+      const pageviews = Number.parseInt(row.metricValues[0].value, 10);
+      const conversions = Number.parseInt(row.metricValues[3].value, 10);
 
       return {
         pagePath: row.dimensionValues[0].value,
@@ -586,7 +586,7 @@ export class GoogleAnalyticsConnector extends BaseConnector {
       avgEngagementTime,
       bounceRate,
       pagesPerSession,
-      engagedSessions: parseInt(currentRow?.metricValues[3]?.value || '0', 10),
+      engagedSessions: Number.parseInt(currentRow?.metricValues[3]?.value || '0', 10),
       engagementRate: parseFloat(currentRow?.metricValues[4]?.value || '0'),
       trends: {
         engagementTime: this.calculateTrend(avgEngagementTime, prevEngagementTime),
@@ -603,7 +603,7 @@ export class GoogleAnalyticsConnector extends BaseConnector {
   private getPreviousPeriod(dateRange: GA4DateRange): GA4DateRange {
     // Simple implementation - calculate based on 'NdaysAgo' format
     if (dateRange.startDate.includes('daysAgo')) {
-      const days = parseInt(dateRange.startDate.replace('daysAgo', ''), 10);
+      const days = Number.parseInt(dateRange.startDate.replace('daysAgo', ''), 10);
       return {
         startDate: `${days * 2}daysAgo`,
         endDate: `${days + 1}daysAgo`,

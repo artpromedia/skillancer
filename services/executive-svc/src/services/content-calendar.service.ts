@@ -1,5 +1,5 @@
 import { prisma } from '@skillancer/database';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 
 // Content Calendar Service for CMO Suite
 // Manages content planning, scheduling, and publishing workflows

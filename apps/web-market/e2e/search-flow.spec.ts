@@ -31,7 +31,7 @@ class SearchPage {
   async getResultCount(): Promise<number> {
     const countText = await this.page.getByTestId('result-count').textContent();
     const match = countText?.match(/(\d+)/);
-    return match ? parseInt(match[1]) : 0;
+    return match ? Number.parseInt(match[1]) : 0;
   }
 
   async selectFilter(filterName: string, value: string) {

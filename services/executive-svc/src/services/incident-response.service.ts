@@ -1,5 +1,5 @@
 import { prisma } from '@skillancer/database';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 
 // Incident Response Service for CISO Suite
 // Manages security incidents, playbooks, and post-mortems

@@ -173,8 +173,8 @@ export async function teamReunionRoutes(fastify: FastifyInstance) {
       const result = await teamReunionService.getUserTeamReunions(
         userId,
         status as any,
-        page ? parseInt(page) : 1,
-        limit ? parseInt(limit) : 20
+        page ? Number.parseInt(page) : 1,
+        limit ? Number.parseInt(limit) : 20
       );
 
       return reply.send(result);
@@ -221,7 +221,7 @@ export async function teamReunionRoutes(fastify: FastifyInstance) {
         const suggestions = await teamReunionService.suggestColleagues(
           userId,
           company,
-          limit ? parseInt(limit) : 10
+          limit ? Number.parseInt(limit) : 10
         );
 
         return reply.send(suggestions);

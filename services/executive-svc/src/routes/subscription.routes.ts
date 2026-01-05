@@ -362,7 +362,7 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
         return reply.code(404).send({ error: 'No subscription found' });
       }
 
-      const limit = request.query.limit ? parseInt(request.query.limit, 10) : 12;
+      const limit = request.query.limit ? Number.parseInt(request.query.limit, 10) : 12;
       const invoices = await subscriptionService.getInvoices(subscription.id, limit);
 
       return { invoices };

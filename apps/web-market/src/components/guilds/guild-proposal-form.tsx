@@ -313,7 +313,7 @@ export default function GuildProposalForm({
                       value={tm.allocation}
                       onChange={(e) =>
                         updateTeamMember(tm.memberId, {
-                          allocation: parseInt(e.target.value) || 0,
+                          allocation: Number.parseInt(e.target.value) || 0,
                         })
                       }
                     />

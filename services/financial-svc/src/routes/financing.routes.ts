@@ -73,8 +73,8 @@ export async function financingRoutes(fastify: FastifyInstance) {
       const result = await financingService.getUserFinancings(
         userId,
         status as any,
-        page ? parseInt(page) : 1,
-        limit ? parseInt(limit) : 20
+        page ? Number.parseInt(page) : 1,
+        limit ? Number.parseInt(limit) : 20
       );
 
       return reply.send(result);
@@ -195,8 +195,8 @@ export async function financingRoutes(fastify: FastifyInstance) {
       const { page, limit } = request.query as { page?: string; limit?: string };
 
       const result = await financingService.getPendingRequests(
-        page ? parseInt(page) : 1,
-        limit ? parseInt(limit) : 20
+        page ? Number.parseInt(page) : 1,
+        limit ? Number.parseInt(limit) : 20
       );
 
       return reply.send(result);

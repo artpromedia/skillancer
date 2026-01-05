@@ -34,7 +34,7 @@ export interface AppConfig {
 }
 
 const defaultConfig: AppConfig = {
-  port: parseInt(process.env.PORT || '4000', 10),
+  port: Number.parseInt(process.env.PORT || '4000', 10),
   host: process.env.HOST || '0.0.0.0',
   environment: (process.env.NODE_ENV as AppConfig['environment']) || 'development',
   apiVersion: 'v1',

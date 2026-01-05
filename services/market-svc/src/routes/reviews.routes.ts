@@ -146,8 +146,8 @@ export function registerReviewRoutes(fastify: FastifyInstance, deps: ReviewRoute
     const { userId } = request.params;
     const { type, limit, offset } = request.query;
 
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    const parsedLimit = limit ? Number.parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? Number.parseInt(offset, 10) : undefined;
 
     const result = await reviewService.getReviewsForUser(userId, {
       type: type === 'given' ? 'given' : 'received',
@@ -247,8 +247,8 @@ export function registerReviewRoutes(fastify: FastifyInstance, deps: ReviewRoute
     '/feed',
     async (request, reply) => {
       const { limit: limitStr, offset: offsetStr } = request.query;
-      const limit = limitStr ? parseInt(limitStr, 10) : 20;
-      const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+      const limit = limitStr ? Number.parseInt(limitStr, 10) : 20;
+      const offset = offsetStr ? Number.parseInt(offsetStr, 10) : 0;
 
       const [reviews, total] = await Promise.all([
         prisma.review.findMany({

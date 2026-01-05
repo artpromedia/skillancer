@@ -126,11 +126,11 @@ const ListInvoicesSchema = z.object({
   search: z.string().optional(),
   page: z
     .string()
-    .transform((s) => parseInt(s, 10))
+    .transform((s) => Number.parseInt(s, 10))
     .optional(),
   limit: z
     .string()
-    .transform((s) => parseInt(s, 10))
+    .transform((s) => Number.parseInt(s, 10))
     .optional(),
   sortBy: z.enum(['issueDate', 'dueDate', 'total', 'status', 'invoiceNumber']).optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),

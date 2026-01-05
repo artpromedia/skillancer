@@ -435,7 +435,7 @@ export function observabilityRoutes(
  * Parse period string to milliseconds
  */
 function parsePeriodToMs(period: string): number {
-  const value = parseInt(period, 10);
+  const value = Number.parseInt(period, 10);
   const unit = period.replace(/\d+/g, '');
 
   switch (unit) {

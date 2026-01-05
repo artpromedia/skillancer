@@ -625,7 +625,7 @@ export class MonitoringService {
     const match = interval.match(/^(\d+)([smhd])$/);
     if (!match || !match[1] || !match[2]) return 60000; // Default 1 minute
 
-    const value = parseInt(match[1], 10);
+    const value = Number.parseInt(match[1], 10);
     const unit = match[2];
 
     switch (unit) {

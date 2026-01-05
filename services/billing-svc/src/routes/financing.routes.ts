@@ -169,8 +169,8 @@ router.get(
       return;
     }
 
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const limit = Number.parseInt(req.query.limit as string) || 50;
+    const offset = Number.parseInt(req.query.offset as string) || 0;
 
     const advanceManager = getAdvanceManager();
     const history = await advanceManager.getHistory(userId, { limit, offset });

@@ -360,7 +360,7 @@ export default function ExecutiveRegisterPage() {
                     type="number"
                     value={formData.yearsExecutiveExp}
                     onChange={(e) =>
-                      updateFormData({ yearsExecutiveExp: parseInt(e.target.value) || 0 })
+                      updateFormData({ yearsExecutiveExp: Number.parseInt(e.target.value) || 0 })
                     }
                   />
                 </div>
@@ -374,7 +374,7 @@ export default function ExecutiveRegisterPage() {
                     type="number"
                     value={formData.totalYearsExp}
                     onChange={(e) =>
-                      updateFormData({ totalYearsExp: parseInt(e.target.value) || 0 })
+                      updateFormData({ totalYearsExp: Number.parseInt(e.target.value) || 0 })
                     }
                   />
                 </div>
@@ -663,7 +663,7 @@ export default function ExecutiveRegisterPage() {
                     type="number"
                     value={formData.hoursPerWeekMin}
                     onChange={(e) =>
-                      updateFormData({ hoursPerWeekMin: parseInt(e.target.value) || 5 })
+                      updateFormData({ hoursPerWeekMin: Number.parseInt(e.target.value) || 5 })
                     }
                   />
                 </div>
@@ -678,7 +678,7 @@ export default function ExecutiveRegisterPage() {
                     type="number"
                     value={formData.hoursPerWeekMax}
                     onChange={(e) =>
-                      updateFormData({ hoursPerWeekMax: parseInt(e.target.value) || 20 })
+                      updateFormData({ hoursPerWeekMax: Number.parseInt(e.target.value) || 20 })
                     }
                   />
                 </div>
@@ -692,7 +692,7 @@ export default function ExecutiveRegisterPage() {
                     min="1"
                     type="number"
                     value={formData.maxClients}
-                    onChange={(e) => updateFormData({ maxClients: parseInt(e.target.value) || 3 })}
+                    onChange={(e) => updateFormData({ maxClients: Number.parseInt(e.target.value) || 3 })}
                   />
                 </div>
                 <div>
@@ -722,7 +722,7 @@ export default function ExecutiveRegisterPage() {
                         type="number"
                         value={formData.hourlyRateMin}
                         onChange={(e) =>
-                          updateFormData({ hourlyRateMin: parseInt(e.target.value) || 0 })
+                          updateFormData({ hourlyRateMin: Number.parseInt(e.target.value) || 0 })
                         }
                       />
                       <span className="text-gray-500">-</span>
@@ -732,7 +732,7 @@ export default function ExecutiveRegisterPage() {
                         type="number"
                         value={formData.hourlyRateMax}
                         onChange={(e) =>
-                          updateFormData({ hourlyRateMax: parseInt(e.target.value) || 0 })
+                          updateFormData({ hourlyRateMax: Number.parseInt(e.target.value) || 0 })
                         }
                       />
                     </div>
@@ -748,7 +748,7 @@ export default function ExecutiveRegisterPage() {
                         type="number"
                         value={formData.monthlyRetainerMin}
                         onChange={(e) =>
-                          updateFormData({ monthlyRetainerMin: parseInt(e.target.value) || 0 })
+                          updateFormData({ monthlyRetainerMin: Number.parseInt(e.target.value) || 0 })
                         }
                       />
                       <span className="text-gray-500">-</span>
@@ -758,7 +758,7 @@ export default function ExecutiveRegisterPage() {
                         type="number"
                         value={formData.monthlyRetainerMax}
                         onChange={(e) =>
-                          updateFormData({ monthlyRetainerMax: parseInt(e.target.value) || 0 })
+                          updateFormData({ monthlyRetainerMax: Number.parseInt(e.target.value) || 0 })
                         }
                       />
                     </div>

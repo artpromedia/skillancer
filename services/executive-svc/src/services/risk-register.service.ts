@@ -1,5 +1,5 @@
 import { prisma } from '@skillancer/database';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 
 // Risk Register Service for CISO Suite
 // Manages security risks, assessments, and mitigation tracking

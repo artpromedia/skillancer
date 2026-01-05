@@ -82,8 +82,8 @@ export async function discoveryRoutes(fastify: FastifyInstance) {
         limit = '20',
       } = request.query;
 
-      const pageNum = parseInt(page, 10);
-      const limitNum = Math.min(parseInt(limit, 10), 50);
+      const pageNum = Number.parseInt(page, 10);
+      const limitNum = Math.min(Number.parseInt(limit, 10), 50);
       const skip = (pageNum - 1) * limitNum;
 
       // Build where clause
@@ -114,11 +114,11 @@ export async function discoveryRoutes(fastify: FastifyInstance) {
       }
 
       if (hoursMin) {
-        where.hoursPerWeekMax = { gte: parseInt(hoursMin, 10) };
+        where.hoursPerWeekMax = { gte: Number.parseInt(hoursMin, 10) };
       }
 
       if (hoursMax) {
-        where.hoursPerWeekMin = { lte: parseInt(hoursMax, 10) };
+        where.hoursPerWeekMin = { lte: Number.parseInt(hoursMax, 10) };
       }
 
       if (rateMin) {

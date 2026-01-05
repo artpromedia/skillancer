@@ -121,7 +121,7 @@ export async function usageMetering(request: FastifyRequest, reply: FastifyReply
     queryParams: request.query as Record<string, unknown>,
     statusCode: reply.statusCode,
     responseMs: Math.round(responseTime),
-    responseSize: parseInt((reply.getHeader('content-length') as string) || '0', 10),
+    responseSize: Number.parseInt((reply.getHeader('content-length') as string) || '0', 10),
     ipAddress: request.ip,
     userAgent: request.headers['user-agent'] || 'unknown',
     timestamp: new Date(),

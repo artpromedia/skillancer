@@ -92,7 +92,7 @@ function parseArgs(): RollbackOptions {
 
       case '--steps':
       case '-s': {
-        const steps = parseInt(args[++i] || '0', 10);
+        const steps = Number.parseInt(args[++i] || '0', 10);
         if (isNaN(steps) || steps < 1) {
           console.error('❌ --steps must be a positive integer');
           process.exit(1);

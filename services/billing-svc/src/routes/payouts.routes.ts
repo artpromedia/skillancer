@@ -262,8 +262,8 @@ export async function payoutRoutes(fastify: FastifyInstance): Promise<void> {
         const payoutService = getGlobalPayoutService({ stripeSecretKey: config.STRIPE_SECRET_KEY });
         const result = await payoutService.getPayoutHistory(userId, {
           status: status as any,
-          limit: limit ? parseInt(limit, 10) : undefined,
-          offset: offset ? parseInt(offset, 10) : undefined,
+          limit: limit ? Number.parseInt(limit, 10) : undefined,
+          offset: offset ? Number.parseInt(offset, 10) : undefined,
         });
 
         return await reply.send({

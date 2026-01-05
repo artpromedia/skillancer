@@ -224,8 +224,8 @@ router.get(
         type: type as any,
         startDate: startDate ? new Date(startDate as string) : undefined,
         endDate: endDate ? new Date(endDate as string) : undefined,
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined,
+        limit: limit ? Number.parseInt(limit as string) : undefined,
+        offset: offset ? Number.parseInt(offset as string) : undefined,
       });
 
       res.json(result);
@@ -428,7 +428,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
-      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+      const year = req.query.year ? Number.parseInt(req.query.year as string) : undefined;
 
       const schedule = await taxCalculator.getQuarterlySchedule(userId, year);
 
@@ -449,7 +449,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
-      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+      const year = req.query.year ? Number.parseInt(req.query.year as string) : undefined;
 
       const statuses = await quarterlyReminders.getYearlyStatus(userId, year);
 
@@ -503,8 +503,8 @@ router.get(
 
       const instructions = await quarterlyReminders.getPaymentInstructions(
         userId,
-        parseInt(quarter as string) || 1,
-        parseInt(year as string) || new Date().getFullYear()
+        Number.parseInt(quarter as string) || 1,
+        Number.parseInt(year as string) || new Date().getFullYear()
       );
 
       res.json({ instructions });
@@ -569,7 +569,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      const limit = req.query.limit ? Number.parseInt(req.query.limit as string) : 5;
 
       const reminders = await quarterlyReminders.getUpcomingReminders(userId, limit);
 

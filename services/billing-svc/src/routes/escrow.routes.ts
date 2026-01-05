@@ -436,7 +436,7 @@ export const escrowRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const user = requireUser(request);
         const { contractId } = request.params;
-        const limit = request.query.limit ? parseInt(request.query.limit, 10) : undefined;
+        const limit = request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined;
 
         // Verify access through summary
         await escrowService.getEscrowSummary(contractId, user.id);

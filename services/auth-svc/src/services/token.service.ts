@@ -51,7 +51,7 @@ function parseDuration(duration: string): number {
     throw new Error(`Invalid duration format: ${duration}`);
   }
 
-  const value = parseInt(match[1], 10);
+  const value = Number.parseInt(match[1], 10);
   const unit = match[2] as 's' | 'm' | 'h' | 'd';
 
   const multipliers = {

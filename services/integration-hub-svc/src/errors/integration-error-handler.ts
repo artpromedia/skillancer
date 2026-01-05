@@ -44,7 +44,7 @@ export class IntegrationErrorHandler {
     }
 
     if (status === 429) {
-      const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+      const retryAfter = Number.parseInt(response.headers.get('Retry-After') || '60', 10);
       return {
         type: IntegrationErrorType.RATE_LIMITED,
         message: `Rate limited. Please wait ${retryAfter} seconds.`,

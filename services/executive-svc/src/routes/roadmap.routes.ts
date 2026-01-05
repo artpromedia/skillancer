@@ -250,7 +250,7 @@ export async function roadmapRoutes(app: FastifyInstance): Promise<void> {
       request: FastifyRequest<{ Params: { id: string }; Querystring: { days?: string } }>,
       reply: FastifyReply
     ) => {
-      const days = request.query.days ? parseInt(request.query.days, 10) : 14;
+      const days = request.query.days ? Number.parseInt(request.query.days, 10) : 14;
       const upcoming = await roadmapService.getUpcomingMilestones(request.params.id, days);
       return { success: true, data: upcoming };
     }

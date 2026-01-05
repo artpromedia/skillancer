@@ -379,7 +379,7 @@ export abstract class BaseConnector implements IntegrationConnector {
 
         // Handle rate limiting
         if (response.status === 429) {
-          const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+          const retryAfter = Number.parseInt(response.headers.get('Retry-After') || '60', 10);
           throw new RateLimitError(retryAfter);
         }
 
@@ -425,7 +425,7 @@ export abstract class BaseConnector implements IntegrationConnector {
     }
 
     if (response.status === 429) {
-      const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+      const retryAfter = Number.parseInt(response.headers.get('Retry-After') || '60', 10);
       throw new RateLimitError(retryAfter);
     }
 

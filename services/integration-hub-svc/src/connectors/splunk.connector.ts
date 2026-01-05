@@ -293,7 +293,7 @@ export class SplunkConnector extends BaseConnector {
     let totalEvents = 0;
 
     for (const row of result.results) {
-      const count = parseInt(row.count as string, 10) || 0;
+      const count = Number.parseInt(row.count as string, 10) || 0;
       totalEvents += count;
 
       const source = (row.source as string) || 'unknown';
@@ -314,7 +314,7 @@ export class SplunkConnector extends BaseConnector {
       bySourcetype,
       trend: result.results.map((row) => ({
         time: row._time as string,
-        count: parseInt(row.count as string, 10) || 0,
+        count: Number.parseInt(row.count as string, 10) || 0,
       })),
     };
   }
@@ -431,7 +431,7 @@ export class SplunkConnector extends BaseConnector {
     src: (event.src as string) || '',
     dest: (event.dest as string) || '',
     time: new Date((event._time as number) * 1000),
-    count: parseInt(event.count as string, 10) || 1,
+    count: Number.parseInt(event.count as string, 10) || 1,
   });
 
   private normalizeSeverity(severity: string): NotableEvent['severity'] {

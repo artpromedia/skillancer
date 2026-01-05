@@ -44,7 +44,7 @@ router.get(
       return;
     }
 
-    const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+    const year = req.query.year ? Number.parseInt(req.query.year as string) : undefined;
     const type = req.query.type as string | undefined;
 
     const taxDocsService = getTaxDocumentsService();
@@ -153,7 +153,7 @@ router.get(
       return;
     }
 
-    const year = parseInt(req.params.year);
+    const year = Number.parseInt(req.params.year);
     if (isNaN(year)) {
       res.status(400).json({ error: 'Invalid year' });
       return;
@@ -179,7 +179,7 @@ router.get(
       return;
     }
 
-    const year = parseInt(req.query.year as string) || new Date().getFullYear() - 1;
+    const year = Number.parseInt(req.query.year as string) || new Date().getFullYear() - 1;
 
     const integration = getTaxPrepIntegration();
     const exportData = await integration.exportForTurboTax(userId, year);

@@ -88,7 +88,7 @@ async function start() {
   try {
     const app = await buildApp();
 
-    const port = parseInt(process.env.PORT || '3007', 10);
+    const port = Number.parseInt(process.env.PORT || '3007', 10);
     const host = process.env.HOST || '0.0.0.0';
 
     await app.listen({ port, host });

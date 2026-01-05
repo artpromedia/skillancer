@@ -1,5 +1,5 @@
 import { prisma } from '@skillancer/database';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 
 // HR Compliance Service for CHRO Suite
 // Manages HR compliance items: training, filings, policies, audits

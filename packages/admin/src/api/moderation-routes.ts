@@ -49,8 +49,8 @@ export function createModerationRoutes(config: ModerationRoutesConfig): Router {
         status: status as any,
         priority: priority as any,
         assignedTo: assignedTo as string,
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined,
+        limit: limit ? Number.parseInt(limit as string) : undefined,
+        offset: offset ? Number.parseInt(offset as string) : undefined,
       });
 
       res.json(queue);

@@ -720,7 +720,7 @@ export class AnalyticsClient {
     if (typeof window !== 'undefined') {
       const loadTime = sessionStorage.getItem('_analytics_page_load_time');
       if (loadTime) {
-        return Date.now() - parseInt(loadTime, 10);
+        return Date.now() - Number.parseInt(loadTime, 10);
       }
     }
     return undefined;

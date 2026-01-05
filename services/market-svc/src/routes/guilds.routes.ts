@@ -121,8 +121,8 @@ router.get('/', async (req, res, next) => {
       skills: req.query.skills ? (req.query.skills as string).split(',') : undefined,
       verified: req.query.verified === 'true' ? true : undefined,
       minRating: req.query.minRating ? parseFloat(req.query.minRating as string) : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
-      offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
+      limit: req.query.limit ? Number.parseInt(req.query.limit as string) : undefined,
+      offset: req.query.offset ? Number.parseInt(req.query.offset as string) : undefined,
     };
 
     const result = await guildService.listGuilds(options);
@@ -341,7 +341,7 @@ router.get('/:id/reputation', async (req, res, next) => {
 router.get('/:id/reputation/trend', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const days = req.query.days ? parseInt(req.query.days as string) : 90;
+    const days = req.query.days ? Number.parseInt(req.query.days as string) : 90;
 
     const trend = await guildReputationService.getReputationTrend(id, days);
 
@@ -359,8 +359,8 @@ router.get('/:id/reviews', async (req, res, next) => {
   try {
     const { id } = req.params;
     const options = {
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
-      offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
+      limit: req.query.limit ? Number.parseInt(req.query.limit as string) : undefined,
+      offset: req.query.offset ? Number.parseInt(req.query.offset as string) : undefined,
     };
 
     const result = await guildReputationService.getGuildReviews(id, options);
@@ -419,8 +419,8 @@ router.get('/:id/projects', async (req, res, next) => {
       status: req.query.status
         ? ((req.query.status as string).split(',') as ('PLANNING' | 'IN_PROGRESS' | 'COMPLETED')[])
         : undefined,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
-      offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
+      limit: req.query.limit ? Number.parseInt(req.query.limit as string) : undefined,
+      offset: req.query.offset ? Number.parseInt(req.query.offset as string) : undefined,
     };
 
     const result = await guildProjectsService.listGuildProjects(id, options);

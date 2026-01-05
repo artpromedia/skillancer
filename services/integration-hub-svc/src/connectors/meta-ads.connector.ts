@@ -313,14 +313,14 @@ export class MetaAdsConnector extends BaseConnector {
     }>(`/${objectId}/insights`, credentials, params);
 
     return response.data.map((insight) => ({
-      impressions: parseInt(insight.impressions, 10),
-      clicks: parseInt(insight.clicks, 10),
+      impressions: Number.parseInt(insight.impressions, 10),
+      clicks: Number.parseInt(insight.clicks, 10),
       spend: parseFloat(insight.spend),
-      reach: parseInt(insight.reach, 10),
+      reach: Number.parseInt(insight.reach, 10),
       cpm: parseFloat(insight.cpm),
       cpc: parseFloat(insight.cpc),
       ctr: parseFloat(insight.ctr),
-      conversions: parseInt(insight.conversions || '0', 10),
+      conversions: Number.parseInt(insight.conversions || '0', 10),
       costPerConversion: parseFloat(insight.cost_per_conversion || '0'),
       frequency: parseFloat(insight.frequency),
       dateStart: insight.date_start,

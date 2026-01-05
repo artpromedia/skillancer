@@ -6,10 +6,11 @@ import '../../features/auth/domain/models/user.dart';
 import '../../features/contracts/domain/models/contract.dart';
 import '../../features/jobs/domain/models/job.dart';
 import '../../features/jobs/domain/models/job_filter.dart';
-import '../../features/messages/domain/models/conversation.dart';
+import '../../features/messages/domain/models/message.dart';
 import '../../features/notifications/domain/models/notification.dart' as app;
 import '../../features/proposals/domain/models/proposal.dart';
-import '../../features/time/domain/models/time_entry.dart';
+import '../../features/time_tracking/domain/models/time_entry.dart';
+import '../../features/time_tracking/domain/services/timer_service.dart';
 import '../connectivity/connectivity_service.dart';
 import '../network/api_client.dart';
 import '../storage/local_cache.dart';
@@ -186,6 +187,11 @@ final proposalDetailProvider =
 // Time Tracking Providers
 // ============================================================================
 
+/// Timer service provider
+final timerServiceProvider = ChangeNotifierProvider<TimerService>((ref) {
+  return TimerService();
+});
+
 /// Active timer provider
 final activeTimerProvider =
     StateNotifierProvider<ActiveTimerNotifier, ActiveTimer?>((ref) {
@@ -266,6 +272,14 @@ final timeEntriesProvider =
 
 /// Contracts provider
 final contractsProvider =
+    FutureProvider.autoDispose<List<Contract>>((ref) async {
+  // TODO: Fetch from API
+  await Future.delayed(const Duration(seconds: 1));
+  return _mockContracts;
+});
+
+/// My contracts provider (alias for contractsProvider, filtered for current user)
+final myContractsProvider =
     FutureProvider.autoDispose<List<Contract>>((ref) async {
   // TODO: Fetch from API
   await Future.delayed(const Duration(seconds: 1));
@@ -378,12 +392,12 @@ final _mockProposals = <Proposal>[
 final _mockTimeEntries = <TimeEntry>[
   TimeEntry(
     id: '1',
-    projectId: '1',
-    projectName: 'E-commerce App',
+    contractId: '1',
+    contractTitle: 'E-commerce App Development',
     startTime: DateTime.now().subtract(const Duration(hours: 3)),
     endTime: DateTime.now().subtract(const Duration(hours: 1)),
     description: 'Implemented product listing screen',
-    category: 'Development',
+    memo: 'Development work',
     isBillable: true,
   ),
 ];
@@ -406,12 +420,20 @@ final _mockContracts = <Contract>[
 final _mockConversations = <Conversation>[
   Conversation(
     id: '1',
+    participantId: 'user_1',
     participantName: 'John Smith',
     participantAvatarUrl: null,
-    lastMessage: 'Thanks for the update!',
-    lastMessageAt: DateTime.now().subtract(const Duration(minutes: 30)),
+    jobTitle: 'E-commerce App Development',
+    lastMessage: Message(
+      id: 'msg_1',
+      conversationId: '1',
+      senderId: 'user_1',
+      content: 'Thanks for the update!',
+      sentAt: DateTime.now().subtract(const Duration(minutes: 30)),
+      isRead: false,
+    ),
     unreadCount: 2,
-    isOnline: true,
+    updatedAt: DateTime.now().subtract(const Duration(minutes: 30)),
   ),
 ];
 

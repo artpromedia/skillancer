@@ -654,7 +654,7 @@ export class SLOService {
     const unit = match[2];
     if (!valueStr || !unit) return 43200; // Default 30 days
 
-    const value = parseInt(valueStr, 10);
+    const value = Number.parseInt(valueStr, 10);
 
     switch (unit) {
       case 'd':

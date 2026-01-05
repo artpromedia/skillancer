@@ -46,8 +46,8 @@ export function getRedisConfigFromEnv(
 
   const config: RedisConfig = {
     host: env.REDIS_HOST || 'localhost',
-    port: parseInt(env.REDIS_PORT || '6379', 10),
-    database: parseInt(env.REDIS_DATABASE || '0', 10),
+    port: Number.parseInt(env.REDIS_PORT || '6379', 10),
+    database: Number.parseInt(env.REDIS_DATABASE || '0', 10),
     tls: env.REDIS_TLS === 'true',
   };
 
@@ -59,16 +59,16 @@ export function getRedisConfigFromEnv(
     config.keyPrefix = env.REDIS_KEY_PREFIX;
   }
   if (env.REDIS_CONNECT_TIMEOUT) {
-    config.connectTimeout = parseInt(env.REDIS_CONNECT_TIMEOUT, 10);
+    config.connectTimeout = Number.parseInt(env.REDIS_CONNECT_TIMEOUT, 10);
   }
   if (env.REDIS_COMMAND_TIMEOUT) {
-    config.commandTimeout = parseInt(env.REDIS_COMMAND_TIMEOUT, 10);
+    config.commandTimeout = Number.parseInt(env.REDIS_COMMAND_TIMEOUT, 10);
   }
   if (env.REDIS_MAX_RETRIES) {
-    config.maxRetriesPerRequest = parseInt(env.REDIS_MAX_RETRIES, 10);
+    config.maxRetriesPerRequest = Number.parseInt(env.REDIS_MAX_RETRIES, 10);
   }
   if (env.REDIS_RETRY_DELAY) {
-    config.retryDelayMs = parseInt(env.REDIS_RETRY_DELAY, 10);
+    config.retryDelayMs = Number.parseInt(env.REDIS_RETRY_DELAY, 10);
   }
 
   return config;
@@ -95,9 +95,9 @@ export function parseRedisUrl(
 
   const config: RedisConfig = {
     host: parsed.hostname || 'localhost',
-    port: parseInt(parsed.port || '6379', 10),
+    port: Number.parseInt(parsed.port || '6379', 10),
     database: parsed.pathname
-      ? parseInt(parsed.pathname.slice(1), 10) || 0
+      ? Number.parseInt(parsed.pathname.slice(1), 10) || 0
       : 0,
     tls: parsed.protocol === 'rediss:',
   };
@@ -112,10 +112,10 @@ export function parseRedisUrl(
     config.keyPrefix = env.REDIS_KEY_PREFIX;
   }
   if (env.REDIS_CONNECT_TIMEOUT) {
-    config.connectTimeout = parseInt(env.REDIS_CONNECT_TIMEOUT, 10);
+    config.connectTimeout = Number.parseInt(env.REDIS_CONNECT_TIMEOUT, 10);
   }
   if (env.REDIS_COMMAND_TIMEOUT) {
-    config.commandTimeout = parseInt(env.REDIS_COMMAND_TIMEOUT, 10);
+    config.commandTimeout = Number.parseInt(env.REDIS_COMMAND_TIMEOUT, 10);
   }
 
   return config;
@@ -217,7 +217,7 @@ export function getClusterConfigFromEnv(
       const [host, port] = node.trim().split(':');
       return {
         host: host || 'localhost',
-        port: parseInt(port || '6379', 10),
+        port: Number.parseInt(port || '6379', 10),
       };
     });
 
@@ -225,7 +225,7 @@ export function getClusterConfigFromEnv(
   if (nodes.length === 0) {
     nodes.push({
       host: env.REDIS_HOST || 'localhost',
-      port: parseInt(env.REDIS_PORT || '6379', 10),
+      port: Number.parseInt(env.REDIS_PORT || '6379', 10),
     });
   }
 

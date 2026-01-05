@@ -441,7 +441,7 @@ export class PrivacyFilter {
     let isEven = false;
 
     for (let i = cardNumber.length - 1; i >= 0; i--) {
-      let digit = parseInt(cardNumber[i], 10);
+      let digit = Number.parseInt(cardNumber[i], 10);
 
       if (isEven) {
         digit *= 2;

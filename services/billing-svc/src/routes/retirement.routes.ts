@@ -119,9 +119,9 @@ router.get(
       return;
     }
 
-    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const year = req.query.year ? Number.parseInt(req.query.year as string) : new Date().getFullYear();
+    const limit = Number.parseInt(req.query.limit as string) || 50;
+    const offset = Number.parseInt(req.query.offset as string) || 0;
 
     const contributionManager = getContributionManager();
     const contributions = await contributionManager.getContributions(userId, {
@@ -193,7 +193,7 @@ router.get(
       return;
     }
 
-    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const year = req.query.year ? Number.parseInt(req.query.year as string) : new Date().getFullYear();
 
     const retirementService = getRetirementService();
     const limits = await retirementService.getContributionLimits(userId, year);
@@ -247,7 +247,7 @@ router.get(
       return;
     }
 
-    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const year = req.query.year ? Number.parseInt(req.query.year as string) : new Date().getFullYear();
 
     const retirementService = getRetirementService();
     const benefit = await retirementService.calculateTaxBenefit(userId, year);

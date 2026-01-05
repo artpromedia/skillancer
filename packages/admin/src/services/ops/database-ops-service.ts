@@ -126,7 +126,7 @@ export class DatabaseOpsService {
       active: this.pool.totalCount - this.pool.idleCount,
       idle: this.pool.idleCount,
       waiting: this.pool.waitingCount,
-      maxConnections: parseInt(row.max_connections),
+      maxConnections: Number.parseInt(row.max_connections),
     };
   }
 
@@ -144,10 +144,10 @@ export class DatabaseOpsService {
     const row = result.rows[0];
 
     return {
-      activeQueries: parseInt(row.active_queries),
+      activeQueries: Number.parseInt(row.active_queries),
       avgQueryTime: parseFloat(row.avg_query_time) || 0,
-      slowQueries: parseInt(row.slow_queries),
-      deadlocks: parseInt(row.deadlocks) || 0,
+      slowQueries: Number.parseInt(row.slow_queries),
+      deadlocks: Number.parseInt(row.deadlocks) || 0,
     };
   }
 
@@ -172,12 +172,12 @@ export class DatabaseOpsService {
 
     return {
       databaseSize: sizeResult.rows[0].size,
-      tablesCount: parseInt(countsResult.rows[0].tables_count),
-      indexesCount: parseInt(countsResult.rows[0].indexes_count),
+      tablesCount: Number.parseInt(countsResult.rows[0].tables_count),
+      indexesCount: Number.parseInt(countsResult.rows[0].indexes_count),
       largestTables: largestTablesResult.rows.map((row) => ({
         name: row.name,
         size: row.size,
-        rowCount: parseInt(row.row_count),
+        rowCount: Number.parseInt(row.row_count),
       })),
     };
   }
@@ -275,14 +275,14 @@ export class DatabaseOpsService {
     return result.rows.map((row) => ({
       name: row.name,
       schema: row.schema,
-      rowCount: parseInt(row.row_count),
+      rowCount: Number.parseInt(row.row_count),
       size: row.size,
       totalSize: row.total_size,
       indexSize: row.index_size,
       lastVacuum: row.last_vacuum,
       lastAnalyze: row.last_analyze,
-      deadTuples: parseInt(row.dead_tuples),
-      modifiedSinceAnalyze: parseInt(row.modified_since_analyze),
+      deadTuples: Number.parseInt(row.dead_tuples),
+      modifiedSinceAnalyze: Number.parseInt(row.modified_since_analyze),
     }));
   }
 
@@ -304,7 +304,7 @@ export class DatabaseOpsService {
     `);
 
     return result.rows.map((row) => {
-      const scans = parseInt(row.scans);
+      const scans = Number.parseInt(row.scans);
       let usage: IndexStats['usage'];
 
       if (scans > 10000) usage = 'high';
@@ -317,8 +317,8 @@ export class DatabaseOpsService {
         tableName: row.table_name,
         size: row.size,
         scans,
-        tuplesRead: parseInt(row.tuples_read),
-        tuplesFetched: parseInt(row.tuples_fetched),
+        tuplesRead: Number.parseInt(row.tuples_read),
+        tuplesFetched: Number.parseInt(row.tuples_fetched),
         isUnique: row.is_unique,
         isPrimary: row.is_primary,
         isValid: row.is_valid,
@@ -358,8 +358,8 @@ export class DatabaseOpsService {
     return result.rows.map((row) => ({
       table: row.table,
       columns: 'Analyze query patterns to identify columns',
-      seqScans: parseInt(row.seq_scans),
-      rowsRead: parseInt(row.rows_read),
+      seqScans: Number.parseInt(row.seq_scans),
+      rowsRead: Number.parseInt(row.rows_read),
       recommendation: `Table ${row.table} has ${row.seq_scans} sequential scans reading ${row.rows_read} rows. Consider adding indexes on frequently filtered columns.`,
     }));
   }
@@ -493,7 +493,7 @@ export class DatabaseOpsService {
         version: row.version,
         name: row.name,
         appliedAt: row.applied_at,
-        executionTime: parseInt(row.execution_time),
+        executionTime: Number.parseInt(row.execution_time),
         checksum: row.checksum,
       }));
     } catch {

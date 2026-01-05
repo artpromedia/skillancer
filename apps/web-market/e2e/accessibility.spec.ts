@@ -21,7 +21,7 @@ test.describe('Accessibility Tests', () => {
 
       // Check heading order
       const headings = await page.$$eval('h1, h2, h3, h4, h5, h6', (elements) =>
-        elements.map((el) => parseInt(el.tagName[1]))
+        elements.map((el) => Number.parseInt(el.tagName[1]))
       );
 
       for (let i = 1; i < headings.length; i++) {

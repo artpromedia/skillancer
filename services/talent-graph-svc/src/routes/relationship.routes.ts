@@ -38,8 +38,8 @@ export async function relationshipRoutes(fastify: FastifyInstance) {
         relationshipType: type,
         strength,
         verified: verified === 'true' ? true : verified === 'false' ? false : undefined,
-        page: page ? parseInt(page) : 1,
-        limit: limit ? parseInt(limit) : 50,
+        page: page ? Number.parseInt(page) : 1,
+        limit: limit ? Number.parseInt(limit) : 50,
       });
 
       return reply.send(result);
@@ -187,7 +187,7 @@ export async function relationshipRoutes(fastify: FastifyInstance) {
       const { limit } = request.query as { limit?: string };
       const suggestions = await relationshipService.getConnectionSuggestions(
         userId,
-        limit ? parseInt(limit) : 10
+        limit ? Number.parseInt(limit) : 10
       );
 
       return reply.send(suggestions);
