@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '@skillancer/database';
+import { logger } from '@skillancer/logger';
 import { Queue, Worker, type Job } from 'bullmq';
 import { Redis } from 'ioredis';
 
@@ -11,6 +12,7 @@ import { getConfig } from '../config/index.js';
 import { BILLING_CONFIG, calculateOverageCost } from '../config/plans.js';
 import { getStripeService } from '../services/stripe.service.js';
 import { getSubscriptionService } from '../services/subscription.service.js';
+import { billingNotifications } from '../services/billing-notifications.js';
 
 import type { ProductType } from '../config/plans.js';
 
@@ -106,7 +108,7 @@ export function initializeBillingJobs(): void {
   billingWorker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      console.log(`[Billing Job] Processing ${job.name}:`, job.id);
+      logger.info('Processing billing job', { jobName: job.name, jobId: job.id });
 
       switch (job.name) {
         case JOB_NAMES.PAYMENT_RETRY:
@@ -122,7 +124,7 @@ export function initializeBillingJobs(): void {
           return processSubscriptionExpiring(job.data as SubscriptionExpiringJobData);
 
         default:
-          console.log(`[Billing Job] Unknown job type: ${job.name}`);
+          logger.warn('Unknown billing job type', { jobName: job.name });
       }
     },
     {
@@ -133,14 +135,18 @@ export function initializeBillingJobs(): void {
 
   // Worker error handling
   billingWorker.on('completed', (job) => {
-    console.log(`[Billing Job] Completed ${job.name}:`, job.id);
+    logger.info('Billing job completed', { jobName: job.name, jobId: job.id });
   });
 
   billingWorker.on('failed', (job, error) => {
-    console.error(`[Billing Job] Failed ${job?.name}:`, job?.id, error);
+    logger.error('Billing job failed', {
+      jobName: job?.name,
+      jobId: job?.id,
+      error: error.message,
+    });
   });
 
-  console.log('[Billing Jobs] Queue and worker initialized');
+  logger.info('Billing jobs queue and worker initialized', { queue: QUEUE_NAME });
 }
 
 /**
@@ -162,7 +168,7 @@ export async function closeBillingJobs(): Promise<void> {
     redisConnection = null;
   }
 
-  console.log('[Billing Jobs] Queue and worker closed');
+  logger.info('Billing jobs queue and worker closed');
 }
 
 // =============================================================================
@@ -184,7 +190,7 @@ export async function schedulePaymentRetry(
   // Get delay based on retry schedule
   const retryDays = BILLING_CONFIG.paymentRetryDays[attemptNumber - 1];
   if (!retryDays) {
-    console.log(`[Billing Job] No more retries for subscription ${subscriptionId}`);
+    logger.info('No more retries for subscription', { subscriptionId });
     return;
   }
 
@@ -203,9 +209,12 @@ export async function schedulePaymentRetry(
     }
   );
 
-  console.log(
-    `[Billing Job] Scheduled payment retry ${attemptNumber} for ${invoiceId} in ${retryDays} days`
-  );
+  logger.info('Scheduled payment retry', {
+    subscriptionId,
+    invoiceId,
+    attemptNumber,
+    retryInDays: retryDays,
+  });
 }
 
 /**
@@ -237,9 +246,10 @@ export async function scheduleUsageAggregation(
     }
   );
 
-  console.log(
-    `[Billing Job] Scheduled usage aggregation for ${subscriptionId} at ${scheduledTime.toISOString()}`
-  );
+  logger.info('Scheduled usage aggregation', {
+    subscriptionId,
+    scheduledTime: scheduledTime.toISOString(),
+  });
 }
 
 /**
@@ -271,7 +281,7 @@ export async function scheduleTrialEndingReminder(
     }
   );
 
-  console.log(`[Billing Job] Scheduled trial ending reminder for ${subscriptionId}`);
+  logger.info('Scheduled trial ending reminder', { subscriptionId });
 }
 
 // =============================================================================
@@ -292,7 +302,7 @@ export async function scheduleDailyBillingJobs(): Promise<void> {
   // Check for expiring subscriptions
   await checkExpiringSoonSubscriptions();
 
-  console.log('[Billing Jobs] Daily billing jobs scheduled');
+  logger.info('Daily billing jobs scheduled');
 }
 
 /**
@@ -327,7 +337,7 @@ async function checkTrialsEndingSoon(): Promise<void> {
     }
   }
 
-  console.log(`[Billing Jobs] Found ${trialsEndingSoon.length} trials ending soon`);
+  logger.info('Found trials ending soon', { count: trialsEndingSoon.length });
 }
 
 /**
@@ -354,7 +364,7 @@ async function checkExpiringSoonSubscriptions(): Promise<void> {
 
   for (const subscription of expiringSoon) {
     if (subscription.cancelAt) {
-      sendSubscriptionExpiringNotification(
+      await sendSubscriptionExpiringNotification(
         subscription.userId,
         subscription.id,
         subscription.cancelAt
@@ -362,7 +372,7 @@ async function checkExpiringSoonSubscriptions(): Promise<void> {
     }
   }
 
-  console.log(`[Billing Jobs] Found ${expiringSoon.length} subscriptions expiring soon`);
+  logger.info('Found subscriptions expiring soon', { count: expiringSoon.length });
 }
 
 // =============================================================================
@@ -376,7 +386,7 @@ async function processPaymentRetry(data: PaymentRetryJobData): Promise<void> {
   const { subscriptionId, invoiceId, attemptNumber } = data;
   const stripeService = getStripeService();
 
-  console.log(`[Payment Retry] Processing retry ${attemptNumber} for invoice ${invoiceId}`);
+  logger.info('Processing payment retry', { invoiceId, attemptNumber });
 
   try {
     // Get the invoice from Stripe
@@ -384,21 +394,27 @@ async function processPaymentRetry(data: PaymentRetryJobData): Promise<void> {
 
     // If already paid, we're done
     if (invoice.status === 'paid') {
-      console.log(`[Payment Retry] Invoice ${invoiceId} already paid`);
+      logger.info('Invoice already paid', { invoiceId });
       return;
     }
 
     // If voided or uncollectible, don't retry
     if (invoice.status === 'void' || invoice.status === 'uncollectible') {
-      console.log(`[Payment Retry] Invoice ${invoiceId} is ${invoice.status}, skipping retry`);
+      logger.info('Invoice voided/uncollectible, skipping retry', {
+        invoiceId,
+        status: invoice.status,
+      });
       return;
     }
 
     // Attempt to pay the invoice
     await stripeService.payInvoice(invoiceId);
-    console.log(`[Payment Retry] Successfully paid invoice ${invoiceId}`);
+    logger.info('Successfully paid invoice', { invoiceId });
   } catch (error) {
-    console.error(`[Payment Retry] Failed to pay invoice ${invoiceId}:`, error);
+    logger.error('Failed to pay invoice', {
+      invoiceId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
 
     // Schedule next retry if available
     const nextAttempt = attemptNumber + 1;
@@ -406,8 +422,8 @@ async function processPaymentRetry(data: PaymentRetryJobData): Promise<void> {
       await schedulePaymentRetry(subscriptionId, invoiceId, nextAttempt);
     } else {
       // All retries exhausted - subscription will be canceled by Stripe
-      console.log(`[Payment Retry] All retries exhausted for invoice ${invoiceId}`);
-      sendPaymentRetriesExhaustedNotification(subscriptionId, invoiceId);
+      logger.info('All retries exhausted for invoice', { invoiceId });
+      await sendPaymentRetriesExhaustedNotification(subscriptionId, invoiceId);
     }
   }
 }
@@ -419,7 +435,7 @@ async function processUsageAggregation(data: UsageAggregationJobData): Promise<v
   const { subscriptionId, periodStart, periodEnd: _periodEnd } = data;
   const subscriptionService = getSubscriptionService();
 
-  console.log(`[Usage Aggregation] Processing for subscription ${subscriptionId}`);
+  logger.info('Processing usage aggregation', { subscriptionId });
 
   try {
     // Get usage summary
@@ -431,15 +447,16 @@ async function processUsageAggregation(data: UsageAggregationJobData): Promise<v
     });
 
     if (!subscription) {
-      console.log(`[Usage Aggregation] Subscription ${subscriptionId} not found`);
+      logger.info('Subscription not found', { subscriptionId });
       return;
     }
 
     // Check for overage
     if (usage.overageMinutes > 0) {
-      console.log(
-        `[Usage Aggregation] Subscription ${subscriptionId} has ${usage.overageMinutes} overage minutes`
-      );
+      logger.info('Subscription has overage minutes', {
+        subscriptionId,
+        overageMinutes: usage.overageMinutes,
+      });
 
       // Calculate overage cost
       const overageCost = calculateOverageCost(
@@ -450,10 +467,13 @@ async function processUsageAggregation(data: UsageAggregationJobData): Promise<v
       if (overageCost > 0) {
         // Create usage record for billing
         // The actual overage charge will be handled by Stripe's metered billing
-        console.log(`[Usage Aggregation] Overage cost: $${(overageCost / 100).toFixed(2)}`);
+        logger.info('Overage cost calculated', {
+          subscriptionId,
+          overageCost: `$${(overageCost / 100).toFixed(2)}`,
+        });
 
         // Send overage notification
-        sendOverageNotification(
+        await sendOverageNotification(
           subscription.userId,
           subscriptionId,
           usage.overageMinutes,
@@ -462,9 +482,12 @@ async function processUsageAggregation(data: UsageAggregationJobData): Promise<v
       }
     }
 
-    console.log(`[Usage Aggregation] Completed for subscription ${subscriptionId}`);
+    logger.info('Usage aggregation completed', { subscriptionId });
   } catch (error) {
-    console.error(`[Usage Aggregation] Failed for subscription ${subscriptionId}:`, error);
+    logger.error('Failed usage aggregation', {
+      subscriptionId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     throw error; // Will trigger retry
   }
 }
@@ -475,7 +498,7 @@ async function processUsageAggregation(data: UsageAggregationJobData): Promise<v
 async function processTrialEnding(data: TrialEndingJobData): Promise<void> {
   const { subscriptionId, userId, trialEndsAt } = data;
 
-  console.log(`[Trial Ending] Processing for subscription ${subscriptionId}`);
+  logger.info('Processing trial ending', { subscriptionId });
 
   // Check if subscription still in trial
   const subscription = await prisma.subscription.findUnique({
@@ -484,7 +507,7 @@ async function processTrialEnding(data: TrialEndingJobData): Promise<void> {
   });
 
   if (!subscription || subscription.status !== 'TRIALING') {
-    console.log(`[Trial Ending] Subscription ${subscriptionId} no longer in trial`);
+    logger.info('Subscription no longer in trial', { subscriptionId });
     return;
   }
 
@@ -494,7 +517,7 @@ async function processTrialEnding(data: TrialEndingJobData): Promise<void> {
       where: { userId, status: 'ACTIVE' },
     })) > 0;
 
-  sendTrialEndingSoonNotification(
+  await sendTrialEndingSoonNotification(
     subscription.user.email,
     subscription.user.firstName,
     subscription.plan,
@@ -502,7 +525,7 @@ async function processTrialEnding(data: TrialEndingJobData): Promise<void> {
     hasPaymentMethod
   );
 
-  console.log(`[Trial Ending] Notification sent for subscription ${subscriptionId}`);
+  logger.info('Trial ending notification sent', { subscriptionId });
 }
 
 /**
@@ -511,7 +534,7 @@ async function processTrialEnding(data: TrialEndingJobData): Promise<void> {
 function processSubscriptionExpiring(data: SubscriptionExpiringJobData): void {
   const { subscriptionId, userId, expiresAt } = data;
 
-  console.log(`[Subscription Expiring] Processing for subscription ${subscriptionId}`);
+  logger.info('Processing subscription expiring', { subscriptionId });
 
   sendSubscriptionExpiringNotification(userId, subscriptionId, new Date(expiresAt));
 }
@@ -520,54 +543,116 @@ function processSubscriptionExpiring(data: SubscriptionExpiringJobData): void {
 // NOTIFICATIONS
 // =============================================================================
 
-function sendPaymentRetriesExhaustedNotification(subscriptionId: string, invoiceId: string): void {
-  console.log(`[NOTIFICATION] Payment retries exhausted:`, {
+async function sendPaymentRetriesExhaustedNotification(
+  subscriptionId: string,
+  invoiceId: string
+): Promise<void> {
+  logger.info('Sending payment retries exhausted notification', {
     subscriptionId,
     invoiceId,
   });
-  // FUTURE: Integrate with notification service
+
+  // Get subscription details
+  const subscription = await prisma.subscription.findUnique({
+    where: { id: subscriptionId },
+    select: { userId: true },
+  });
+
+  if (subscription) {
+    await billingNotifications.notifyPaymentFailed(
+      { userId: subscription.userId },
+      {
+        amount: 'subscription',
+        reason:
+          'All payment attempts have failed. Your subscription will be suspended. Please update your payment method.',
+      }
+    );
+
+    // Alert ops team
+    await billingNotifications.alertOpsTeam({
+      severity: 'high',
+      title: 'Payment Retries Exhausted',
+      message: `Subscription ${subscriptionId} - all payment retries exhausted`,
+      context: { subscriptionId, invoiceId },
+    });
+  }
 }
 
-function sendOverageNotification(
+async function sendOverageNotification(
   userId: string,
   subscriptionId: string,
   overageMinutes: number,
   overageCost: number
-): void {
-  console.log(`[NOTIFICATION] Usage overage for user ${userId}:`, {
+): Promise<void> {
+  logger.info('Sending overage notification', {
+    userId,
     subscriptionId,
     overageMinutes,
     overageCost: `$${(overageCost / 100).toFixed(2)}`,
   });
-  // FUTURE: Integrate with notification service
+
+  await billingNotifications.notifyPaymentReceived(
+    { userId },
+    {
+      amount: `$${(overageCost / 100).toFixed(2)}`,
+      description: `Usage overage charge for ${overageMinutes} additional minutes`,
+    }
+  );
 }
 
-function sendTrialEndingSoonNotification(
+async function sendTrialEndingSoonNotification(
   email: string,
   firstName: string,
   plan: string,
   trialEndsAt: Date,
   hasPaymentMethod: boolean
-): void {
-  console.log(`[NOTIFICATION] Trial ending soon for ${email}:`, {
-    firstName,
+): Promise<void> {
+  logger.info('Sending trial ending soon notification', {
+    email,
     plan,
     trialEndsAt: trialEndsAt.toISOString(),
     hasPaymentMethod,
   });
-  // FUTURE: Integrate with notification service
+
+  // Get user ID from email
+  const user = await prisma.user.findFirst({
+    where: { email },
+    select: { id: true },
+  });
+
+  if (user) {
+    const message = hasPaymentMethod
+      ? `Your ${plan} trial ends on ${trialEndsAt.toLocaleDateString()}. Your subscription will automatically continue.`
+      : `Your ${plan} trial ends on ${trialEndsAt.toLocaleDateString()}. Please add a payment method to continue using the service.`;
+
+    await billingNotifications.notifyPaymentFailed(
+      { userId: user.id, email },
+      {
+        amount: plan,
+        reason: message,
+      }
+    );
+  }
 }
 
-function sendSubscriptionExpiringNotification(
+async function sendSubscriptionExpiringNotification(
   userId: string,
   subscriptionId: string,
   expiresAt: Date
-): void {
-  console.log(`[NOTIFICATION] Subscription expiring for user ${userId}:`, {
+): Promise<void> {
+  logger.info('Sending subscription expiring notification', {
+    userId,
     subscriptionId,
     expiresAt: expiresAt.toISOString(),
   });
-  // FUTURE: Integrate with notification service
+
+  await billingNotifications.notifyPaymentFailed(
+    { userId },
+    {
+      amount: 'subscription',
+      reason: `Your subscription will expire on ${expiresAt.toLocaleDateString()}. Reactivate to keep your access.`,
+    }
+  );
 }
 
 // =============================================================================

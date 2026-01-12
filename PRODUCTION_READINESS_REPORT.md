@@ -170,6 +170,35 @@ The following improvements have been implemented:
 
 ---
 
+## Sprint 7 Fixes Applied (2026-01-12)
+
+The following improvements have been implemented:
+
+| # | Issue | Fix Applied | Status |
+|---|-------|-------------|--------|
+| 2 | Console.log in escrow.job.ts | Replaced ~35 console.log with structured logger, added billingNotifications | FIXED |
+| - | Console.log in subscription-billing.job.ts | Replaced ~30 console.log with structured logger, added billingNotifications | FIXED |
+| - | TODOs in escrow.job.ts | Integrated billingNotifications for milestone auto-approval, reminders, disputes | FIXED |
+| - | TODOs in subscription-billing.job.ts | Integrated billingNotifications for trial/subscription/overage alerts | FIXED |
+
+**Files Changed:**
+- `services/billing-svc/src/jobs/escrow.job.ts` (complete logging and notification rewrite)
+- `services/billing-svc/src/jobs/subscription-billing.job.ts` (complete logging and notification rewrite)
+
+**Console.log Reduction:** Removed ~65 console.log statements from critical billing jobs.
+
+**Notification Integration Added:**
+- Milestone auto-approval notifications (client + freelancer)
+- Milestone approval reminder notifications
+- Dispute escalation notifications
+- Escrow balance mismatch alerts (ops team)
+- Payment retry exhausted notifications
+- Trial ending soon notifications
+- Subscription expiring notifications
+- Usage overage notifications
+
+---
+
 ## Remaining Critical Blockers
 
 | # | Issue | Location | Impact | Effort |
@@ -186,8 +215,8 @@ The following improvements have been implemented:
 
 | # | Issue | Location | Impact | Effort |
 |---|-------|----------|--------|--------|
-| 1 | ~85 TODO comments in critical paths | Various billing/notification/security files | Incomplete features | 2-4w |
-| 2 | ~590 console.log statements | Throughout codebase | Should use proper logging | 4h |
+| 1 | ~70 TODO comments in critical paths | Various billing/notification/security files | Incomplete features | 2-4w |
+| 2 | ~525 console.log statements | Throughout codebase | Should use proper logging | 4h |
 | 3 | 1,246 `any` type usages | Throughout codebase | Type safety | 1-2w |
 | 4 | ~~Login/signup forms have no validation~~ | ~~`apps/web/src/app/(auth)/login/page.tsx`, signup~~ | ~~UX/Security~~ | **FIXED** |
 | 5 | ~~No error boundary pages~~ | ~~All frontend apps~~ | ~~UX~~ | **FIXED** |
