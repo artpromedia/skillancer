@@ -141,6 +141,35 @@ The following improvements have been implemented:
 
 ---
 
+## Sprint 6 Fixes Applied (2026-01-12)
+
+The following improvements have been implemented:
+
+| # | Issue | Fix Applied | Status |
+|---|-------|-------------|--------|
+| 2 | Missing input validation on copilot-svc | Added Zod validation to all 8 endpoints with proper OpenAPI schemas | FIXED |
+| - | Card expiration job notifications | Integrated billingNotifications service, replaced console.log with logger | FIXED |
+| - | Retry-manager notifications | Integrated billingNotifications for customer/admin alerts | FIXED |
+
+**Files Changed:**
+- `services/copilot-svc/src/routes/copilot.routes.ts` (complete rewrite with Zod validation)
+- `services/copilot-svc/package.json` (added zod-to-json-schema dependency)
+- `services/billing-svc/src/jobs/card-expiration.job.ts` (integrated notifications, replaced console.log)
+- `services/billing-svc/src/services/retry-manager.ts` (integrated billingNotifications)
+
+**Validation Added to Copilot Endpoints:**
+- POST /proposals/draft - GenerateProposalDraftSchema
+- GET /proposals/draft/:draftId - DraftIdParamsSchema (UUID validation)
+- PATCH /proposals/draft/:draftId - UpdateProposalDraftSchema
+- GET /proposals/drafts - GetProposalDraftsQuerySchema
+- POST /rates/suggest - SuggestRateSchema
+- POST /messages/assist - AssistMessageSchema
+- POST /profile/optimize - OptimizeProfileSchema
+- POST /market/insights - GetMarketInsightsSchema
+- GET /history - GetHistoryQuerySchema
+
+---
+
 ## Remaining Critical Blockers
 
 | # | Issue | Location | Impact | Effort |
@@ -157,8 +186,8 @@ The following improvements have been implemented:
 
 | # | Issue | Location | Impact | Effort |
 |---|-------|----------|--------|--------|
-| 1 | 100+ TODO comments in critical paths | Various billing/notification/security files | Incomplete features | 2-4w |
-| 2 | 622 console.log statements | Throughout codebase | Should use proper logging | 4h |
+| 1 | ~85 TODO comments in critical paths | Various billing/notification/security files | Incomplete features | 2-4w |
+| 2 | ~590 console.log statements | Throughout codebase | Should use proper logging | 4h |
 | 3 | 1,246 `any` type usages | Throughout codebase | Type safety | 1-2w |
 | 4 | ~~Login/signup forms have no validation~~ | ~~`apps/web/src/app/(auth)/login/page.tsx`, signup~~ | ~~UX/Security~~ | **FIXED** |
 | 5 | ~~No error boundary pages~~ | ~~All frontend apps~~ | ~~UX~~ | **FIXED** |
@@ -175,7 +204,7 @@ The following improvements have been implemented:
 | # | Issue | Location | Impact | Effort |
 |---|-------|----------|--------|--------|
 | 1 | Hardcoded localhost URLs as defaults | ~50 occurrences in services | Config risk | 4h |
-| 2 | Missing input validation on copilot-svc | All endpoints use `as any` | Security | 1d |
+| 2 | ~~Missing input validation on copilot-svc~~ | ~~All endpoints use `as any`~~ | ~~Security~~ | **FIXED** |
 | 3 | Inconsistent auth patterns across services | Manual checks vs middleware | Security | 2d |
 | 4 | CPO suite page is placeholder | `apps/web-cockpit/src/app/(suites)/cpo/page.tsx` | Incomplete feature | 1d |
 | 5 | Contract routes commented out in market-svc | `services/market-svc/src/routes/index.ts:174` | Missing feature | 2d |

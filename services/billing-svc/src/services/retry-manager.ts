@@ -18,6 +18,7 @@ import { addHours, addDays, setHours, isWeekend, isBefore, addMinutes } from 'da
 
 import { getPaymentOrchestrator, PaymentState } from './payment-orchestrator.js';
 import { getStripe } from './stripe.service.js';
+import { billingNotifications } from './billing-notifications.js';
 
 // =============================================================================
 // TYPES
@@ -707,21 +708,28 @@ export class RetryManager {
       'Notifying customer of retry schedule'
     );
 
-    // TODO: Integrate with notification service
-    // await notificationService.send({
-    //   type: 'PAYMENT_RETRY_SCHEDULED',
-    //   customerId: payment.stripeCustomerId,
-    //   data: {
-    //     amount: payment.amount,
-    //     currency: payment.currency,
-    //     nextRetryAt: schedule.scheduledFor,
-    //     updatePaymentMethodUrl: '/settings/payment-methods',
-    //   },
-    // });
+    // Get user from payment
+    const userId = payment.userId as string | undefined;
+    if (!userId) {
+      logger.warn({ paymentId: payment.id }, 'Cannot notify - no userId on payment');
+      return;
+    }
+
+    const amount = payment.amount as number;
+    const currency = payment.currency as string;
+    const formattedAmount = `${(amount / 100).toFixed(2)} ${currency?.toUpperCase() || 'USD'}`;
+
+    await billingNotifications.notifyPaymentFailed(
+      { userId },
+      {
+        amount: formattedAmount,
+        reason: `Payment failed. We'll automatically retry on ${schedule.scheduledFor.toLocaleDateString()}. You can update your payment method to resolve this sooner.`,
+      }
+    );
   }
 
   private async notifyCustomerOfFailure(
-    payment: { id: string; stripeCustomerId: string; amount: number; currency: string },
+    payment: { id: string; stripeCustomerId: string; amount: number; currency: string; userId?: string },
     strategy: RetryStrategy
   ): Promise<void> {
     logger.info(
@@ -733,7 +741,35 @@ export class RetryManager {
       'Notifying customer of final payment failure'
     );
 
-    // TODO: Integrate with notification service
+    const userId = payment.userId;
+    if (!userId) {
+      logger.warn({ paymentId: payment.id }, 'Cannot notify - no userId on payment');
+      return;
+    }
+
+    const formattedAmount = `${(payment.amount / 100).toFixed(2)} ${payment.currency?.toUpperCase() || 'USD'}`;
+    const reasonMessages: Record<FailureCategory, string> = {
+      insufficient_funds: 'Your payment method has insufficient funds.',
+      card_declined_generic: 'Your card was declined by your bank.',
+      card_expired: 'Your card has expired.',
+      incorrect_cvc: 'The security code (CVC) was incorrect.',
+      processing_error: 'There was a processing error. Please try again.',
+      network_error: 'A network error occurred. Please try again.',
+      fraud_suspected: 'The payment was flagged for security reasons.',
+      authentication_required: 'Additional authentication is required.',
+      card_not_supported: 'This card type is not supported.',
+      currency_not_supported: 'This currency is not supported.',
+      rate_limit: 'Too many payment attempts. Please try again later.',
+      unknown: 'An unexpected error occurred.',
+    };
+
+    await billingNotifications.notifyPaymentFailed(
+      { userId },
+      {
+        amount: formattedAmount,
+        reason: `${reasonMessages[strategy.category]} Please update your payment method to continue.`,
+      }
+    );
   }
 
   private async notifyAdminOfFailure(
@@ -749,13 +785,43 @@ export class RetryManager {
       'Admin notification: Payment failure requiring attention'
     );
 
-    // TODO: Integrate with admin alerting
+    // Alert ops team for non-retryable failures that require attention
+    const severity = strategy.category === 'fraud_suspected' ? 'critical' : 'medium';
+    await billingNotifications.alertOpsTeam({
+      severity: severity as 'low' | 'medium' | 'high' | 'critical',
+      title: `Payment Failure: ${strategy.category}`,
+      message: `Payment ${payment.id} failed with non-retryable error.`,
+      context: {
+        paymentId: payment.id,
+        stripeCustomerId: payment.stripeCustomerId,
+        category: strategy.category,
+        amount: payment.amount,
+        currency: payment.currency,
+      },
+    });
   }
 
   private async requestCardUpdate(stripeCustomerId: string): Promise<void> {
     logger.info({ stripeCustomerId }, 'Requesting card update from customer');
 
-    // TODO: Send card update request email/notification
+    // Look up user by Stripe customer ID to send notification
+    const paymentMethod = await prisma.paymentMethod.findFirst({
+      where: { stripeCustomerId },
+      include: { user: { select: { id: true, email: true } } },
+    });
+
+    if (paymentMethod?.user) {
+      await billingNotifications.notifyPaymentFailed(
+        {
+          userId: paymentMethod.user.id,
+          email: paymentMethod.user.email,
+        },
+        {
+          amount: 'N/A',
+          reason: 'Your payment method needs to be updated. Please add a new card to continue using Skillancer.',
+        }
+      );
+    }
   }
 }
 

@@ -42,7 +42,8 @@
     "fastify-plugin": "^4.5.1",
     "pino": "^9.1.0",
     "pino-pretty": "^11.2.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.0"
   },
   "devDependencies": {
     "@skillancer/config": "workspace:*",
