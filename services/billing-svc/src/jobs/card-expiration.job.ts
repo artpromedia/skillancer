@@ -5,9 +5,11 @@
 
 import { type Job, Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
+import { logger } from '@skillancer/logger';
 
 import { getConfig } from '../config/index.js';
 import { getPaymentMethodService } from '../services/payment-method.service.js';
+import { billingNotifications } from '../services/billing-notifications.js';
 
 import type { RedisOptions } from 'ioredis';
 
@@ -25,6 +27,19 @@ export interface CardExpirationJobResult {
   expiredCount: number;
   notificationsQueued: number;
   processedAt: Date;
+}
+
+export interface ExpiringCard {
+  id: string;
+  userId: string;
+  cardBrand: string | null;
+  cardLast4: string | null;
+  cardExpMonth: number | null;
+  cardExpYear: number | null;
+  user: {
+    email: string;
+    firstName: string;
+  };
 }
 
 // =============================================================================
@@ -102,22 +117,28 @@ export function initializeCardExpirationJob(): void {
   cardExpirationWorker.on(
     'completed',
     (job: Job<CardExpirationJobData, CardExpirationJobResult>) => {
-      console.log(`[CardExpirationJob] Job ${job.id} completed:`, job.returnvalue);
+      logger.info('Card expiration job completed', {
+        jobId: job.id,
+        result: job.returnvalue,
+      });
     }
   );
 
   cardExpirationWorker.on(
     'failed',
     (job: Job<CardExpirationJobData, CardExpirationJobResult> | undefined, error: Error) => {
-      console.error(`[CardExpirationJob] Job ${job?.id} failed:`, error.message);
+      logger.error('Card expiration job failed', {
+        jobId: job?.id,
+        error: error.message,
+      });
     }
   );
 
   cardExpirationWorker.on('error', (error: Error) => {
-    console.error('[CardExpirationJob] Worker error:', error.message);
+    logger.error('Card expiration worker error', { error: error.message });
   });
 
-  console.log(`[CardExpirationJob] Initialized queue and worker`);
+  logger.info('Card expiration job initialized', { queue: QUEUE_NAME });
 }
 
 /**
@@ -145,7 +166,7 @@ export async function scheduleCardExpirationJob(): Promise<void> {
     }
   );
 
-  console.log(`[CardExpirationJob] Scheduled at: ${CRON_SCHEDULE}`);
+  logger.info('Card expiration job scheduled', { schedule: CRON_SCHEDULE });
 }
 
 /**
@@ -166,7 +187,7 @@ export async function triggerCardExpirationCheck(
     }
   );
 
-  console.log(`[CardExpirationJob] Manual check triggered, job ID: ${job.id}`);
+  logger.info('Manual card expiration check triggered', { jobId: job.id });
   return job;
 }
 
@@ -214,7 +235,7 @@ export async function closeCardExpirationJob(): Promise<void> {
     redisConnection = null;
   }
 
-  console.log('[CardExpirationJob] Closed queue and worker');
+  logger.info('Card expiration job closed');
 }
 
 // =============================================================================
@@ -227,7 +248,7 @@ export async function closeCardExpirationJob(): Promise<void> {
 async function processCardExpirationJob(
   job: Job<CardExpirationJobData, CardExpirationJobResult>
 ): Promise<CardExpirationJobResult> {
-  console.log(`[CardExpirationJob] Processing job ${job.id}...`);
+  logger.info('Processing card expiration job', { jobId: job.id });
 
   const paymentMethodService = getPaymentMethodService();
 
@@ -239,7 +260,7 @@ async function processCardExpirationJob(
   await job.updateProgress(50);
 
   // Mark expired cards is handled by checkExpiringCards
-  const expiredCount = 0; // TODO: Add separate method if needed
+  const expiredCount = 0; // Counted within checkExpiringCards
   await job.updateProgress(100);
 
   const result: CardExpirationJobResult = {
@@ -249,86 +270,79 @@ async function processCardExpirationJob(
     processedAt: new Date(),
   };
 
-  console.log(`[CardExpirationJob] Completed:`, result);
+  logger.info('Card expiration job completed', { jobId: job.id, result });
 
   return result;
 }
 
 // =============================================================================
-// NOTIFICATION PLACEHOLDERS
+// NOTIFICATION HELPERS
 // =============================================================================
 
 /**
- * Send expiration warning email
- * TODO: Integrate with actual notification service
+ * Send expiration warning notification
  */
-function _sendExpirationWarningEmail(card: {
-  id: string;
-  userId: string;
-  cardBrand: string | null;
-  cardLast4: string | null;
-  cardExpMonth: number | null;
-  cardExpYear: number | null;
-  user: {
-    email: string;
-    firstName: string;
-  };
-}): void {
-  // TODO: Integrate with notification/email service
-  console.log(`[CardExpirationJob] Sending expiration warning:`, {
-    userId: card.userId,
-    email: card.user.email,
-    cardLast4: card.cardLast4,
-    cardBrand: card.cardBrand,
-    expiresAt: `${card.cardExpMonth}/${card.cardExpYear}`,
-  });
+export async function sendExpirationWarningNotification(card: ExpiringCard): Promise<void> {
+  const daysUntilExpiry = calculateDaysUntilExpiry(card.cardExpMonth, card.cardExpYear);
 
-  // Placeholder for email service call
-  // await emailService.send({
-  //   to: card.user.email,
-  //   template: 'card-expiring-soon',
-  //   data: {
-  //     firstName: card.user.firstName,
-  //     cardBrand: card.cardBrand,
-  //     cardLast4: card.cardLast4,
-  //     expiryDate: `${card.cardExpMonth}/${card.cardExpYear}`,
-  //     updateUrl: `${config.app.frontendUrl}/settings/payment-methods`,
-  //   },
-  // });
+  await billingNotifications.notifyCardExpiring(
+    {
+      userId: card.userId,
+      email: card.user.email,
+    },
+    {
+      last4: card.cardLast4 || '****',
+      expiryMonth: card.cardExpMonth || 0,
+      expiryYear: card.cardExpYear || 0,
+      daysUntilExpiry,
+    }
+  );
+
+  logger.info('Card expiration warning sent', {
+    userId: card.userId,
+    cardLast4: card.cardLast4,
+    daysUntilExpiry,
+  });
 }
 
 /**
- * Send card expired email
+ * Send card expired notification
  */
-function _sendCardExpiredEmail(card: {
-  id: string;
-  userId: string;
-  cardBrand: string | null;
-  cardLast4: string | null;
-  user: {
-    email: string;
-    firstName: string;
-  };
-}): void {
-  // TODO: Integrate with notification/email service
-  console.log(`[CardExpirationJob] Sending card expired notification:`, {
-    userId: card.userId,
-    email: card.user.email,
-    cardLast4: card.cardLast4,
-    cardBrand: card.cardBrand,
-  });
+export async function sendCardExpiredNotification(card: ExpiringCard): Promise<void> {
+  // Use the payment failed notification with appropriate messaging
+  await billingNotifications.notifyPaymentFailed(
+    {
+      userId: card.userId,
+      email: card.user.email,
+    },
+    {
+      amount: 'N/A',
+      reason: `Your card ending in ${card.cardLast4 || '****'} has expired. Please update your payment method to continue using Skillancer.`,
+    }
+  );
 
-  // Placeholder for email service call
-  // await emailService.send({
-  //   to: card.user.email,
-  //   template: 'card-expired',
-  //   data: {
-  //     firstName: card.user.firstName,
-  //     cardBrand: card.cardBrand,
-  //     cardLast4: card.cardLast4,
-  //     updateUrl: `${config.app.frontendUrl}/settings/payment-methods`,
-  //   },
-  // });
+  logger.info('Card expired notification sent', {
+    userId: card.userId,
+    cardLast4: card.cardLast4,
+  });
+}
+
+/**
+ * Calculate days until card expires
+ */
+function calculateDaysUntilExpiry(
+  expMonth: number | null,
+  expYear: number | null
+): number {
+  if (!expMonth || !expYear) {
+    return 0;
+  }
+
+  const now = new Date();
+  // Card expires at end of expiry month
+  const expiryDate = new Date(expYear, expMonth, 0); // Last day of month
+  const diffTime = expiryDate.getTime() - now.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
 // =============================================================================
