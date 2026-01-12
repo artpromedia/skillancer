@@ -16,6 +16,7 @@ import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
 import { addDays, differenceInDays } from 'date-fns';
 
+import { billingNotifications } from './billing-notifications.js';
 import { getEscrowManager } from './escrow-manager.js';
 
 // =============================================================================
@@ -187,16 +188,17 @@ export class MilestonePaymentService {
         },
       });
 
-      // TODO: Notify client
-      // await notificationService.send({
-      //   type: 'MILESTONE_DELIVERY_READY',
-      //   userId: milestone.escrow.clientId,
-      //   data: {
-      //     milestoneName: milestone.name,
-      //     autoApproveAt,
-      //     reviewUrl: `/contracts/${milestone.escrow.contractId}/milestones/${milestone.id}`,
-      //   },
-      // });
+      // Notify client that milestone is ready for review
+      await billingNotifications.notifyMilestoneSubmitted(
+        { userId: milestone.escrow.clientId },
+        {
+          contractId: milestone.escrow.contractId,
+          contractTitle: milestone.escrow.contract?.title || 'Contract',
+          milestoneId: milestone.id,
+          milestoneName: milestone.name,
+          amount: `$${(milestone.amount / 100).toFixed(2)}`,
+        }
+      );
 
       logger.info(
         {
@@ -515,15 +517,17 @@ export class MilestonePaymentService {
         },
       });
 
-      // TODO: Notify freelancer
-      // await notificationService.send({
-      //   type: 'MILESTONE_PAYMENT_RECEIVED',
-      //   userId: milestone.escrow.freelancerId,
-      //   data: {
-      //     milestoneName: milestone.name,
-      //     amount: releaseResult.amountReleased,
-      //   },
-      // });
+      // Notify freelancer about milestone approval
+      await billingNotifications.notifyMilestoneApproved(
+        { userId: milestone.escrow.freelancerId },
+        {
+          contractId: milestone.escrow.contractId,
+          contractTitle: milestone.escrow.contract?.title || 'Contract',
+          milestoneId: milestone.id,
+          milestoneName: milestone.name,
+          amount: `$${(releaseResult.amountReleased / 100).toFixed(2)}`,
+        }
+      );
 
       logger.info(
         {
@@ -639,16 +643,18 @@ export class MilestonePaymentService {
       'Revision requested'
     );
 
-    // TODO: Notify freelancer
-    // await notificationService.send({
-    //   type: 'MILESTONE_REVISION_REQUESTED',
-    //   userId: milestone.escrow.freelancerId,
-    //   data: {
-    //     milestoneName: milestone.name,
-    //     revisionNotes: request.revisionNotes,
-    //     revisionsRemaining: MAX_REVISIONS - revisionCount - 1,
-    //   },
-    // });
+    // Notify freelancer about revision request
+    await billingNotifications.notifyMilestoneRejected(
+      { userId: milestone.escrow.freelancerId },
+      {
+        contractId: milestone.escrow.contractId,
+        contractTitle: milestone.escrow.contract?.title || 'Contract',
+        milestoneId: milestone.id,
+        milestoneName: milestone.name,
+        amount: `$${(milestone.amount / 100).toFixed(2)}`,
+        reason: request.revisionNotes,
+      }
+    );
 
     return {
       success: true,
@@ -722,11 +728,20 @@ export class MilestonePaymentService {
       'Milestone disputed'
     );
 
-    // TODO: Notify both parties and support
-    // await notificationService.sendBatch([
-    //   { type: 'DISPUTE_CREATED', userId: milestone.escrow.freelancerId, data: { disputeId: dispute.id } },
-    //   { type: 'DISPUTE_CREATED', userId: 'support', data: { disputeId: dispute.id } },
-    // ]);
+    // Notify both parties about dispute
+    await billingNotifications.notifyDisputeOpened(
+      {
+        client: { userId: milestone.escrow.clientId },
+        freelancer: { userId: milestone.escrow.freelancerId },
+      },
+      {
+        disputeId: dispute.id,
+        contractId: milestone.escrow.contractId,
+        contractTitle: milestone.escrow.contract?.title || 'Contract',
+        reason: request.disputeReason || 'Disputed',
+        amount: `$${(milestone.amount / 100).toFixed(2)}`,
+      }
+    );
 
     return {
       success: true,
