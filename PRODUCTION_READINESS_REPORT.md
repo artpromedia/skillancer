@@ -47,6 +47,40 @@ The following critical security issues have been addressed:
 
 ---
 
+## Sprint 2 Fixes Applied (2026-01-12)
+
+The following issues have been addressed:
+
+| # | Issue | Fix Applied | Status |
+|---|-------|-------------|--------|
+| 8 | Production seed fails | Rewrote to use correct Skill, User, NotificationTemplate models | FIXED |
+| 9 | Demo seed fails | Rewrote to use Bid, Contract with correct fields | FIXED |
+| 4 | Login/signup forms no validation | Added comprehensive client-side validation with error states | FIXED |
+| 5 | No error boundary pages | Added error.tsx and not-found.tsx to all 5 frontend apps | FIXED |
+| - | web-cockpit dashboard unprotected | Added auth check with redirect to login | FIXED |
+
+**Files Changed:**
+- `packages/database/scripts/production-seed.ts` (complete rewrite)
+- `packages/database/scripts/demo-data-seed.ts` (complete rewrite)
+- `apps/web/src/app/(auth)/login/page.tsx` (added validation)
+- `apps/web/src/app/(auth)/signup/page.tsx` (added validation)
+- `apps/web-market/src/app/login/page.tsx` (added validation)
+- `apps/web-market/src/app/signup/page.tsx` (added validation)
+- `apps/web/src/app/error.tsx` (new)
+- `apps/web/src/app/not-found.tsx` (new)
+- `apps/web-market/src/app/error.tsx` (new)
+- `apps/web-market/src/app/not-found.tsx` (new)
+- `apps/web-cockpit/src/app/error.tsx` (new)
+- `apps/web-cockpit/src/app/not-found.tsx` (new)
+- `apps/web-cockpit/src/app/page.tsx` (added auth check)
+- `apps/web-cockpit/src/app/components/cockpit-dashboard.tsx` (new - client component)
+- `apps/web-skillpod/src/app/error.tsx` (new)
+- `apps/web-skillpod/src/app/not-found.tsx` (new)
+- `apps/admin/src/app/error.tsx` (new)
+- `apps/admin/src/app/not-found.tsx` (new)
+
+---
+
 ## Remaining Critical Blockers
 
 | # | Issue | Location | Impact | Effort |
@@ -54,8 +88,8 @@ The following critical security issues have been addressed:
 | 2 | **Database build fails** - 150+ missing Prisma exports (env issue) | `packages/database/src/index.ts:151-350` | Build broken | 4h |
 | 6 | **Mobile app missing screens** - 4 screens referenced but don't exist | `apps/mobile/lib/core/navigation/` | App crashes | 2w |
 | 7 | **Mobile app mock data** - All providers return fake data | `apps/mobile/lib/core/providers/providers.dart` | Non-functional | 2w |
-| 8 | **Production seed fails** - References non-existent models | `packages/database/scripts/production-seed.ts` | Deploy blocked | 1d |
-| 9 | **Demo seed fails** - Schema mismatches | `packages/database/scripts/demo-data-seed.ts` | Testing blocked | 1d |
+
+*Note: Issues #8 and #9 (seed files) have been resolved in Sprint 2.*
 
 ---
 
@@ -66,8 +100,8 @@ The following critical security issues have been addressed:
 | 1 | 100+ TODO comments in critical paths | Various billing/notification/security files | Incomplete features | 2-4w |
 | 2 | 622 console.log statements | Throughout codebase | Should use proper logging | 4h |
 | 3 | 1,246 `any` type usages | Throughout codebase | Type safety | 1-2w |
-| 4 | Login/signup forms have no validation | `apps/web/src/app/(auth)/login/page.tsx`, signup | UX/Security | 1d |
-| 5 | No error boundary pages (error.tsx, not-found.tsx) | All frontend apps | UX | 4h |
+| 4 | ~~Login/signup forms have no validation~~ | ~~`apps/web/src/app/(auth)/login/page.tsx`, signup~~ | ~~UX/Security~~ | **FIXED** |
+| 5 | ~~No error boundary pages~~ | ~~All frontend apps~~ | ~~UX~~ | **FIXED** |
 | 6 | Soft-delete only covers 4 of 346 models | `packages/database/src/extensions/soft-delete.ts` | Data loss risk | 1d |
 | 7 | Audit logging only covers 11 of 346 models | `packages/database/src/extensions/audit-log.ts` | Compliance | 1d |
 | 8 | 3 high-severity dependency vulnerabilities | glob, qs, storybook | Security | 2h |
@@ -87,7 +121,7 @@ The following critical security issues have been addressed:
 | 5 | Contract routes commented out in market-svc | `services/market-svc/src/routes/index.ts:174` | Missing feature | 2d |
 | 6 | Contract management incomplete in cockpit-svc | `services/cockpit-svc/src/routes/index.ts:174` | Missing feature | 2d |
 | 7 | Chart placeholders in admin dashboard | `apps/admin` | Incomplete UI | 1d |
-| 8 | Hardcoded admin password in seed | `packages/database/scripts/production-seed.ts:336` | Security | 1h |
+| 8 | ~~Hardcoded admin password in seed~~ | ~~`packages/database/scripts/production-seed.ts`~~ | ~~Security~~ | **FIXED** |
 | 9 | Migration 20251219124848_ has empty name | `packages/database/prisma/migrations/` | DB stability | 4h |
 | 10 | Push notification token not sent to backend | `apps/mobile/.../push_notification_service.dart:44` | Notifications | 4h |
 
