@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 
 import { healthRoutes } from './routes/health.routes';
 import { intelligenceRoutes } from './routes/intelligence.routes';
+import { registerAuthPlugin } from './middleware/auth';
 
 const prisma = new PrismaClient();
 
@@ -33,6 +34,9 @@ async function buildApp() {
   await fastify.register(helmet, {
     contentSecurityPolicy: false,
   });
+
+  // Register authentication plugin
+  registerAuthPlugin(fastify);
 
   fastify.decorateRequest('prisma', null);
   fastify.addHook('onRequest', async (request) => {

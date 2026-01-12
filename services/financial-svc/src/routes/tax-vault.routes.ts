@@ -198,21 +198,41 @@ export async function taxVaultRoutes(fastify: FastifyInstance) {
   });
 
   // Internal: Auto-save from payment (called by payment service)
+  // PROTECTED by internal API key verification
   fastify.post(
     '/internal/tax-vault/auto-save',
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        // This endpoint should be protected by internal API key
+        // Verify internal API key
+        const apiKey = request.headers['x-internal-api-key'] || request.headers['x-api-key'];
+        const expectedKey = process.env.INTERNAL_API_KEY;
+
+        if (!expectedKey) {
+          fastify.log.error('INTERNAL_API_KEY environment variable not set');
+          return reply.status(500).send({ error: 'Internal configuration error' });
+        }
+
+        if (!apiKey || apiKey !== expectedKey) {
+          fastify.log.warn('Unauthorized internal API access attempt');
+          return reply.status(401).send({ error: 'Unauthorized - Invalid or missing API key' });
+        }
+
         const { userId, paymentAmount, paymentId } = request.body as {
           userId: string;
           paymentAmount: number;
           paymentId: string;
         };
 
+        // Validate required fields
+        if (!userId || !paymentAmount || !paymentId) {
+          return reply.status(400).send({ error: 'Missing required fields: userId, paymentAmount, paymentId' });
+        }
+
         const deposit = await taxVaultService.autoSaveFromPayment(userId, paymentAmount, paymentId);
 
         return reply.send({ success: true, deposit });
       } catch (error: any) {
+        fastify.log.error('Auto-save tax vault error:', error);
         return reply.status(400).send({ error: error.message });
       }
     }
