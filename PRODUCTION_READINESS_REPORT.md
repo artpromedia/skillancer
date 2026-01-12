@@ -97,6 +97,24 @@ The following security issues have been addressed:
 
 ---
 
+## Sprint 4 Fixes Applied (2026-01-12)
+
+The following high priority issues have been addressed:
+
+| # | Issue | Fix Applied | Status |
+|---|-------|-------------|--------|
+| 6 | Soft-delete only covers 4 models | Extended to 10 models (all with deletedAt field) | FIXED |
+| 7 | Audit logging only covers 11 models | Extended to 28 critical models | FIXED |
+| 2 | Console.log in billing code | Replaced with structured logger in stripe-webhook and financial-svc | IMPROVED |
+
+**Files Changed:**
+- `packages/database/src/extensions/soft-delete.ts` (extended to 10 models)
+- `packages/database/src/extensions/audit-log.ts` (extended to 28 models)
+- `services/billing-svc/src/handlers/stripe-webhook.handler.ts` (replaced console.log with logger)
+- `services/financial-svc/src/index.ts` (replaced console.log with Fastify logger)
+
+---
+
 ## Remaining Critical Blockers
 
 | # | Issue | Location | Impact | Effort |
@@ -118,8 +136,8 @@ The following security issues have been addressed:
 | 3 | 1,246 `any` type usages | Throughout codebase | Type safety | 1-2w |
 | 4 | ~~Login/signup forms have no validation~~ | ~~`apps/web/src/app/(auth)/login/page.tsx`, signup~~ | ~~UX/Security~~ | **FIXED** |
 | 5 | ~~No error boundary pages~~ | ~~All frontend apps~~ | ~~UX~~ | **FIXED** |
-| 6 | Soft-delete only covers 4 of 346 models | `packages/database/src/extensions/soft-delete.ts` | Data loss risk | 1d |
-| 7 | Audit logging only covers 11 of 346 models | `packages/database/src/extensions/audit-log.ts` | Compliance | 1d |
+| 6 | ~~Soft-delete only covers 4 models~~ | ~~`packages/database/src/extensions/soft-delete.ts`~~ | ~~Data loss risk~~ | **FIXED** |
+| 7 | ~~Audit logging only covers 11 models~~ | ~~`packages/database/src/extensions/audit-log.ts`~~ | ~~Compliance~~ | **FIXED** |
 | 8 | ~~3 high-severity dependency vulnerabilities~~ | ~~glob, qs, storybook~~ | ~~Security~~ | **FIXED** |
 | 9 | 0 E2E test files | - | No E2E coverage | 2-4w |
 | 10 | ~~Webhook signature validation incomplete~~ | ~~`services/integration-hub-svc`~~ | ~~Security~~ | **FIXED** |
