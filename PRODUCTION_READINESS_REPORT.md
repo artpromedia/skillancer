@@ -81,6 +81,22 @@ The following issues have been addressed:
 
 ---
 
+## Sprint 3 Fixes Applied (2026-01-12)
+
+The following security issues have been addressed:
+
+| # | Issue | Fix Applied | Status |
+|---|-------|-------------|--------|
+| 8 | Dependency vulnerabilities | Added pnpm overrides for glob, qs, esbuild; updated storybook | FIXED |
+| 10 | Webhook signature validation | Added signature validation before processing webhooks | FIXED |
+
+**Files Changed:**
+- `package.json` (added pnpm overrides for glob >=10.5.0, qs >=6.14.1, esbuild >=0.25.0)
+- `packages/ui/package.json` (updated storybook packages to ^7.6.21)
+- `services/integration-hub-svc/src/services/webhook.service.ts` (complete webhook signature validation)
+
+---
+
 ## Remaining Critical Blockers
 
 | # | Issue | Location | Impact | Effort |
@@ -104,9 +120,9 @@ The following issues have been addressed:
 | 5 | ~~No error boundary pages~~ | ~~All frontend apps~~ | ~~UX~~ | **FIXED** |
 | 6 | Soft-delete only covers 4 of 346 models | `packages/database/src/extensions/soft-delete.ts` | Data loss risk | 1d |
 | 7 | Audit logging only covers 11 of 346 models | `packages/database/src/extensions/audit-log.ts` | Compliance | 1d |
-| 8 | 3 high-severity dependency vulnerabilities | glob, qs, storybook | Security | 2h |
+| 8 | ~~3 high-severity dependency vulnerabilities~~ | ~~glob, qs, storybook~~ | ~~Security~~ | **FIXED** |
 | 9 | 0 E2E test files | - | No E2E coverage | 2-4w |
-| 10 | Webhook signature validation incomplete | `services/integration-hub-svc/src/routes/integrations.routes.ts:341` | Security | 4h |
+| 10 | ~~Webhook signature validation incomplete~~ | ~~`services/integration-hub-svc`~~ | ~~Security~~ | **FIXED** |
 
 ---
 

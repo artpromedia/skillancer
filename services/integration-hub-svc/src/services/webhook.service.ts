@@ -100,35 +100,61 @@ class WebhookService {
   /**
    * Handle incoming webhook from provider
    */
-  async handleIncomingWebhook(
-    connectorSlug: string,
-    payload: Record<string, unknown>,
-    headers: Record<string, string>
-  ): Promise<WebhookResult> {
+  async handleIncomingWebhook(params: {
+    connectorId: string;
+    payload: unknown;
+    headers: Record<string, string>;
+    signature: string;
+  }): Promise<WebhookResult & { success: boolean; error?: string }> {
+    const { connectorId: connectorSlug, payload, headers, signature } = params;
+
     const connector = connectorRegistry.get(connectorSlug);
     if (!connector) {
-      throw new Error(`Unknown connector: ${connectorSlug}`);
+      logger.error('Unknown connector', { connectorSlug });
+      return { success: false, error: `Unknown connector: ${connectorSlug}`, eventType: 'error' };
     }
 
     if (!connector.webhookEnabled || !connector.handleWebhook) {
-      throw new Error(`Connector ${connectorSlug} does not support webhooks`);
+      logger.error('Connector does not support webhooks', { connectorSlug });
+      return { success: false, error: `Connector ${connectorSlug} does not support webhooks`, eventType: 'error' };
     }
 
-    // Extract signature from headers (provider-specific)
-    const signature = this.extractSignature(connectorSlug, headers);
+    // Extract signature from headers if not provided directly
+    const webhookSignature = signature || this.extractSignature(connectorSlug, headers);
+
+    // Validate webhook signature (CRITICAL SECURITY CHECK)
+    const integration = await this.findIntegrationByConnector(connectorSlug, headers);
+    if (integration?.webhookSecret) {
+      const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      const isValidSignature = this.validateSignature(
+        connectorSlug,
+        payloadString,
+        webhookSignature,
+        integration.webhookSecret
+      );
+
+      if (!isValidSignature) {
+        logger.warn('Invalid webhook signature', { connectorSlug });
+        return { success: false, error: 'Invalid webhook signature', eventType: 'error' };
+      }
+      logger.debug('Webhook signature validated', { connectorSlug });
+    } else if (webhookSignature) {
+      // Signature provided but no secret configured - log warning
+      logger.warn('Webhook signature provided but no secret configured', { connectorSlug });
+    }
 
     // Check for replay attacks
-    const webhookId = this.extractWebhookId(payload);
+    const webhookId = this.extractWebhookId(payload as Record<string, unknown>);
     if (webhookId) {
       const isReplay = await this.checkReplayAttack(webhookId);
       if (isReplay) {
         logger.warn('Webhook replay attack detected', { webhookId, connectorSlug });
-        throw new Error('Webhook replay detected');
+        return { success: false, error: 'Webhook replay detected', eventType: 'error' };
       }
     }
 
     // Process webhook through connector
-    const result = await connector.handleWebhook(payload, signature);
+    const result = await connector.handleWebhook(payload as Record<string, unknown>, webhookSignature);
 
     // Mark as processed to prevent replays
     if (webhookId) {
@@ -149,7 +175,40 @@ class WebhookService {
       integrationId: result.integrationId,
     });
 
-    return result;
+    return { ...result, success: true };
+  }
+
+  /**
+   * Find integration by connector slug (for signature validation)
+   */
+  private async findIntegrationByConnector(
+    connectorSlug: string,
+    headers: Record<string, string>
+  ): Promise<{ webhookSecret: string | null } | null> {
+    // Try to find integration from headers (some providers include integration ID)
+    const integrationId = headers['x-integration-id'] || headers['x-workspace-id'];
+
+    if (integrationId) {
+      const integration = await prisma.workspaceIntegration.findUnique({
+        where: { id: integrationId },
+        select: { webhookSecret: true },
+      });
+      return integration;
+    }
+
+    // Fallback: find by connector type (may return multiple, use first with webhook configured)
+    const integrationType = await prisma.integrationType.findFirst({
+      where: { slug: connectorSlug },
+      include: {
+        workspaceIntegrations: {
+          where: { webhookSecret: { not: null } },
+          take: 1,
+          select: { webhookSecret: true },
+        },
+      },
+    });
+
+    return integrationType?.workspaceIntegrations[0] || null;
   }
 
   /**
