@@ -1,6 +1,8 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { TaxVaultService } from '../services/tax-vault.service';
 import { PrismaClient } from '@prisma/client';
+
+import { TaxVaultService } from '../services/tax-vault.service';
+
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 const prisma = new PrismaClient();
 const taxVaultService = new TaxVaultService(prisma);

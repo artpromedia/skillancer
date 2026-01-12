@@ -63,7 +63,7 @@
     "plop": "^4.0.1",
     "prettier": "^3.2.0",
     "turbo": "^2.0.0",
-    "typescript": "^5.3.0"
+    "typescript": "~5.4.0"
   },
   "lint-staged": {
     "**/src/**/!(*.test|*.spec).{ts,tsx}": [

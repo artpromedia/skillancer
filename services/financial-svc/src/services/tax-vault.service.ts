@@ -1,4 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+
+import { TaxVaultWithdrawalReason } from '../types/financial.types.js';
+
 import type {
   TaxVaultCreateInput,
   TaxVaultUpdateInput,
@@ -6,7 +8,7 @@ import type {
   TaxVaultWithdrawalInput,
   TaxVaultSummary,
 } from '../types/financial.types.js';
-import { TaxVaultWithdrawalReason } from '../types/financial.types.js';
+import type { PrismaClient } from '@prisma/client';
 
 export class TaxVaultService {
   constructor(private prisma: PrismaClient) {}

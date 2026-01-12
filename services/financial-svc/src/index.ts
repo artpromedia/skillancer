@@ -1,11 +1,11 @@
-import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
+import Fastify from 'fastify';
 
-import { healthRoutes } from './routes/health.routes';
 import { cardRoutes } from './routes/card.routes';
 import { financingRoutes } from './routes/financing.routes';
+import { healthRoutes } from './routes/health.routes';
 import { taxVaultRoutes } from './routes/tax-vault.routes';
 
 const prisma = new PrismaClient();
@@ -104,7 +104,7 @@ async function start() {
 // Connect to database and start server
 prisma
   .$connect()
-  .then(() => {
+  .then(async () => {
     console.log('Connected to database');
     return start();
   })

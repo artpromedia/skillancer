@@ -1,6 +1,8 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { InvoiceFinancingService } from '../services/invoice-financing.service';
 import { PrismaClient } from '@prisma/client';
+
+import { InvoiceFinancingService } from '../services/invoice-financing.service';
+
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 const prisma = new PrismaClient();
 const financingService = new InvoiceFinancingService(prisma);

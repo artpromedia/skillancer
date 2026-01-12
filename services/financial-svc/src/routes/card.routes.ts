@@ -1,6 +1,8 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { SkillancerCardService } from '../services/skillancer-card.service';
 import { PrismaClient } from '@prisma/client';
+
+import { SkillancerCardService } from '../services/skillancer-card.service';
+
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 const prisma = new PrismaClient();
 const cardService = new SkillancerCardService(prisma);

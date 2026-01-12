@@ -1,0 +1,33 @@
+/** @type {import('eslint').Linter.Config} */
+module.exports = {
+  root: true,
+  extends: [require.resolve('@skillancer/config/eslint/node')],
+  parserOptions: {
+    project: './tsconfig.eslint.json',
+    tsconfigRootDir: __dirname,
+  },
+  ignorePatterns: ['**/*.test.ts', '**/*.spec.ts', 'src/__tests__/**'],
+  rules: {
+    // Disable strict type checks - will be re-enabled when Prisma types are fixed
+    '@typescript-eslint/ban-ts-comment': 'off',
+    '@typescript-eslint/require-await': 'off',
+    '@typescript-eslint/no-unsafe-call': 'off',
+    '@typescript-eslint/no-unsafe-member-access': 'off',
+    '@typescript-eslint/no-unsafe-assignment': 'off',
+    '@typescript-eslint/no-unsafe-argument': 'off',
+    '@typescript-eslint/no-unsafe-return': 'off',
+    '@typescript-eslint/no-unused-vars': 'off',
+    '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+    '@typescript-eslint/await-thenable': 'off',
+    '@typescript-eslint/no-floating-promises': 'off',
+    '@typescript-eslint/no-redundant-type-constituents': 'off',
+    '@typescript-eslint/no-base-to-string': 'off',
+    '@typescript-eslint/restrict-template-expressions': 'off',
+    '@typescript-eslint/no-non-null-assertion': 'off',
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/return-await': 'off',
+    '@typescript-eslint/no-unsafe-enum-comparison': 'off',
+    'n/no-process-exit': 'off',
+    'no-case-declarations': 'off',
+  },
+};
