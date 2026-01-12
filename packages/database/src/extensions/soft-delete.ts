@@ -7,12 +7,25 @@ import { Prisma } from '@prisma/client';
 
 /**
  * Models that support soft delete (have deletedAt field)
+ * Updated to include all models with deletedAt in the Prisma schema
  */
 export const SOFT_DELETE_MODELS = [
+  // Core user/tenant models
   'User',
   'Tenant',
+  // Marketplace models
   'Job',
   'Service',
+  // Communication models
+  'Message',
+  'ConversationMessage',
+  // Session and calendar models
+  'SessionRecording',
+  'CalendarEvent',
+  // Community models
+  'Guild',
+  // SkillPod models
+  'SkillPodTenant',
 ] as const;
 
 export type SoftDeleteModel = (typeof SOFT_DELETE_MODELS)[number];

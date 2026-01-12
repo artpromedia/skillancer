@@ -93,10 +93,10 @@ async function start() {
 
     await app.listen({ port, host });
 
-    console.log(`Financial Service running on http://${host}:${port}`);
-    console.log(`Health check: http://${host}:${port}/health`);
+    app.log.info(`Financial Service running on http://${host}:${port}`);
+    app.log.info(`Health check: http://${host}:${port}/health`);
   } catch (error) {
-    console.error('Failed to start server:', error);
+    process.stderr.write(`Failed to start server: ${error}\n`);
     process.exit(1);
   }
 }
@@ -105,11 +105,11 @@ async function start() {
 prisma
   .$connect()
   .then(() => {
-    console.log('Connected to database');
+    process.stdout.write('[financial-svc] Connected to database\n');
     return start();
   })
   .catch((error) => {
-    console.error('Failed to connect to database:', error);
+    process.stderr.write(`[financial-svc] Failed to connect to database: ${error}\n`);
     process.exit(1);
   });
 
