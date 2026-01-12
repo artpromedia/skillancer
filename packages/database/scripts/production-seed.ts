@@ -5,24 +5,14 @@
  * This script should be run once during initial production setup.
  *
  * Includes:
- * - Skill categories and skills
- * - Default security policies
- * - System configuration
+ * - Skills by category
  * - Initial admin user
- * - Email templates
- * - Default invoice templates
+ * - Notification templates
  *
- * @deprecated TODO: This seed file needs updates to match the current schema:
- * - SkillpodPolicy model doesn't exist (use different policy model)
- * - SystemConfig model doesn't exist (need to create or use alternative)
- * - EmailTemplate model doesn't exist (need to create or use alternative)
- * - Skill model uses 'category' field not 'categoryId'
- * - User model uses firstName/lastName not 'name', has different status/role enums
- * - InvoiceTemplate requires freelancerUserId relation
- * - See demo-data-seed.ts for a working example
+ * @module scripts/production-seed
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, NotificationCategory, NotificationPriority } from '@prisma/client';
 import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -30,520 +20,332 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting production seed...\n');
 
-  // Seed skill categories and skills
-  await seedSkillCategories();
-
-  // Seed security policies
-  await seedSecurityPolicies();
-
-  // Seed system configuration
-  await seedSystemConfig();
+  // Seed skills
+  await seedSkills();
 
   // Seed initial admin user
   await seedAdminUser();
 
-  // Seed email templates
-  await seedEmailTemplates();
-
-  // Seed invoice templates
-  await seedInvoiceTemplates();
+  // Seed notification templates
+  await seedNotificationTemplates();
 
   console.log('\n✅ Production seed completed successfully!');
 }
 
-async function seedSkillCategories() {
-  console.log('📚 Seeding skill categories...');
+/**
+ * Seed skills with categories
+ * Note: Skills have a 'category' string field, not a relation to SkillCategory
+ */
+async function seedSkills() {
+  console.log('📚 Seeding skills...');
 
-  const categories = [
-    {
-      id: 'cat_web_dev',
-      name: 'Web Development',
-      slug: 'web-development',
-      icon: 'globe',
-      skills: [
-        { name: 'JavaScript', slug: 'javascript' },
-        { name: 'TypeScript', slug: 'typescript' },
-        { name: 'React', slug: 'react' },
-        { name: 'Vue.js', slug: 'vuejs' },
-        { name: 'Angular', slug: 'angular' },
-        { name: 'Next.js', slug: 'nextjs' },
-        { name: 'Node.js', slug: 'nodejs' },
-        { name: 'Express.js', slug: 'expressjs' },
-        { name: 'HTML/CSS', slug: 'html-css' },
-        { name: 'Tailwind CSS', slug: 'tailwindcss' },
-      ],
-    },
-    {
-      id: 'cat_mobile_dev',
-      name: 'Mobile Development',
-      slug: 'mobile-development',
-      icon: 'smartphone',
-      skills: [
-        { name: 'React Native', slug: 'react-native' },
-        { name: 'Flutter', slug: 'flutter' },
-        { name: 'iOS/Swift', slug: 'ios-swift' },
-        { name: 'Android/Kotlin', slug: 'android-kotlin' },
-        { name: 'Ionic', slug: 'ionic' },
-      ],
-    },
-    {
-      id: 'cat_backend',
-      name: 'Backend Development',
-      slug: 'backend-development',
-      icon: 'server',
-      skills: [
-        { name: 'Python', slug: 'python' },
-        { name: 'Java', slug: 'java' },
-        { name: 'Go', slug: 'golang' },
-        { name: 'Ruby', slug: 'ruby' },
-        { name: 'PHP', slug: 'php' },
-        { name: 'C#/.NET', slug: 'csharp-dotnet' },
-        { name: 'Rust', slug: 'rust' },
-      ],
-    },
-    {
-      id: 'cat_devops',
-      name: 'DevOps & Cloud',
-      slug: 'devops-cloud',
-      icon: 'cloud',
-      skills: [
-        { name: 'AWS', slug: 'aws' },
-        { name: 'Google Cloud', slug: 'gcp' },
-        { name: 'Azure', slug: 'azure' },
-        { name: 'Docker', slug: 'docker' },
-        { name: 'Kubernetes', slug: 'kubernetes' },
-        { name: 'Terraform', slug: 'terraform' },
-        { name: 'CI/CD', slug: 'ci-cd' },
-        { name: 'Linux', slug: 'linux' },
-      ],
-    },
-    {
-      id: 'cat_data',
-      name: 'Data Science & ML',
-      slug: 'data-science',
-      icon: 'bar-chart',
-      skills: [
-        { name: 'Machine Learning', slug: 'machine-learning' },
-        { name: 'Deep Learning', slug: 'deep-learning' },
-        { name: 'Data Analysis', slug: 'data-analysis' },
-        { name: 'SQL', slug: 'sql' },
-        { name: 'TensorFlow', slug: 'tensorflow' },
-        { name: 'PyTorch', slug: 'pytorch' },
-        { name: 'Pandas', slug: 'pandas' },
-      ],
-    },
-    {
-      id: 'cat_design',
-      name: 'Design',
-      slug: 'design',
-      icon: 'palette',
-      skills: [
-        { name: 'UI Design', slug: 'ui-design' },
-        { name: 'UX Design', slug: 'ux-design' },
-        { name: 'Figma', slug: 'figma' },
-        { name: 'Adobe XD', slug: 'adobe-xd' },
-        { name: 'Sketch', slug: 'sketch' },
-        { name: 'Graphic Design', slug: 'graphic-design' },
-        { name: 'Motion Graphics', slug: 'motion-graphics' },
-      ],
-    },
-    {
-      id: 'cat_blockchain',
-      name: 'Blockchain',
-      slug: 'blockchain',
-      icon: 'link',
-      skills: [
-        { name: 'Solidity', slug: 'solidity' },
-        { name: 'Web3.js', slug: 'web3js' },
-        { name: 'Smart Contracts', slug: 'smart-contracts' },
-        { name: 'DeFi', slug: 'defi' },
-        { name: 'NFT Development', slug: 'nft-development' },
-      ],
-    },
-    {
-      id: 'cat_security',
-      name: 'Cybersecurity',
-      slug: 'cybersecurity',
-      icon: 'shield',
-      skills: [
-        { name: 'Penetration Testing', slug: 'penetration-testing' },
-        { name: 'Security Auditing', slug: 'security-auditing' },
-        { name: 'Network Security', slug: 'network-security' },
-        { name: 'Cloud Security', slug: 'cloud-security' },
-        { name: 'OWASP', slug: 'owasp' },
-      ],
-    },
-  ];
+  const skillsByCategory: Record<string, Array<{ name: string; slug: string; description?: string }>> = {
+    'Web Development': [
+      { name: 'JavaScript', slug: 'javascript', description: 'Core web programming language' },
+      { name: 'TypeScript', slug: 'typescript', description: 'Typed superset of JavaScript' },
+      { name: 'React', slug: 'react', description: 'UI component library' },
+      { name: 'Vue.js', slug: 'vuejs', description: 'Progressive JavaScript framework' },
+      { name: 'Angular', slug: 'angular', description: 'Enterprise web framework' },
+      { name: 'Next.js', slug: 'nextjs', description: 'React framework for production' },
+      { name: 'Node.js', slug: 'nodejs', description: 'JavaScript runtime' },
+      { name: 'Express.js', slug: 'expressjs', description: 'Node.js web framework' },
+      { name: 'HTML/CSS', slug: 'html-css', description: 'Web markup and styling' },
+      { name: 'Tailwind CSS', slug: 'tailwindcss', description: 'Utility-first CSS framework' },
+    ],
+    'Mobile Development': [
+      { name: 'React Native', slug: 'react-native', description: 'Cross-platform mobile framework' },
+      { name: 'Flutter', slug: 'flutter', description: 'Google UI toolkit for mobile' },
+      { name: 'iOS/Swift', slug: 'ios-swift', description: 'Native iOS development' },
+      { name: 'Android/Kotlin', slug: 'android-kotlin', description: 'Native Android development' },
+      { name: 'Ionic', slug: 'ionic', description: 'Hybrid mobile framework' },
+    ],
+    'Backend Development': [
+      { name: 'Python', slug: 'python', description: 'General-purpose programming language' },
+      { name: 'Java', slug: 'java', description: 'Enterprise programming language' },
+      { name: 'Go', slug: 'golang', description: 'Google systems language' },
+      { name: 'Ruby', slug: 'ruby', description: 'Dynamic programming language' },
+      { name: 'PHP', slug: 'php', description: 'Web scripting language' },
+      { name: 'C#/.NET', slug: 'csharp-dotnet', description: 'Microsoft ecosystem' },
+      { name: 'Rust', slug: 'rust', description: 'Systems programming language' },
+    ],
+    'Database': [
+      { name: 'PostgreSQL', slug: 'postgresql', description: 'Advanced open-source database' },
+      { name: 'MySQL', slug: 'mysql', description: 'Popular relational database' },
+      { name: 'MongoDB', slug: 'mongodb', description: 'Document database' },
+      { name: 'Redis', slug: 'redis', description: 'In-memory data store' },
+      { name: 'Elasticsearch', slug: 'elasticsearch', description: 'Search and analytics engine' },
+    ],
+    'Cloud & DevOps': [
+      { name: 'AWS', slug: 'aws', description: 'Amazon Web Services' },
+      { name: 'Google Cloud', slug: 'gcp', description: 'Google Cloud Platform' },
+      { name: 'Azure', slug: 'azure', description: 'Microsoft Cloud' },
+      { name: 'Docker', slug: 'docker', description: 'Container platform' },
+      { name: 'Kubernetes', slug: 'kubernetes', description: 'Container orchestration' },
+      { name: 'Terraform', slug: 'terraform', description: 'Infrastructure as Code' },
+      { name: 'CI/CD', slug: 'ci-cd', description: 'Continuous Integration/Deployment' },
+    ],
+    'Design': [
+      { name: 'UI Design', slug: 'ui-design', description: 'User interface design' },
+      { name: 'UX Design', slug: 'ux-design', description: 'User experience design' },
+      { name: 'Figma', slug: 'figma', description: 'Design collaboration tool' },
+      { name: 'Adobe XD', slug: 'adobe-xd', description: 'Adobe design tool' },
+      { name: 'Sketch', slug: 'sketch', description: 'macOS design tool' },
+      { name: 'Graphic Design', slug: 'graphic-design', description: 'Visual design' },
+      { name: 'Brand Identity', slug: 'brand-identity', description: 'Brand design' },
+    ],
+    'Data & AI': [
+      { name: 'Machine Learning', slug: 'machine-learning', description: 'ML algorithms and models' },
+      { name: 'Data Science', slug: 'data-science', description: 'Data analysis and insights' },
+      { name: 'Deep Learning', slug: 'deep-learning', description: 'Neural networks' },
+      { name: 'NLP', slug: 'nlp', description: 'Natural language processing' },
+      { name: 'Computer Vision', slug: 'computer-vision', description: 'Image and video analysis' },
+      { name: 'Data Engineering', slug: 'data-engineering', description: 'Data pipelines' },
+    ],
+    'Security': [
+      { name: 'Penetration Testing', slug: 'penetration-testing', description: 'Security testing' },
+      { name: 'Security Auditing', slug: 'security-auditing', description: 'Security assessment' },
+      { name: 'Network Security', slug: 'network-security', description: 'Network protection' },
+      { name: 'Cloud Security', slug: 'cloud-security', description: 'Cloud security architecture' },
+      { name: 'OWASP', slug: 'owasp', description: 'Web application security' },
+    ],
+  };
 
-  for (const category of categories) {
-    const { skills, ...categoryData } = category;
+  let totalSkills = 0;
 
-    await prisma.skillCategory.upsert({
-      where: { id: category.id },
-      update: categoryData,
-      create: categoryData,
-    });
-
+  for (const [category, skills] of Object.entries(skillsByCategory)) {
     for (const skill of skills) {
       await prisma.skill.upsert({
         where: { slug: skill.slug },
-        update: { ...skill, categoryId: category.id },
+        update: {
+          name: skill.name,
+          category,
+          description: skill.description,
+        },
         create: {
-          id: `skill_${skill.slug.replace(/-/g, '_')}`,
-          ...skill,
-          categoryId: category.id,
+          name: skill.name,
+          slug: skill.slug,
+          category,
+          description: skill.description,
+          isCustom: false,
+          isApproved: true,
         },
       });
+      totalSkills++;
     }
   }
 
-  console.log(`   ✓ Created ${categories.length} categories with skills`);
+  console.log(`   ✓ Created ${totalSkills} skills in ${Object.keys(skillsByCategory).length} categories`);
 }
 
-async function seedSecurityPolicies() {
-  console.log('🔒 Seeding security policies...');
-
-  const policies = [
-    {
-      id: 'policy_standard',
-      name: 'Standard',
-      level: 1,
-      description: 'Basic monitoring, suitable for general work',
-      config: {
-        recording: true,
-        clipboardAccess: true,
-        internetAccess: true,
-        fileDownload: true,
-        sessionTimeout: 480, // 8 hours
-        idleTimeout: 30, // 30 minutes
-      },
-    },
-    {
-      id: 'policy_enhanced',
-      name: 'Enhanced',
-      level: 2,
-      description: 'Full recording with limited internet access',
-      config: {
-        recording: true,
-        clipboardAccess: true,
-        clipboardLogging: true,
-        internetAccess: 'whitelist',
-        fileDownload: 'approval',
-        sessionTimeout: 480,
-        idleTimeout: 15,
-      },
-    },
-    {
-      id: 'policy_strict',
-      name: 'Strict',
-      level: 3,
-      description: 'No internet, no clipboard, watermarked screen',
-      config: {
-        recording: true,
-        clipboardAccess: false,
-        internetAccess: false,
-        fileDownload: false,
-        screenWatermark: true,
-        sessionTimeout: 240, // 4 hours
-        idleTimeout: 10,
-      },
-    },
-    {
-      id: 'policy_maximum',
-      name: 'Maximum Security',
-      level: 4,
-      description: 'All restrictions plus keystroke logging',
-      config: {
-        recording: true,
-        keystrokeLogging: true,
-        clipboardAccess: false,
-        internetAccess: false,
-        fileDownload: false,
-        screenWatermark: true,
-        screenshotBlocking: true,
-        sessionTimeout: 120, // 2 hours
-        idleTimeout: 5,
-        managerApproval: true,
-      },
-    },
-  ];
-
-  for (const policy of policies) {
-    await prisma.skillpodPolicy.upsert({
-      where: { id: policy.id },
-      update: policy,
-      create: policy,
-    });
-  }
-
-  console.log(`   ✓ Created ${policies.length} security policies`);
-}
-
-async function seedSystemConfig() {
-  console.log('⚙️ Seeding system configuration...');
-
-  const configs = [
-    // Platform settings
-    { key: 'platform.name', value: 'Skillancer', category: 'platform' },
-    { key: 'platform.url', value: 'https://skillancer.com', category: 'platform' },
-    { key: 'platform.supportEmail', value: 'support@skillancer.com', category: 'platform' },
-    { key: 'platform.maintenanceMode', value: 'false', category: 'platform' },
-
-    // Fee configuration
-    { key: 'fees.freelancer.tier1', value: '0.20', category: 'fees' }, // 20% for first $500
-    { key: 'fees.freelancer.tier2', value: '0.10', category: 'fees' }, // 10% $500-$10k
-    { key: 'fees.freelancer.tier3', value: '0.05', category: 'fees' }, // 5% over $10k
-    { key: 'fees.client', value: '0.03', category: 'fees' }, // 3% client fee
-
-    // Payment settings
-    { key: 'payment.minWithdrawal', value: '100', category: 'payment' },
-    { key: 'payment.fixedReleaseDelay', value: '5', category: 'payment' }, // days
-    { key: 'payment.hourlyReleaseDelay', value: '10', category: 'payment' }, // days
-
-    // Proposal settings
-    { key: 'proposal.connectsCost.low', value: '2', category: 'proposal' }, // Under $500
-    { key: 'proposal.connectsCost.medium', value: '4', category: 'proposal' }, // $500-$1000
-    { key: 'proposal.connectsCost.high', value: '6', category: 'proposal' }, // Over $1000
-    { key: 'proposal.freeConnectsMonthly', value: '60', category: 'proposal' },
-
-    // Session settings
-    { key: 'session.timeout', value: '1800', category: 'session' }, // 30 minutes
-    { key: 'session.absoluteTimeout', value: '86400', category: 'session' }, // 24 hours
-    { key: 'session.maxConcurrent', value: '5', category: 'session' },
-
-    // Security settings
-    { key: 'security.maxLoginAttempts', value: '5', category: 'security' },
-    { key: 'security.lockoutDuration', value: '900', category: 'security' }, // 15 minutes
-    { key: 'security.passwordMinLength', value: '12', category: 'security' },
-    { key: 'security.mfaRequired.admin', value: 'true', category: 'security' },
-  ];
-
-  for (const config of configs) {
-    await prisma.systemConfig.upsert({
-      where: { key: config.key },
-      update: config,
-      create: config,
-    });
-  }
-
-  console.log(`   ✓ Created ${configs.length} configuration entries`);
-}
-
+/**
+ * Seed initial admin user
+ */
 async function seedAdminUser() {
   console.log('👤 Seeding initial admin user...');
 
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@skillancer.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeThisPassword123!';
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminPassword) {
+    console.log('   ⚠️  ADMIN_PASSWORD environment variable not set. Skipping admin user creation.');
+    console.log('   ⚠️  Set ADMIN_PASSWORD to create the initial admin user.');
+    return;
+  }
 
   const hashedPassword = await hash(adminPassword, 12);
 
-  await prisma.user.upsert({
+  const adminUser = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},
+    update: {
+      passwordHash: hashedPassword,
+    },
     create: {
-      id: 'user_admin_initial',
       email: adminEmail,
       passwordHash: hashedPassword,
-      name: 'System Administrator',
-      role: 'ADMIN',
-      emailVerified: true,
-      mfaEnabled: false, // Should enable after first login
+      firstName: 'System',
+      lastName: 'Administrator',
       status: 'ACTIVE',
+      verificationLevel: 'EMAIL',
     },
   });
 
   console.log(`   ✓ Created admin user: ${adminEmail}`);
-  console.log('   ⚠️  Remember to change the default password and enable MFA!');
+  console.log(`   ⚠️  Remember to enable MFA for the admin account!`);
+
+  return adminUser;
 }
 
-async function seedEmailTemplates() {
-  console.log('📧 Seeding email templates...');
+/**
+ * Seed notification templates
+ */
+async function seedNotificationTemplates() {
+  console.log('📧 Seeding notification templates...');
 
   const templates = [
     {
-      id: 'email_welcome',
+      type: 'welcome',
       name: 'Welcome Email',
-      subject: 'Welcome to Skillancer!',
-      htmlTemplate: `
-        <h1>Welcome to Skillancer, {{name}}!</h1>
+      category: NotificationCategory.SYSTEM,
+      inAppTitle: 'Welcome to Skillancer!',
+      inAppBody: 'We are excited to have you join our community. Complete your profile to get started.',
+      emailSubject: 'Welcome to Skillancer!',
+      emailHtmlTemplate: `
+        <h1>Welcome to Skillancer, {{firstName}}!</h1>
         <p>We're excited to have you join our community of talented professionals.</p>
         <p>Get started by completing your profile and exploring opportunities.</p>
-        <a href="{{dashboardUrl}}">Go to Dashboard</a>
+        <a href="{{dashboardUrl}}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Go to Dashboard</a>
       `,
-      textTemplate: `
-Welcome to Skillancer, {{name}}!
+      emailTextTemplate: `
+Welcome to Skillancer, {{firstName}}!
 
 We're excited to have you join our community.
 
 Get started: {{dashboardUrl}}
       `,
+      defaultPriority: NotificationPriority.HIGH,
+      defaultChannels: ['EMAIL', 'IN_APP'],
     },
     {
-      id: 'email_verify',
+      type: 'email_verification',
       name: 'Email Verification',
-      subject: 'Verify your email address',
-      htmlTemplate: `
+      category: NotificationCategory.SECURITY,
+      inAppTitle: 'Verify Your Email',
+      inAppBody: 'Please check your email to verify your account.',
+      emailSubject: 'Verify your email address',
+      emailHtmlTemplate: `
         <h1>Verify Your Email</h1>
-        <p>Hi {{name}}, please click below to verify your email:</p>
-        <a href="{{verificationUrl}}">Verify Email</a>
+        <p>Hi {{firstName}}, please click below to verify your email:</p>
+        <a href="{{verificationUrl}}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Verify Email</a>
         <p>This link expires in 24 hours.</p>
       `,
-      textTemplate: `
+      emailTextTemplate: `
 Verify your email: {{verificationUrl}}
 This link expires in 24 hours.
       `,
+      defaultPriority: NotificationPriority.HIGH,
+      defaultChannels: ['EMAIL'],
     },
     {
-      id: 'email_password_reset',
+      type: 'password_reset',
       name: 'Password Reset',
-      subject: 'Reset your password',
-      htmlTemplate: `
+      category: NotificationCategory.SECURITY,
+      inAppTitle: 'Password Reset Requested',
+      inAppBody: 'A password reset was requested for your account.',
+      emailSubject: 'Reset your password',
+      emailHtmlTemplate: `
         <h1>Password Reset</h1>
-        <p>Hi {{name}}, click below to reset your password:</p>
-        <a href="{{resetUrl}}">Reset Password</a>
+        <p>Hi {{firstName}}, click below to reset your password:</p>
+        <a href="{{resetUrl}}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Reset Password</a>
         <p>This link expires in 1 hour. If you didn't request this, ignore this email.</p>
       `,
-      textTemplate: `
+      emailTextTemplate: `
 Reset your password: {{resetUrl}}
 This link expires in 1 hour.
       `,
+      defaultPriority: NotificationPriority.HIGH,
+      defaultChannels: ['EMAIL'],
     },
     {
-      id: 'email_proposal_received',
+      type: 'proposal_received',
       name: 'Proposal Received',
-      subject: 'New proposal on your job: {{jobTitle}}',
-      htmlTemplate: `
+      category: NotificationCategory.JOB,
+      inAppTitle: 'New Proposal Received',
+      inAppBody: '{{freelancerName}} submitted a proposal for "{{jobTitle}}"',
+      emailSubject: 'New proposal on your job: {{jobTitle}}',
+      emailHtmlTemplate: `
         <h1>New Proposal Received</h1>
         <p>{{freelancerName}} submitted a proposal for "{{jobTitle}}"</p>
-        <p>Bid: {{bidAmount}}</p>
-        <a href="{{proposalUrl}}">View Proposal</a>
+        <p><strong>Bid:</strong> {{bidAmount}}</p>
+        <a href="{{proposalUrl}}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">View Proposal</a>
       `,
-      textTemplate: `
+      emailTextTemplate: `
 New proposal from {{freelancerName}} for "{{jobTitle}}"
 Bid: {{bidAmount}}
 View: {{proposalUrl}}
       `,
+      defaultPriority: NotificationPriority.NORMAL,
+      defaultChannels: ['EMAIL', 'IN_APP', 'PUSH'],
     },
     {
-      id: 'email_contract_started',
+      type: 'contract_started',
       name: 'Contract Started',
-      subject: 'Contract started: {{jobTitle}}',
-      htmlTemplate: `
+      category: NotificationCategory.CONTRACT,
+      inAppTitle: 'Contract Started',
+      inAppBody: 'Your contract for "{{jobTitle}}" has begun.',
+      emailSubject: 'Contract started: {{jobTitle}}',
+      emailHtmlTemplate: `
         <h1>Contract Started!</h1>
         <p>Your contract for "{{jobTitle}}" has begun.</p>
-        <p>Client: {{clientName}}</p>
-        <p>Freelancer: {{freelancerName}}</p>
-        <a href="{{contractUrl}}">View Contract</a>
+        <p><strong>Client:</strong> {{clientName}}</p>
+        <p><strong>Freelancer:</strong> {{freelancerName}}</p>
+        <a href="{{contractUrl}}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">View Contract</a>
       `,
-      textTemplate: `
+      emailTextTemplate: `
 Contract started for "{{jobTitle}}"
 View: {{contractUrl}}
       `,
+      defaultPriority: NotificationPriority.HIGH,
+      defaultChannels: ['EMAIL', 'IN_APP', 'PUSH'],
     },
     {
-      id: 'email_payment_received',
+      type: 'payment_received',
       name: 'Payment Received',
-      subject: 'Payment received: {{amount}}',
-      htmlTemplate: `
+      category: NotificationCategory.PAYMENT,
+      inAppTitle: 'Payment Received',
+      inAppBody: 'You received {{amount}} for "{{jobTitle}}"',
+      emailSubject: 'Payment received: {{amount}}',
+      emailHtmlTemplate: `
         <h1>Payment Received!</h1>
-        <p>You received {{amount}} for "{{jobTitle}}"</p>
-        <p>After fees: {{netAmount}}</p>
-        <a href="{{paymentsUrl}}">View Payments</a>
+        <p>You received <strong>{{amount}}</strong> for "{{jobTitle}}"</p>
+        <p><strong>After fees:</strong> {{netAmount}}</p>
+        <a href="{{paymentsUrl}}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">View Payments</a>
       `,
-      textTemplate: `
+      emailTextTemplate: `
 Payment received: {{amount}}
 After fees: {{netAmount}}
 View: {{paymentsUrl}}
       `,
+      defaultPriority: NotificationPriority.HIGH,
+      defaultChannels: ['EMAIL', 'IN_APP', 'PUSH'],
+    },
+    {
+      type: 'message_received',
+      name: 'Message Received',
+      category: NotificationCategory.MESSAGE,
+      inAppTitle: 'New Message',
+      inAppBody: '{{senderName}} sent you a message',
+      emailSubject: 'New message from {{senderName}}',
+      emailHtmlTemplate: `
+        <h1>New Message</h1>
+        <p>{{senderName}} sent you a message:</p>
+        <blockquote style="border-left: 4px solid #E5E7EB; padding-left: 16px; margin: 16px 0;">{{messagePreview}}</blockquote>
+        <a href="{{conversationUrl}}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">View Conversation</a>
+      `,
+      emailTextTemplate: `
+New message from {{senderName}}:
+"{{messagePreview}}"
+
+View: {{conversationUrl}}
+      `,
+      defaultPriority: NotificationPriority.NORMAL,
+      defaultChannels: ['EMAIL', 'IN_APP', 'PUSH'],
     },
   ];
 
   for (const template of templates) {
-    await prisma.emailTemplate.upsert({
-      where: { id: template.id },
+    await prisma.notificationTemplate.upsert({
+      where: { type: template.type },
       update: template,
       create: template,
     });
   }
 
-  console.log(`   ✓ Created ${templates.length} email templates`);
-}
-
-async function seedInvoiceTemplates() {
-  console.log('📄 Seeding invoice templates...');
-
-  const templates = [
-    {
-      id: 'invoice_default',
-      name: 'Default Invoice',
-      isDefault: true,
-      config: {
-        showLogo: true,
-        showCompanyAddress: true,
-        showClientAddress: true,
-        showTaxId: true,
-        columns: ['description', 'quantity', 'rate', 'amount'],
-        showSubtotal: true,
-        showTax: true,
-        showTotal: true,
-        footerText: 'Thank you for your business!\n\nPayment is due within 14 days.',
-        accentColor: '#3B82F6',
-      },
-    },
-    {
-      id: 'invoice_minimal',
-      name: 'Minimal Invoice',
-      isDefault: false,
-      config: {
-        showLogo: false,
-        showCompanyAddress: false,
-        showClientAddress: true,
-        showTaxId: false,
-        columns: ['description', 'amount'],
-        showSubtotal: false,
-        showTax: false,
-        showTotal: true,
-        footerText: '',
-        accentColor: '#000000',
-      },
-    },
-    {
-      id: 'invoice_detailed',
-      name: 'Detailed Invoice',
-      isDefault: false,
-      config: {
-        showLogo: true,
-        showCompanyAddress: true,
-        showClientAddress: true,
-        showTaxId: true,
-        columns: ['date', 'description', 'hours', 'rate', 'amount'],
-        showSubtotal: true,
-        showTax: true,
-        showDiscount: true,
-        showTotal: true,
-        showNotes: true,
-        showPaymentTerms: true,
-        footerText:
-          'Thank you for choosing Skillancer!\n\nQuestions? Contact billing@skillancer.com',
-        accentColor: '#10B981',
-      },
-    },
-  ];
-
-  for (const template of templates) {
-    await prisma.invoiceTemplate.upsert({
-      where: { id: template.id },
-      update: template,
-      create: template,
-    });
-  }
-
-  console.log(`   ✓ Created ${templates.length} invoice templates`);
+  console.log(`   ✓ Created ${templates.length} notification templates`);
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e);
+    console.error('❌ Production seed failed:', e);
     process.exit(1);
   })
   .finally(async () => {

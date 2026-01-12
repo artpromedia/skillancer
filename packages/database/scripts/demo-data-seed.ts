@@ -5,24 +5,16 @@
  * DO NOT run in production!
  *
  * Includes:
- * - Sample freelancer profiles
- * - Sample client profiles
+ * - Sample user accounts (freelancers, clients, admin)
  * - Sample jobs
+ * - Sample bids
  * - Sample contracts
  * - Sample reviews
- * - Demo credentials
  *
- * @deprecated TODO: This seed file needs updates to match the current schema:
- * - User model uses firstName/lastName not 'name'
- * - Job skills should use relation syntax not string array
- * - JobDuration enum values may have changed
- * - JobStatus enum may have changed
- * - 'proposal' model doesn't exist (use 'bid')
- * - Contract model fields differ
- * - Review model fields differ
+ * @module scripts/demo-data-seed
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, BidStatus, ContractStatus, JobStatus, ReviewType, ReviewStatus, BudgetType, ExperienceLevel, JobDuration } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { faker } from '@faker-js/faker';
 
@@ -54,173 +46,128 @@ async function main() {
   }
 
   // Seed demo accounts
-  await seedDemoAccounts();
+  const demoAccounts = await seedDemoAccounts();
 
   // Seed sample freelancers
   const freelancerIds = await seedFreelancers(20);
+  freelancerIds.push(demoAccounts.freelancerId);
 
   // Seed sample clients
   const clientIds = await seedClients(10);
+  clientIds.push(demoAccounts.clientId);
 
   // Seed sample jobs
   const jobIds = await seedJobs(clientIds, 50);
 
-  // Seed sample proposals
-  await seedProposals(freelancerIds, jobIds, 100);
+  // Seed sample bids
+  await seedBids(freelancerIds, jobIds, 100);
 
   // Seed sample contracts
   const contractIds = await seedContracts(freelancerIds, clientIds, jobIds, 30);
 
   // Seed sample reviews
-  await seedReviews(contractIds);
+  await seedReviews(contractIds, freelancerIds, clientIds);
 
   console.log('\n✅ Demo data seed completed!');
   console.log('\n📋 Demo Accounts:');
   console.log(`   Freelancer: ${DEMO_ACCOUNTS.freelancer.email}`);
   console.log(`   Client: ${DEMO_ACCOUNTS.client.email}`);
   console.log(`   Admin: ${DEMO_ACCOUNTS.admin.email}`);
-  console.log(`   Password: Same as username prefix + "123!"`);
+  console.log(`   Passwords: ${DEMO_ACCOUNTS.freelancer.password.slice(0, 4)}... (check code)`);
 }
 
-async function seedDemoAccounts() {
+async function seedDemoAccounts(): Promise<{ freelancerId: string; clientId: string; adminId: string }> {
   console.log('👤 Creating demo accounts...');
 
   // Demo Freelancer
   const freelancerPassword = await hash(DEMO_ACCOUNTS.freelancer.password, 12);
-  await prisma.user.upsert({
+  const freelancer = await prisma.user.upsert({
     where: { email: DEMO_ACCOUNTS.freelancer.email },
     update: {},
     create: {
-      id: 'user_demo_freelancer',
       email: DEMO_ACCOUNTS.freelancer.email,
       passwordHash: freelancerPassword,
-      name: 'Demo Freelancer',
-      role: 'FREELANCER',
-      emailVerified: true,
+      firstName: 'Demo',
+      lastName: 'Freelancer',
+      displayName: 'Demo Freelancer',
+      bio: 'Experienced developer with 8+ years building web applications. Specialized in React, Node.js, and cloud architecture.',
       status: 'ACTIVE',
-      profile: {
-        create: {
-          title: 'Senior Full-Stack Developer',
-          bio: 'Experienced developer with 8+ years building web applications. Specialized in React, Node.js, and cloud architecture.',
-          hourlyRate: 85,
-          skills: ['react', 'nodejs', 'typescript', 'aws'],
-          location: 'San Francisco, CA',
-          timezone: 'America/Los_Angeles',
-          availability: 'FULL_TIME',
-          completeness: 100,
-        },
-      },
+      verificationLevel: 'EMAIL',
+      timezone: 'America/Los_Angeles',
     },
   });
 
   // Demo Client
   const clientPassword = await hash(DEMO_ACCOUNTS.client.password, 12);
-  await prisma.user.upsert({
+  const client = await prisma.user.upsert({
     where: { email: DEMO_ACCOUNTS.client.email },
     update: {},
     create: {
-      id: 'user_demo_client',
       email: DEMO_ACCOUNTS.client.email,
       passwordHash: clientPassword,
-      name: 'Demo Client',
-      role: 'CLIENT',
-      emailVerified: true,
+      firstName: 'Demo',
+      lastName: 'Client',
+      displayName: 'Demo Client',
+      bio: 'Tech entrepreneur looking for talented developers.',
       status: 'ACTIVE',
-      company: {
-        create: {
-          name: 'Demo Company Inc.',
-          description: 'A demo company for testing Skillancer features.',
-          website: 'https://democompany.example.com',
-          size: '11-50',
-          industry: 'Technology',
-        },
-      },
+      verificationLevel: 'EMAIL',
+      timezone: 'America/New_York',
     },
   });
 
   // Demo Admin
   const adminPassword = await hash(DEMO_ACCOUNTS.admin.password, 12);
-  await prisma.user.upsert({
+  const admin = await prisma.user.upsert({
     where: { email: DEMO_ACCOUNTS.admin.email },
     update: {},
     create: {
-      id: 'user_demo_admin',
       email: DEMO_ACCOUNTS.admin.email,
       passwordHash: adminPassword,
-      name: 'Demo Admin',
-      role: 'ADMIN',
-      emailVerified: true,
+      firstName: 'Demo',
+      lastName: 'Admin',
+      displayName: 'Demo Administrator',
       status: 'ACTIVE',
+      verificationLevel: 'EMAIL',
     },
   });
 
-  console.log('   ✓ Created 3 demo accounts');
+  console.log('   ✓ Created demo accounts');
+
+  return {
+    freelancerId: freelancer.id,
+    clientId: client.id,
+    adminId: admin.id,
+  };
 }
 
 async function seedFreelancers(count: number): Promise<string[]> {
-  console.log(`👨‍💻 Creating ${count} sample freelancers...`);
-
-  const skills = [
-    ['react', 'typescript', 'nodejs'],
-    ['python', 'django', 'postgresql'],
-    ['java', 'spring', 'aws'],
-    ['flutter', 'dart', 'firebase'],
-    ['figma', 'ui-design', 'ux-design'],
-    ['go', 'kubernetes', 'docker'],
-    ['ruby', 'rails', 'postgresql'],
-    ['vue', 'nuxt', 'tailwindcss'],
-    ['swift', 'ios', 'objective-c'],
-    ['solidity', 'web3', 'ethereum'],
-  ];
-
-  const titles = [
-    'Senior Frontend Developer',
-    'Full-Stack Engineer',
-    'Backend Developer',
-    'Mobile App Developer',
-    'UI/UX Designer',
-    'DevOps Engineer',
-    'Data Scientist',
-    'Cloud Architect',
-    'Blockchain Developer',
-    'Product Designer',
-  ];
+  console.log(`👷 Creating ${count} sample freelancers...`);
 
   const ids: string[] = [];
-  const passwordHash = await hash('Password123!', 12);
 
   for (let i = 0; i < count; i++) {
-    const id = `user_freelancer_${i + 1}`;
-    ids.push(id);
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const email = faker.internet.email({ firstName, lastName, provider: 'demo.skillancer.com' }).toLowerCase();
+    const hashedPassword = await hash('Password123!', 12);
 
-    await prisma.user.upsert({
-      where: { id },
+    const user = await prisma.user.upsert({
+      where: { email },
       update: {},
       create: {
-        id,
-        email: faker.internet.email().toLowerCase(),
-        passwordHash,
-        name: faker.person.fullName(),
-        role: 'FREELANCER',
-        emailVerified: true,
+        email,
+        passwordHash: hashedPassword,
+        firstName,
+        lastName,
+        displayName: `${firstName} ${lastName}`,
+        bio: faker.lorem.paragraph(),
         status: 'ACTIVE',
-        createdAt: faker.date.past({ years: 2 }),
-        profile: {
-          create: {
-            title: titles[i % titles.length],
-            bio: faker.lorem.paragraphs(2),
-            hourlyRate: faker.number.int({ min: 30, max: 200 }),
-            skills: skills[i % skills.length],
-            location: `${faker.location.city()}, ${faker.location.country()}`,
-            timezone: faker.location.timeZone(),
-            availability: faker.helpers.arrayElement(['FULL_TIME', 'PART_TIME', 'HOURLY']),
-            completeness: faker.number.int({ min: 70, max: 100 }),
-            totalEarnings: faker.number.int({ min: 0, max: 500000 }),
-            jobSuccessScore: faker.number.int({ min: 80, max: 100 }),
-          },
-        },
+        verificationLevel: 'EMAIL',
+        timezone: faker.location.timeZone(),
       },
     });
+
+    ids.push(user.id);
   }
 
   console.log(`   ✓ Created ${count} freelancers`);
@@ -228,47 +175,33 @@ async function seedFreelancers(count: number): Promise<string[]> {
 }
 
 async function seedClients(count: number): Promise<string[]> {
-  console.log(`🏢 Creating ${count} sample clients...`);
+  console.log(`💼 Creating ${count} sample clients...`);
 
   const ids: string[] = [];
-  const passwordHash = await hash('Password123!', 12);
 
   for (let i = 0; i < count; i++) {
-    const id = `user_client_${i + 1}`;
-    ids.push(id);
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const email = faker.internet.email({ firstName, lastName, provider: 'democlient.skillancer.com' }).toLowerCase();
+    const hashedPassword = await hash('Password123!', 12);
 
-    await prisma.user.upsert({
-      where: { id },
+    const user = await prisma.user.upsert({
+      where: { email },
       update: {},
       create: {
-        id,
-        email: faker.internet.email().toLowerCase(),
-        passwordHash,
-        name: faker.person.fullName(),
-        role: 'CLIENT',
-        emailVerified: true,
+        email,
+        passwordHash: hashedPassword,
+        firstName,
+        lastName,
+        displayName: `${firstName} ${lastName}`,
+        bio: faker.company.catchPhrase(),
         status: 'ACTIVE',
-        createdAt: faker.date.past({ years: 2 }),
-        company: {
-          create: {
-            name: faker.company.name(),
-            description: faker.company.catchPhrase(),
-            website: faker.internet.url(),
-            size: faker.helpers.arrayElement(['1-10', '11-50', '51-200', '201-500', '500+']),
-            industry: faker.helpers.arrayElement([
-              'Technology',
-              'Finance',
-              'Healthcare',
-              'E-commerce',
-              'Education',
-              'Media',
-            ]),
-            totalSpent: faker.number.int({ min: 0, max: 1000000 }),
-            paymentVerified: true,
-          },
-        },
+        verificationLevel: 'EMAIL',
+        timezone: faker.location.timeZone(),
       },
     });
+
+    ids.push(user.id);
   }
 
   console.log(`   ✓ Created ${count} clients`);
@@ -276,109 +209,123 @@ async function seedClients(count: number): Promise<string[]> {
 }
 
 async function seedJobs(clientIds: string[], count: number): Promise<string[]> {
-  console.log(`📋 Creating ${count} sample jobs...`);
-
-  const categories = ['cat_web_dev', 'cat_mobile_dev', 'cat_backend', 'cat_devops', 'cat_design'];
-
-  const jobTitles = [
-    'Build a React Dashboard Application',
-    'Develop Mobile App with Flutter',
-    'Create REST API with Node.js',
-    'Design UI/UX for SaaS Product',
-    'Set up AWS Infrastructure',
-    'Build E-commerce Website',
-    'Develop iOS App',
-    'Create Data Pipeline',
-    'Design Mobile App Interface',
-    'Implement Authentication System',
-  ];
+  console.log(`📌 Creating ${count} sample jobs...`);
 
   const ids: string[] = [];
+  const jobTitles = [
+    'Full-Stack Web Application Development',
+    'React Native Mobile App',
+    'E-commerce Website Redesign',
+    'API Integration Specialist',
+    'Data Pipeline Development',
+    'Machine Learning Model Development',
+    'WordPress Website Development',
+    'DevOps Infrastructure Setup',
+    'UI/UX Design for SaaS Platform',
+    'Node.js Backend Development',
+    'Python Script Automation',
+    'AWS Cloud Architecture',
+    'Database Optimization Expert',
+    'Flutter Mobile App Development',
+    'Vue.js Frontend Development',
+  ];
+
+  const durations: JobDuration[] = [
+    'LESS_THAN_WEEK',
+    'ONE_TO_TWO_WEEKS',
+    'TWO_TO_FOUR_WEEKS',
+    'ONE_TO_THREE_MONTHS',
+    'THREE_TO_SIX_MONTHS',
+  ];
+
+  const experienceLevels: ExperienceLevel[] = ['ENTRY', 'INTERMEDIATE', 'EXPERT'];
 
   for (let i = 0; i < count; i++) {
-    const id = `job_${i + 1}`;
-    ids.push(id);
+    const title = faker.helpers.arrayElement(jobTitles);
+    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${faker.string.alphanumeric(8)}`;
+    const clientId = faker.helpers.arrayElement(clientIds);
 
-    const isFixed = faker.datatype.boolean();
-    const status = faker.helpers.weightedArrayElement([
-      { value: 'OPEN', weight: 50 },
-      { value: 'IN_PROGRESS', weight: 30 },
-      { value: 'COMPLETED', weight: 15 },
-      { value: 'CLOSED', weight: 5 },
-    ]);
-
-    await prisma.job.upsert({
-      where: { id },
+    const job = await prisma.job.upsert({
+      where: { slug },
       update: {},
       create: {
-        id,
-        title: jobTitles[i % jobTitles.length] + ` #${i + 1}`,
+        clientId,
+        title,
+        slug,
         description: faker.lorem.paragraphs(3),
-        clientId: faker.helpers.arrayElement(clientIds),
-        categoryId: faker.helpers.arrayElement(categories),
-        budget: {
-          type: isFixed ? 'FIXED' : 'HOURLY',
-          amount: isFixed
-            ? faker.number.int({ min: 500, max: 50000 })
-            : faker.number.int({ min: 30, max: 150 }),
-          currency: 'USD',
-        },
-        experienceLevel: faker.helpers.arrayElement(['ENTRY', 'INTERMEDIATE', 'EXPERT']),
-        duration: faker.helpers.arrayElement([
-          'LESS_THAN_WEEK',
-          'LESS_THAN_MONTH',
-          'ONE_TO_THREE_MONTHS',
-          'THREE_TO_SIX_MONTHS',
-          'MORE_THAN_SIX_MONTHS',
+        status: faker.helpers.weightedArrayElement([
+          { value: JobStatus.PUBLISHED, weight: 50 },
+          { value: JobStatus.IN_PROGRESS, weight: 20 },
+          { value: JobStatus.COMPLETED, weight: 20 },
+          { value: JobStatus.DRAFT, weight: 10 },
         ]),
-        skills: faker.helpers.arrayElements(
-          ['react', 'nodejs', 'python', 'aws', 'figma', 'typescript'],
-          { min: 2, max: 5 }
-        ),
-        status,
-        proposalsCount: faker.number.int({ min: 0, max: 50 }),
+        budgetType: faker.datatype.boolean() ? BudgetType.FIXED : BudgetType.HOURLY,
+        budgetMin: faker.number.int({ min: 500, max: 5000 }),
+        budgetMax: faker.number.int({ min: 5000, max: 50000 }),
+        currency: 'USD',
+        duration: faker.helpers.arrayElement(durations),
+        experienceLevel: faker.helpers.arrayElement(experienceLevels),
+        isRemote: faker.datatype.boolean(0.8),
+        publishedAt: faker.date.past({ years: 1 }),
         createdAt: faker.date.past({ years: 1 }),
       },
     });
+
+    ids.push(job.id);
   }
 
   console.log(`   ✓ Created ${count} jobs`);
   return ids;
 }
 
-async function seedProposals(
+async function seedBids(
   freelancerIds: string[],
   jobIds: string[],
   count: number
 ): Promise<void> {
-  console.log(`📝 Creating ${count} sample proposals...`);
+  console.log(`📝 Creating ${count} sample bids...`);
+
+  const bidStatuses: BidStatus[] = [
+    'PENDING',
+    'SHORTLISTED',
+    'ACCEPTED',
+    'REJECTED',
+    'WITHDRAWN',
+  ];
 
   for (let i = 0; i < count; i++) {
-    const id = `proposal_${i + 1}`;
+    const jobId = faker.helpers.arrayElement(jobIds);
+    const freelancerId = faker.helpers.arrayElement(freelancerIds);
 
-    await prisma.proposal.upsert({
-      where: { id },
-      update: {},
-      create: {
-        id,
-        jobId: faker.helpers.arrayElement(jobIds),
-        freelancerId: faker.helpers.arrayElement(freelancerIds),
+    // Skip if bid already exists for this job/freelancer combo
+    const existingBid = await prisma.bid.findFirst({
+      where: { jobId, freelancerId },
+    });
+
+    if (existingBid) continue;
+
+    await prisma.bid.create({
+      data: {
+        jobId,
+        freelancerId,
         coverLetter: faker.lorem.paragraphs(2),
-        bidAmount: faker.number.int({ min: 500, max: 10000 }),
-        estimatedDuration: faker.helpers.arrayElement(['1 week', '2 weeks', '1 month', '2 months']),
+        proposedRate: faker.number.int({ min: 500, max: 10000 }),
+        rateType: faker.datatype.boolean() ? BudgetType.FIXED : BudgetType.HOURLY,
+        deliveryDays: faker.number.int({ min: 7, max: 90 }),
         status: faker.helpers.weightedArrayElement([
-          { value: 'PENDING', weight: 40 },
-          { value: 'SHORTLISTED', weight: 20 },
-          { value: 'ACCEPTED', weight: 15 },
-          { value: 'REJECTED', weight: 20 },
-          { value: 'WITHDRAWN', weight: 5 },
+          { value: BidStatus.PENDING, weight: 40 },
+          { value: BidStatus.SHORTLISTED, weight: 20 },
+          { value: BidStatus.ACCEPTED, weight: 15 },
+          { value: BidStatus.REJECTED, weight: 20 },
+          { value: BidStatus.WITHDRAWN, weight: 5 },
         ]),
-        createdAt: faker.date.past({ years: 1 }),
+        qualityScore: faker.number.int({ min: 60, max: 100 }),
+        submittedAt: faker.date.past({ years: 1 }),
       },
     });
   }
 
-  console.log(`   ✓ Created ${count} proposals`);
+  console.log(`   ✓ Created bids`);
 }
 
 async function seedContracts(
@@ -392,45 +339,46 @@ async function seedContracts(
   const ids: string[] = [];
 
   for (let i = 0; i < count; i++) {
-    const id = `contract_${i + 1}`;
-    ids.push(id);
-
+    const jobId = faker.helpers.arrayElement(jobIds);
+    const freelancerId = faker.helpers.arrayElement(freelancerIds);
+    const clientId = faker.helpers.arrayElement(clientIds);
     const isFixed = faker.datatype.boolean();
     const totalAmount = faker.number.int({ min: 1000, max: 50000 });
 
-    await prisma.contract.upsert({
-      where: { id },
-      update: {},
-      create: {
-        id,
-        jobId: faker.helpers.arrayElement(jobIds),
-        freelancerId: faker.helpers.arrayElement(freelancerIds),
-        clientId: faker.helpers.arrayElement(clientIds),
-        title: `Contract #${i + 1}`,
-        type: isFixed ? 'FIXED' : 'HOURLY',
-        budget: {
-          total: totalAmount,
-          funded: totalAmount * 0.3,
-          released: totalAmount * 0.2,
-          currency: 'USD',
-        },
+    const contract = await prisma.contract.create({
+      data: {
+        jobId,
+        freelancerId,
+        clientId,
+        title: `Contract #${i + 1} - ${faker.company.catchPhrase()}`,
+        description: faker.lorem.paragraphs(2),
+        agreedRate: totalAmount,
+        rateType: isFixed ? BudgetType.FIXED : BudgetType.HOURLY,
+        currency: 'USD',
+        totalAmount,
         status: faker.helpers.weightedArrayElement([
-          { value: 'ACTIVE', weight: 40 },
-          { value: 'PAUSED', weight: 10 },
-          { value: 'COMPLETED', weight: 40 },
-          { value: 'CANCELLED', weight: 10 },
+          { value: ContractStatus.ACTIVE, weight: 40 },
+          { value: ContractStatus.PAUSED, weight: 10 },
+          { value: ContractStatus.COMPLETED, weight: 40 },
+          { value: ContractStatus.CANCELLED, weight: 10 },
         ]),
         startDate: faker.date.past({ years: 1 }),
         createdAt: faker.date.past({ years: 1 }),
       },
     });
+
+    ids.push(contract.id);
   }
 
   console.log(`   ✓ Created ${count} contracts`);
   return ids;
 }
 
-async function seedReviews(contractIds: string[]): Promise<void> {
+async function seedReviews(
+  contractIds: string[],
+  freelancerIds: string[],
+  clientIds: string[]
+): Promise<void> {
   console.log(`⭐ Creating reviews for contracts...`);
 
   let count = 0;
@@ -438,17 +386,36 @@ async function seedReviews(contractIds: string[]): Promise<void> {
   for (const contractId of contractIds) {
     if (faker.datatype.boolean(0.7)) {
       // 70% have reviews
-      const id = `review_${contractId}`;
+      const reviewerId = faker.helpers.arrayElement(clientIds);
+      const revieweeId = faker.helpers.arrayElement(freelancerIds);
+      const isClientReview = faker.datatype.boolean();
 
-      await prisma.review.upsert({
-        where: { id },
-        update: {},
-        create: {
-          id,
+      await prisma.review.create({
+        data: {
           contractId,
-          rating: faker.number.int({ min: 3, max: 5 }),
-          comment: faker.lorem.paragraph(),
-          type: faker.helpers.arrayElement(['CLIENT_TO_FREELANCER', 'FREELANCER_TO_CLIENT']),
+          reviewerId: isClientReview ? reviewerId : revieweeId,
+          revieweeId: isClientReview ? revieweeId : reviewerId,
+          reviewType: isClientReview ? ReviewType.CLIENT_TO_FREELANCER : ReviewType.FREELANCER_TO_CLIENT,
+          overallRating: faker.number.int({ min: 3, max: 5 }),
+          categoryRatings: isClientReview
+            ? {
+                quality: faker.number.int({ min: 3, max: 5 }),
+                communication: faker.number.int({ min: 3, max: 5 }),
+                expertise: faker.number.int({ min: 3, max: 5 }),
+                professionalism: faker.number.int({ min: 3, max: 5 }),
+                wouldHireAgain: faker.datatype.boolean(0.8),
+              }
+            : {
+                clarity: faker.number.int({ min: 3, max: 5 }),
+                responsiveness: faker.number.int({ min: 3, max: 5 }),
+                payment: faker.number.int({ min: 3, max: 5 }),
+                professionalism: faker.number.int({ min: 3, max: 5 }),
+                wouldWorkAgain: faker.datatype.boolean(0.8),
+              },
+          title: faker.lorem.sentence({ min: 3, max: 8 }),
+          content: faker.lorem.paragraph(),
+          status: ReviewStatus.REVEALED,
+          isPublic: true,
           createdAt: faker.date.past({ years: 1 }),
         },
       });
