@@ -77,5 +77,10 @@
     "*.{json,md,yml,yaml,css,scss}": [
       "prettier --write"
     ]
+  },
+  "pnpm": {
+    "overrides": {
+      "typescript": "5.4.0"
+    }
   }
 }
