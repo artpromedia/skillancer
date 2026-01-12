@@ -18,8 +18,8 @@ import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/proposals/presentation/screens/my_proposals_screen.dart';
 import '../../features/proposals/presentation/screens/proposal_detail_screen.dart';
 import '../../features/proposals/presentation/screens/submit_proposal_screen.dart';
-import '../../features/time/presentation/screens/add_time_entry_screen.dart';
-import '../../features/time/presentation/screens/time_tracking_screen.dart';
+import '../../features/time_tracking/presentation/screens/add_time_entry_screen.dart';
+import '../../features/time_tracking/presentation/screens/time_tracking_screen.dart';
 import '../providers/providers.dart';
 import 'shell_screen.dart';
 

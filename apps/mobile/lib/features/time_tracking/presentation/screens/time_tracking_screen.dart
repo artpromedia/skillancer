@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/time_entry.dart';
+import '../../domain/services/timer_service.dart';
 
 /// Time tracking screen with timer and entries
 class TimeTrackingScreen extends ConsumerStatefulWidget {
@@ -389,20 +390,4 @@ class _EmptyState extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Placeholder for TimerService - actual implementation above
-class TimerService extends ChangeNotifier {
-  bool get isRunning => false;
-  bool get isPaused => false;
-  bool get hasActiveSession => false;
-  String get formattedTime => '00:00:00';
-  String? get activeContractTitle => null;
-
-  void startTimer(
-      {required String contractId, required String contractTitle}) {}
-  void pauseTimer() {}
-  void resumeTimer() {}
-  void stopTimer({String? memo}) {}
-  void discardTimer() {}
 }
