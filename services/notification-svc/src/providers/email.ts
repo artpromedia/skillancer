@@ -3,6 +3,40 @@
  * SOC 2 compliant email delivery with tracking
  */
 
+import sgMail from '@sendgrid/mail';
+import type { MailDataRequired } from '@sendgrid/mail';
+import { createLogger } from '@skillancer/logger';
+
+// Extended mail data interface for building messages
+interface SendGridMailData {
+  to: string[];
+  from: { email: string; name: string };
+  subject: string;
+  replyTo?: string;
+  cc?: string[];
+  bcc?: string[];
+  templateId?: string;
+  dynamicTemplateData?: Record<string, string>;
+  html?: string;
+  text?: string;
+  attachments?: Array<{
+    filename: string;
+    content: string;
+    type: string;
+    disposition: string;
+    contentId?: string;
+  }>;
+  headers?: Record<string, string>;
+  categories?: string[];
+  customArgs?: Record<string, string>;
+  trackingSettings?: {
+    clickTracking: { enable: boolean };
+    openTracking: { enable: boolean };
+  };
+}
+
+const logger = createLogger({ name: 'EmailProvider' });
+
 export interface EmailConfig {
   provider: 'sendgrid' | 'ses' | 'mailgun' | 'smtp';
   apiKey?: string;
@@ -63,9 +97,9 @@ export interface EmailDeliveryStatus {
 }
 
 const DEFAULT_CONFIG: EmailConfig = {
-  provider: 'ses',
-  fromEmail: 'no-reply@skillancer.com',
-  fromName: 'Skillancer',
+  provider: 'sendgrid',
+  fromEmail: process.env.SENDGRID_FROM_EMAIL || 'no-reply@skillancer.com',
+  fromName: process.env.SENDGRID_FROM_NAME || 'Skillancer',
   replyTo: 'support@skillancer.com',
   trackOpens: true,
   trackClicks: true,
@@ -77,9 +111,22 @@ const sentEmails: Map<string, EmailResult> = new Map();
 
 export class EmailProvider {
   private config: EmailConfig;
+  private initialized = false;
 
   constructor(customConfig?: Partial<EmailConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...customConfig };
+    this.initialize();
+  }
+
+  private initialize(): void {
+    const apiKey = this.config.apiKey || process.env.SENDGRID_API_KEY;
+    if (apiKey && this.config.provider === 'sendgrid') {
+      sgMail.setApiKey(apiKey);
+      this.initialized = true;
+      logger.info('SendGrid email provider initialized');
+    } else {
+      logger.warn('Email provider not fully configured - SendGrid API key missing');
+    }
   }
 
   /**
@@ -122,17 +169,26 @@ export class EmailProvider {
         this.logDelivery(id, messageId, email, 'sent');
       }
 
-      console.log(`[EMAIL] Sent ${id} to ${recipients.to.join(', ')}`);
+      logger.info(
+        { emailId: id, recipients: recipients.to, messageId },
+        `Email sent successfully to ${recipients.to.join(', ')}`
+      );
 
       return result;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const result: EmailResult = {
         id,
         success: false,
         provider: this.config.provider,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         recipients,
       };
+
+      logger.error(
+        { emailId: id, recipients: recipients.to, error: errorMessage },
+        'Email send failed'
+      );
 
       sentEmails.set(id, result);
       return result;
@@ -243,10 +299,109 @@ export class EmailProvider {
   // Private helpers
 
   private async sendViaProvider(message: EmailMessage): Promise<string> {
-    // Simulate provider-specific sending
-    // In production, implement actual provider integration
-    await new Promise((resolve) => setTimeout(resolve, 50)); // Simulate API call
-    return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (!this.initialized || this.config.provider !== 'sendgrid') {
+      // Fallback to mock for non-SendGrid or uninitialized providers
+      logger.warn('Using mock email provider - SendGrid not initialized');
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return `mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    // Build SendGrid message
+    const sgMessage: SendGridMailData = {
+      to: Array.isArray(message.to) ? message.to : [message.to],
+      from: {
+        email: this.config.fromEmail,
+        name: this.config.fromName,
+      },
+      subject: message.subject,
+      replyTo: this.config.replyTo,
+      trackingSettings: {
+        clickTracking: { enable: this.config.trackClicks },
+        openTracking: { enable: this.config.trackOpens },
+      },
+    };
+
+    // Add CC/BCC if provided
+    if (message.cc) {
+      sgMessage.cc = Array.isArray(message.cc) ? message.cc : [message.cc];
+    }
+    if (message.bcc) {
+      sgMessage.bcc = Array.isArray(message.bcc) ? message.bcc : [message.bcc];
+    }
+
+    // Use template or raw content
+    if (message.templateId) {
+      sgMessage.templateId = message.templateId;
+      sgMessage.dynamicTemplateData = message.templateData as Record<string, string>;
+    } else if (message.html) {
+      sgMessage.html = message.html;
+      sgMessage.text = message.text || this.stripHtml(message.html);
+    } else if (message.text) {
+      sgMessage.text = message.text;
+    } else {
+      // Default fallback content if nothing else is provided
+      sgMessage.text = 'This is a notification from Skillancer.';
+    }
+
+    // Add attachments if provided
+    if (message.attachments?.length) {
+      sgMessage.attachments = message.attachments.map((att) => ({
+        filename: att.filename,
+        content: typeof att.content === 'string' ? att.content : att.content.toString('base64'),
+        type: att.contentType,
+        disposition: att.contentId ? 'inline' : 'attachment',
+        contentId: att.contentId,
+      }));
+    }
+
+    // Add custom headers
+    if (message.headers) {
+      sgMessage.headers = message.headers;
+    }
+
+    // Add categories/tags for tracking
+    if (message.tags?.length) {
+      sgMessage.categories = message.tags;
+    }
+
+    // Add custom args for metadata tracking
+    if (message.metadata) {
+      sgMessage.customArgs = message.metadata;
+    }
+
+    try {
+      const [response] = await sgMail.send(sgMessage as MailDataRequired);
+      const messageId = response.headers['x-message-id'] as string;
+
+      logger.info(
+        {
+          messageId,
+          to: sgMessage.to,
+          subject: message.subject,
+          statusCode: response.statusCode,
+        },
+        'Email sent via SendGrid'
+      );
+
+      return messageId;
+    } catch (error: any) {
+      logger.error(
+        {
+          error: error.message,
+          response: error.response?.body,
+          to: sgMessage.to,
+        },
+        'SendGrid email send failed'
+      );
+      throw new Error(error.response?.body?.errors?.[0]?.message || error.message);
+    }
+  }
+
+  private stripHtml(html: string): string {
+    return html
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private normalizeRecipients(message: EmailMessage): {
@@ -287,6 +442,20 @@ export class EmailProvider {
       timestamp: new Date(),
       details,
     });
+  }
+
+  /**
+   * Check if the email provider is configured and ready
+   */
+  isConfigured(): boolean {
+    return this.initialized;
+  }
+
+  /**
+   * Get the current provider type
+   */
+  getProvider(): string {
+    return this.config.provider;
   }
 }
 

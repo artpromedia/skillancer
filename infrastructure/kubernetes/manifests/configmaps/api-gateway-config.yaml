@@ -1,0 +1,56 @@
+# API Gateway ConfigMap
+# Non-sensitive configuration for the API Gateway service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: skillancer-production
+  labels:
+    app: api-gateway
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/component: config
+data:
+  # Server configuration
+  NODE_ENV: "production"
+  PORT: "8080"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+
+  # Service discovery
+  AUTH_SERVICE_URL: "http://auth-svc:8081"
+  MARKET_SERVICE_URL: "http://market-svc:8084"
+  BILLING_SERVICE_URL: "http://billing-svc:8082"
+  NOTIFICATION_SERVICE_URL: "http://notification-svc:8083"
+  SKILLPOD_SERVICE_URL: "http://skillpod-svc:8085"
+  COCKPIT_SERVICE_URL: "http://cockpit-svc:8086"
+
+  # Rate limiting
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_WINDOW_MS: "60000"
+  RATE_LIMIT_MAX_REQUESTS: "100"
+  RATE_LIMIT_SKIP_SUCCESSFUL_REQUESTS: "false"
+
+  # CORS configuration
+  CORS_ENABLED: "true"
+  CORS_ORIGIN: "https://skillancer.com,https://www.skillancer.com,https://app.skillancer.com"
+  CORS_METHODS: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+  CORS_CREDENTIALS: "true"
+
+  # Request configuration
+  REQUEST_TIMEOUT_MS: "30000"
+  MAX_REQUEST_SIZE: "50mb"
+  BODY_PARSER_LIMIT: "10mb"
+
+  # Health check configuration
+  HEALTH_CHECK_PATH: "/health"
+  METRICS_PATH: "/metrics"
+  METRICS_ENABLED: "true"
+
+  # Tracing
+  TRACING_ENABLED: "true"
+  TRACING_SERVICE_NAME: "api-gateway"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+
+  # Cache
+  CACHE_ENABLED: "true"
+  CACHE_DEFAULT_TTL: "300"

@@ -32,9 +32,22 @@ import {
   TrendingUp,
   XCircle,
 } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
+import { getAuthSession } from '@/lib/auth';
+
 import type { Contract, ContractStatus } from '@/lib/api/contracts';
+import type { Metadata } from 'next';
+
+// ============================================================================
+// Metadata
+// ============================================================================
+
+export const metadata: Metadata = {
+  title: 'Contracts | Skillancer',
+  description: 'Manage your active and past contracts.',
+};
 
 // ============================================================================
 // Types
@@ -389,7 +402,13 @@ function ContractsList({ contracts }: Readonly<{ contracts: Contract[] }>) {
 // Page Component
 // ============================================================================
 
-export default function ContractsPage() {
+export default async function ContractsPage() {
+  const session = await getAuthSession();
+
+  if (!session) {
+    redirect('/login?redirect=/dashboard/contracts');
+  }
+
   const activeContracts = mockContracts.filter((c) =>
     ['ACTIVE', 'PENDING_SIGNATURE'].includes(c.status)
   );

@@ -1,0 +1,74 @@
+# Kustomization for Skillancer Kubernetes Manifests
+# Use: kubectl apply -k infrastructure/kubernetes/manifests/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: skillancer-production
+
+namespace: skillancer-production
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/part-of: skillancer
+  environment: production
+
+# Resources to include
+resources:
+  # Base configuration
+  - base/namespace.yaml
+  - base/service-account.yaml
+  - base/pod-disruption-budget.yaml
+
+  # Deployments
+  - deployments/api-gateway.yaml
+  - deployments/auth-svc.yaml
+  - deployments/market-svc.yaml
+  - deployments/billing-svc.yaml
+
+  # Services
+  - services/api-gateway-service.yaml
+  - services/internal-services.yaml
+  - services/headless-services.yaml
+
+  # ConfigMaps
+  - configmaps/shared-config.yaml
+  - configmaps/api-gateway-config.yaml
+  - configmaps/auth-svc-config.yaml
+  - configmaps/market-svc-config.yaml
+  - configmaps/billing-svc-config.yaml
+
+  # Secrets (templates - actual values from external secrets)
+  # - secrets/secrets-template.yaml  # Do not apply directly
+  - secrets/external-secrets.yaml
+
+  # Autoscaling
+  - hpa/horizontal-pod-autoscalers.yaml
+  - hpa/vertical-pod-autoscaler.yaml
+
+  # Ingress
+  - ingress/ingress.yaml
+  - ingress/certificate-issuers.yaml
+
+  # Network Policies
+  - network-policies/network-policies.yaml
+
+# Image configuration - override in overlays
+images:
+  - name: ghcr.io/skillancer/api-gateway
+    newTag: "1.0.0"
+  - name: ghcr.io/skillancer/auth-svc
+    newTag: "1.0.0"
+  - name: ghcr.io/skillancer/market-svc
+    newTag: "1.0.0"
+  - name: ghcr.io/skillancer/billing-svc
+    newTag: "1.0.0"
+
+# ConfigMap generator for dynamic configuration
+configMapGenerator:
+  - name: deployment-info
+    literals:
+      - DEPLOYED_AT=TIMESTAMP_PLACEHOLDER
+      - DEPLOYED_BY=kustomize
+      - CLUSTER=skillancer-production

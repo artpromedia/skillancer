@@ -28,6 +28,12 @@ const configSchema = z.object({
   firebasePrivateKey: z.string().optional(),
   firebaseClientEmail: z.string().optional(),
 
+  // Twilio SMS
+  twilioAccountSid: z.string().optional(),
+  twilioAuthToken: z.string().optional(),
+  twilioPhoneNumber: z.string().optional(),
+  twilioWebhookUrl: z.string().optional(),
+
   // Rate limiting
   rateLimitMax: z.number().default(100),
   rateLimitTimeWindow: z.number().default(60000), // 1 minute
@@ -67,6 +73,10 @@ export function validateConfig(): Config {
     firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
     firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+    twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
+    twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
+    twilioWebhookUrl: process.env.TWILIO_WEBHOOK_URL,
     rateLimitMax: Number.parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
     rateLimitTimeWindow: Number.parseInt(process.env.RATE_LIMIT_TIME_WINDOW || '60000', 10),
     batchSize: Number.parseInt(process.env.BATCH_SIZE || '100', 10),

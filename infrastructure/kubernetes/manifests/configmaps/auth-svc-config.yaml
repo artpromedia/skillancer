@@ -1,0 +1,67 @@
+# Auth Service ConfigMap
+# Non-sensitive configuration for the Auth service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-svc-config
+  namespace: skillancer-production
+  labels:
+    app: auth-svc
+    app.kubernetes.io/name: auth-svc
+    app.kubernetes.io/component: config
+data:
+  # Server configuration
+  NODE_ENV: "production"
+  PORT: "8081"
+  GRPC_PORT: "9081"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+
+  # JWT configuration (non-sensitive)
+  JWT_ALGORITHM: "RS256"
+  JWT_ISSUER: "https://skillancer.com"
+  JWT_AUDIENCE: "skillancer-api"
+  JWT_EXPIRY: "1h"
+  REFRESH_TOKEN_EXPIRY: "7d"
+  ACCESS_TOKEN_EXPIRY: "15m"
+
+  # OAuth providers
+  OAUTH_GOOGLE_ENABLED: "true"
+  OAUTH_GITHUB_ENABLED: "true"
+  OAUTH_LINKEDIN_ENABLED: "true"
+  OAUTH_CALLBACK_URL: "https://api.skillancer.com/auth/callback"
+
+  # Session configuration
+  SESSION_COOKIE_NAME: "skillancer_session"
+  SESSION_COOKIE_SECURE: "true"
+  SESSION_COOKIE_HTTPONLY: "true"
+  SESSION_COOKIE_SAMESITE: "strict"
+  SESSION_MAX_AGE: "86400"
+
+  # Security
+  PASSWORD_MIN_LENGTH: "12"
+  PASSWORD_REQUIRE_UPPERCASE: "true"
+  PASSWORD_REQUIRE_LOWERCASE: "true"
+  PASSWORD_REQUIRE_NUMBER: "true"
+  PASSWORD_REQUIRE_SPECIAL: "true"
+  MAX_LOGIN_ATTEMPTS: "5"
+  LOCKOUT_DURATION_MINUTES: "15"
+
+  # MFA
+  MFA_ENABLED: "true"
+  MFA_ISSUER: "Skillancer"
+  TOTP_WINDOW: "1"
+
+  # Database
+  DATABASE_POOL_MIN: "5"
+  DATABASE_POOL_MAX: "20"
+  DATABASE_IDLE_TIMEOUT: "10000"
+
+  # Redis (for session storage)
+  REDIS_KEY_PREFIX: "auth:"
+  REDIS_SESSION_TTL: "86400"
+
+  # Tracing
+  TRACING_ENABLED: "true"
+  TRACING_SERVICE_NAME: "auth-svc"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"

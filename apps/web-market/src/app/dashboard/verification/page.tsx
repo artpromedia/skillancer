@@ -1,3 +1,7 @@
+import { redirect } from 'next/navigation';
+
+import { getAuthSession } from '@/lib/auth';
+
 import { VerificationCenter } from './components/verification-center';
 
 import type { Metadata } from 'next';
@@ -7,7 +11,13 @@ export const metadata: Metadata = {
   description: 'Verify your identity to build trust and unlock more opportunities.',
 };
 
-export default function VerificationPage() {
+export default async function VerificationPage() {
+  const session = await getAuthSession();
+
+  if (!session) {
+    redirect('/login?redirect=/dashboard/verification');
+  }
+
   return (
     <div className="container max-w-4xl py-8">
       <div className="mb-8">

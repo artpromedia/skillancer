@@ -1,0 +1,115 @@
+# Certificate Issuers for Skillancer
+# Requires cert-manager to be installed in the cluster
+#
+# Install cert-manager:
+# kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+---
+# Let's Encrypt Production Issuer
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    app.kubernetes.io/name: letsencrypt-prod
+    app.kubernetes.io/component: certificate-issuer
+spec:
+  acme:
+    # Production Let's Encrypt server
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: devops@skillancer.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      # HTTP-01 challenge solver using ingress
+      - http01:
+          ingress:
+            class: nginx
+        selector:
+          dnsZones:
+            - "skillancer.com"
+---
+# Let's Encrypt Staging Issuer (for testing)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  labels:
+    app.kubernetes.io/name: letsencrypt-staging
+    app.kubernetes.io/component: certificate-issuer
+spec:
+  acme:
+    # Staging Let's Encrypt server (use for testing to avoid rate limits)
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: devops@skillancer.com
+    privateKeySecretRef:
+      name: letsencrypt-staging-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+# Certificate for API domain
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-skillancer-cert
+  namespace: skillancer-production
+spec:
+  secretName: api-skillancer-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - api.skillancer.com
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days before expiry
+---
+# Certificate for main domain
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: skillancer-cert
+  namespace: skillancer-production
+spec:
+  secretName: skillancer-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - skillancer.com
+    - www.skillancer.com
+  duration: 2160h
+  renewBefore: 360h
+---
+# Certificate for webhooks domain
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: webhooks-skillancer-cert
+  namespace: skillancer-production
+spec:
+  secretName: webhooks-skillancer-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - webhooks.skillancer.com
+  duration: 2160h
+  renewBefore: 360h
+---
+# Certificate for metrics domain
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: metrics-skillancer-cert
+  namespace: skillancer-production
+spec:
+  secretName: metrics-skillancer-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - metrics.skillancer.com
+  duration: 2160h
+  renewBefore: 360h

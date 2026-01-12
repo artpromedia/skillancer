@@ -49,3 +49,42 @@ export {
   type KasmWebhookPayload,
   type WebhookResponse,
 } from './kasm-watermark.service.js';
+
+// DCT watermarking exports
+export {
+  embedDCT,
+  extractDCT,
+  calculateDCTCapacity,
+  type DCTConfig,
+  type DCTEmbedResult,
+  type DCTExtractResult,
+} from './dct-watermark.js';
+
+// DWT watermarking exports
+export {
+  embedDWT,
+  extractDWT,
+  calculateDWTCapacity,
+  analyzeDWTParameters,
+  type DWTConfig,
+  type DWTEmbedResult,
+  type DWTExtractResult,
+} from './dwt-watermark.js';
+
+// Transform utilities exports
+export {
+  dct1D,
+  idct1D,
+  dct2D,
+  idct2D,
+  dwt2D,
+  idwt2D,
+  dwtMultiLevel,
+  idwtMultiLevel,
+  bufferToChannel,
+  channelToBuffer,
+  calculatePSNR,
+  type TransformConfig,
+  type TransformResult,
+  type WaveletCoefficients,
+} from './transforms.js';

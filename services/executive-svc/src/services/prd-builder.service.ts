@@ -8,6 +8,15 @@ import type {
   PRDExportFormat,
   PRDWithRelations,
 } from '@skillancer/types';
+import {
+  pdfExporter,
+  notionExporter,
+  confluenceExporter,
+  type NotionExportOptions,
+  type NotionExportResult,
+  type ConfluenceExportOptions,
+  type ConfluenceExportResult,
+} from './exporters/index.js';
 
 const log = logger.child({ service: 'prd-builder-service' });
 
@@ -34,6 +43,36 @@ export interface CreateTemplateInput {
   createdBy?: string;
   isPublic?: boolean;
 }
+
+// =============================================================================
+// EXPORT TYPES
+// =============================================================================
+
+export interface PDFExportResult {
+  content: Buffer;
+  filename: string;
+  mimeType: 'application/pdf';
+}
+
+export interface MarkdownExportResult {
+  content: string;
+  filename: string;
+  mimeType: 'text/markdown';
+}
+
+export interface JSONExportResult {
+  content: string;
+  filename: string;
+  mimeType: 'application/json';
+}
+
+export type ExportResult =
+  | PDFExportResult
+  | MarkdownExportResult
+  | JSONExportResult
+  | { content: string; filename: string; mimeType: string };
+
+export { NotionExportOptions, NotionExportResult, ConfluenceExportOptions, ConfluenceExportResult };
 
 // =============================================================================
 // PRD BUILDER SERVICE
@@ -436,14 +475,15 @@ export class PRDBuilderService {
 
   // ==================== EXPORT ====================
 
+  /**
+   * Export PRD to various formats
+   * For markdown, json, and pdf: returns the content directly
+   * For notion and confluence: requires additional options and creates/updates external pages
+   */
   async exportPRD(
     prdId: string,
     format: PRDExportFormat['format']
-  ): Promise<{
-    content: string;
-    filename: string;
-    mimeType: string;
-  }> {
+  ): Promise<ExportResult> {
     log.info({ prdId, format }, 'Exporting PRD');
 
     const prd = await this.getPRD(prdId);
@@ -459,12 +499,48 @@ export class PRDBuilderService {
       case 'pdf':
         return this.exportToPDF(prd);
       case 'notion':
-        return this.exportToNotion(prd);
+        throw new Error('Notion export requires options. Use exportToNotion() method directly.');
       case 'confluence':
-        return this.exportToConfluence(prd);
+        throw new Error('Confluence export requires options. Use exportToConfluence() method directly.');
       default:
         throw new Error(`Unsupported export format: ${format}`);
     }
+  }
+
+  /**
+   * Export PRD to Notion
+   * Creates or updates a Notion page with the PRD content
+   */
+  async exportPRDToNotion(
+    prdId: string,
+    options: NotionExportOptions
+  ): Promise<NotionExportResult> {
+    log.info({ prdId, hasExistingPage: !!options.existingPageId }, 'Exporting PRD to Notion');
+
+    const prd = await this.getPRD(prdId);
+    if (!prd) {
+      throw new Error('PRD not found');
+    }
+
+    return notionExporter.export(prd, options);
+  }
+
+  /**
+   * Export PRD to Confluence
+   * Creates or updates a Confluence page with the PRD content
+   */
+  async exportPRDToConfluence(
+    prdId: string,
+    options: ConfluenceExportOptions
+  ): Promise<ConfluenceExportResult> {
+    log.info({ prdId, spaceKey: options.spaceKey, hasExistingPage: !!options.existingPageId }, 'Exporting PRD to Confluence');
+
+    const prd = await this.getPRD(prdId);
+    if (!prd) {
+      throw new Error('PRD not found');
+    }
+
+    return confluenceExporter.export(prd, options);
   }
 
   private async exportToMarkdown(prd: PRDWithRelations): Promise<{
@@ -614,40 +690,17 @@ export class PRDBuilderService {
     };
   }
 
-  private async exportToPDF(prd: PRDWithRelations): Promise<{
-    content: string;
-    filename: string;
-    mimeType: string;
-  }> {
-    // TODO: Implement PDF generation (use puppeteer or similar)
-    log.warn({ prdId: prd.id }, 'PDF export not yet implemented');
+  private async exportToPDF(prd: PRDWithRelations): Promise<PDFExportResult> {
+    log.info({ prdId: prd.id }, 'Generating PDF export');
 
-    // For now, return markdown that could be converted to PDF
-    return this.exportToMarkdown(prd);
-  }
+    const pdfBuffer = await pdfExporter.export(prd);
+    const filename = `${prd.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-prd.pdf`;
 
-  private async exportToNotion(prd: PRDWithRelations): Promise<{
-    content: string;
-    filename: string;
-    mimeType: string;
-  }> {
-    // TODO: Implement Notion export via Notion API
-    log.warn({ prdId: prd.id }, 'Notion export not yet implemented');
-
-    // Return Notion-compatible markdown for now
-    return this.exportToMarkdown(prd);
-  }
-
-  private async exportToConfluence(prd: PRDWithRelations): Promise<{
-    content: string;
-    filename: string;
-    mimeType: string;
-  }> {
-    // TODO: Implement Confluence export
-    log.warn({ prdId: prd.id }, 'Confluence export not yet implemented');
-
-    // Return markdown for now
-    return this.exportToMarkdown(prd);
+    return {
+      content: pdfBuffer,
+      filename,
+      mimeType: 'application/pdf',
+    };
   }
 
   // ==================== STATS ====================

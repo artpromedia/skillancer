@@ -13,8 +13,9 @@ import {
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
+import { getAuthSession } from '@/lib/auth';
 import { getProposalStatusInfo } from '@/lib/api/bids';
 
 import { ProposalDetailClient } from './proposal-detail-client';
@@ -214,6 +215,12 @@ function StatusBadge({ status }: Readonly<{ status: string }>) {
 export default async function ProposalDetailPage({
   params,
 }: Readonly<{ params: { proposalId: string } }>) {
+  const session = await getAuthSession();
+
+  if (!session) {
+    redirect('/login?redirect=/dashboard/proposals');
+  }
+
   const proposal = await getProposalDetails(params.proposalId);
 
   if (!proposal) {

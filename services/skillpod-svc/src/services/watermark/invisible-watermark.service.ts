@@ -20,6 +20,8 @@ import type {
   WatermarkMethod,
   WatermarkStrength,
 } from '../../repositories/watermark.repository.js';
+import { embedDCT, extractDCT } from './dct-watermark.js';
+import { embedDWT, extractDWT } from './dwt-watermark.js';
 
 // =============================================================================
 // TYPES
@@ -75,6 +77,16 @@ type ColorChannel = 'R' | 'G' | 'B';
 interface InternalWatermarkConfig extends InvisibleWatermarkConfig {
   channels?: ColorChannel[];
   strengthValue?: number;
+  // DCT-specific config
+  dctBlockSize?: number;
+  dctStrength?: number;
+  // DWT-specific config
+  dwtLevels?: number;
+  dwtStrength?: number;
+  useHH?: boolean;
+  // Image dimensions (required for DCT/DWT)
+  imageWidth?: number;
+  imageHeight?: number;
 }
 
 // Default configuration
@@ -85,6 +97,13 @@ const DEFAULT_CONFIG: InternalWatermarkConfig = {
   redundancy: 3,
   channels: ['B'],
   strengthValue: 1,
+  // DCT defaults
+  dctBlockSize: 8,
+  dctStrength: 25,
+  // DWT defaults
+  dwtLevels: 2,
+  dwtStrength: 10,
+  useHH: false,
 };
 
 // Encryption configuration
@@ -558,12 +577,39 @@ export function createInvisibleWatermarkService(): InvisibleWatermarkService {
       case 'LSB':
         embeddedData = embedLSB(imageData, watermarkData, mergedConfig);
         break;
-      case 'DCT':
-        // DCT implementation placeholder - would require image processing library
-        throw new Error('DCT steganography not implemented - requires image processing library');
-      case 'DWT':
-        // DWT implementation placeholder - would require image processing library
-        throw new Error('DWT steganography not implemented - requires image processing library');
+      case 'DCT': {
+        // DCT watermarking - requires image dimensions
+        const width = mergedConfig.imageWidth;
+        const height = mergedConfig.imageHeight;
+        if (!width || !height) {
+          throw new Error('DCT watermarking requires imageWidth and imageHeight in config');
+        }
+        const dctResult = embedDCT(imageData, width, height, watermarkData, {
+          blockSize: mergedConfig.dctBlockSize || 8,
+          strength: mergedConfig.dctStrength || strengthToValue(mergedConfig.strength) * 10,
+          channel: 2, // Blue channel
+          redundancy: mergedConfig.redundancy,
+        });
+        embeddedData = dctResult.embeddedData;
+        break;
+      }
+      case 'DWT': {
+        // DWT watermarking - requires image dimensions
+        const width = mergedConfig.imageWidth;
+        const height = mergedConfig.imageHeight;
+        if (!width || !height) {
+          throw new Error('DWT watermarking requires imageWidth and imageHeight in config');
+        }
+        const dwtResult = embedDWT(imageData, width, height, watermarkData, {
+          levels: mergedConfig.dwtLevels || 2,
+          strength: mergedConfig.dwtStrength || strengthToValue(mergedConfig.strength) * 5,
+          channel: 2, // Blue channel
+          redundancy: mergedConfig.redundancy,
+          useHH: mergedConfig.useHH || false,
+        });
+        embeddedData = dwtResult.embeddedData;
+        break;
+      }
       default:
         embeddedData = embedLSB(imageData, watermarkData, mergedConfig);
     }
@@ -597,18 +643,65 @@ export function createInvisibleWatermarkService(): InvisibleWatermarkService {
       case 'LSB':
         extractResult = extractLSB(imageData, mergedConfig);
         break;
-      case 'DCT':
-      case 'DWT':
-        return {
-          found: false,
-          confidence: 0,
-          manipulationDetected: false,
-          extractionDetails: {
-            bitsExtracted: 0,
-            errorRate: 1,
-            positionsChecked: 0,
-          },
+      case 'DCT': {
+        // DCT extraction - requires image dimensions
+        const width = mergedConfig.imageWidth;
+        const height = mergedConfig.imageHeight;
+        if (!width || !height) {
+          return {
+            found: false,
+            confidence: 0,
+            manipulationDetected: false,
+            extractionDetails: {
+              bitsExtracted: 0,
+              errorRate: 1,
+              positionsChecked: 0,
+            },
+          };
+        }
+        const dctResult = extractDCT(imageData, width, height, {
+          blockSize: mergedConfig.dctBlockSize || 8,
+          strength: mergedConfig.dctStrength || strengthToValue(mergedConfig.strength) * 10,
+          channel: 2,
+          redundancy: mergedConfig.redundancy,
+        });
+        extractResult = {
+          data: dctResult.data,
+          errorRate: dctResult.errorRate,
+          bitsExtracted: dctResult.bitsExtracted,
         };
+        break;
+      }
+      case 'DWT': {
+        // DWT extraction - requires image dimensions
+        const width = mergedConfig.imageWidth;
+        const height = mergedConfig.imageHeight;
+        if (!width || !height) {
+          return {
+            found: false,
+            confidence: 0,
+            manipulationDetected: false,
+            extractionDetails: {
+              bitsExtracted: 0,
+              errorRate: 1,
+              positionsChecked: 0,
+            },
+          };
+        }
+        const dwtResult = extractDWT(imageData, width, height, {
+          levels: mergedConfig.dwtLevels || 2,
+          strength: mergedConfig.dwtStrength || strengthToValue(mergedConfig.strength) * 5,
+          channel: 2,
+          redundancy: mergedConfig.redundancy,
+          useHH: mergedConfig.useHH || false,
+        });
+        extractResult = {
+          data: dwtResult.data,
+          errorRate: dwtResult.errorRate,
+          bitsExtracted: dwtResult.bitsExtracted,
+        };
+        break;
+      }
       default:
         extractResult = extractLSB(imageData, mergedConfig);
     }

@@ -1,0 +1,66 @@
+# Market Service ConfigMap
+# Non-sensitive configuration for the Market service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: market-svc-config
+  namespace: skillancer-production
+  labels:
+    app: market-svc
+    app.kubernetes.io/name: market-svc
+    app.kubernetes.io/component: config
+data:
+  # Server configuration
+  NODE_ENV: "production"
+  PORT: "8084"
+  GRPC_PORT: "9084"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+
+  # Feature flags
+  ELASTICSEARCH_ENABLED: "true"
+  RECOMMENDATIONS_ENABLED: "true"
+  SKILL_MATCHING_ENABLED: "true"
+
+  # Search configuration
+  ELASTICSEARCH_INDEX_JOBS: "skillancer-jobs"
+  ELASTICSEARCH_INDEX_FREELANCERS: "skillancer-freelancers"
+  SEARCH_RESULTS_PER_PAGE: "20"
+  SEARCH_MAX_RESULTS: "100"
+
+  # Job configuration
+  JOB_EXPIRY_DAYS: "30"
+  MAX_ACTIVE_JOBS_PER_CLIENT: "50"
+  MAX_PROPOSALS_PER_JOB: "50"
+
+  # Proposal configuration
+  MAX_ACTIVE_PROPOSALS_PER_FREELANCER: "30"
+  PROPOSAL_EXPIRY_DAYS: "14"
+
+  # Contract configuration
+  CONTRACT_ESCROW_HOLD_DAYS: "14"
+  DISPUTE_RESOLUTION_DAYS: "7"
+
+  # Cache
+  CACHE_ENABLED: "true"
+  CACHE_DEFAULT_TTL: "300"
+  CACHE_JOB_TTL: "600"
+  CACHE_SEARCH_TTL: "60"
+
+  # Database
+  DATABASE_POOL_MIN: "10"
+  DATABASE_POOL_MAX: "50"
+  DATABASE_IDLE_TIMEOUT: "10000"
+
+  # Redis
+  REDIS_KEY_PREFIX: "market:"
+  REDIS_CACHE_TTL: "300"
+
+  # Tracing
+  TRACING_ENABLED: "true"
+  TRACING_SERVICE_NAME: "market-svc"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+
+  # Pagination
+  DEFAULT_PAGE_SIZE: "20"
+  MAX_PAGE_SIZE: "100"

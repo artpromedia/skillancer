@@ -15,6 +15,7 @@ export * from './headcount-planning.service.js';
 // CPO Tool Suite
 export * from './prd-builder.service.js';
 export * from './prioritization.service.js';
+export * from './exporters/index.js';
 
 // Subscription & Billing
 export * from './subscription.service.js';

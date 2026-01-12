@@ -1,0 +1,60 @@
+# Shared ConfigMap
+# Common configuration used across all services
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shared-config
+  namespace: skillancer-production
+  labels:
+    app.kubernetes.io/name: shared-config
+    app.kubernetes.io/component: config
+data:
+  # Environment
+  ENVIRONMENT: "production"
+  CLUSTER_NAME: "skillancer-production"
+  AWS_REGION: "us-east-1"
+
+  # Domain configuration
+  API_DOMAIN: "api.skillancer.com"
+  WEB_DOMAIN: "skillancer.com"
+  CDN_DOMAIN: "cdn.skillancer.com"
+
+  # Database (connection parameters, not credentials)
+  DATABASE_HOST: "skillancer-production.cluster-xxxxx.us-east-1.rds.amazonaws.com"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "skillancer"
+  DATABASE_SSL_MODE: "require"
+
+  # Redis (connection parameters, not credentials)
+  REDIS_HOST: "skillancer-production.xxxxx.cache.amazonaws.com"
+  REDIS_PORT: "6379"
+  REDIS_TLS_ENABLED: "true"
+  REDIS_CLUSTER_MODE: "true"
+
+  # Elasticsearch
+  ELASTICSEARCH_HOST: "https://skillancer-es.us-east-1.es.amazonaws.com"
+  ELASTICSEARCH_PORT: "443"
+
+  # S3
+  S3_BUCKET_UPLOADS: "skillancer-uploads-production"
+  S3_BUCKET_ASSETS: "skillancer-assets-production"
+  S3_REGION: "us-east-1"
+
+  # SQS
+  SQS_QUEUE_JOBS: "https://sqs.us-east-1.amazonaws.com/ACCOUNT_ID/skillancer-jobs"
+  SQS_QUEUE_NOTIFICATIONS: "https://sqs.us-east-1.amazonaws.com/ACCOUNT_ID/skillancer-notifications"
+  SQS_QUEUE_EMAILS: "https://sqs.us-east-1.amazonaws.com/ACCOUNT_ID/skillancer-emails"
+
+  # Observability
+  OTEL_COLLECTOR_ENDPOINT: "http://otel-collector:4318"
+  PROMETHEUS_ENDPOINT: "http://prometheus:9090"
+  GRAFANA_ENDPOINT: "https://metrics.skillancer.com"
+
+  # Feature flags service
+  FEATURE_FLAGS_ENABLED: "true"
+  LAUNCHDARKLY_ENABLED: "false"
+
+  # Timeouts
+  HTTP_CLIENT_TIMEOUT_MS: "30000"
+  GRPC_CLIENT_TIMEOUT_MS: "10000"
+  DATABASE_QUERY_TIMEOUT_MS: "30000"

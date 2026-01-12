@@ -187,9 +187,19 @@ export async function registerRoutes(
   // ============================================================================
 
   // Create encryption service for integrations
-  // NOTE: In production, INTEGRATION_ENCRYPTION_KEY should be loaded from environment
-  const encryptionKey =
-    process.env.INTEGRATION_ENCRYPTION_KEY ?? 'development-key-at-least-32-characters';
+  // SECURITY: INTEGRATION_ENCRYPTION_KEY is required - no fallback allowed
+  const encryptionKey = process.env.INTEGRATION_ENCRYPTION_KEY;
+  if (!encryptionKey) {
+    throw new Error(
+      'INTEGRATION_ENCRYPTION_KEY environment variable is required. ' +
+      'Please set a secure 32+ character encryption key.'
+    );
+  }
+  if (encryptionKey.length < 32) {
+    throw new Error(
+      'INTEGRATION_ENCRYPTION_KEY must be at least 32 characters long for AES-256 encryption.'
+    );
+  }
   const encryption = new EncryptionService({ masterKey: encryptionKey }, deps.logger);
 
   // Register integration routes

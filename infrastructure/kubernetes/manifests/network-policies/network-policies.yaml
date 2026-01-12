@@ -1,0 +1,356 @@
+# Network Policies for Skillancer
+# Implements zero-trust networking by default denying all traffic
+# and explicitly allowing only necessary communication paths
+
+---
+# Default deny all ingress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: skillancer-production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# Default deny all egress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+  namespace: skillancer-production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+---
+# Allow DNS resolution for all pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: skillancer-production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# API Gateway Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-gateway-network-policy
+  namespace: skillancer-production
+spec:
+  podSelector:
+    matchLabels:
+      app: api-gateway
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from nginx ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow metrics scraping from prometheus
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow connections to internal services
+    - to:
+        - podSelector:
+            matchLabels:
+              app: auth-svc
+      ports:
+        - protocol: TCP
+          port: 8081
+        - protocol: TCP
+          port: 9081
+    - to:
+        - podSelector:
+            matchLabels:
+              app: market-svc
+      ports:
+        - protocol: TCP
+          port: 8084
+        - protocol: TCP
+          port: 9084
+    - to:
+        - podSelector:
+            matchLabels:
+              app: billing-svc
+      ports:
+        - protocol: TCP
+          port: 8082
+        - protocol: TCP
+          port: 9082
+    - to:
+        - podSelector:
+            matchLabels:
+              app: notification-svc
+      ports:
+        - protocol: TCP
+          port: 8083
+    - to:
+        - podSelector:
+            matchLabels:
+              app: skillpod-svc
+      ports:
+        - protocol: TCP
+          port: 8085
+    - to:
+        - podSelector:
+            matchLabels:
+              app: cockpit-svc
+      ports:
+        - protocol: TCP
+          port: 8086
+    # Allow external HTTPS (for third-party APIs)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+---
+# Auth Service Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: auth-svc-network-policy
+  namespace: skillancer-production
+spec:
+  podSelector:
+    matchLabels:
+      app: auth-svc
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from api-gateway
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-gateway
+      ports:
+        - protocol: TCP
+          port: 8081
+        - protocol: TCP
+          port: 9081
+    # Allow from other services for auth verification
+    - from:
+        - podSelector:
+            matchLabels:
+              app: market-svc
+        - podSelector:
+            matchLabels:
+              app: billing-svc
+        - podSelector:
+            matchLabels:
+              app: notification-svc
+      ports:
+        - protocol: TCP
+          port: 9081
+    # Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8081
+  egress:
+    # Allow database connections
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8 # VPC CIDR - adjust as needed
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow Redis connections
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow OAuth provider connections
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+---
+# Market Service Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: market-svc-network-policy
+  namespace: skillancer-production
+spec:
+  podSelector:
+    matchLabels:
+      app: market-svc
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-gateway
+      ports:
+        - protocol: TCP
+          port: 8084
+        - protocol: TCP
+          port: 9084
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8084
+  egress:
+    # Database
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Redis
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Elasticsearch
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 9200
+    # Auth service for token verification
+    - to:
+        - podSelector:
+            matchLabels:
+              app: auth-svc
+      ports:
+        - protocol: TCP
+          port: 9081
+---
+# Billing Service Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: billing-svc-network-policy
+  namespace: skillancer-production
+spec:
+  podSelector:
+    matchLabels:
+      app: billing-svc
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-gateway
+      ports:
+        - protocol: TCP
+          port: 8082
+        - protocol: TCP
+          port: 9082
+    # Allow webhook ingress from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8082
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8082
+  egress:
+    # Database
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Redis
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Stripe API
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+    # Auth service
+    - to:
+        - podSelector:
+            matchLabels:
+              app: auth-svc
+      ports:
+        - protocol: TCP
+          port: 9081
+    # Notification service
+    - to:
+        - podSelector:
+            matchLabels:
+              app: notification-svc
+      ports:
+        - protocol: TCP
+          port: 8083

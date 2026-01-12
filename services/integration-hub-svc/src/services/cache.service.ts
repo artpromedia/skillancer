@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Module resolution handled at build time
 /**
  * Integration Cache Service
  *
@@ -6,22 +6,83 @@
  */
 
 import { createHash } from 'crypto';
+import Redis from 'ioredis';
 import { logger } from '@skillancer/logger';
 
-// Stub redis client - TODO: Replace with actual cache package
-const redis = {
-  get: async (key: string) => null,
-  set: async (key: string, value: string, mode?: string, ttl?: number) => 'OK',
-  del: async (...keys: string[]) => 1,
-  exists: async (key: string) => 0,
-  keys: async (pattern: string) => [] as string[],
-  expire: async (key: string, ttl: number) => 1,
-  sadd: async (key: string, ...members: string[]) => 1,
-  smembers: async (key: string) => [] as string[],
-  hset: async (key: string, field: string, value: string) => 1,
-  hget: async (key: string, field: string) => null as string | null,
-  hgetall: async (key: string) => ({}) as Record<string, string>,
-};
+import { getConfig } from '../config/index.js';
+
+// Redis client singleton
+let redisClient: Redis | null = null;
+let isConnected = false;
+
+function getRedisClient(): Redis {
+  if (redisClient) {
+    return redisClient;
+  }
+
+  const config = getConfig();
+  const redisUrl = config.redis?.url || process.env.REDIS_URL;
+
+  if (!redisUrl) {
+    throw new Error('REDIS_URL environment variable is required for cache service');
+  }
+
+  redisClient = new Redis(redisUrl, {
+    keyPrefix: config.redis?.keyPrefix || 'integration-hub:',
+    retryStrategy: (times: number) => {
+      if (times > 10) {
+        logger.error('Redis connection failed after 10 retries');
+        return null; // Stop retrying
+      }
+      const delay = Math.min(times * 100, 3000);
+      logger.warn(`Redis connection retry ${times}, waiting ${delay}ms`);
+      return delay;
+    },
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: true,
+    lazyConnect: false,
+  });
+
+  redisClient.on('connect', () => {
+    isConnected = true;
+    logger.info('Redis connected successfully');
+  });
+
+  redisClient.on('error', (error: Error) => {
+    isConnected = false;
+    logger.error('Redis connection error', { error: error.message });
+  });
+
+  redisClient.on('close', () => {
+    isConnected = false;
+    logger.warn('Redis connection closed');
+  });
+
+  redisClient.on('reconnecting', () => {
+    logger.info('Redis reconnecting...');
+  });
+
+  return redisClient;
+}
+
+/**
+ * Check if Redis is connected
+ */
+export function isRedisConnected(): boolean {
+  return isConnected && redisClient !== null;
+}
+
+/**
+ * Gracefully close Redis connection
+ */
+export async function closeRedisConnection(): Promise<void> {
+  if (redisClient) {
+    await redisClient.quit();
+    redisClient = null;
+    isConnected = false;
+    logger.info('Redis connection closed gracefully');
+  }
+}
 
 // Cache configuration
 interface CacheConfig {
@@ -69,6 +130,7 @@ class CacheService {
     params?: Record<string, unknown>
   ): Promise<T | null> {
     const key = this.generateCacheKey(integrationId, widgetId, params);
+    const redis = getRedisClient();
 
     try {
       const cached = await redis.get(key);
@@ -87,7 +149,7 @@ class CacheService {
       logger.debug('Cache miss', { key, integrationId, widgetId });
       return null;
     } catch (error) {
-      logger.error('Cache get error', { key, error });
+      logger.error('Cache get error', { key, error: error instanceof Error ? error.message : String(error) });
       return null;
     }
   }
@@ -104,6 +166,7 @@ class CacheService {
   ): Promise<void> {
     const key = this.generateCacheKey(integrationId, widgetId, params);
     const effectiveTTL = ttl || this.config.widgetTTL;
+    const redis = getRedisClient();
 
     try {
       const serialized = JSON.stringify(data);
@@ -114,7 +177,7 @@ class CacheService {
 
       logger.debug('Cache set', { key, integrationId, widgetId, ttl: effectiveTTL });
     } catch (error) {
-      logger.error('Cache set error', { key, error });
+      logger.error('Cache set error', { key, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -122,6 +185,8 @@ class CacheService {
    * Invalidate cache for a widget
    */
   async invalidate(integrationId: string, widgetId?: string): Promise<number> {
+    const redis = getRedisClient();
+
     try {
       let pattern: string;
       if (widgetId) {
@@ -130,15 +195,28 @@ class CacheService {
         pattern = `integration:${integrationId}:*`;
       }
 
-      const keys = await redis.keys(pattern);
+      // Use SCAN for production-safe key retrieval (avoids blocking)
+      const keys: string[] = [];
+      let cursor = '0';
+      do {
+        const [nextCursor, batch] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
+
       if (keys.length > 0) {
-        await redis.del(...keys);
+        // Delete in batches to avoid blocking
+        const batchSize = 100;
+        for (let i = 0; i < keys.length; i += batchSize) {
+          const batch = keys.slice(i, i + batchSize);
+          await redis.del(...batch);
+        }
         logger.info('Cache invalidated', { integrationId, widgetId, keysDeleted: keys.length });
       }
 
       return keys.length;
     } catch (error) {
-      logger.error('Cache invalidate error', { integrationId, widgetId, error });
+      logger.error('Cache invalidate error', { integrationId, widgetId, error: error instanceof Error ? error.message : String(error) });
       return 0;
     }
   }
@@ -147,15 +225,31 @@ class CacheService {
    * Invalidate all caches for a workspace
    */
   async invalidateWorkspace(workspaceId: string): Promise<number> {
+    const redis = getRedisClient();
+
     try {
       const pattern = `workspace:${workspaceId}:*`;
-      const keys = await redis.keys(pattern);
+
+      // Use SCAN for production-safe key retrieval
+      const keys: string[] = [];
+      let cursor = '0';
+      do {
+        const [nextCursor, batch] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
+
       if (keys.length > 0) {
-        await redis.del(...keys);
+        // Delete in batches
+        const batchSize = 100;
+        for (let i = 0; i < keys.length; i += batchSize) {
+          const batch = keys.slice(i, i + batchSize);
+          await redis.del(...batch);
+        }
       }
       return keys.length;
     } catch (error) {
-      logger.error('Workspace cache invalidate error', { workspaceId, error });
+      logger.error('Workspace cache invalidate error', { workspaceId, error: error instanceof Error ? error.message : String(error) });
       return 0;
     }
   }
@@ -238,8 +332,15 @@ class CacheService {
     params?: Record<string, unknown>
   ): Promise<boolean> {
     const key = this.generateCacheKey(integrationId, widgetId, params);
-    const result = await redis.exists(key);
-    return result === 1;
+    const redis = getRedisClient();
+
+    try {
+      const result = await redis.exists(key);
+      return result === 1;
+    } catch (error) {
+      logger.error('Cache exists error', { key, error: error instanceof Error ? error.message : String(error) });
+      return false;
+    }
   }
 
   /**
@@ -251,7 +352,14 @@ class CacheService {
     params?: Record<string, unknown>
   ): Promise<number> {
     const key = this.generateCacheKey(integrationId, widgetId, params);
-    return redis.ttl(key);
+    const redis = getRedisClient();
+
+    try {
+      return await redis.ttl(key);
+    } catch (error) {
+      logger.error('Cache getTTL error', { key, error: error instanceof Error ? error.message : String(error) });
+      return -1;
+    }
   }
 
   /**
@@ -264,27 +372,54 @@ class CacheService {
     additionalSeconds: number
   ): Promise<boolean> {
     const key = this.generateCacheKey(integrationId, widgetId, params);
-    const currentTTL = await redis.ttl(key);
+    const redis = getRedisClient();
 
-    if (currentTTL > 0) {
-      await redis.expire(key, currentTTL + additionalSeconds);
-      return true;
+    try {
+      const currentTTL = await redis.ttl(key);
+
+      if (currentTTL > 0) {
+        await redis.expire(key, currentTTL + additionalSeconds);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      logger.error('Cache extendTTL error', { key, error: error instanceof Error ? error.message : String(error) });
+      return false;
     }
-
-    return false;
   }
 
   /**
    * Clear all integration caches
    */
   async clearAll(): Promise<void> {
-    const pattern = 'integration:*';
-    const keys = await redis.keys(pattern);
-    if (keys.length > 0) {
-      await redis.del(...keys);
+    const redis = getRedisClient();
+
+    try {
+      const pattern = 'integration:*';
+
+      // Use SCAN for production-safe key retrieval
+      const keys: string[] = [];
+      let cursor = '0';
+      do {
+        const [nextCursor, batch] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
+
+      if (keys.length > 0) {
+        // Delete in batches
+        const batchSize = 100;
+        for (let i = 0; i < keys.length; i += batchSize) {
+          const batch = keys.slice(i, i + batchSize);
+          await redis.del(...batch);
+        }
+      }
+      this.stats = { hits: 0, misses: 0 };
+      logger.info('All integration caches cleared', { keysDeleted: keys.length });
+    } catch (error) {
+      logger.error('Cache clearAll error', { error: error instanceof Error ? error.message : String(error) });
     }
-    this.stats = { hits: 0, misses: 0 };
-    logger.info('All integration caches cleared', { keysDeleted: keys.length });
   }
 
   // Private helper methods
@@ -304,35 +439,63 @@ class CacheService {
   }
 
   private async storeMetadata(key: string, ttl: number): Promise<void> {
-    const metadataKey = `${key}:meta`;
-    const metadata: CacheMetadata = {
-      createdAt: Date.now(),
-      expiresAt: Date.now() + ttl * 1000,
-      hitCount: 0,
-      lastAccessedAt: Date.now(),
-    };
-    await redis.set(metadataKey, JSON.stringify(metadata), 'EX', ttl);
+    const redis = getRedisClient();
+
+    try {
+      const metadataKey = `${key}:meta`;
+      const metadata: CacheMetadata = {
+        createdAt: Date.now(),
+        expiresAt: Date.now() + ttl * 1000,
+        hitCount: 0,
+        lastAccessedAt: Date.now(),
+      };
+      await redis.set(metadataKey, JSON.stringify(metadata), 'EX', ttl);
+    } catch (error) {
+      logger.error('Cache storeMetadata error', { key, error: error instanceof Error ? error.message : String(error) });
+    }
   }
 
   private async updateAccessMetadata(key: string): Promise<void> {
-    const metadataKey = `${key}:meta`;
-    const metadataStr = await redis.get(metadataKey);
-    if (metadataStr) {
-      const metadata = JSON.parse(metadataStr) as CacheMetadata;
-      metadata.hitCount++;
-      metadata.lastAccessedAt = Date.now();
-      const ttl = await redis.ttl(metadataKey);
-      if (ttl > 0) {
-        await redis.set(metadataKey, JSON.stringify(metadata), 'EX', ttl);
+    const redis = getRedisClient();
+
+    try {
+      const metadataKey = `${key}:meta`;
+      const metadataStr = await redis.get(metadataKey);
+      if (metadataStr) {
+        const metadata = JSON.parse(metadataStr) as CacheMetadata;
+        metadata.hitCount++;
+        metadata.lastAccessedAt = Date.now();
+        const ttl = await redis.ttl(metadataKey);
+        if (ttl > 0) {
+          await redis.set(metadataKey, JSON.stringify(metadata), 'EX', ttl);
+        }
       }
+    } catch (error) {
+      logger.error('Cache updateAccessMetadata error', { key, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
   private async getCacheSize(): Promise<number> {
-    const pattern = 'integration:*';
-    const keys = await redis.keys(pattern);
-    // Filter out metadata keys
-    return keys.filter((k) => !k.endsWith(':meta')).length;
+    const redis = getRedisClient();
+
+    try {
+      const pattern = 'integration:*';
+
+      // Use SCAN for production-safe key retrieval
+      const keys: string[] = [];
+      let cursor = '0';
+      do {
+        const [nextCursor, batch] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
+
+      // Filter out metadata keys
+      return keys.filter((k) => !k.endsWith(':meta')).length;
+    } catch (error) {
+      logger.error('Cache getCacheSize error', { error: error instanceof Error ? error.message : String(error) });
+      return 0;
+    }
   }
 }
 

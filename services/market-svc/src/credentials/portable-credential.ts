@@ -128,9 +128,23 @@ export class PortableCredentialService {
     this.issuerName = 'Skillancer';
     this.baseUrl = process.env.APP_URL || 'https://skillancer.com';
 
-    // In production, these would be loaded from secure key storage
-    this.privateKey = process.env.CREDENTIAL_SIGNING_KEY || '';
-    this.publicKey = process.env.CREDENTIAL_PUBLIC_KEY || '';
+    // SECURITY: Credential signing keys are required - no fallback allowed
+    const signingKey = process.env.CREDENTIAL_SIGNING_KEY;
+    if (!signingKey) {
+      throw new Error(
+        'CREDENTIAL_SIGNING_KEY environment variable is required. ' +
+        'Please set a secure private key for credential signing.'
+      );
+    }
+    const publicKey = process.env.CREDENTIAL_PUBLIC_KEY;
+    if (!publicKey) {
+      throw new Error(
+        'CREDENTIAL_PUBLIC_KEY environment variable is required. ' +
+        'Please set the corresponding public key for credential verification.'
+      );
+    }
+    this.privateKey = signingKey;
+    this.publicKey = publicKey;
   }
 
   // ---------------------------------------------------------------------------

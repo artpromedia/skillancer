@@ -1,0 +1,157 @@
+# Internal ClusterIP Services for Skillancer Microservices
+# These services are only accessible within the cluster
+
+---
+# Auth Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-svc
+  namespace: skillancer-production
+  labels:
+    app: auth-svc
+    app.kubernetes.io/name: auth-svc
+    app.kubernetes.io/component: authentication
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8081"
+spec:
+  type: ClusterIP
+  selector:
+    app: auth-svc
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+    - name: grpc
+      port: 9081
+      targetPort: 9081
+      protocol: TCP
+---
+# Market Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: market-svc
+  namespace: skillancer-production
+  labels:
+    app: market-svc
+    app.kubernetes.io/name: market-svc
+    app.kubernetes.io/component: marketplace
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8084"
+spec:
+  type: ClusterIP
+  selector:
+    app: market-svc
+  ports:
+    - name: http
+      port: 8084
+      targetPort: 8084
+      protocol: TCP
+    - name: grpc
+      port: 9084
+      targetPort: 9084
+      protocol: TCP
+---
+# Billing Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: billing-svc
+  namespace: skillancer-production
+  labels:
+    app: billing-svc
+    app.kubernetes.io/name: billing-svc
+    app.kubernetes.io/component: payments
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8082"
+spec:
+  type: ClusterIP
+  selector:
+    app: billing-svc
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+      protocol: TCP
+    - name: grpc
+      port: 9082
+      targetPort: 9082
+      protocol: TCP
+---
+# Notification Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-svc
+  namespace: skillancer-production
+  labels:
+    app: notification-svc
+    app.kubernetes.io/name: notification-svc
+    app.kubernetes.io/component: notifications
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8083"
+spec:
+  type: ClusterIP
+  selector:
+    app: notification-svc
+  ports:
+    - name: http
+      port: 8083
+      targetPort: 8083
+      protocol: TCP
+---
+# SkillPod Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: skillpod-svc
+  namespace: skillancer-production
+  labels:
+    app: skillpod-svc
+    app.kubernetes.io/name: skillpod-svc
+    app.kubernetes.io/component: skillpod
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8085"
+spec:
+  type: ClusterIP
+  selector:
+    app: skillpod-svc
+  ports:
+    - name: http
+      port: 8085
+      targetPort: 8085
+      protocol: TCP
+    - name: websocket
+      port: 8086
+      targetPort: 8086
+      protocol: TCP
+---
+# Cockpit Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: cockpit-svc
+  namespace: skillancer-production
+  labels:
+    app: cockpit-svc
+    app.kubernetes.io/name: cockpit-svc
+    app.kubernetes.io/component: dashboard
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8086"
+spec:
+  type: ClusterIP
+  selector:
+    app: cockpit-svc
+  ports:
+    - name: http
+      port: 8086
+      targetPort: 8086
+      protocol: TCP

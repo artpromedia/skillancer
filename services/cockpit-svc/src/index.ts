@@ -7,6 +7,7 @@ import Fastify from 'fastify';
 import { Redis } from 'ioredis';
 
 import { registerRoutes } from './routes/index.js';
+import { authPlugin, rawBodyPlugin } from './plugins/index.js';
 import { HealthScoreWorker, ReminderWorker, MarketSyncWorker } from './workers/index.js';
 
 // Initialize logger
@@ -96,9 +97,34 @@ server.get('/ready', async () => {
 
 const start = async () => {
   try {
-    // Register CRM routes under /api/cockpit prefix
+    // Register raw body plugin for webhook signature verification
+    // Must be registered before routes to override content type parser
+    await server.register(rawBodyPlugin, {
+      routes: ['/webhooks/'],
+    });
+    logger.info('Raw body plugin registered for webhook routes');
+
+    // Register authentication plugin globally
+    await server.register(authPlugin, { logger });
+    logger.info('Authentication plugin registered');
+
+    // Register CRM routes under /api/cockpit prefix (protected by auth)
     await server.register(
       async (instance) => {
+        // Add global authentication hook for all routes in this scope
+        instance.addHook('preHandler', async (request, reply) => {
+          // Skip auth for health/ready endpoints (already defined outside this scope)
+          // and for public booking routes
+          if (request.url.includes('/public/')) {
+            return;
+          }
+          // Skip auth for webhook routes - they use signature verification instead
+          if (request.url.includes('/webhooks/')) {
+            return;
+          }
+          await instance.authenticate(request, reply);
+        });
+
         await registerRoutes(instance, { prisma, redis, logger });
       },
       { prefix: '/api/cockpit' }

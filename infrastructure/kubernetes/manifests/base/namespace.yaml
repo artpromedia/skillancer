@@ -1,0 +1,52 @@
+# Skillancer Production Namespace
+# This manifest defines the production namespace with resource quotas and limits
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: skillancer-production
+  labels:
+    name: skillancer-production
+    environment: production
+    managed-by: kubectl
+  annotations:
+    description: "Skillancer production workloads"
+---
+# Resource Quota for the namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: skillancer-resource-quota
+  namespace: skillancer-production
+spec:
+  hard:
+    requests.cpu: "100"
+    requests.memory: 200Gi
+    limits.cpu: "200"
+    limits.memory: 400Gi
+    pods: "500"
+    services: "50"
+    secrets: "100"
+    configmaps: "100"
+    persistentvolumeclaims: "50"
+---
+# Limit Range for default resource limits
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: skillancer-limit-range
+  namespace: skillancer-production
+spec:
+  limits:
+    - default:
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+      max:
+        cpu: "4"
+        memory: "8Gi"
+      type: Container

@@ -97,14 +97,21 @@ export class PCIComplianceService {
   private encryptionKey: Buffer;
 
   constructor() {
+    // SECURITY: PCI_ENCRYPTION_KEY is required - no fallback allowed for PCI compliance
     // In production, this should come from a secure key management service (e.g., AWS KMS, HashiCorp Vault)
     const key = process.env.PCI_ENCRYPTION_KEY;
     if (!key) {
-      logger.warn('PCI_ENCRYPTION_KEY not set - using derived key (NOT FOR PRODUCTION)');
-      this.encryptionKey = createHash('sha256').update('skillancer-pci-key').digest();
-    } else {
-      this.encryptionKey = Buffer.from(key, 'hex');
+      throw new Error(
+        'PCI_ENCRYPTION_KEY environment variable is required for PCI compliance. ' +
+        'Please set a secure 64-character hex string (32 bytes) encryption key.'
+      );
     }
+    if (key.length !== 64) {
+      throw new Error(
+        'PCI_ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes) for AES-256 encryption.'
+      );
+    }
+    this.encryptionKey = Buffer.from(key, 'hex');
   }
 
   /**

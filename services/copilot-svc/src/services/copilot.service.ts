@@ -1,4 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import {
+  InteractionType,
+} from '../types/copilot.types.js';
 import type {
   CopilotInteractionInput,
   CopilotResponse,
@@ -14,7 +17,6 @@ import type {
   MarketInsightResult,
   Suggestion,
   SuggestionType,
-  InteractionType,
 } from '../types/copilot.types.js';
 
 export class CopilotService {

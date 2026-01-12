@@ -1,9 +1,17 @@
 /**
  * Notification Service - Push Provider
- * Multi-platform push notification delivery
+ * Multi-platform push notification delivery with Firebase integration
  */
 
+import admin from 'firebase-admin';
+import { createLogger } from '@skillancer/logger';
+
+const logger = createLogger({ name: 'PushProvider' });
+
 export interface PushConfig {
+  firebaseProjectId?: string;
+  firebasePrivateKey?: string;
+  firebaseClientEmail?: string;
   fcmServiceAccount?: Record<string, unknown>;
   apnsKeyId?: string;
   apnsTeamId?: string;
@@ -57,6 +65,44 @@ const userSubscriptions: Map<string, Set<string>> = new Map(); // userId -> subs
 const pushLog: PushResult[] = [];
 
 export class PushProvider {
+  private initialized = false;
+  private config: PushConfig;
+
+  constructor(config?: PushConfig) {
+    this.config = config || {
+      firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
+      firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    };
+    this.initialize();
+  }
+
+  private initialize(): void {
+    try {
+      if (
+        this.config.firebaseProjectId &&
+        this.config.firebasePrivateKey &&
+        this.config.firebaseClientEmail
+      ) {
+        if (!admin.apps.length) {
+          admin.initializeApp({
+            credential: admin.credential.cert({
+              projectId: this.config.firebaseProjectId,
+              privateKey: this.config.firebasePrivateKey,
+              clientEmail: this.config.firebaseClientEmail,
+            }),
+          });
+        }
+        this.initialized = true;
+        logger.info('Firebase push provider initialized');
+      } else {
+        logger.warn('Firebase push provider not configured - missing credentials');
+      }
+    } catch (error: any) {
+      logger.error({ error: error.message }, 'Firebase initialization failed');
+    }
+  }
+
   /**
    * Register a device for push notifications
    */
@@ -98,7 +144,10 @@ export class PushProvider {
     }
     userSubscriptions.get(userId)!.add(id);
 
-    console.log(`[PUSH] Registered device ${deviceId} for user ${userId}`);
+    logger.info(
+      { deviceId, userId, platform },
+      `Device registered for push notifications`
+    );
 
     return subscription;
   }
@@ -177,8 +226,14 @@ export class PushProvider {
 
     pushLog.push(result);
 
-    console.log(
-      `[PUSH] Sent to ${message.userId}: ${deliveredTo.length} delivered, ${failedDevices.length} failed`
+    logger.info(
+      {
+        userId: message.userId,
+        pushId: id,
+        deliveredCount: deliveredTo.length,
+        failedCount: failedDevices.length,
+      },
+      `Push notification sent: ${deliveredTo.length} delivered, ${failedDevices.length} failed`
     );
 
     return result;
@@ -274,36 +329,111 @@ export class PushProvider {
   // Private helpers
 
   private async sendToDevice(subscription: PushSubscription, message: PushMessage): Promise<void> {
-    // Platform-specific sending
-    switch (subscription.platform) {
-      case 'ios':
-        await this.sendAPNS(subscription, message);
-        break;
-      case 'android':
-        await this.sendFCM(subscription, message);
-        break;
-      case 'web':
-        await this.sendWebPush(subscription, message);
-        break;
+    if (!this.initialized) {
+      // Fallback to mock for uninitialized provider
+      logger.warn('Using mock push provider - Firebase not initialized');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return;
+    }
+
+    // Use Firebase for all platforms (FCM supports iOS via APNs, Android, and Web)
+    const fcmMessage: admin.messaging.Message = {
+      token: subscription.token,
+      notification: {
+        title: message.title,
+        body: message.body,
+        imageUrl: message.image,
+      },
+      data: message.data,
+    };
+
+    // Platform-specific options
+    if (subscription.platform === 'android') {
+      fcmMessage.android = {
+        priority: message.priority === 'high' ? 'high' : 'normal',
+        notification: {
+          icon: message.icon || 'ic_notification',
+          sound: message.sound || 'default',
+          channelId: 'skillancer_notifications',
+        },
+        ttl: message.ttl ? message.ttl * 1000 : undefined,
+        collapseKey: message.collapseKey,
+      };
+    } else if (subscription.platform === 'ios') {
+      fcmMessage.apns = {
+        payload: {
+          aps: {
+            alert: {
+              title: message.title,
+              body: message.body,
+            },
+            sound: message.sound || 'default',
+            badge: 1,
+          },
+        },
+        headers: {
+          'apns-priority': message.priority === 'high' ? '10' : '5',
+          'apns-collapse-id': message.collapseKey,
+        },
+      };
+    } else if (subscription.platform === 'web') {
+      fcmMessage.webpush = {
+        notification: {
+          title: message.title,
+          body: message.body,
+          icon: message.icon,
+          image: message.image,
+          badge: message.badge,
+        },
+        fcmOptions: {
+          link: message.action?.url,
+        },
+      };
+    }
+
+    try {
+      const messageId = await admin.messaging().send(fcmMessage);
+      logger.debug(
+        { messageId, token: subscription.token.slice(0, 20) + '...', platform: subscription.platform },
+        'Push notification sent via FCM'
+      );
+    } catch (error: any) {
+      logger.error(
+        { error: error.message, code: error.code, platform: subscription.platform },
+        'FCM push send failed'
+      );
+      throw error;
     }
   }
 
-  private async sendAPNS(subscription: PushSubscription, message: PushMessage): Promise<void> {
-    // Simulate APNS send
-    // In production, use @parse/node-apn or similar
-    await new Promise((resolve) => setTimeout(resolve, 20));
+  /**
+   * Check if the push provider is configured and ready
+   */
+  isConfigured(): boolean {
+    return this.initialized;
   }
 
-  private async sendFCM(subscription: PushSubscription, message: PushMessage): Promise<void> {
-    // Simulate FCM send
-    // In production, use firebase-admin
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  }
+  /**
+   * Validate a device token
+   */
+  async validateToken(token: string): Promise<boolean> {
+    if (!this.initialized) {
+      return false;
+    }
 
-  private async sendWebPush(subscription: PushSubscription, message: PushMessage): Promise<void> {
-    // Simulate Web Push
-    // In production, use web-push library
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    try {
+      // Use dry run to validate the token
+      await admin.messaging().send(
+        {
+          token,
+          notification: { title: 'Test', body: 'Test' },
+        },
+        true // dry run
+      );
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

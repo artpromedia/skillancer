@@ -5,8 +5,17 @@
  */
 
 import { createLogger } from '@skillancer/logger';
+import { EmailService } from '../services/email.service.js';
+import { PushService } from '../services/push.service.js';
+import { SmsService } from '../services/sms.service.js';
+import type { EmailType } from '../types/notification.types.js';
 
 const baseLogger = createLogger({ name: 'FinancialNotifications' });
+
+// Initialize notification services
+const emailService = new EmailService();
+const pushService = new PushService();
+const smsService = new SmsService();
 
 // Wrapper to allow (message, object) pattern
 const logger = {
@@ -460,16 +469,83 @@ class FinancialNotificationsService {
       templateId,
     });
 
-    // TODO: Integrate with email service (SendGrid, SES, etc.)
-    // await emailService.send({
-    //   to: user.email,
-    //   templateId,
-    //   dynamicTemplateData: {
-    //     title: notification.title,
-    //     body: notification.body,
-    //     ...notification.data,
-    //   },
-    // });
+    try {
+      // Get user email from user service (placeholder - in production, fetch from user service)
+      const userEmail = await this.getUserEmail(notification.userId);
+      if (!userEmail) {
+        this.logger.warn('Cannot send email - user email not found', {
+          userId: notification.userId,
+        });
+        return;
+      }
+
+      // Send via email service
+      const result = await emailService.sendTemplatedEmail(
+        userEmail,
+        this.mapNotificationTypeToEmailType(notification.type),
+        {
+          title: notification.title,
+          body: notification.body,
+          userName: 'User', // Would be fetched from user service
+          ...notification.data,
+        },
+        {
+          userId: notification.userId,
+          subject: notification.title,
+        }
+      );
+
+      if (!result.success) {
+        this.logger.error('Email notification failed', {
+          userId: notification.userId,
+          error: result.error,
+        });
+      } else {
+        this.logger.info('Email notification sent successfully', {
+          userId: notification.userId,
+          messageId: result.messageId,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Email notification error', {
+        userId: notification.userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  private mapNotificationTypeToEmailType(type: FinancialNotificationType): EmailType {
+    // Map financial notification types to email template types
+    const typeMap: Record<FinancialNotificationType, EmailType> = {
+      payout_initiated: 'PAYMENT_SENT',
+      payout_completed: 'PAYMENT_SENT',
+      payout_failed: 'SECURITY_ALERT',
+      card_issued: 'WELCOME',
+      card_activated: 'WELCOME',
+      card_frozen: 'SECURITY_ALERT',
+      card_unfrozen: 'WELCOME',
+      card_transaction: 'PAYMENT_RECEIVED',
+      card_declined: 'SECURITY_ALERT',
+      spending_limit_warning: 'SECURITY_ALERT',
+      spending_limit_reached: 'SECURITY_ALERT',
+      tax_auto_save: 'PAYMENT_RECEIVED',
+      quarterly_reminder: 'INVOICE_CREATED',
+      quarterly_payment_due: 'INVOICE_CREATED',
+      quarterly_payment_overdue: 'SECURITY_ALERT',
+      quarterly_payment_recorded: 'PAYMENT_RECEIVED',
+      low_balance_warning: 'SECURITY_ALERT',
+      large_deposit_received: 'PAYMENT_RECEIVED',
+      unusual_activity: 'SECURITY_ALERT',
+    };
+    return typeMap[type] || 'SECURITY_ALERT';
+  }
+
+  private async getUserEmail(userId: string): Promise<string | null> {
+    // Placeholder - in production, fetch from user service or database
+    // This would typically call the user service API or query the database
+    this.logger.debug('Fetching user email', { userId });
+    // Return null for now - implement actual user lookup
+    return null;
   }
 
   private async sendPush(notification: FinancialNotification): Promise<void> {
@@ -478,14 +554,71 @@ class FinancialNotificationsService {
       type: notification.type,
     });
 
-    // TODO: Integrate with push service (Firebase, OneSignal, etc.)
-    // await pushService.send({
-    //   userId: notification.userId,
-    //   title: notification.title,
-    //   body: notification.body,
-    //   data: notification.data,
-    //   priority: notification.priority,
-    // });
+    try {
+      // Get user device tokens
+      const deviceTokens = await this.getUserDeviceTokens(notification.userId);
+      if (!deviceTokens.length) {
+        this.logger.warn('Cannot send push - no device tokens found', {
+          userId: notification.userId,
+        });
+        return;
+      }
+
+      // Map priority
+      const priorityMap: Record<string, 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'> = {
+        low: 'LOW',
+        normal: 'NORMAL',
+        high: 'HIGH',
+        urgent: 'URGENT',
+      };
+
+      // Send via push service
+      const result = await pushService.sendToDevices({
+        userId: notification.userId,
+        channels: ['PUSH'],
+        pushType: 'SYSTEM_ALERT',
+        title: notification.title,
+        body: notification.body,
+        data: this.stringifyData(notification.data),
+        deviceTokens,
+        priority: priorityMap[notification.priority] || 'NORMAL',
+      });
+
+      if (!result.success) {
+        this.logger.error('Push notification failed', {
+          userId: notification.userId,
+          failureCount: result.failureCount,
+          errors: result.errors,
+        });
+      } else {
+        this.logger.info('Push notification sent successfully', {
+          userId: notification.userId,
+          successCount: result.successCount,
+          messageIds: result.messageIds,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Push notification error', {
+        userId: notification.userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  private async getUserDeviceTokens(userId: string): Promise<string[]> {
+    // Placeholder - in production, fetch from database
+    // This would typically query the device_tokens table
+    this.logger.debug('Fetching user device tokens', { userId });
+    return [];
+  }
+
+  private stringifyData(data: Record<string, unknown>): Record<string, string> {
+    // Convert all values to strings for FCM data payload
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(data)) {
+      result[key] = typeof value === 'string' ? value : JSON.stringify(value);
+    }
+    return result;
   }
 
   private async sendInApp(notification: FinancialNotification): Promise<void> {
@@ -504,11 +637,53 @@ class FinancialNotificationsService {
       type: notification.type,
     });
 
-    // TODO: Integrate with SMS service (Twilio, etc.)
-    // await smsService.send({
-    //   userId: notification.userId,
-    //   body: notification.body,
-    // });
+    try {
+      // Get user phone number
+      const phoneNumber = await this.getUserPhoneNumber(notification.userId);
+      if (!phoneNumber) {
+        this.logger.warn('Cannot send SMS - user phone number not found', {
+          userId: notification.userId,
+        });
+        return;
+      }
+
+      // Send via SMS service
+      const result = await smsService.sendSMS({
+        userId: notification.userId,
+        to: phoneNumber,
+        body: notification.body,
+        metadata: {
+          notificationType: notification.type,
+          notificationId: notification.id,
+        },
+      });
+
+      if (!result.success) {
+        this.logger.error('SMS notification failed', {
+          userId: notification.userId,
+          error: result.error,
+        });
+      } else {
+        this.logger.info('SMS notification sent successfully', {
+          userId: notification.userId,
+          messageId: result.messageId,
+          status: result.status,
+        });
+      }
+    } catch (error) {
+      this.logger.error('SMS notification error', {
+        userId: notification.userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  private async getUserPhoneNumber(userId: string): Promise<string | null> {
+    // Placeholder - in production, fetch from user service or database
+    // This would typically call the user service API or query the database
+    this.logger.debug('Fetching user phone number', { userId });
+    // Return null for now - implement actual user lookup
+    return null;
   }
 
   // ---------------------------------------------------------------------------

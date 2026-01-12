@@ -1,0 +1,67 @@
+# Billing Service ConfigMap
+# Non-sensitive configuration for the Billing service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: billing-svc-config
+  namespace: skillancer-production
+  labels:
+    app: billing-svc
+    app.kubernetes.io/name: billing-svc
+    app.kubernetes.io/component: config
+data:
+  # Server configuration
+  NODE_ENV: "production"
+  PORT: "8082"
+  GRPC_PORT: "9082"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+
+  # Payment configuration
+  PAYMENT_CURRENCY: "USD"
+  PLATFORM_FEE_PERCENTAGE: "10"
+  MINIMUM_WITHDRAWAL_AMOUNT: "50"
+  MAXIMUM_WITHDRAWAL_AMOUNT: "50000"
+
+  # Stripe configuration (non-sensitive)
+  STRIPE_API_VERSION: "2023-10-16"
+  STRIPE_WEBHOOK_ENABLED: "true"
+  STRIPE_PAYMENT_METHODS: "card,bank_transfer"
+
+  # Escrow configuration
+  ESCROW_HOLD_DAYS: "14"
+  ESCROW_RELEASE_DELAY_HOURS: "24"
+  AUTO_RELEASE_ENABLED: "true"
+
+  # Invoice configuration
+  INVOICE_PREFIX: "INV"
+  INVOICE_DUE_DAYS: "30"
+  TAX_CALCULATION_ENABLED: "true"
+
+  # Payout configuration
+  PAYOUT_SCHEDULE: "weekly"
+  PAYOUT_MIN_AMOUNT: "100"
+  PAYOUT_BATCH_SIZE: "100"
+
+  # Retry configuration
+  PAYMENT_RETRY_ATTEMPTS: "3"
+  PAYMENT_RETRY_DELAY_MS: "5000"
+  WEBHOOK_RETRY_ATTEMPTS: "5"
+
+  # Database
+  DATABASE_POOL_MIN: "5"
+  DATABASE_POOL_MAX: "20"
+  DATABASE_IDLE_TIMEOUT: "10000"
+
+  # Redis
+  REDIS_KEY_PREFIX: "billing:"
+  REDIS_LOCK_TTL: "30000"
+
+  # Tracing
+  TRACING_ENABLED: "true"
+  TRACING_SERVICE_NAME: "billing-svc"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+
+  # Compliance
+  PCI_COMPLIANCE_MODE: "true"
+  AUDIT_LOGGING_ENABLED: "true"

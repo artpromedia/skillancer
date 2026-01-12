@@ -129,6 +129,35 @@ export interface PushSendResult {
   }>;
 }
 
+// SMS notification input
+export interface SMSNotificationInput extends NotificationInput {
+  to: string;
+  body: string;
+  mediaUrl?: string[];
+  statusCallback?: string;
+}
+
+// SMS send result
+export interface SMSSendResult {
+  success: boolean;
+  messageId?: string;
+  status?: string;
+  error?: string;
+  segments?: number;
+  price?: string;
+  priceUnit?: string;
+}
+
+// SMS delivery status
+export interface SMSDeliveryStatus {
+  messageId: string;
+  to: string;
+  status: 'queued' | 'sending' | 'sent' | 'delivered' | 'undelivered' | 'failed';
+  errorCode?: string;
+  errorMessage?: string;
+  timestamp: Date;
+}
+
 // User notification preferences
 export interface NotificationPreferences {
   userId: string;

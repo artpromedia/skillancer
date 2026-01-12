@@ -24,9 +24,20 @@ export class IntegrationHubService {
   private encryptionKey: Buffer;
 
   constructor(private prisma: PrismaClient) {
-    // Use environment variable for encryption key
-    const key = process.env.INTEGRATION_ENCRYPTION_KEY || 'default-32-char-encryption-key!';
-    this.encryptionKey = Buffer.from(key.padEnd(32, '0').slice(0, 32));
+    // SECURITY: INTEGRATION_ENCRYPTION_KEY is required - no fallback allowed
+    const key = process.env.INTEGRATION_ENCRYPTION_KEY;
+    if (!key) {
+      throw new Error(
+        'INTEGRATION_ENCRYPTION_KEY environment variable is required. ' +
+        'Please set a secure 32+ character encryption key.'
+      );
+    }
+    if (key.length < 32) {
+      throw new Error(
+        'INTEGRATION_ENCRYPTION_KEY must be at least 32 characters long for AES-256 encryption.'
+      );
+    }
+    this.encryptionKey = Buffer.from(key.slice(0, 32));
   }
 
   /**

@@ -690,9 +690,19 @@ export abstract class PlatformConnector {
   }
 
   protected encryptToken(token: string): string {
-    // In production, use proper encryption (e.g., AWS KMS, Vault)
-    // This is a placeholder for the encryption pattern
-    const key = process.env.TOKEN_ENCRYPTION_KEY || 'default-key-change-in-production';
+    // SECURITY: TOKEN_ENCRYPTION_KEY is required - no fallback allowed
+    const key = process.env.TOKEN_ENCRYPTION_KEY;
+    if (!key) {
+      throw new Error(
+        'TOKEN_ENCRYPTION_KEY environment variable is required. ' +
+        'Please set a secure encryption key for token encryption.'
+      );
+    }
+    if (key.length < 32) {
+      throw new Error(
+        'TOKEN_ENCRYPTION_KEY must be at least 32 characters long for AES-256 encryption.'
+      );
+    }
     const cipher = crypto.createCipher('aes-256-cbc', key);
     let encrypted = cipher.update(token, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -700,7 +710,19 @@ export abstract class PlatformConnector {
   }
 
   protected decryptToken(encryptedToken: string): string {
-    const key = process.env.TOKEN_ENCRYPTION_KEY || 'default-key-change-in-production';
+    // SECURITY: TOKEN_ENCRYPTION_KEY is required - no fallback allowed
+    const key = process.env.TOKEN_ENCRYPTION_KEY;
+    if (!key) {
+      throw new Error(
+        'TOKEN_ENCRYPTION_KEY environment variable is required. ' +
+        'Please set a secure encryption key for token decryption.'
+      );
+    }
+    if (key.length < 32) {
+      throw new Error(
+        'TOKEN_ENCRYPTION_KEY must be at least 32 characters long for AES-256 encryption.'
+      );
+    }
     const decipher = crypto.createDecipher('aes-256-cbc', key);
     let decrypted = decipher.update(encryptedToken, 'hex', 'utf8');
     decrypted += decipher.final('utf8');

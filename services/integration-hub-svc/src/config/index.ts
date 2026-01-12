@@ -117,7 +117,16 @@ export function getConfig(): Config {
     },
 
     encryption: {
-      tokenKey: process.env.TOKEN_ENCRYPTION_KEY || '0'.repeat(64), // Default for dev only
+      tokenKey: (() => {
+        const key = process.env.TOKEN_ENCRYPTION_KEY;
+        if (!key) {
+          throw new Error(
+            'TOKEN_ENCRYPTION_KEY environment variable is required. ' +
+            'Please set a secure 32+ character encryption key (64 hex chars for 32 bytes).'
+          );
+        }
+        return key;
+      })(),
     },
 
     oauth: {

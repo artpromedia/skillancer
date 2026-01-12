@@ -1,11 +1,13 @@
 /**
  * Main Notification Service
- * Orchestrates email, push, and in-app notifications
+ * Orchestrates email, push, SMS, and in-app notifications
  */
 
 import { PrismaClient } from '@prisma/client';
+import { createLogger } from '@skillancer/logger';
 import { EmailService } from './email.service.js';
 import { PushService } from './push.service.js';
+import { SmsService, type SMSNotificationInput, type SMSSendResult } from './sms.service.js';
 import type {
   NotificationChannel,
   NotificationStatus,
@@ -20,13 +22,17 @@ import type {
 } from '../types/notification.types.js';
 import { getConfig } from '../config/index.js';
 
+const logger = createLogger({ name: 'NotificationService' });
+
 export class NotificationService {
   private emailService: EmailService;
   private pushService: PushService;
+  private smsService: SmsService;
 
   constructor(private prisma: PrismaClient) {
     this.emailService = new EmailService();
     this.pushService = new PushService();
+    this.smsService = new SmsService();
   }
 
   /**
@@ -154,6 +160,137 @@ export class NotificationService {
   }
 
   /**
+   * Send SMS notification
+   */
+  async sendSMS(
+    userId: string,
+    to: string,
+    body: string,
+    options?: { tenantId?: string; metadata?: Record<string, unknown> }
+  ): Promise<NotificationResult> {
+    // Check user preferences
+    const preferences = await this.getUserPreferences(userId);
+    if (preferences && !preferences.sms.enabled) {
+      logger.info({ userId }, 'SMS notification skipped - user has disabled SMS');
+      return {
+        id: '',
+        status: 'FAILED',
+        channel: 'SMS',
+        errorMessage: 'User has disabled SMS notifications',
+      };
+    }
+
+    // Send SMS
+    const result = await this.smsService.sendSMS({
+      userId,
+      to,
+      body,
+      metadata: options?.metadata,
+    });
+
+    // Log notification
+    const log = await this.logNotification({
+      userId,
+      tenantId: options?.tenantId,
+      channel: 'SMS',
+      type: 'SMS',
+      status: result.success ? 'SENT' : 'FAILED',
+      recipient: to,
+      content: body,
+      externalId: result.messageId,
+      errorMessage: result.error,
+      metadata: options?.metadata,
+    });
+
+    logger.info(
+      {
+        userId,
+        to,
+        success: result.success,
+        messageId: result.messageId,
+      },
+      result.success ? 'SMS sent successfully' : 'SMS send failed'
+    );
+
+    return {
+      id: log.id,
+      status: result.success ? 'SENT' : 'FAILED',
+      channel: 'SMS',
+      sentAt: result.success ? new Date() : undefined,
+      errorMessage: result.error,
+      externalId: result.messageId,
+    };
+  }
+
+  /**
+   * Send OTP via SMS
+   */
+  async sendOTP(
+    userId: string,
+    to: string,
+    code: string,
+    expiryMinutes: number = 10,
+    options?: { tenantId?: string }
+  ): Promise<NotificationResult> {
+    const result = await this.smsService.sendOTP(userId, to, code, expiryMinutes);
+
+    const log = await this.logNotification({
+      userId,
+      tenantId: options?.tenantId,
+      channel: 'SMS',
+      type: 'OTP',
+      status: result.success ? 'SENT' : 'FAILED',
+      recipient: to,
+      content: `OTP sent (expires in ${expiryMinutes} mins)`,
+      externalId: result.messageId,
+      errorMessage: result.error,
+    });
+
+    return {
+      id: log.id,
+      status: result.success ? 'SENT' : 'FAILED',
+      channel: 'SMS',
+      sentAt: result.success ? new Date() : undefined,
+      errorMessage: result.error,
+      externalId: result.messageId,
+    };
+  }
+
+  /**
+   * Send security alert via SMS
+   */
+  async sendSecurityAlertSMS(
+    userId: string,
+    to: string,
+    alertType: string,
+    details?: string,
+    options?: { tenantId?: string }
+  ): Promise<NotificationResult> {
+    const result = await this.smsService.sendSecurityAlert(userId, to, alertType, details);
+
+    const log = await this.logNotification({
+      userId,
+      tenantId: options?.tenantId,
+      channel: 'SMS',
+      type: 'SECURITY_ALERT',
+      status: result.success ? 'SENT' : 'FAILED',
+      recipient: to,
+      content: `Security alert: ${alertType}`,
+      externalId: result.messageId,
+      errorMessage: result.error,
+    });
+
+    return {
+      id: log.id,
+      status: result.success ? 'SENT' : 'FAILED',
+      channel: 'SMS',
+      sentAt: result.success ? new Date() : undefined,
+      errorMessage: result.error,
+      externalId: result.messageId,
+    };
+  }
+
+  /**
    * Send templated notification by type
    */
   async sendTemplatedEmail(
@@ -199,6 +336,7 @@ export class NotificationService {
     content: {
       email?: Omit<EmailNotificationInput, 'userId' | 'channels'>;
       push?: Omit<PushNotificationInput, 'userId' | 'channels'>;
+      sms?: { to: string; body: string; metadata?: Record<string, unknown> };
     }
   ): Promise<NotificationResult[]> {
     const results: NotificationResult[] = [];
@@ -219,6 +357,16 @@ export class NotificationService {
         channels: ['PUSH'],
       });
       results.push(pushResult);
+    }
+
+    if (channels.includes('SMS') && content.sms) {
+      const smsResult = await this.sendSMS(
+        userId,
+        content.sms.to,
+        content.sms.body,
+        { metadata: content.sms.metadata }
+      );
+      results.push(smsResult);
     }
 
     return results;
@@ -472,7 +620,7 @@ export class NotificationService {
     });
 
     if (!log) {
-      console.warn(`Notification log not found for messageId: ${messageId}`);
+      logger.warn({ messageId }, `Notification log not found for messageId: ${messageId}`);
       return;
     }
 

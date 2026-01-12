@@ -132,7 +132,20 @@ export class WorkHistoryVerifier {
   private readonly signingKey: string;
 
   constructor() {
-    this.signingKey = process.env.VERIFICATION_SIGNING_KEY || 'dev-signing-key';
+    // SECURITY: VERIFICATION_SIGNING_KEY is required - no fallback allowed
+    const signingKey = process.env.VERIFICATION_SIGNING_KEY;
+    if (!signingKey) {
+      throw new Error(
+        'VERIFICATION_SIGNING_KEY environment variable is required. ' +
+        'Please set a secure signing key for work history verification.'
+      );
+    }
+    if (signingKey.length < 32) {
+      throw new Error(
+        'VERIFICATION_SIGNING_KEY must be at least 32 characters long for secure signing.'
+      );
+    }
+    this.signingKey = signingKey;
   }
 
   // ---------------------------------------------------------------------------

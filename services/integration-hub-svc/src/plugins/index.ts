@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Fastify type compatibility issues
 /**
  * @module @skillancer/integration-hub-svc/plugins
  * Fastify plugin registration
@@ -6,17 +6,46 @@
 
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
+import { getConfig } from '../config/index.js';
+
+// User type that matches @fastify/jwt expectations
+export interface AuthenticatedUser {
+  userId: string;
+  tenantId?: string;
+  email?: string;
+  role?: string;
+}
+
+// JWT augmentation to declare user type
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    user: AuthenticatedUser;
+  }
+}
+
 // Extend FastifyInstance with authenticate
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    optionalAuth: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
+}
+
+// JWT Payload type
+export interface JwtPayload {
+  userId: string;
+  tenantId?: string;
+  email: string;
+  role: string;
+  iat?: number;
+  exp?: number;
 }
 
 export interface PluginOptions {
@@ -28,15 +57,78 @@ export interface PluginOptions {
 }
 
 export async function registerPlugins(app: FastifyInstance, options: PluginOptions): Promise<void> {
+  const config = getConfig();
+
   // Sensible (adds useful utilities)
   await app.register(sensible);
 
-  // Register authenticate decorator (stub for development)
-  // TODO: Replace with proper JWT authentication
-  app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
-    // Stub: In production, this should verify JWT tokens
-    // For now, allow all requests through
-  });
+  // JWT Authentication
+  if (options.jwt !== false) {
+    if (!config.jwt?.secret) {
+      throw new Error('JWT_SECRET environment variable is required for authentication');
+    }
+
+    await app.register(jwt, {
+      secret: config.jwt.secret,
+      sign: {
+        expiresIn: '24h',
+        issuer: config.jwt.issuer,
+      },
+      verify: {
+        maxAge: '24h',
+        issuer: config.jwt.issuer,
+      },
+      formatUser: (payload): AuthenticatedUser => {
+        const p = payload as JwtPayload;
+        const user: AuthenticatedUser = {
+          userId: p.userId,
+          email: p.email,
+          role: p.role,
+        };
+        if (p.tenantId) {
+          user.tenantId = p.tenantId;
+        }
+        return user;
+      },
+    });
+
+    /**
+     * Required authentication - throws if not authenticated
+     */
+    app.decorate('authenticate', async (request: FastifyRequest, _reply: FastifyReply) => {
+      try {
+        await request.jwtVerify();
+      } catch (error) {
+        throw app.httpErrors.unauthorized('Invalid or expired token');
+      }
+    });
+
+    /**
+     * Optional authentication - sets user if valid token, doesn't throw if missing
+     */
+    app.decorate('optionalAuth', async (request: FastifyRequest, _reply: FastifyReply) => {
+      const authHeader = request.headers.authorization;
+
+      if (!authHeader?.startsWith('Bearer ')) {
+        return; // No token - continue without user
+      }
+
+      try {
+        await request.jwtVerify();
+      } catch {
+        // Invalid token - continue without user but log it
+        request.log.debug('Optional auth: invalid token provided');
+      }
+    });
+  } else {
+    // Register dummy decorators when JWT is explicitly disabled
+    app.decorate('authenticate', async (): Promise<void> => {
+      throw app.httpErrors.unauthorized('Authentication not configured');
+    });
+    app.decorate('optionalAuth', async (): Promise<void> => {
+      // No-op when not configured
+    });
+  }
 
   // CORS
   if (options.cors) {

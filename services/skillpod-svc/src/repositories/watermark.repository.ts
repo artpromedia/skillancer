@@ -575,10 +575,20 @@ export function createWatermarkRepository(prisma: PrismaClient): WatermarkReposi
   // =========================================================================
 
   async function getTenantEncryptionKey(tenantId: string): Promise<string | null> {
-    // In production, this would fetch from a secure key store
-    // For now, derive from tenant ID and master key
+    // SECURITY: WATERMARK_MASTER_KEY is required - no fallback allowed
     const crypto = await import('crypto');
-    const masterKey = process.env.WATERMARK_MASTER_KEY || 'default-watermark-key';
+    const masterKey = process.env.WATERMARK_MASTER_KEY;
+    if (!masterKey) {
+      throw new Error(
+        'WATERMARK_MASTER_KEY environment variable is required. ' +
+        'Please set a secure master key for watermark encryption.'
+      );
+    }
+    if (masterKey.length < 32) {
+      throw new Error(
+        'WATERMARK_MASTER_KEY must be at least 32 characters long for secure encryption.'
+      );
+    }
     return crypto.createHash('sha256').update(`${tenantId}:${masterKey}`).digest('hex');
   }
 

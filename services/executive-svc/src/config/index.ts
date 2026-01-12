@@ -39,6 +39,16 @@ const configSchema = z.object({
   calendlyApiKey: z.string().optional(),
   calendlyWebhookSecret: z.string().optional(),
 
+  // Document Export - Notion
+  notionIntegrationToken: z.string().optional(),
+  notionDefaultParentPageId: z.string().optional(),
+
+  // Document Export - Confluence
+  confluenceBaseUrl: z.string().optional(),
+  confluenceUserEmail: z.string().optional(),
+  confluenceApiToken: z.string().optional(),
+  confluenceDefaultSpaceKey: z.string().optional(),
+
   // Vetting Configuration
   vettingInterviewScheduleDeadlineDays: z.coerce.number().default(7),
   vettingReferenceDeadlineDays: z.coerce.number().default(14),
@@ -80,6 +90,12 @@ export function getConfig(): Config {
       linkedinRedirectUri: process.env.LINKEDIN_REDIRECT_URI,
       calendlyApiKey: process.env.CALENDLY_API_KEY,
       calendlyWebhookSecret: process.env.CALENDLY_WEBHOOK_SECRET,
+      notionIntegrationToken: process.env.NOTION_INTEGRATION_TOKEN,
+      notionDefaultParentPageId: process.env.NOTION_DEFAULT_PARENT_PAGE_ID,
+      confluenceBaseUrl: process.env.CONFLUENCE_BASE_URL,
+      confluenceUserEmail: process.env.CONFLUENCE_USER_EMAIL,
+      confluenceApiToken: process.env.CONFLUENCE_API_TOKEN,
+      confluenceDefaultSpaceKey: process.env.CONFLUENCE_DEFAULT_SPACE_KEY,
       vettingInterviewScheduleDeadlineDays: process.env.VETTING_INTERVIEW_SCHEDULE_DEADLINE_DAYS,
       vettingReferenceDeadlineDays: process.env.VETTING_REFERENCE_DEADLINE_DAYS,
       vettingAutoWithdrawDays: process.env.VETTING_AUTO_WITHDRAW_DAYS,

@@ -2,7 +2,9 @@
 import { Badge, Button } from '@skillancer/ui';
 import { ArrowLeft, Scale, Users } from 'lucide-react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+
+import { getAuthSession } from '@/lib/auth';
 
 import { ProposalsClient } from './proposals-client';
 
@@ -78,6 +80,12 @@ export async function generateMetadata({
 // ============================================================================
 
 export default async function ClientProposalsPage({ params }: { params: { jobId: string } }) {
+  const session = await getAuthSession();
+
+  if (!session) {
+    redirect('/login?redirect=/dashboard/jobs');
+  }
+
   const job = await getJobSummary(params.jobId);
 
   if (!job) {

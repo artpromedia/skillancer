@@ -1,0 +1,59 @@
+# Pod Disruption Budgets for Skillancer Services
+# Ensures high availability during voluntary disruptions (node drains, upgrades)
+
+---
+# API Gateway PDB - maintain at least 2 pods during disruptions
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: skillancer-production
+  labels:
+    app.kubernetes.io/name: api-gateway
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+---
+# Auth Service PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-svc-pdb
+  namespace: skillancer-production
+  labels:
+    app.kubernetes.io/name: auth-svc
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: auth-svc
+---
+# Market Service PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: market-svc-pdb
+  namespace: skillancer-production
+  labels:
+    app.kubernetes.io/name: market-svc
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: market-svc
+---
+# Billing Service PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: billing-svc-pdb
+  namespace: skillancer-production
+  labels:
+    app.kubernetes.io/name: billing-svc
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: billing-svc

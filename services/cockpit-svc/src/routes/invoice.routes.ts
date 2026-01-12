@@ -781,53 +781,98 @@ export async function registerInvoiceRoutes(
   // WEBHOOKS
   // ============================================================================
 
-  // Stripe webhook
-  app.post('/webhooks/stripe/invoice', async (request, reply) => {
+  // Stripe webhook - requires raw body for signature verification
+  app.post('/webhooks/stripe/invoice', {
+    config: {
+      rawBody: true, // Enable raw body capture for this route
+    },
+  }, async (request, reply) => {
     try {
-      const event = request.body as any;
+      // Get the Stripe signature from headers
+      const signature = request.headers['stripe-signature'];
 
-      // TODO: Verify Stripe signature
-      // const sig = request.headers['stripe-signature'];
-      // const event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-
-      if (event.type === 'payment_intent.succeeded') {
-        const paymentIntentId = event.data.object.id;
-        await paymentService.handleStripeWebhook(paymentIntentId, 'succeeded');
-      } else if (event.type === 'payment_intent.payment_failed') {
-        const paymentIntentId = event.data.object.id;
-        await paymentService.handleStripeWebhook(paymentIntentId, 'failed');
+      if (!signature || typeof signature !== 'string') {
+        logger.warn('Stripe webhook received without signature');
+        return reply.status(400).send({ error: 'Missing stripe-signature header' });
       }
+
+      // Get the raw body for signature verification
+      // Fastify stores raw body when configured
+      const rawBody = (request as any).rawBody;
+
+      if (!rawBody) {
+        logger.error('Stripe webhook: raw body not available');
+        return reply.status(400).send({ error: 'Raw body not available for signature verification' });
+      }
+
+      // Process webhook with signature verification
+      await paymentService.processStripeWebhook(rawBody, signature);
 
       return await reply.send({ received: true });
     } catch (error) {
-      logger.error({ error }, 'Stripe webhook error');
-      return reply.status(400).send({ error: 'Webhook error' });
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error({ error: message }, 'Stripe webhook error');
+
+      // Return 400 for signature verification failures
+      if (message.includes('signature') || message.includes('Webhook')) {
+        return reply.status(400).send({ error: 'Webhook signature verification failed' });
+      }
+
+      // Return 500 for processing errors (Stripe will retry)
+      return reply.status(500).send({ error: 'Webhook processing error' });
     }
   });
 
-  // PayPal webhook
-  app.post('/webhooks/paypal/invoice', async (request, reply) => {
+  // PayPal webhook - requires raw body for signature verification
+  app.post('/webhooks/paypal/invoice', {
+    config: {
+      rawBody: true, // Enable raw body capture for this route
+    },
+  }, async (request, reply) => {
     try {
-      const event = request.body as any;
+      // Get the raw body for signature verification
+      const rawBody = (request as any).rawBody;
 
-      // TODO: Verify PayPal signature
-
-      if (event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
-        const orderId = event.resource.supplementary_data?.related_ids?.order_id;
-        if (orderId) {
-          await paymentService.handlePayPalWebhook(orderId, 'COMPLETED');
-        }
-      } else if (event.event_type === 'PAYMENT.CAPTURE.DENIED') {
-        const orderId = event.resource.supplementary_data?.related_ids?.order_id;
-        if (orderId) {
-          await paymentService.handlePayPalWebhook(orderId, 'DECLINED');
-        }
+      if (!rawBody) {
+        logger.error('PayPal webhook: raw body not available');
+        return reply.status(400).send({ error: 'Raw body not available for signature verification' });
       }
+
+      // Extract PayPal verification headers
+      const paypalHeaders: Record<string, string> = {
+        'paypal-auth-algo': request.headers['paypal-auth-algo'] as string || '',
+        'paypal-cert-url': request.headers['paypal-cert-url'] as string || '',
+        'paypal-transmission-id': request.headers['paypal-transmission-id'] as string || '',
+        'paypal-transmission-sig': request.headers['paypal-transmission-sig'] as string || '',
+        'paypal-transmission-time': request.headers['paypal-transmission-time'] as string || '',
+      };
+
+      // Check for required PayPal headers
+      const missingHeaders = Object.entries(paypalHeaders)
+        .filter(([, value]) => !value)
+        .map(([key]) => key);
+
+      if (missingHeaders.length > 0) {
+        logger.warn({ missingHeaders }, 'PayPal webhook received with missing headers');
+        return reply.status(400).send({ error: `Missing required PayPal headers: ${missingHeaders.join(', ')}` });
+      }
+
+      // Process webhook with signature verification
+      const bodyString = typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8');
+      await paymentService.processPayPalWebhook(paypalHeaders, bodyString);
 
       return await reply.send({ received: true });
     } catch (error) {
-      logger.error({ error }, 'PayPal webhook error');
-      return reply.status(400).send({ error: 'Webhook error' });
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error({ error: message }, 'PayPal webhook error');
+
+      // Return 400 for signature verification failures
+      if (message.includes('signature') || message.includes('Invalid webhook')) {
+        return reply.status(400).send({ error: 'Webhook signature verification failed' });
+      }
+
+      // Return 500 for processing errors (PayPal will retry)
+      return reply.status(500).send({ error: 'Webhook processing error' });
     }
   });
 

@@ -1,0 +1,69 @@
+# Headless Services for StatefulSet workloads and direct pod access
+# These services do not load balance but provide DNS records for each pod
+
+---
+# Auth Service Headless (for direct pod access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-svc-headless
+  namespace: skillancer-production
+  labels:
+    app: auth-svc
+    app.kubernetes.io/name: auth-svc-headless
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: auth-svc
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+    - name: grpc
+      port: 9081
+      targetPort: 9081
+---
+# Market Service Headless
+apiVersion: v1
+kind: Service
+metadata:
+  name: market-svc-headless
+  namespace: skillancer-production
+  labels:
+    app: market-svc
+    app.kubernetes.io/name: market-svc-headless
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: market-svc
+  ports:
+    - name: http
+      port: 8084
+      targetPort: 8084
+    - name: grpc
+      port: 9084
+      targetPort: 9084
+---
+# Billing Service Headless
+apiVersion: v1
+kind: Service
+metadata:
+  name: billing-svc-headless
+  namespace: skillancer-production
+  labels:
+    app: billing-svc
+    app.kubernetes.io/name: billing-svc-headless
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: billing-svc
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+    - name: grpc
+      port: 9082
+      targetPort: 9082
