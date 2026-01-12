@@ -5,12 +5,14 @@
  */
 
 import { prisma } from '@skillancer/database';
+import { logger } from '@skillancer/logger';
 import { Queue, Worker, type Job } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { getConfig } from '../config/index.js';
 import { getDisputeService } from '../services/dispute.service.js';
 import { getMilestoneService } from '../services/milestone.service.js';
+import { billingNotifications } from '../services/billing-notifications.js';
 
 // =============================================================================
 // CONFIGURATION
@@ -151,14 +153,18 @@ export function initializeEscrowJobs(): void {
 
   // Error handling
   escrowWorker.on('failed', (job, err) => {
-    console.error(`[EscrowJob] Job ${job?.name} failed:`, err);
+    logger.error('Escrow job failed', {
+      jobName: job?.name,
+      jobId: job?.id,
+      error: err.message,
+    });
   });
 
   escrowWorker.on('completed', (job) => {
-    console.log(`[EscrowJob] Job ${job.name} completed`);
+    logger.info('Escrow job completed', { jobName: job.name, jobId: job.id });
   });
 
-  console.log('[EscrowJob] Escrow jobs initialized');
+  logger.info('Escrow jobs initialized', { queue: QUEUE_NAME });
 }
 
 /**
@@ -177,7 +183,7 @@ export async function shutdownEscrowJobs(): Promise<void> {
     await redisConnection.quit();
     redisConnection = null;
   }
-  console.log('[EscrowJob] Escrow jobs shut down');
+  logger.info('Escrow jobs shut down');
 }
 
 // =============================================================================
@@ -189,7 +195,7 @@ export async function shutdownEscrowJobs(): Promise<void> {
  * Automatically approves milestone after 14 days if client hasn't responded
  */
 async function processAutoApproveMilestone(data: AutoApproveMilestoneJobData): Promise<void> {
-  console.log(`[EscrowJob] Processing auto-approve for milestone ${data.milestoneId}`);
+  logger.info('Processing auto-approve milestone', { milestoneId: data.milestoneId });
 
   const milestoneService = getMilestoneService();
 
@@ -199,31 +205,46 @@ async function processAutoApproveMilestone(data: AutoApproveMilestoneJobData): P
       where: { id: data.milestoneId },
       include: {
         contract: {
-          select: { clientId: true, freelancerId: true },
+          select: { clientId: true, freelancerId: true, title: true },
         },
       },
     });
 
     if (!milestone) {
-      console.log(`[EscrowJob] Milestone ${data.milestoneId} not found, skipping`);
+      logger.info('Milestone not found, skipping auto-approve', { milestoneId: data.milestoneId });
       return;
     }
 
     if (milestone.status !== 'SUBMITTED') {
-      console.log(
-        `[EscrowJob] Milestone ${data.milestoneId} is no longer SUBMITTED (${milestone.status}), skipping`
-      );
+      logger.info('Milestone no longer SUBMITTED, skipping', {
+        milestoneId: data.milestoneId,
+        status: milestone.status,
+      });
       return;
     }
 
     // Auto-approve the milestone
     await milestoneService.autoApproveMilestone(data.milestoneId);
 
-    console.log(`[EscrowJob] Milestone ${data.milestoneId} auto-approved`);
+    logger.info('Milestone auto-approved', { milestoneId: data.milestoneId });
 
-    // TODO: Send notification to client and freelancer about auto-approval
+    // Send notification to client and freelancer about auto-approval
+    await billingNotifications.notifyMilestoneAutoApproved(
+      { userId: milestone.contract.clientId },
+      { userId: milestone.contract.freelancerId },
+      {
+        contractId: data.contractId,
+        contractTitle: milestone.contract.title || 'Contract',
+        milestoneId: milestone.id,
+        milestoneName: milestone.title || 'Milestone',
+        amount: `${(Number(milestone.amount) / 100).toFixed(2)}`,
+      }
+    );
   } catch (error) {
-    console.error(`[EscrowJob] Error auto-approving milestone ${data.milestoneId}:`, error);
+    logger.error('Error auto-approving milestone', {
+      milestoneId: data.milestoneId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     throw error;
   }
 }
@@ -235,32 +256,45 @@ async function processAutoApproveMilestone(data: AutoApproveMilestoneJobData): P
 async function processMilestoneApprovalReminder(
   data: MilestoneApprovalReminderJobData
 ): Promise<void> {
-  console.log(
-    `[EscrowJob] Processing approval reminder for milestone ${data.milestoneId} (${data.daysUntilAutoApproval} days left)`
-  );
+  logger.info('Processing approval reminder', {
+    milestoneId: data.milestoneId,
+    daysUntilAutoApproval: data.daysUntilAutoApproval,
+  });
 
   try {
     // Check if milestone is still in SUBMITTED status
     const milestone = await prisma.milestone.findUnique({
       where: { id: data.milestoneId },
-      select: { status: true, title: true },
+      include: {
+        contract: { select: { title: true } },
+      },
     });
 
     if (!milestone || milestone.status !== 'SUBMITTED') {
-      console.log(`[EscrowJob] Milestone ${data.milestoneId} no longer needs reminder, skipping`);
+      logger.info('Milestone no longer needs reminder, skipping', {
+        milestoneId: data.milestoneId,
+      });
       return;
     }
 
-    // TODO: Send reminder notification to client
-    // await notificationService.sendMilestoneApprovalReminder({
-    //   milestoneId: data.milestoneId,
-    //   clientId: data.clientId,
-    //   daysUntilAutoApproval: data.daysUntilAutoApproval,
-    // });
+    // Send reminder notification to client
+    await billingNotifications.notifyMilestoneSubmitted(
+      { userId: data.clientId },
+      {
+        contractId: data.contractId,
+        contractTitle: milestone.contract?.title || 'Contract',
+        milestoneId: data.milestoneId,
+        milestoneName: milestone.title || 'Milestone',
+        amount: `${(Number(milestone.amount) / 100).toFixed(2)}`,
+      }
+    );
 
-    console.log(`[EscrowJob] Reminder sent for milestone ${data.milestoneId}`);
+    logger.info('Reminder sent for milestone', { milestoneId: data.milestoneId });
   } catch (error) {
-    console.error(`[EscrowJob] Error sending reminder for milestone ${data.milestoneId}:`, error);
+    logger.error('Error sending reminder for milestone', {
+      milestoneId: data.milestoneId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     throw error;
   }
 }
@@ -270,32 +304,44 @@ async function processMilestoneApprovalReminder(
  * Sends reminder to respondent about pending dispute response
  */
 async function processDisputeResponseReminder(data: DisputeResponseReminderJobData): Promise<void> {
-  console.log(
-    `[EscrowJob] Processing response reminder for dispute ${data.disputeId} (${data.daysUntilEscalation} days left)`
-  );
+  logger.info('Processing response reminder for dispute', {
+    disputeId: data.disputeId,
+    daysUntilEscalation: data.daysUntilEscalation,
+  });
 
   try {
     // Check if dispute is still open
     const dispute = await prisma.dispute.findUnique({
       where: { id: data.disputeId },
-      select: { status: true, respondedAt: true },
+      include: {
+        contract: { select: { title: true, clientId: true, freelancerId: true } },
+      },
     });
 
     if (!dispute || dispute.status !== 'OPEN' || dispute.respondedAt) {
-      console.log(`[EscrowJob] Dispute ${data.disputeId} no longer needs reminder, skipping`);
+      logger.info('Dispute no longer needs reminder, skipping', { disputeId: data.disputeId });
       return;
     }
 
-    // TODO: Send reminder notification to respondent
-    // await notificationService.sendDisputeResponseReminder({
-    //   disputeId: data.disputeId,
-    //   respondentId: data.respondentId,
-    //   daysUntilEscalation: data.daysUntilEscalation,
-    // });
+    // Send reminder notification using system notification
+    await billingNotifications.alertOpsTeam({
+      severity: 'medium',
+      title: 'Dispute Response Reminder',
+      message: `Dispute ${data.disputeId} requires response within ${data.daysUntilEscalation} days`,
+      context: {
+        disputeId: data.disputeId,
+        contractId: data.contractId,
+        respondentId: data.respondentId,
+        daysUntilEscalation: data.daysUntilEscalation,
+      },
+    });
 
-    console.log(`[EscrowJob] Reminder sent for dispute ${data.disputeId}`);
+    logger.info('Reminder sent for dispute', { disputeId: data.disputeId });
   } catch (error) {
-    console.error(`[EscrowJob] Error sending reminder for dispute ${data.disputeId}:`, error);
+    logger.error('Error sending reminder for dispute', {
+      disputeId: data.disputeId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     throw error;
   }
 }
@@ -305,22 +351,24 @@ async function processDisputeResponseReminder(data: DisputeResponseReminderJobDa
  * Automatically escalates dispute if no response within deadline
  */
 async function processDisputeAutoEscalate(data: DisputeAutoEscalateJobData): Promise<void> {
-  console.log(`[EscrowJob] Processing auto-escalate for dispute ${data.disputeId}`);
+  logger.info('Processing auto-escalate for dispute', { disputeId: data.disputeId });
 
   try {
     // Check if dispute is still open and hasn't been responded to
     const dispute = await prisma.dispute.findUnique({
       where: { id: data.disputeId },
-      select: { status: true, respondedAt: true, raisedBy: true },
+      include: {
+        contract: { select: { title: true, clientId: true, freelancerId: true } },
+      },
     });
 
     if (!dispute) {
-      console.log(`[EscrowJob] Dispute ${data.disputeId} not found, skipping`);
+      logger.info('Dispute not found, skipping', { disputeId: data.disputeId });
       return;
     }
 
     if (dispute.status !== 'OPEN' || dispute.respondedAt) {
-      console.log(`[EscrowJob] Dispute ${data.disputeId} already responded/escalated, skipping`);
+      logger.info('Dispute already responded/escalated, skipping', { disputeId: data.disputeId });
       return;
     }
 
@@ -332,11 +380,28 @@ async function processDisputeAutoEscalate(data: DisputeAutoEscalateJobData): Pro
       reason: 'Auto-escalated due to no response within deadline',
     });
 
-    console.log(`[EscrowJob] Dispute ${data.disputeId} auto-escalated`);
+    logger.info('Dispute auto-escalated', { disputeId: data.disputeId });
 
-    // TODO: Send notification to both parties
+    // Notify both parties
+    if (dispute.contract) {
+      await billingNotifications.notifyDisputeOpened(
+        {
+          client: { userId: dispute.contract.clientId },
+          freelancer: { userId: dispute.contract.freelancerId },
+        },
+        {
+          disputeId: data.disputeId,
+          contractId: data.contractId,
+          contractTitle: dispute.contract.title || 'Contract',
+          reason: 'Dispute escalated due to no response within deadline',
+        }
+      );
+    }
   } catch (error) {
-    console.error(`[EscrowJob] Error auto-escalating dispute ${data.disputeId}:`, error);
+    logger.error('Error auto-escalating dispute', {
+      disputeId: data.disputeId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     throw error;
   }
 }
@@ -346,7 +411,7 @@ async function processDisputeAutoEscalate(data: DisputeAutoEscalateJobData): Pro
  * Validates escrow balance consistency
  */
 async function processEscrowBalanceCheck(data: EscrowBalanceCheckJobData): Promise<void> {
-  console.log(`[EscrowJob] Processing balance check for contract ${data.contractId}`);
+  logger.info('Processing balance check for contract', { contractId: data.contractId });
 
   try {
     const balance = await prisma.escrowBalance.findUnique({
@@ -354,7 +419,7 @@ async function processEscrowBalanceCheck(data: EscrowBalanceCheckJobData): Promi
     });
 
     if (!balance) {
-      console.log(`[EscrowJob] No escrow balance for contract ${data.contractId}`);
+      logger.info('No escrow balance for contract', { contractId: data.contractId });
       return;
     }
 
@@ -365,17 +430,35 @@ async function processEscrowBalanceCheck(data: EscrowBalanceCheckJobData): Promi
     const actualBalance = Number(balance.currentBalance);
 
     if (Math.abs(expectedBalance - actualBalance) > 0.01) {
-      console.error(
-        `[EscrowJob] Balance mismatch for contract ${data.contractId}: ` +
-          `expected ${expectedBalance}, actual ${actualBalance}`
-      );
+      logger.error('Escrow balance mismatch detected', {
+        contractId: data.contractId,
+        expectedBalance,
+        actualBalance,
+        difference: Math.abs(expectedBalance - actualBalance),
+      });
 
-      // TODO: Alert ops team about balance mismatch
+      // Alert ops team about balance mismatch
+      await billingNotifications.alertOpsTeam({
+        severity: 'critical',
+        title: 'Escrow Balance Mismatch',
+        message: `Contract ${data.contractId} has a balance discrepancy of ${Math.abs(expectedBalance - actualBalance).toFixed(2)}`,
+        context: {
+          contractId: data.contractId,
+          expectedBalance,
+          actualBalance,
+          totalFunded: balance.totalFunded,
+          totalReleased: balance.totalReleased,
+          totalRefunded: balance.totalRefunded,
+        },
+      });
     } else {
-      console.log(`[EscrowJob] Balance check passed for contract ${data.contractId}`);
+      logger.info('Balance check passed', { contractId: data.contractId });
     }
   } catch (error) {
-    console.error(`[EscrowJob] Error checking balance for contract ${data.contractId}:`, error);
+    logger.error('Error checking balance for contract', {
+      contractId: data.contractId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     throw error;
   }
 }
@@ -393,7 +476,7 @@ export async function scheduleAutoApprove(
   submittedAt: Date
 ): Promise<void> {
   if (!escrowQueue) {
-    console.warn('[EscrowJob] Queue not initialized, skipping job scheduling');
+    logger.warn('Escrow queue not initialized, skipping job scheduling');
     return;
   }
 
@@ -416,9 +499,10 @@ export async function scheduleAutoApprove(
     }
   );
 
-  console.log(
-    `[EscrowJob] Scheduled auto-approve for milestone ${milestoneId} at ${autoApproveAt.toISOString()}`
-  );
+  logger.info('Scheduled auto-approve for milestone', {
+    milestoneId,
+    autoApproveAt: autoApproveAt.toISOString(),
+  });
 
   // Schedule reminder jobs
   await scheduleMilestoneReminders(milestoneId, contractId, submittedAt);
@@ -478,7 +562,7 @@ export async function scheduleDisputeJobs(
   respondBy: Date
 ): Promise<void> {
   if (!escrowQueue) {
-    console.warn('[EscrowJob] Queue not initialized, skipping job scheduling');
+    logger.warn('Escrow queue not initialized, skipping job scheduling');
     return;
   }
 
@@ -522,7 +606,7 @@ export async function scheduleDisputeJobs(
     }
   }
 
-  console.log(`[EscrowJob] Scheduled dispute jobs for ${disputeId}`);
+  logger.info('Scheduled dispute jobs', { disputeId });
 }
 
 /**
@@ -545,7 +629,7 @@ export async function cancelMilestoneJobs(milestoneId: string): Promise<void> {
     }
   }
 
-  console.log(`[EscrowJob] Cancelled jobs for milestone ${milestoneId}`);
+  logger.info('Cancelled jobs for milestone', { milestoneId });
 }
 
 /**
@@ -568,7 +652,7 @@ export async function cancelDisputeJobs(disputeId: string): Promise<void> {
     }
   }
 
-  console.log(`[EscrowJob] Cancelled jobs for dispute ${disputeId}`);
+  logger.info('Cancelled jobs for dispute', { disputeId });
 }
 
 // =============================================================================
@@ -580,7 +664,7 @@ export async function cancelDisputeJobs(disputeId: string): Promise<void> {
  */
 export async function scheduleEscrowCronJobs(): Promise<void> {
   if (!escrowQueue) {
-    console.warn('[EscrowJob] Queue not initialized, skipping cron scheduling');
+    logger.warn('Escrow queue not initialized, skipping cron scheduling');
     return;
   }
 
@@ -608,14 +692,14 @@ export async function scheduleEscrowCronJobs(): Promise<void> {
     }
   );
 
-  console.log('[EscrowJob] Cron jobs scheduled');
+  logger.info('Escrow cron jobs scheduled');
 }
 
 /**
  * Process daily balance check for all active contracts
  */
 export async function processDailyBalanceCheck(): Promise<void> {
-  console.log('[EscrowJob] Running daily balance check');
+  logger.info('Running daily balance check');
 
   const activeBalances = await prisma.escrowBalance.findMany({
     where: {
@@ -636,14 +720,14 @@ export async function processDailyBalanceCheck(): Promise<void> {
     }
   }
 
-  console.log(`[EscrowJob] Queued balance checks for ${activeBalances.length} contracts`);
+  logger.info('Queued balance checks', { count: activeBalances.length });
 }
 
 /**
  * Check for milestones that should have been auto-approved (backup)
  */
 export async function checkPendingAutoApprovals(): Promise<void> {
-  console.log('[EscrowJob] Checking for pending auto-approvals');
+  logger.info('Checking for pending auto-approvals');
 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - AUTO_APPROVAL_DAYS);
@@ -665,13 +749,16 @@ export async function checkPendingAutoApprovals(): Promise<void> {
   for (const milestone of pendingMilestones) {
     try {
       await milestoneService.autoApproveMilestone(milestone.id);
-      console.log(`[EscrowJob] Backup auto-approved milestone ${milestone.id}`);
+      logger.info('Backup auto-approved milestone', { milestoneId: milestone.id });
     } catch (error) {
-      console.error(`[EscrowJob] Error backup auto-approving milestone ${milestone.id}:`, error);
+      logger.error('Error backup auto-approving milestone', {
+        milestoneId: milestone.id,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 
-  console.log(`[EscrowJob] Processed ${pendingMilestones.length} pending milestones`);
+  logger.info('Processed pending milestones', { count: pendingMilestones.length });
 }
 
 // =============================================================================
