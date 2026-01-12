@@ -21,20 +21,41 @@ The platform requires **4-8 weeks of focused development** to reach production r
 
 ---
 
-## Critical Blockers (Must Fix Before Launch)
+## Sprint 1 Fixes Applied (2026-01-12)
+
+The following critical security issues have been addressed:
+
+| # | Issue | Fix Applied | Status |
+|---|-------|-------------|--------|
+| 1 | UI build fails - Case sensitivity | Renamed `Button.tsx` to `button.tsx` | FIXED |
+| 3 | Config lint fails - Missing TS parser | Added TypeScript parser to `.eslintrc.cjs` | FIXED |
+| 4 | Intelligence-svc unprotected | Added `preHandler: [fastify.authenticate]` to all POST endpoints | FIXED |
+| 5 | Financial-svc internal endpoint | Added internal API key verification (`X-Internal-API-Key` header) | FIXED |
+| 10 | Dashboard pages unprotected | Added `getAuthSession()` check with redirect to login | FIXED |
+
+**Files Changed:**
+- `packages/ui/src/components/button.tsx` (renamed from Button.tsx)
+- `packages/config/.eslintrc.cjs` (added TS parser)
+- `services/intelligence-svc/src/middleware/auth.ts` (new - auth middleware)
+- `services/intelligence-svc/src/routes/intelligence.routes.ts` (added auth)
+- `services/intelligence-svc/src/index.ts` (registered auth plugin)
+- `services/financial-svc/src/routes/tax-vault.routes.ts` (added API key check)
+- `apps/web-market/src/lib/auth.ts` (new - server-side auth)
+- `apps/web-market/src/app/dashboard/page.tsx` (added auth check)
+- `apps/web-market/src/app/dashboard/components/dashboard-content.tsx` (new - client component)
+- `apps/web-cockpit/src/lib/auth.ts` (new - auth library for cockpit)
+
+---
+
+## Remaining Critical Blockers
 
 | # | Issue | Location | Impact | Effort |
 |---|-------|----------|--------|--------|
-| 1 | **UI build fails** - Case sensitivity: `Button.tsx` vs `button.tsx` import | `packages/ui/src/index.ts:26` | Build broken | 1h |
-| 2 | **Database build fails** - 150+ missing Prisma exports | `packages/database/src/index.ts:151-350` | Build broken | 4h |
-| 3 | **Config lint fails** - Missing TypeScript parser | `packages/config/.eslintrc.cjs` | Lint broken | Fixed |
-| 4 | **Intelligence-svc unprotected** - 4 POST endpoints without auth | `services/intelligence-svc/src/routes/` | Security critical | 4h |
-| 5 | **Financial-svc internal endpoint unprotected** - `/internal/tax-vault/auto-save` | `services/financial-svc/src/routes/tax-vault.routes.ts:201` | Security critical | 2h |
+| 2 | **Database build fails** - 150+ missing Prisma exports (env issue) | `packages/database/src/index.ts:151-350` | Build broken | 4h |
 | 6 | **Mobile app missing screens** - 4 screens referenced but don't exist | `apps/mobile/lib/core/navigation/` | App crashes | 2w |
 | 7 | **Mobile app mock data** - All providers return fake data | `apps/mobile/lib/core/providers/providers.dart` | Non-functional | 2w |
 | 8 | **Production seed fails** - References non-existent models | `packages/database/scripts/production-seed.ts` | Deploy blocked | 1d |
 | 9 | **Demo seed fails** - Schema mismatches | `packages/database/scripts/demo-data-seed.ts` | Testing blocked | 1d |
-| 10 | **Dashboard pages unprotected** - No auth checks | `apps/web-market/src/app/dashboard/page.tsx` | Security | 4h |
 
 ---
 
