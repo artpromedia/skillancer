@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/auth/data/repositories/auth_repository.dart';
 import '../../features/auth/domain/models/auth_state.dart';
 import '../../features/auth/domain/models/user.dart';
+import '../../features/contracts/data/repositories/contracts_repository.dart';
 import '../../features/contracts/domain/models/contract.dart';
+import '../../features/jobs/data/repositories/jobs_repository.dart';
 import '../../features/jobs/domain/models/job.dart';
 import '../../features/jobs/domain/models/job_filter.dart';
+import '../../features/messages/data/repositories/messages_repository.dart';
 import '../../features/messages/domain/models/message.dart';
 import '../../features/notifications/domain/models/notification.dart' as app;
+import '../../features/proposals/data/repositories/proposals_repository.dart';
 import '../../features/proposals/domain/models/proposal.dart';
+import '../../features/time_tracking/data/repositories/time_tracking_repository.dart';
 import '../../features/time_tracking/domain/models/time_entry.dart';
 import '../../features/time_tracking/domain/services/timer_service.dart';
 import '../connectivity/connectivity_service.dart';
@@ -57,6 +63,46 @@ final isOnlineProvider = Provider<bool>((ref) {
 });
 
 // ============================================================================
+// Repository Providers
+// ============================================================================
+
+/// Auth repository provider
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return AuthRepository(
+    apiClient: ref.watch(apiClientProvider),
+    secureStorage: ref.watch(secureStorageProvider),
+  );
+});
+
+/// Jobs repository provider
+final jobsRepositoryProvider = Provider<JobsRepository>((ref) {
+  return JobsRepository(
+    apiClient: ref.watch(apiClientProvider),
+    localCache: ref.watch(localCacheProvider),
+  );
+});
+
+/// Proposals repository provider
+final proposalsRepositoryProvider = Provider<ProposalsRepository>((ref) {
+  return ProposalsRepository(apiClient: ref.watch(apiClientProvider));
+});
+
+/// Contracts repository provider
+final contractsRepositoryProvider = Provider<ContractsRepository>((ref) {
+  return ContractsRepository(apiClient: ref.watch(apiClientProvider));
+});
+
+/// Messages repository provider
+final messagesRepositoryProvider = Provider<MessagesRepository>((ref) {
+  return MessagesRepository(apiClient: ref.watch(apiClientProvider));
+});
+
+/// Time tracking repository provider
+final timeTrackingRepositoryProvider = Provider<TimeTrackingRepository>((ref) {
+  return TimeTrackingRepository(apiClient: ref.watch(apiClientProvider));
+});
+
+// ============================================================================
 // Auth Providers
 // ============================================================================
 
@@ -85,27 +131,40 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   Future<void> login(String email, String password) async {
     state = const AuthState.loading();
     try {
-      // TODO: Implement actual login
-      await Future.delayed(const Duration(seconds: 1));
-      state = AuthState.authenticated(
-        user: User(
-          id: '1',
-          email: email,
-          firstName: 'John',
-          lastName: 'Doe',
-          avatarUrl: null,
-          role: UserRole.freelancer,
-        ),
-        token: 'mock_token',
-      );
+      final authRepo = _ref.read(authRepositoryProvider);
+      final result = await authRepo.login(email: email, password: password);
+
+      switch (result) {
+        case AuthResultSuccess(:final user, :final token):
+          state = AuthState.authenticated(user: user, token: token);
+        case AuthResultFailure(:final message):
+          state = AuthState.error(message);
+      }
     } catch (e) {
       state = AuthState.error(e.toString());
     }
   }
 
   Future<void> logout() async {
-    await _ref.read(secureStorageProvider).deleteToken();
+    final authRepo = _ref.read(authRepositoryProvider);
+    await authRepo.logout();
     state = const AuthState.initial();
+  }
+
+  Future<void> checkAuthStatus() async {
+    state = const AuthState.loading();
+    try {
+      final authRepo = _ref.read(authRepositoryProvider);
+      final user = await authRepo.getCurrentUser();
+      if (user != null) {
+        final token = await _ref.read(secureStorageProvider).getToken();
+        state = AuthState.authenticated(user: user, token: token ?? '');
+      } else {
+        state = const AuthState.initial();
+      }
+    } catch (_) {
+      state = const AuthState.initial();
+    }
   }
 }
 
@@ -122,44 +181,83 @@ final jobsFilterProvider = StateProvider<JobFilter>((ref) {
 final jobsProvider = FutureProvider.autoDispose<List<Job>>((ref) async {
   final filter = ref.watch(jobsFilterProvider);
   final isOnline = ref.watch(isOnlineProvider);
+  final jobsRepo = ref.watch(jobsRepositoryProvider);
 
   if (!isOnline) {
     // Return cached jobs when offline
-    return ref.read(localCacheProvider).getCachedJobs();
+    return jobsRepo.getCachedJobs();
   }
 
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(seconds: 1));
-  return _mockJobs;
+  try {
+    final result = await jobsRepo.getJobs(filter: filter);
+    return result.jobs;
+  } catch (_) {
+    // Fallback to cache on error
+    return jobsRepo.getCachedJobs();
+  }
 });
 
 /// Job detail provider
 final jobDetailProvider =
     FutureProvider.family<Job?, String>((ref, jobId) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(milliseconds: 500));
-  return _mockJobs.firstWhere((j) => j.id == jobId,
-      orElse: () => _mockJobs.first);
+  final jobsRepo = ref.watch(jobsRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    return jobsRepo.getCachedJob(jobId);
+  }
+
+  try {
+    return await jobsRepo.getJobById(jobId);
+  } catch (_) {
+    return jobsRepo.getCachedJob(jobId);
+  }
 });
 
 /// Saved jobs provider
 final savedJobsProvider =
     StateNotifierProvider<SavedJobsNotifier, Set<String>>((ref) {
-  return SavedJobsNotifier();
+  return SavedJobsNotifier(ref);
 });
 
 class SavedJobsNotifier extends StateNotifier<Set<String>> {
-  SavedJobsNotifier() : super({});
+  final Ref _ref;
 
-  void toggle(String jobId) {
+  SavedJobsNotifier(this._ref) : super({});
+
+  Future<void> toggle(String jobId) async {
+    final jobsRepo = _ref.read(jobsRepositoryProvider);
+
     if (state.contains(jobId)) {
       state = {...state}..remove(jobId);
+      try {
+        await jobsRepo.unsaveJob(jobId);
+      } catch (_) {
+        // Revert on error
+        state = {...state, jobId};
+      }
     } else {
       state = {...state, jobId};
+      try {
+        await jobsRepo.saveJob(jobId);
+      } catch (_) {
+        // Revert on error
+        state = {...state}..remove(jobId);
+      }
     }
   }
 
   bool isSaved(String jobId) => state.contains(jobId);
+
+  Future<void> loadSavedJobs() async {
+    final jobsRepo = _ref.read(jobsRepositoryProvider);
+    try {
+      final savedJobs = await jobsRepo.getSavedJobs();
+      state = savedJobs.map((j) => j.id).toSet();
+    } catch (_) {
+      // Ignore errors, keep current state
+    }
+  }
 }
 
 // ============================================================================
@@ -169,18 +267,31 @@ class SavedJobsNotifier extends StateNotifier<Set<String>> {
 /// My proposals provider
 final myProposalsProvider =
     FutureProvider.autoDispose<List<Proposal>>((ref) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(seconds: 1));
-  return _mockProposals;
+  final proposalsRepo = ref.watch(proposalsRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    return []; // No offline cache for proposals
+  }
+
+  try {
+    final result = await proposalsRepo.getMyProposals();
+    return result.proposals;
+  } catch (_) {
+    return [];
+  }
 });
 
 /// Proposal detail provider
 final proposalDetailProvider =
     FutureProvider.family<Proposal?, String>((ref, proposalId) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(milliseconds: 500));
-  return _mockProposals.firstWhere((p) => p.id == proposalId,
-      orElse: () => _mockProposals.first);
+  final proposalsRepo = ref.watch(proposalsRepositoryProvider);
+
+  try {
+    return await proposalsRepo.getProposalById(proposalId);
+  } catch (_) {
+    return null;
+  }
 });
 
 // ============================================================================
@@ -258,12 +369,21 @@ class ActiveTimer {
   }
 }
 
-/// Time entries provider
+/// Time entries provider (for a specific contract)
 final timeEntriesProvider =
-    FutureProvider.autoDispose<List<TimeEntry>>((ref) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(seconds: 1));
-  return _mockTimeEntries;
+    FutureProvider.autoDispose.family<List<TimeEntry>, String>((ref, contractId) async {
+  final timeTrackingRepo = ref.watch(timeTrackingRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    return []; // No offline cache for time entries
+  }
+
+  try {
+    return await timeTrackingRepo.getTimeEntries(contractId);
+  } catch (_) {
+    return [];
+  }
 });
 
 // ============================================================================
@@ -273,26 +393,39 @@ final timeEntriesProvider =
 /// Contracts provider
 final contractsProvider =
     FutureProvider.autoDispose<List<Contract>>((ref) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(seconds: 1));
-  return _mockContracts;
+  final contractsRepo = ref.watch(contractsRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    return []; // No offline cache for contracts
+  }
+
+  try {
+    return await contractsRepo.getMyContracts();
+  } catch (_) {
+    return [];
+  }
 });
 
 /// My contracts provider (alias for contractsProvider, filtered for current user)
 final myContractsProvider =
     FutureProvider.autoDispose<List<Contract>>((ref) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(seconds: 1));
-  return _mockContracts;
+  return ref.watch(contractsProvider).maybeWhen(
+    data: (contracts) => contracts,
+    orElse: () => [],
+  );
 });
 
 /// Contract detail provider
 final contractDetailProvider =
     FutureProvider.family<Contract?, String>((ref, contractId) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(milliseconds: 500));
-  return _mockContracts.firstWhere((c) => c.id == contractId,
-      orElse: () => _mockContracts.first);
+  final contractsRepo = ref.watch(contractsRepositoryProvider);
+
+  try {
+    return await contractsRepo.getContractById(contractId);
+  } catch (_) {
+    return null;
+  }
 });
 
 // ============================================================================
@@ -302,18 +435,40 @@ final contractDetailProvider =
 /// Conversations provider
 final conversationsProvider =
     FutureProvider.autoDispose<List<Conversation>>((ref) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(seconds: 1));
-  return _mockConversations;
+  final messagesRepo = ref.watch(messagesRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    return []; // No offline cache for conversations
+  }
+
+  try {
+    final result = await messagesRepo.getConversations();
+    return result.conversations;
+  } catch (_) {
+    return [];
+  }
 });
 
 /// Unread count provider
-final unreadMessagesCountProvider = Provider<int>((ref) {
-  final conversations = ref.watch(conversationsProvider);
-  return conversations.whenOrNull(
-        data: (list) => list.fold<int>(0, (sum, c) => sum + c.unreadCount),
-      ) ??
-      0;
+final unreadMessagesCountProvider = FutureProvider<int>((ref) async {
+  final messagesRepo = ref.watch(messagesRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    return 0;
+  }
+
+  try {
+    return await messagesRepo.getTotalUnreadCount();
+  } catch (_) {
+    // Fallback to calculating from conversations
+    final conversations = ref.watch(conversationsProvider);
+    return conversations.whenOrNull(
+          data: (list) => list.fold<int>(0, (sum, c) => sum + c.unreadCount),
+        ) ??
+        0;
+  }
 });
 
 // ============================================================================

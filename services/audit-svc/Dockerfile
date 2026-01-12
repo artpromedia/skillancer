@@ -12,6 +12,13 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/config/package.json ./packages/config/
 COPY packages/database/package.json ./packages/database/
 COPY services/audit-svc/package.json ./services/audit-svc/
+
+# Copy Prisma schema for postinstall (prisma generate)
+COPY packages/database/prisma ./packages/database/prisma
+
+# Set dummy DATABASE_URL for Prisma client generation during postinstall
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder

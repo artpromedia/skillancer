@@ -24,6 +24,12 @@ COPY packages/config/package.json ./packages/config/
 COPY packages/database/package.json ./packages/database/
 COPY services/talent-graph-svc/package.json ./services/talent-graph-svc/
 
+# Copy Prisma schema for postinstall (prisma generate)
+COPY packages/database/prisma ./packages/database/prisma
+
+# Set dummy DATABASE_URL for Prisma client generation during postinstall
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 

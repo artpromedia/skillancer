@@ -27,6 +27,12 @@ COPY packages/types/package.json ./packages/types/
 COPY packages/utils/package.json ./packages/utils/
 COPY services/auth-svc/package.json ./services/auth-svc/
 
+# Copy Prisma schema for postinstall (prisma generate)
+COPY packages/database/prisma ./packages/database/prisma
+
+# Set dummy DATABASE_URL for Prisma client generation during postinstall
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 

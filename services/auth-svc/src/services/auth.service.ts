@@ -10,6 +10,7 @@ import { CacheService } from '@skillancer/cache';
 import { prisma, type User, MfaMethod } from '@skillancer/database';
 import bcrypt from 'bcrypt';
 
+import { getEncryptionService } from './encryption.service.js';
 import { getMfaService } from './mfa.service.js';
 import { getSessionService, type SessionInfo } from './session.service.js';
 import { getTokenService, type TokenPair, type UserTokenData } from './token.service.js';
@@ -730,6 +731,7 @@ export class AuthService {
 
   /**
    * Store refresh token in database with token family for rotation tracking
+   * Token is encrypted before storage for security
    */
   private async storeRefreshToken(
     userId: string,
@@ -744,10 +746,14 @@ export class AuthService {
     // Generate new family ID if not provided (first token in family)
     const tokenFamily = family || crypto.randomUUID();
 
+    // Encrypt the refresh token before storing
+    const encryptionService = getEncryptionService();
+    const encryptedToken = encryptionService.encrypt(token);
+
     await prisma.refreshToken.create({
       data: {
         id: tokenId,
-        token,
+        token: encryptedToken,
         userId,
         family: tokenFamily,
         expiresAt,
@@ -756,11 +762,11 @@ export class AuthService {
       },
     });
 
-    // If replacing an old token, update it to point to this one
+    // If replacing an old token, store encrypted version of new token
     if (replacedTokenId) {
       await prisma.refreshToken.update({
         where: { id: replacedTokenId },
-        data: { replacedBy: token },
+        data: { replacedBy: encryptedToken },
       });
     }
   }
