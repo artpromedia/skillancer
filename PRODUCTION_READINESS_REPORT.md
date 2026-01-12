@@ -115,6 +115,32 @@ The following high priority issues have been addressed:
 
 ---
 
+## Sprint 5 Fixes Applied (2026-01-12)
+
+The following improvements have been implemented:
+
+| # | Issue | Fix Applied | Status |
+|---|-------|-------------|--------|
+| 1 | ~15 TODO comments for notification integration | Created billing-notifications.ts service and integrated | FIXED |
+| - | Escrow notifications missing | Added notifications for escrow funded/released | FIXED |
+| - | Milestone notifications missing | Added notifications for submit/approve/reject/dispute | FIXED |
+
+**Files Changed:**
+- `services/billing-svc/src/services/billing-notifications.ts` (NEW - comprehensive billing notification helper)
+- `services/billing-svc/src/services/escrow-manager.ts` (integrated notifications)
+- `services/billing-svc/src/services/milestone-payment.ts` (integrated notifications)
+
+**New Notification Capabilities:**
+- Escrow funded/released notifications to freelancers
+- Milestone submission notifications to clients
+- Milestone approval/rejection notifications to freelancers
+- Dispute opened/resolved notifications to both parties
+- Payment received/failed notifications
+- Card expiring/auto-updated notifications
+- Security alerts and ops team alerting
+
+---
+
 ## Remaining Critical Blockers
 
 | # | Issue | Location | Impact | Effort |
