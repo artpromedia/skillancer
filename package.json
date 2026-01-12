@@ -80,7 +80,10 @@
   },
   "pnpm": {
     "overrides": {
-      "typescript": "5.4.0"
+      "typescript": "5.4.0",
+      "glob": ">=10.5.0",
+      "qs": ">=6.14.1",
+      "esbuild": ">=0.25.0"
     }
   }
 }
