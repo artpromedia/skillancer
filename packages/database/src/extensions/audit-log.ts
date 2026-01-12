@@ -17,19 +17,44 @@ export interface AuditContext {
 
 /**
  * Models that should be audited
+ * Extended to include all security and compliance-critical models
  */
 export const AUDITED_MODELS = [
+  // Core user/tenant models
   'User',
   'Tenant',
   'TenantMember',
+  // Marketplace models
   'Job',
   'Bid',
   'Contract',
   'Milestone',
   'Service',
   'Session',
+  // Financial models (critical for compliance)
   'Payment',
+  'Invoice',
+  'Transaction',
+  'Withdrawal',
+  'Escrow',
+  'TaxVaultEntry',
+  // Review and reputation
   'Review',
+  // Dispute resolution (legal compliance)
+  'Dispute',
+  'DisputeEvidence',
+  // Credentials and verification
+  'Skill',
+  'Certification',
+  'SkillVerification',
+  // Communication (may be needed for disputes)
+  'Message',
+  'ConversationMessage',
+  // Integration security
+  'WorkspaceIntegration',
+  // Workspace management
+  'Workspace',
+  'WorkspaceMember',
 ] as const;
 
 export type AuditedModel = (typeof AUDITED_MODELS)[number];

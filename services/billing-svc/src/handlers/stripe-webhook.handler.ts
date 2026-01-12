@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '@skillancer/database';
+import { logger } from '@skillancer/logger';
 
 import { getPaymentMethodService } from '../services/payment-method.service.js';
 import { getStripeService } from '../services/stripe.service.js';
@@ -48,7 +49,7 @@ export interface WebhookHandlerResult {
  * Main webhook event router
  */
 export async function handleStripeWebhook(event: Stripe.Event): Promise<WebhookHandlerResult> {
-  console.log(`[Stripe Webhook] Processing event: ${event.type}`);
+  logger.info(`[Stripe Webhook] Processing event: ${event.type}`);
 
   switch (event.type) {
     // Payment Method Events
@@ -150,7 +151,7 @@ export async function handleStripeWebhook(event: Stripe.Event): Promise<WebhookH
       return handleInvoiceUpcoming(event.data.object);
 
     default:
-      console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
+      logger.info(`[Stripe Webhook] Unhandled event type: ${event.type}`);
       return { handled: false, message: `Unhandled event type: ${event.type}` };
   }
 }
@@ -179,7 +180,7 @@ async function handlePaymentMethodAttached(
   const userId = await stripeService.getUserIdByStripeCustomerId(customerId);
 
   if (!userId) {
-    console.log(`[Stripe Webhook] No user found for Stripe customer ${customerId}`);
+    logger.info(`[Stripe Webhook] No user found for Stripe customer ${customerId}`);
     return { handled: true, message: 'Customer not linked to user' };
   }
 
@@ -189,7 +190,7 @@ async function handlePaymentMethodAttached(
   });
 
   if (existing) {
-    console.log(`[Stripe Webhook] Payment method ${paymentMethod.id} already exists`);
+    logger.info(`[Stripe Webhook] Payment method ${paymentMethod.id} already exists`);
     return { handled: true, message: 'Payment method already exists' };
   }
 
@@ -233,7 +234,7 @@ async function handlePaymentMethodAttached(
   // Send notification
   sendPaymentMethodAddedNotification(userId, paymentMethod);
 
-  console.log(`[Stripe Webhook] Payment method ${paymentMethod.id} attached for user ${userId}`);
+  logger.info(`[Stripe Webhook] Payment method ${paymentMethod.id} attached for user ${userId}`);
   return { handled: true, message: 'Payment method created' };
 }
 
@@ -248,7 +249,7 @@ async function handlePaymentMethodDetached(
   });
 
   if (!existing) {
-    console.log(`[Stripe Webhook] Payment method ${paymentMethod.id} not found locally`);
+    logger.info(`[Stripe Webhook] Payment method ${paymentMethod.id} not found locally`);
     return { handled: true, message: 'Payment method not found' };
   }
 
@@ -277,7 +278,7 @@ async function handlePaymentMethodDetached(
     }
   }
 
-  console.log(`[Stripe Webhook] Payment method ${paymentMethod.id} detached`);
+  logger.info(`[Stripe Webhook] Payment method ${paymentMethod.id} detached`);
   return { handled: true, message: 'Payment method marked as removed' };
 }
 
@@ -292,7 +293,7 @@ async function handlePaymentMethodUpdated(
   });
 
   if (!existing) {
-    console.log(`[Stripe Webhook] Payment method ${paymentMethod.id} not found locally`);
+    logger.info(`[Stripe Webhook] Payment method ${paymentMethod.id} not found locally`);
     return { handled: true, message: 'Payment method not found' };
   }
 
@@ -311,7 +312,7 @@ async function handlePaymentMethodUpdated(
     },
   });
 
-  console.log(`[Stripe Webhook] Payment method ${paymentMethod.id} updated`);
+  logger.info(`[Stripe Webhook] Payment method ${paymentMethod.id} updated`);
   return { handled: true, message: 'Payment method updated' };
 }
 
@@ -328,7 +329,7 @@ async function handlePaymentMethodAutoUpdated(
   });
 
   if (!existing) {
-    console.log(`[Stripe Webhook] Payment method ${paymentMethod.id} not found locally`);
+    logger.info(`[Stripe Webhook] Payment method ${paymentMethod.id} not found locally`);
     return { handled: true, message: 'Payment method not found' };
   }
 
@@ -348,7 +349,7 @@ async function handlePaymentMethodAutoUpdated(
   // Send notification about card update
   sendCardAutoUpdatedNotification(existing.user, paymentMethod);
 
-  console.log(`[Stripe Webhook] Payment method ${paymentMethod.id} auto-updated`);
+  logger.info(`[Stripe Webhook] Payment method ${paymentMethod.id} auto-updated`);
   return { handled: true, message: 'Payment method auto-updated' };
 }
 
@@ -365,7 +366,7 @@ async function handleCustomerUpdated(customer: Stripe.Customer): Promise<Webhook
   });
 
   if (!stripeCustomer) {
-    console.log(`[Stripe Webhook] Stripe customer ${customer.id} not found locally`);
+    logger.info(`[Stripe Webhook] Stripe customer ${customer.id} not found locally`);
     return { handled: true, message: 'Customer not found' };
   }
 
@@ -399,7 +400,7 @@ async function handleCustomerUpdated(customer: Stripe.Customer): Promise<Webhook
     ]);
   }
 
-  console.log(`[Stripe Webhook] Customer ${customer.id} updated`);
+  logger.info(`[Stripe Webhook] Customer ${customer.id} updated`);
   return { handled: true, message: 'Customer updated' };
 }
 
@@ -412,7 +413,7 @@ async function handleCustomerDeleted(customer: Stripe.Customer): Promise<Webhook
   });
 
   if (!stripeCustomer) {
-    console.log(`[Stripe Webhook] Stripe customer ${customer.id} not found locally`);
+    logger.info(`[Stripe Webhook] Stripe customer ${customer.id} not found locally`);
     return { handled: true, message: 'Customer not found' };
   }
 
@@ -427,7 +428,7 @@ async function handleCustomerDeleted(customer: Stripe.Customer): Promise<Webhook
     where: { id: stripeCustomer.id },
   });
 
-  console.log(`[Stripe Webhook] Customer ${customer.id} deleted`);
+  logger.info(`[Stripe Webhook] Customer ${customer.id} deleted`);
   return { handled: true, message: 'Customer and payment methods removed' };
 }
 
@@ -462,13 +463,13 @@ async function handleSetupIntentSucceeded(
         where: { id: existing.id },
         data: { status: 'ACTIVE' },
       });
-      console.log(`[Stripe Webhook] Payment method ${stripeMethodId} verified`);
+      logger.info(`[Stripe Webhook] Payment method ${stripeMethodId} verified`);
     }
     return { handled: true, message: 'Payment method already exists' };
   }
 
   // Payment method will be created via payment_method.attached event
-  console.log(`[Stripe Webhook] Setup intent ${setupIntent.id} succeeded`);
+  logger.info(`[Stripe Webhook] Setup intent ${setupIntent.id} succeeded`);
   return { handled: true, message: 'Setup intent succeeded' };
 }
 
@@ -497,7 +498,7 @@ async function handleSetupIntentFailed(
     sendSetupFailedNotification(userId, setupIntent);
   }
 
-  console.log(`[Stripe Webhook] Setup intent ${setupIntent.id} failed`);
+  logger.info(`[Stripe Webhook] Setup intent ${setupIntent.id} failed`);
   return { handled: true, message: 'Setup intent failed' };
 }
 
@@ -516,7 +517,7 @@ async function handleSourceExpiring(_source: Stripe.CustomerSource): Promise<Web
   // Check expiring cards
   const count = await paymentMethodService.checkExpiringCards();
 
-  console.log(`[Stripe Webhook] Checked ${count} expiring cards`);
+  logger.info(`[Stripe Webhook] Checked ${count} expiring cards`);
   return { handled: true, message: `Processed ${count} expiring cards` };
 }
 
@@ -549,7 +550,7 @@ function sendPaymentMethodAddedNotification(
   userId: string,
   paymentMethod: Stripe.PaymentMethod
 ): void {
-  console.log(`[NOTIFICATION] Payment method added for user ${userId}:`, {
+  logger.info(`[NOTIFICATION] Payment method added for user ${userId}:`, {
     type: paymentMethod.type,
     last4: paymentMethod.card?.last4 ?? paymentMethod.us_bank_account?.last4,
   });
@@ -563,7 +564,7 @@ function sendCardAutoUpdatedNotification(
   user: { id: string; email: string; firstName: string },
   paymentMethod: Stripe.PaymentMethod
 ): void {
-  console.log(`[NOTIFICATION] Card auto-updated for user ${user.email}:`, {
+  logger.info(`[NOTIFICATION] Card auto-updated for user ${user.email}:`, {
     brand: paymentMethod.card?.brand,
     last4: paymentMethod.card?.last4,
     expMonth: paymentMethod.card?.exp_month,
@@ -576,7 +577,7 @@ function sendCardAutoUpdatedNotification(
  * FUTURE: Integrate with notification service
  */
 function sendSetupFailedNotification(userId: string, setupIntent: Stripe.SetupIntent): void {
-  console.log(`[NOTIFICATION] Setup intent failed for user ${userId}:`, {
+  logger.info(`[NOTIFICATION] Setup intent failed for user ${userId}:`, {
     setupIntentId: setupIntent.id,
     error: setupIntent.last_setup_error?.message,
   });
@@ -605,17 +606,17 @@ async function handleSubscriptionUpdated(
       // If period end has changed, this is a renewal
       if (newPeriodEnd > previousPeriodEnd) {
         await subscriptionService.handlePeriodRenewal(subscription);
-        console.log(`[Stripe Webhook] Subscription ${subscription.id} renewed`);
+        logger.info(`[Stripe Webhook] Subscription ${subscription.id} renewed`);
         return { handled: true, message: 'Subscription renewed' };
       }
     }
 
     // Standard sync for status and other changes
     await subscriptionService.syncSubscriptionStatus(subscription);
-    console.log(`[Stripe Webhook] Subscription ${subscription.id} updated`);
+    logger.info(`[Stripe Webhook] Subscription ${subscription.id} updated`);
     return { handled: true, message: 'Subscription updated' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error updating subscription ${subscription.id}:`, error);
+    logger.error(`[Stripe Webhook] Error updating subscription ${subscription.id}:`, error);
     return { handled: false, message: 'Failed to update subscription' };
   }
 }
@@ -637,10 +638,10 @@ async function handleSubscriptionDeleted(
       sendSubscriptionCanceledNotification(localSub.userId, subscription);
     }
 
-    console.log(`[Stripe Webhook] Subscription ${subscription.id} deleted`);
+    logger.info(`[Stripe Webhook] Subscription ${subscription.id} deleted`);
     return { handled: true, message: 'Subscription deleted' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error deleting subscription ${subscription.id}:`, error);
+    logger.error(`[Stripe Webhook] Error deleting subscription ${subscription.id}:`, error);
     return { handled: false, message: 'Failed to delete subscription' };
   }
 }
@@ -659,10 +660,10 @@ async function handleTrialWillEnd(
       sendTrialEndingNotification(localSub.userId, subscription);
     }
 
-    console.log(`[Stripe Webhook] Trial will end for subscription ${subscription.id}`);
+    logger.info(`[Stripe Webhook] Trial will end for subscription ${subscription.id}`);
     return { handled: true, message: 'Trial ending notification sent' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error handling trial end for ${subscription.id}:`, error);
+    logger.error(`[Stripe Webhook] Error handling trial end for ${subscription.id}:`, error);
     return { handled: false, message: 'Failed to handle trial end' };
   }
 }
@@ -682,7 +683,7 @@ async function handleSubscriptionStatusChange(
     );
     return { handled: true, message: `Subscription status changed to ${subscription.status}` };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error updating subscription status ${subscription.id}:`, error);
+    logger.error(`[Stripe Webhook] Error updating subscription status ${subscription.id}:`, error);
     return { handled: false, message: 'Failed to update subscription status' };
   }
 }
@@ -699,10 +700,10 @@ async function handleInvoiceUpdated(invoice: Stripe.Invoice): Promise<WebhookHan
 
   try {
     await subscriptionService.syncInvoice(invoice);
-    console.log(`[Stripe Webhook] Invoice ${invoice.id} synced`);
+    logger.info(`[Stripe Webhook] Invoice ${invoice.id} synced`);
     return { handled: true, message: 'Invoice synced' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error syncing invoice ${invoice.id}:`, error);
+    logger.error(`[Stripe Webhook] Error syncing invoice ${invoice.id}:`, error);
     return { handled: false, message: 'Failed to sync invoice' };
   }
 }
@@ -725,10 +726,10 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<WebhookHandle
       }
     }
 
-    console.log(`[Stripe Webhook] Invoice ${invoice.id} paid`);
+    logger.info(`[Stripe Webhook] Invoice ${invoice.id} paid`);
     return { handled: true, message: 'Invoice payment processed' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing paid invoice ${invoice.id}:`, error);
+    logger.error(`[Stripe Webhook] Error processing paid invoice ${invoice.id}:`, error);
     return { handled: false, message: 'Failed to process paid invoice' };
   }
 }
@@ -761,7 +762,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<Webh
     );
     return { handled: true, message: 'Invoice payment failure processed' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing failed invoice ${invoice.id}:`, error);
+    logger.error(`[Stripe Webhook] Error processing failed invoice ${invoice.id}:`, error);
     return { handled: false, message: 'Failed to process invoice payment failure' };
   }
 }
@@ -774,10 +775,10 @@ async function handleInvoiceVoided(invoice: Stripe.Invoice): Promise<WebhookHand
 
   try {
     await subscriptionService.syncInvoice(invoice);
-    console.log(`[Stripe Webhook] Invoice ${invoice.id} voided`);
+    logger.info(`[Stripe Webhook] Invoice ${invoice.id} voided`);
     return { handled: true, message: 'Invoice voided' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error voiding invoice ${invoice.id}:`, error);
+    logger.error(`[Stripe Webhook] Error voiding invoice ${invoice.id}:`, error);
     return { handled: false, message: 'Failed to void invoice' };
   }
 }
@@ -798,10 +799,10 @@ async function handleInvoiceUpcoming(invoice: Stripe.Invoice): Promise<WebhookHa
       }
     }
 
-    console.log(`[Stripe Webhook] Upcoming invoice notification for ${invoice.id}`);
+    logger.info(`[Stripe Webhook] Upcoming invoice notification for ${invoice.id}`);
     return { handled: true, message: 'Upcoming invoice notification processed' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing upcoming invoice:`, error);
+    logger.error(`[Stripe Webhook] Error processing upcoming invoice:`, error);
     return { handled: false, message: 'Failed to process upcoming invoice' };
   }
 }
@@ -818,7 +819,7 @@ function sendSubscriptionCanceledNotification(
   userId: string,
   subscription: Stripe.Subscription
 ): void {
-  console.log(`[NOTIFICATION] Subscription canceled for user ${userId}:`, {
+  logger.info(`[NOTIFICATION] Subscription canceled for user ${userId}:`, {
     subscriptionId: subscription.id,
     status: subscription.status,
     canceledAt: subscription.canceled_at,
@@ -830,7 +831,7 @@ function sendSubscriptionCanceledNotification(
  * FUTURE: Integrate with notification service
  */
 function sendTrialEndingNotification(userId: string, subscription: Stripe.Subscription): void {
-  console.log(`[NOTIFICATION] Trial ending soon for user ${userId}:`, {
+  logger.info(`[NOTIFICATION] Trial ending soon for user ${userId}:`, {
     subscriptionId: subscription.id,
     trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
   });
@@ -841,7 +842,7 @@ function sendTrialEndingNotification(userId: string, subscription: Stripe.Subscr
  * FUTURE: Integrate with notification service
  */
 function sendPaymentSuccessNotification(userId: string, invoice: Stripe.Invoice): void {
-  console.log(`[NOTIFICATION] Payment successful for user ${userId}:`, {
+  logger.info(`[NOTIFICATION] Payment successful for user ${userId}:`, {
     invoiceId: invoice.id,
     amount: invoice.amount_paid,
     currency: invoice.currency,
@@ -857,7 +858,7 @@ function sendPaymentFailedNotification(
   invoice: Stripe.Invoice,
   attemptCount: number
 ): void {
-  console.log(`[NOTIFICATION] Payment failed for user ${userId}:`, {
+  logger.info(`[NOTIFICATION] Payment failed for user ${userId}:`, {
     invoiceId: invoice.id,
     amount: invoice.amount_due,
     currency: invoice.currency,
@@ -873,7 +874,7 @@ function sendPaymentFailedNotification(
  * FUTURE: Integrate with notification service
  */
 function sendUpcomingChargeNotification(userId: string, invoice: Stripe.Invoice): void {
-  console.log(`[NOTIFICATION] Upcoming charge for user ${userId}:`, {
+  logger.info(`[NOTIFICATION] Upcoming charge for user ${userId}:`, {
     amount: invoice.amount_due,
     currency: invoice.currency,
     dueDate: invoice.due_date ? new Date(invoice.due_date * 1000).toISOString() : null,
@@ -927,7 +928,7 @@ async function handlePaymentIntentSucceeded(
 
     return { handled: true, message: 'Payment intent succeeded processed' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing payment intent succeeded:`, error);
+    logger.error(`[Stripe Webhook] Error processing payment intent succeeded:`, error);
     return { handled: false, message: 'Failed to process payment intent succeeded' };
   }
 }
@@ -1000,7 +1001,7 @@ async function handleEscrowPaymentSucceeded(
 
     return { handled: true, message: 'Escrow payment succeeded' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing escrow payment succeeded:`, error);
+    logger.error(`[Stripe Webhook] Error processing escrow payment succeeded:`, error);
     return { handled: false, message: 'Failed to process escrow payment succeeded' };
   }
 }
@@ -1033,7 +1034,7 @@ async function handlePaymentIntentFailed(
 
     return { handled: true, message: 'Payment intent failed processed' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing payment intent failed:`, error);
+    logger.error(`[Stripe Webhook] Error processing payment intent failed:`, error);
     return { handled: false, message: 'Failed to process payment intent failed' };
   }
 }
@@ -1064,12 +1065,12 @@ async function handleChargeRefunded(charge: Stripe.Charge): Promise<WebhookHandl
         },
       });
 
-      console.log(`[Stripe Webhook] Charge ${charge.id} refunded (full: ${isFullRefund})`);
+      logger.info(`[Stripe Webhook] Charge ${charge.id} refunded (full: ${isFullRefund})`);
     }
 
     return { handled: true, message: 'Charge refunded processed' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing charge refunded:`, error);
+    logger.error(`[Stripe Webhook] Error processing charge refunded:`, error);
     return { handled: false, message: 'Failed to process charge refunded' };
   }
 }
@@ -1088,7 +1089,7 @@ async function handleConnectAccountUpdated(account: Stripe.Account): Promise<Web
     });
 
     if (!payoutAccount) {
-      console.log(`[Stripe Webhook] No payout account found for Stripe account ${account.id}`);
+      logger.info(`[Stripe Webhook] No payout account found for Stripe account ${account.id}`);
       return { handled: true, message: 'No matching payout account' };
     }
 
@@ -1135,10 +1136,10 @@ async function handleConnectAccountUpdated(account: Stripe.Account): Promise<Web
       data: updateData,
     });
 
-    console.log(`[Stripe Webhook] Connect account ${account.id} updated to status ${status}`);
+    logger.info(`[Stripe Webhook] Connect account ${account.id} updated to status ${status}`);
     return { handled: true, message: 'Connect account updated' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing Connect account update:`, error);
+    logger.error(`[Stripe Webhook] Error processing Connect account update:`, error);
     return { handled: false, message: 'Failed to process Connect account update' };
   }
 }
@@ -1162,7 +1163,7 @@ async function handleTransferCreated(transfer: Stripe.Transfer): Promise<Webhook
         },
       });
 
-      console.log(`[Stripe Webhook] Transfer ${transfer.id} created for payout`);
+      logger.info(`[Stripe Webhook] Transfer ${transfer.id} created for payout`);
       return { handled: true, message: 'Payout transfer created processed' };
     }
 
@@ -1219,10 +1220,10 @@ async function handleTransferCreated(transfer: Stripe.Transfer): Promise<Webhook
       }
     }
 
-    console.log(`[Stripe Webhook] Transfer ${transfer.id} created (no matching record)`);
+    logger.info(`[Stripe Webhook] Transfer ${transfer.id} created (no matching record)`);
     return { handled: true, message: 'Transfer created processed' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing transfer created:`, error);
+    logger.error(`[Stripe Webhook] Error processing transfer created:`, error);
     return { handled: false, message: 'Failed to process transfer created' };
   }
 }
@@ -1247,7 +1248,7 @@ async function handleTransferFailed(transfer: Stripe.Transfer): Promise<WebhookH
         },
       });
 
-      console.log(`[Stripe Webhook] Transfer ${transfer.id} failed`);
+      logger.info(`[Stripe Webhook] Transfer ${transfer.id} failed`);
     }
 
     // Check if this is an escrow transfer
@@ -1276,7 +1277,7 @@ async function handleTransferFailed(transfer: Stripe.Transfer): Promise<WebhookH
 
     return { handled: true, message: 'Transfer failed processed' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing transfer failed:`, error);
+    logger.error(`[Stripe Webhook] Error processing transfer failed:`, error);
     return { handled: false, message: 'Failed to process transfer failed' };
   }
 }
@@ -1340,14 +1341,14 @@ async function handleTransferReversed(transfer: Stripe.Transfer): Promise<Webhoo
         });
       }
 
-      console.log(`[Stripe Webhook] Transfer ${transfer.id} reversed for escrow`);
+      logger.info(`[Stripe Webhook] Transfer ${transfer.id} reversed for escrow`);
       return { handled: true, message: 'Escrow transfer reversal processed' };
     }
 
-    console.log(`[Stripe Webhook] Transfer ${transfer.id} reversed (not escrow-related)`);
+    logger.info(`[Stripe Webhook] Transfer ${transfer.id} reversed (not escrow-related)`);
     return { handled: true, message: 'Transfer reversal processed' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing transfer reversed:`, error);
+    logger.error(`[Stripe Webhook] Error processing transfer reversed:`, error);
     return { handled: false, message: 'Failed to process transfer reversed' };
   }
 }
@@ -1390,7 +1391,7 @@ async function handlePaymentIntentAmountCapturableUpdated(
       });
 
       if (!escrowBalance) {
-        console.error(`[Stripe Webhook] No escrow balance found for contract ${escrowContractId}`);
+        logger.error(`[Stripe Webhook] No escrow balance found for contract ${escrowContractId}`);
         return { handled: false, message: 'Escrow balance not found' };
       }
 
@@ -1441,7 +1442,7 @@ async function handlePaymentIntentAmountCapturableUpdated(
 
     return { handled: true, message: 'Escrow payment authorized' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing escrow amount capturable:`, error);
+    logger.error(`[Stripe Webhook] Error processing escrow amount capturable:`, error);
     return { handled: false, message: 'Failed to process escrow authorization' };
   }
 }
@@ -1486,10 +1487,10 @@ async function handlePaymentIntentRequiresAction(
       );
     }
 
-    console.log(`[Stripe Webhook] Escrow payment ${paymentIntent.id} requires action`);
+    logger.info(`[Stripe Webhook] Escrow payment ${paymentIntent.id} requires action`);
     return { handled: true, message: 'Escrow payment requires action notification sent' };
   } catch (error) {
-    console.error(`[Stripe Webhook] Error processing escrow requires action:`, error);
+    logger.error(`[Stripe Webhook] Error processing escrow requires action:`, error);
     return { handled: false, message: 'Failed to process escrow requires action' };
   }
 }
@@ -1507,7 +1508,7 @@ function sendEscrowTransferFailedNotification(
   contractId: string,
   amount: number
 ): void {
-  console.log(`[NOTIFICATION] Escrow transfer failed for freelancer ${freelancerId}:`, {
+  logger.info(`[NOTIFICATION] Escrow transfer failed for freelancer ${freelancerId}:`, {
     contractId,
     amount,
   });
@@ -1523,7 +1524,7 @@ function sendEscrowAuthorizedNotification(
   amount: number,
   currency: string
 ): void {
-  console.log(`[NOTIFICATION] Escrow funds authorized for client ${clientId}:`, {
+  logger.info(`[NOTIFICATION] Escrow funds authorized for client ${clientId}:`, {
     contractId,
     amount,
     currency,
@@ -1539,7 +1540,7 @@ function sendEscrowActionRequiredNotification(
   contractId: string,
   paymentIntentId: string
 ): void {
-  console.log(`[NOTIFICATION] Escrow payment action required for client ${clientId}:`, {
+  logger.info(`[NOTIFICATION] Escrow payment action required for client ${clientId}:`, {
     contractId,
     paymentIntentId,
   });
@@ -1556,7 +1557,7 @@ function sendEscrowFundedNotification(
   amount: number,
   currency: string
 ): void {
-  console.log(`[NOTIFICATION] Escrow funded for contract ${contractId}:`, {
+  logger.info(`[NOTIFICATION] Escrow funded for contract ${contractId}:`, {
     clientId,
     freelancerId,
     amount,
@@ -1574,7 +1575,7 @@ function sendEscrowReleasedNotification(
   amount: number,
   currency: string
 ): void {
-  console.log(`[NOTIFICATION] Escrow released to freelancer ${freelancerId}:`, {
+  logger.info(`[NOTIFICATION] Escrow released to freelancer ${freelancerId}:`, {
     contractId,
     amount,
     currency,

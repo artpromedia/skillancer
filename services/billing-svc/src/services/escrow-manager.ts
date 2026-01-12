@@ -17,6 +17,7 @@ import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
 import { addDays } from 'date-fns';
 
+import { billingNotifications } from './billing-notifications.js';
 import { getPaymentOrchestrator } from './payment-orchestrator.js';
 import { getStripe } from './stripe.service.js';
 
@@ -271,12 +272,15 @@ export class EscrowManager {
       'Escrow funded successfully'
     );
 
-    // TODO: Notify freelancer that escrow is funded
-    // await notificationService.send({
-    //   type: 'ESCROW_FUNDED',
-    //   userId: escrow.freelancerId,
-    //   data: { escrowId, amount: escrow.totalAmount },
-    // });
+    // Notify freelancer that escrow is funded
+    await billingNotifications.notifyEscrowFunded(
+      { userId: escrow.freelancerId },
+      {
+        contractId: escrow.contractId,
+        contractTitle: escrow.contract?.title || 'Contract',
+        amount: `$${(escrow.totalAmount / 100).toFixed(2)}`,
+      }
+    );
   }
 
   /**
@@ -496,12 +500,15 @@ export class EscrowManager {
         'Escrow funds released successfully'
       );
 
-      // TODO: Notify freelancer
-      // await notificationService.send({
-      //   type: 'FUNDS_RELEASED',
-      //   userId: escrow.freelancerId,
-      //   data: { amount: releaseNetAmount, milestoneName: milestone?.name },
-      // });
+      // Notify freelancer about payment release
+      await billingNotifications.notifyPaymentReceived(
+        { userId: escrow.freelancerId, email: escrow.freelancer?.email },
+        {
+          amount: `$${(releaseNetAmount / 100).toFixed(2)}`,
+          description: milestone?.name || 'Milestone payment',
+          contractTitle: escrow.contract?.title,
+        }
+      );
 
       return {
         success: true,
