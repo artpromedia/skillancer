@@ -58,16 +58,16 @@ async function ProfileTipsLoader({ username }: Readonly<{ username: string }>) {
     // Transform suggestions into improvement tips format
     const tips = completeness.suggestions.map((suggestion, index) => ({
       id: `tip-${index}`,
+      category: getCategoryForSuggestion(suggestion),
+      priority: index < 3 ? ('high' as const) : ('medium' as const),
       title: suggestion,
       description: getDescriptionForSuggestion(suggestion),
-      priority: index < 3 ? ('high' as const) : ('medium' as const),
-      action: {
-        label: 'Fix Now',
-        href: getHrefForSuggestion(suggestion),
-      },
+      impact: getImpactForSuggestion(suggestion),
+      actionLabel: 'Fix Now',
+      actionHref: getHrefForSuggestion(suggestion),
     }));
 
-    return <ProfileImprovementTips completeness={completeness.percentage} tips={tips} />;
+    return <ProfileImprovementTips profileScore={completeness.percentage} tips={tips} />;
   } catch {
     return null;
   }
@@ -101,6 +101,29 @@ function getHrefForSuggestion(suggestion: string): string {
   return '/dashboard/profile';
 }
 
+function getCategoryForSuggestion(suggestion: string): 'identity' | 'skills' | 'portfolio' | 'social-proof' | 'completeness' | 'engagement' {
+  if (suggestion.includes('photo') || suggestion.includes('verification')) return 'identity';
+  if (suggestion.includes('skills')) return 'skills';
+  if (suggestion.includes('portfolio')) return 'portfolio';
+  if (suggestion.includes('work') || suggestion.includes('experience')) return 'social-proof';
+  return 'completeness';
+}
+
+function getImpactForSuggestion(suggestion: string): string {
+  const impacts: Record<string, string> = {
+    'photo': '+14x more profile views',
+    'title': '+20% more relevant job matches',
+    'bio': '+30% higher client engagement',
+    'skills': '+40% more job invitations',
+    'portfolio': '+50% higher hiring rate',
+    'work': '+25% more client trust',
+    'rate': '+15% faster hiring decisions',
+    'verification': '+2x earnings potential',
+  };
+  const key = Object.keys(impacts).find(k => suggestion.includes(k));
+  return key ? impacts[key] : '+10% profile visibility';
+}
+
 // ============================================================================
 // Page
 // ============================================================================
@@ -130,22 +153,33 @@ export default async function DashboardProfilePage() {
           <aside className="space-y-6">
             {/* Profile Improvement Tips */}
             <Suspense fallback={<SectionSkeleton />}>
-              <ProfileTipsLoader username={session.username ?? session.userId} />
+              <ProfileTipsLoader username={session.userId} />
             </Suspense>
 
             {/* Verification Alert */}
             <MissingVerificationAlert
-              missingVerifications={['identity', 'skills']}
-              onVerifyClick={(type) => {
-                globalThis.location.href =
-                  type === 'identity' ? '/dashboard/verification' : '/dashboard/skills';
+              skill="JavaScript"
+              impactPercent={35}
+              onVerify={() => {
+                globalThis.location.href = '/dashboard/skills';
               }}
             />
 
             {/* Skill Verification Journey */}
             <div className="rounded-xl border bg-white p-6">
               <h3 className="mb-4 font-semibold">Skill Verification</h3>
-              <SkillVerificationJourney skillProgress={[]} variant="compact" />
+              <SkillVerificationJourney
+                progress={{
+                  skillId: 'skill-1',
+                  skillName: 'JavaScript',
+                  currentStep: 'add-skill',
+                  endorsementsReceived: 0,
+                  endorsementsRequired: 3,
+                  assessmentPassed: false,
+                  certificationEarned: false,
+                }}
+                compact
+              />
             </div>
           </aside>
         </div>

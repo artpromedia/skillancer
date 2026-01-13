@@ -267,7 +267,6 @@ export function LearningActivityBadge({
           learningStreak={learningStreak}
           recentCompletions={recentCompletions}
           skillUpdates={skillUpdates}
-          variant="card"
         />
       </div>
     );
@@ -279,8 +278,6 @@ export function LearningActivityBadge({
         isActiveLearner={isActiveLearner}
         learningStreak={learningStreak}
         recentCompletions={recentCompletions}
-        skillUpdates={skillUpdates}
-        variant="inline"
       />
     </div>
   );

@@ -107,8 +107,8 @@ function PersonSchema({ profile }: Readonly<PersonSchemaProps>) {
     address: profile.location
       ? {
           '@type': 'PostalAddress',
-          addressLocality: profile.location.city,
-          addressCountry: profile.location.country,
+          addressLocality: profile.location,
+          addressCountry: profile.country,
         }
       : undefined,
     sameAs: [
@@ -158,23 +158,13 @@ async function SkillsSectionLoader({ username }: Readonly<{ username: string }>)
 }
 
 async function PortfolioLoader({ username }: Readonly<{ username: string }>) {
-  const portfolio = await getFreelancerPortfolio(username, { limit: 6 });
-  return <PortfolioGallery items={portfolio.items} profileUrl={`/freelancers/${username}`} />;
+  const portfolio = await getFreelancerPortfolio(username);
+  return <PortfolioGallery items={portfolio.slice(0, 6)} username={username} showViewAll />;
 }
 
 async function ReviewsLoader({ username }: Readonly<{ username: string }>) {
   const reviews = await getFreelancerReviews(username, { limit: 5 });
-  return (
-    <ReviewsSection
-      profileUrl={`/freelancers/${username}`}
-      reviews={reviews.reviews}
-      summary={{
-        avgRating: reviews.avgRating,
-        totalReviews: reviews.total,
-        breakdown: reviews.breakdown,
-      }}
-    />
-  );
+  return <ReviewsSection initialData={reviews} userId={username} />;
 }
 
 async function CredentialsLoader({ username }: Readonly<{ username: string }>) {
@@ -284,30 +274,7 @@ export default async function FreelancerProfilePage({ params }: Readonly<PagePro
         {/* Profile Header */}
         <section className="border-b bg-white">
           <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-            <ProfileHeader
-              profile={{
-                displayName: profile.displayName,
-                title: profile.title,
-                avatarUrl: profile.avatarUrl,
-                location: profile.location
-                  ? `${profile.location.city}, ${profile.location.country}`
-                  : undefined,
-                memberSince: profile.memberSince,
-                isOnline: profile.isOnline,
-                lastSeen: profile.lastSeen,
-                bio: profile.bio,
-                hourlyRate: profile.hourlyRate,
-                verificationLevel: profile.verification.identityTier,
-              }}
-              stats={{
-                avgRating: profile.stats.avgRating,
-                totalReviews: profile.stats.totalReviews,
-                totalJobs: profile.stats.totalJobs,
-                jobSuccessRate: profile.stats.jobSuccessRate,
-                totalEarnings: profile.stats.totalEarnings,
-                responseTime: profile.stats.responseTime,
-              }}
-            />
+            <ProfileHeader profile={profile} />
           </div>
         </section>
 
@@ -327,7 +294,14 @@ export default async function FreelancerProfilePage({ params }: Readonly<PagePro
               {/* Verification Badges */}
               <section>
                 <h2 className="mb-4 text-lg font-semibold">Verification & Trust</h2>
-                <VerificationBadges verification={profile.verification} />
+                <VerificationBadges
+                  verificationLevel={profile.verificationLevel}
+                  isIdentityVerified={profile.isIdentityVerified}
+                  isPaymentVerified={profile.isPaymentVerified}
+                  isPhoneVerified={profile.isPhoneVerified}
+                  isEmailVerified={profile.isEmailVerified}
+                  badges={profile.badges}
+                />
               </section>
 
               {/* Verified Skills Showcase */}
@@ -386,10 +360,10 @@ export default async function FreelancerProfilePage({ params }: Readonly<PagePro
             <aside className="space-y-6">
               {/* Availability */}
               <AvailabilityWidget
-                hoursPerWeek={profile.availability.hoursPerWeek}
-                preferredSchedule={profile.availability.preferredSchedule}
-                status={profile.availability.status}
-                timezone={profile.availability.timezone}
+                availability={profile.availability}
+                hoursPerWeek={profile.hoursPerWeek}
+                preferredWorkingHours={profile.preferredWorkingHours}
+                timezone={profile.timezone}
               />
 
               {/* Learning Activity */}
