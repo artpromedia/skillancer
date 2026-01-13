@@ -43,6 +43,9 @@ packages/database/generated/
 # TypeScript
 *.tsbuildinfo
 
+# tsup build artifacts
+*.bundled_*.mjs
+
 # Flutter
 apps/mobile/.dart_tool/
 apps/mobile/.packages
