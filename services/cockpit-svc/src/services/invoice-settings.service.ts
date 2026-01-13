@@ -8,8 +8,8 @@ import { InvoiceError, InvoiceErrorCode } from '../errors/invoice.errors.js';
 import { InvoiceSettingsRepository } from '../repositories/index.js';
 
 import type { UpdateSettingsParams, BankDetails } from '../types/invoice.types.js';
-import type { InvoiceSettings } from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+import type { InvoiceSettings } from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export class InvoiceSettingsService {

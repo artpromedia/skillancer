@@ -10,7 +10,7 @@ import { IntegrationPlatformService } from '../services/integrations/integration
 
 import type { EncryptionService } from '../services/encryption.service.js';
 import type { SyncOptions } from '../types/integration.types.js';
-import type { IntegrationProvider } from '@prisma/client';
+import type { IntegrationProvider } from '../types/prisma-shim.js';
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance } from 'fastify';

@@ -11,7 +11,7 @@ import type {
   MarketContractType,
   MarketContractLinkStatus,
   MarketContractSyncStatus,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface CreateContractLinkParams {
   freelancerUserId: string;

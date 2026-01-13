@@ -14,7 +14,7 @@ import type {
   ParticipantRole,
   PrismaClient,
   Prisma,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface ConversationWithDetails extends Conversation {
   participants: ParticipantWithUser[];

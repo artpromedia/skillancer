@@ -25,7 +25,7 @@ import type {
   SendMessageInput,
   OrderListParams,
 } from '../types/service-catalog.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient, PackageTier } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 
@@ -54,7 +54,7 @@ export class ServiceOrderService {
    * Validate service is available for ordering
    */
   private validateServiceForOrder(
-    service: { status: string; isActive: boolean; freelancerId: string } | null,
+    service: { status: string; isActive: boolean; freelancerId: string; currency: string } | null,
     buyerId: string
   ): asserts service is NonNullable<typeof service> {
     if (!service) {
@@ -72,7 +72,17 @@ export class ServiceOrderService {
    * Validate package is available for ordering
    */
   private validatePackageForOrder(
-    pkg: { isActive: boolean; serviceId: string } | null,
+    pkg: {
+      isActive: boolean;
+      serviceId: string;
+      name: string;
+      tier: PackageTier;
+      price: number | { toNumber(): number };
+      deliveryDays: number;
+      revisionsIncluded: number;
+      features: any;
+      deliverables: any;
+    } | null,
     serviceId: string
   ): asserts pkg is NonNullable<typeof pkg> {
     if (!pkg?.serviceId || pkg.serviceId !== serviceId) {
@@ -131,11 +141,14 @@ export class ServiceOrderService {
    */
   private validateAddOnForOrder(
     addOn: {
+      id: string;
       isActive: boolean;
       serviceId: string;
       allowQuantity: boolean;
       maxQuantity: number | null;
       title: string;
+      price: number | { toNumber(): number };
+      additionalDays: number | { toNumber(): number };
     } | null,
     serviceId: string,
     quantity = 1

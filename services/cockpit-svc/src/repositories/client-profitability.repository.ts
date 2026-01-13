@@ -10,7 +10,7 @@ import {
   Prisma,
   type ClientProfitabilityReport,
   FinancialReportStatus,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import type { PaginationOptions, PaginatedResult } from '../types/unified-financial.types';

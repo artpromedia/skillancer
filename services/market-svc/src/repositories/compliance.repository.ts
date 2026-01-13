@@ -9,7 +9,7 @@
  * Compliance data access layer for freelancer compliance management
  */
 
-import { type PrismaClient, Prisma } from '@skillancer/database';
+import { type PrismaClient, Prisma } from '../types/prisma-shim.js';
 
 import type {
   AddComplianceInput,

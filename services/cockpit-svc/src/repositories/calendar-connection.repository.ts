@@ -9,7 +9,7 @@ import type {
   UpdateConnectionParams,
   ConnectionWithCalendars,
 } from '../types/calendar.types.js';
-import type { PrismaClient, CalendarConnection, CalendarProvider } from '@skillancer/database';
+import type { PrismaClient, CalendarConnection, CalendarProvider } from '../types/prisma-shim.js';
 
 export class CalendarConnectionRepository {
   constructor(private readonly prisma: PrismaClient) {}

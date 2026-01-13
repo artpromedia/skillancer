@@ -5,7 +5,7 @@
  */
 
 import type { BookingFilters, BookingWithDetails } from '../types/calendar.types.js';
-import type { PrismaClient, Booking, Prisma, BookingStatus } from '@skillancer/database';
+import type { PrismaClient, Booking, Prisma, BookingStatus } from '../types/prisma-shim.js';
 
 export class BookingRepository {
   constructor(private readonly prisma: PrismaClient) {}

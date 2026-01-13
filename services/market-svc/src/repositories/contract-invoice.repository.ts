@@ -3,14 +3,14 @@
  * Contract Invoice data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type {
   CreateInvoiceInput,
   InvoiceListOptions,
   InvoiceWithDetails,
 } from '../types/contract.types.js';
-import type { PrismaClient, ContractInvoiceStatus } from '@skillancer/database';
+import type { PrismaClient, ContractInvoiceStatus } from '../types/prisma-shim.js';
 
 /**
  * Contract Invoice Repository

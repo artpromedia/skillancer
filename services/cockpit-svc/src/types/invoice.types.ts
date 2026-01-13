@@ -22,7 +22,7 @@ import type {
   InvoiceActivity,
   InvoiceSettings,
   Client,
-} from '@prisma/client';
+} from './prisma-shim.js';
 
 // ============================================================================
 // INVOICE CRUD PARAMS

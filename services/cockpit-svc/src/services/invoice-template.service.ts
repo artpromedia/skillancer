@@ -7,8 +7,8 @@ import { InvoiceError, InvoiceErrorCode, templateErrors } from '../errors/invoic
 import { InvoiceTemplateRepository } from '../repositories/index.js';
 
 import type { CreateTemplateParams, UpdateTemplateParams } from '../types/invoice.types.js';
-import type { InvoiceTemplate } from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+import type { InvoiceTemplate } from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export class InvoiceTemplateService {

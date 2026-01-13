@@ -8,7 +8,7 @@
  */
 
 import type { InvitationStatus, InvitationListOptions } from '../types/bidding.types.js';
-import type { PrismaClient, Prisma } from '@skillancer/database';
+import type { PrismaClient, Prisma } from '../types/prisma-shim.js';
 
 /**
  * Invitation Repository

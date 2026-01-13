@@ -9,7 +9,7 @@ import {
   type LearningGoalType,
   type GoalPeriodType,
   GoalStatus,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface CreateLearningGoalInput {
   userId: string;

@@ -7,7 +7,7 @@ import type { EmailService } from './email.service.js';
 import type { NotificationDigestRepository } from '../repositories/notification-digest.repository.js';
 import type { NotificationRepository } from '../repositories/notification.repository.js';
 import type { DigestSummary } from '../types/notification.types.js';
-import type { PrismaClient, Notification, NotificationCategory } from '@skillancer/database';
+import type { PrismaClient, Notification, NotificationCategory } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export interface DigestService {

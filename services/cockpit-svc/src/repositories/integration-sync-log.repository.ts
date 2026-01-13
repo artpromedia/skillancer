@@ -8,8 +8,8 @@ import type {
   IntegrationSyncLog,
   IntegrationSyncType,
   IntegrationSyncStatus,
-} from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+} from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 
 export interface SyncLogFilters {
   integrationId?: string;

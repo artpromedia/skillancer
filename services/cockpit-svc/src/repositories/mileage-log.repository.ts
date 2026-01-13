@@ -10,8 +10,8 @@ import type {
   MileageLogWithDetails,
   MileageSummary,
 } from '../types/finance.types.js';
-import type { MileageLog, MileagePurpose } from '@prisma/client';
-import type { Prisma, PrismaClient } from '@skillancer/database';
+import type { MileageLog, MileagePurpose } from '../types/prisma-shim.js';
+import type { Prisma, PrismaClient } from '../types/prisma-shim.js';
 
 // 2024 IRS standard mileage rates (cents per mile)
 export const MILEAGE_RATES = {

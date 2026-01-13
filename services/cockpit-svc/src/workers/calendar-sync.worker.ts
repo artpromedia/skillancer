@@ -12,7 +12,7 @@ import { CalendarConnectionRepository } from '../repositories/calendar-connectio
 
 import type { CalendarService } from '../services/calendar.service.js';
 import type { CalendarSyncJob, SyncResult } from '../types/calendar.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 
 const logger = createLogger({ name: 'calendar-sync-worker' });
 

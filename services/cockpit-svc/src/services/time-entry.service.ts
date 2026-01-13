@@ -18,7 +18,7 @@ import type {
   TimeEntryFilters,
   TimeStats,
 } from '../types/project.types.js';
-import type { PrismaClient, CockpitTimeEntry } from '@skillancer/database';
+import type { PrismaClient, CockpitTimeEntry } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export class TimeEntryService {

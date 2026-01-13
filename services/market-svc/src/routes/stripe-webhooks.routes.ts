@@ -14,7 +14,7 @@ import { InvoiceService } from '../services/invoice.service.js';
 import { PayoutService } from '../services/payout.service.js';
 import { getStripeService } from '../services/stripe.service.js';
 
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance } from 'fastify';
 import type Stripe from 'stripe';

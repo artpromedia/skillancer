@@ -13,7 +13,7 @@ import {
   type UnifiedTransaction,
   UnifiedTransactionSource,
   UnifiedSyncStatus,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import type { UnifiedTransactionRepository } from '../repositories/unified-transaction.repository';

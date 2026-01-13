@@ -1,10 +1,5 @@
 'use client';
 
-/**
- * API Management Page
- * Manage API keys, view usage, configure webhooks
- */
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {

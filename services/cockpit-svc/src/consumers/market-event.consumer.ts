@@ -6,7 +6,7 @@
 
 import { Worker, type Job } from 'bullmq';
 
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type {
   MarketToCockpitEvent,

@@ -5,7 +5,7 @@
  */
 
 import type { FileFilters, ProjectFileType } from '../types/project.types.js';
-import type { Prisma, PrismaClient, ProjectFile } from '@skillancer/database';
+import type { Prisma, PrismaClient, ProjectFile } from '../types/prisma-shim.js';
 
 export class FileRepository {
   constructor(private readonly prisma: PrismaClient) {}

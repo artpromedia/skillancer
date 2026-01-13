@@ -36,7 +36,7 @@ import type {
   SkillDemandTrend,
   ExperienceLevel,
   DemandLevel,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 
@@ -85,16 +85,21 @@ const REGION_MAP: Record<string, string> = {
   NZ: 'OCEANIA',
 };
 
-const DEFAULT_RATES: Record<ExperienceLevel, { min: number; max: number }> = {
+const DEFAULT_RATES: Partial<Record<ExperienceLevel, { min: number; max: number }>> = {
   ENTRY: { min: 25, max: 50 },
+  JUNIOR: { min: 35, max: 60 },
   INTERMEDIATE: { min: 50, max: 100 },
+  MID: { min: 60, max: 120 },
+  SENIOR: { min: 80, max: 150 },
   EXPERT: { min: 100, max: 200 },
+  PRINCIPAL: { min: 150, max: 300 },
 };
 
 const BASE_BID_COUNTS: Record<DemandLevel, number> = {
   VERY_LOW: 3,
   LOW: 8,
   MODERATE: 15,
+  MEDIUM: 20,
   HIGH: 25,
   VERY_HIGH: 40,
 };

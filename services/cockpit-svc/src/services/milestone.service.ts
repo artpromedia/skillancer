@@ -17,7 +17,7 @@ import type {
   MilestoneWithProgress,
   Deliverable,
 } from '../types/project.types.js';
-import type { PrismaClient, ProjectMilestone } from '@skillancer/database';
+import type { PrismaClient, ProjectMilestone } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export class MilestoneService {

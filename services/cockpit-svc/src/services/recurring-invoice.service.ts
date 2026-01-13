@@ -20,8 +20,8 @@ import type {
   RecurringInvoiceWithDetails,
   CreateLineItemParams,
 } from '../types/invoice.types.js';
-import type { RecurringInvoice, Invoice } from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+import type { RecurringInvoice, Invoice } from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export class RecurringInvoiceService {

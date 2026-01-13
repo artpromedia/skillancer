@@ -14,8 +14,8 @@ import type {
   FinancialTransactionType,
   FinancialTransactionSource,
   FinancialTransactionStatus,
-} from '@prisma/client';
-import type { Prisma, PrismaClient } from '@skillancer/database';
+} from '../types/prisma-shim.js';
+import type { Prisma, PrismaClient } from '../types/prisma-shim.js';
 
 export interface TransactionAggregate {
   totalIncome: number;

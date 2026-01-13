@@ -9,7 +9,7 @@ import type {
   MarketTimeLink,
   MarketTimeLinkStatus,
   MarketTimeSource,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface CreateTimeLinkParams {
   contractLinkId: string;

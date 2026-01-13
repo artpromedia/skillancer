@@ -4,7 +4,7 @@
  * Timesheet data access layer
  */
 
-import type { PrismaClient, Timesheet, Prisma } from '@skillancer/database';
+import type { PrismaClient, Timesheet, Prisma } from '../types/prisma-shim.js';
 
 /** Timesheet status type alias */
 type TimesheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';

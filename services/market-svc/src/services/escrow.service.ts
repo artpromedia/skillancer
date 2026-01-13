@@ -7,7 +7,7 @@
  * Escrow management service for ContractV2 marketplace transactions
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 import { createLogger } from '@skillancer/logger';
 
 import { getStripeService } from './stripe.service.js';
@@ -30,7 +30,7 @@ import type {
   RefundEscrowResult,
   FeePreview,
 } from '../types/contract.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 const logger = createLogger({ serviceName: 'escrow-service' });

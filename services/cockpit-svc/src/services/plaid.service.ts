@@ -15,8 +15,8 @@ import type {
   PlaidTransactionSync,
   PlaidWebhookPayload,
 } from '../types/finance.types.js';
-import type { FinancialAccount } from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+import type { FinancialAccount } from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 // Plaid API types (would be imported from plaid-node in real implementation)

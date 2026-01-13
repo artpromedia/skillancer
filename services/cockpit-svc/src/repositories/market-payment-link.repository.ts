@@ -9,7 +9,7 @@ import type {
   MarketPaymentLink,
   MarketPaymentLinkType,
   MarketPaymentLinkStatus,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface CreatePaymentLinkParams {
   contractLinkId: string;

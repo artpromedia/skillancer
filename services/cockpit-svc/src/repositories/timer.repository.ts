@@ -4,7 +4,7 @@
  * Active Timer data access layer
  */
 
-import type { Prisma, PrismaClient, ActiveTimer } from '@skillancer/database';
+import type { Prisma, PrismaClient, ActiveTimer } from '../types/prisma-shim.js';
 
 export class TimerRepository {
   constructor(private readonly prisma: PrismaClient) {}

@@ -4,7 +4,7 @@
  */
 
 import type { SendPushParams, PushServiceConfig } from '../types/notification.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export type PushPlatform = 'ios' | 'android' | 'web';

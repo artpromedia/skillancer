@@ -4,14 +4,14 @@
  * Milestone data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type {
   Deliverable,
   MilestoneWithProgress,
   MilestoneStatus,
 } from '../types/project.types.js';
-import type { PrismaClient, ProjectMilestone } from '@skillancer/database';
+import type { PrismaClient, ProjectMilestone } from '../types/prisma-shim.js';
 
 export class MilestoneRepository {
   constructor(private readonly prisma: PrismaClient) {}

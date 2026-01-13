@@ -21,7 +21,7 @@ import type {
   OpportunityStats,
   OpportunityActivitySummary,
 } from '../types/crm.types.js';
-import type { PrismaClient, OpportunityStage, OpportunityStatus } from '@skillancer/database';
+import type { PrismaClient, OpportunityStage, OpportunityStatus } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 

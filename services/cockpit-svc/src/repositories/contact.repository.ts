@@ -4,7 +4,7 @@
  * Client Contact data access layer
  */
 
-import type { PrismaClient, ContactRole } from '@skillancer/database';
+import type { PrismaClient, ContactRole } from '../types/prisma-shim.js';
 
 export class ContactRepository {
   constructor(private readonly prisma: PrismaClient) {}

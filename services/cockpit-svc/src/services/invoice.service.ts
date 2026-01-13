@@ -39,8 +39,8 @@ import type {
   InvoiceLineItem,
   InvoicePayment,
   InvoiceTemplate,
-} from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+} from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 /**

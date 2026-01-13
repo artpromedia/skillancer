@@ -10,7 +10,7 @@ import {
   Prisma,
   type RevenueProjection,
   type ScenarioType,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import type { ProjectionCreateInput } from '@skillancer/types/cockpit';

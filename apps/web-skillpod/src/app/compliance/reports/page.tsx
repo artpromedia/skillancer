@@ -329,17 +329,19 @@ function ReportCard({
   );
 }
 
+interface FilterState {
+  type: string[];
+  status: string[];
+  dateRange: { start: Date | null; end: Date | null };
+}
+
 function FilterPanel({
   filters,
   onFilterChange,
   onClose,
 }: {
-  filters: {
-    type: string[];
-    status: string[];
-    dateRange: { start: Date | null; end: Date | null };
-  };
-  onFilterChange: (filters: typeof filters) => void;
+  filters: FilterState;
+  onFilterChange: (filters: FilterState) => void;
   onClose: () => void;
 }) {
   const toggleType = (type: string) => {

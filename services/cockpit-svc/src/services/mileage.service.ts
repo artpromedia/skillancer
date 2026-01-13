@@ -13,8 +13,8 @@ import type {
   MileageLogWithDetails,
   MileageSummary,
 } from '../types/finance.types.js';
-import type { MileageLog } from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+import type { MileageLog } from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export class MileageService {

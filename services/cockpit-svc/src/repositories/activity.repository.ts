@@ -4,10 +4,10 @@
  * Project Activity data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type { ProjectActivityItem, ProjectActivityType } from '../types/project.types.js';
-import type { PrismaClient, ProjectActivity } from '@skillancer/database';
+import type { PrismaClient, ProjectActivity } from '../types/prisma-shim.js';
 
 export class ActivityRepository {
   constructor(private readonly prisma: PrismaClient) {}

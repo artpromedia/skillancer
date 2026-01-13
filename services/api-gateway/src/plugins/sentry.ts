@@ -27,7 +27,7 @@ async function sentryPluginImpl(app: FastifyInstance): Promise<void> {
     tracesSampleRate: config.env === 'production' ? 0.1 : 1.0,
     profilesSampleRate: config.env === 'production' ? 0.1 : 1.0,
     integrations: [
-      Sentry.httpIntegration({ tracing: true }),
+      Sentry.httpIntegration(),
     ],
     beforeSend(event, hint) {
       // Filter out expected errors
@@ -60,7 +60,8 @@ async function sentryPluginImpl(app: FastifyInstance): Promise<void> {
     });
 
     // Add user context if authenticated
-    const user = request.user as { userId?: string; email?: string } | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const user = (request as any).user as { userId?: string; email?: string } | undefined;
     if (user?.userId) {
       Sentry.setUser({
         id: user.userId,
@@ -109,6 +110,7 @@ async function sentryPluginImpl(app: FastifyInstance): Promise<void> {
   });
 }
 
-export const sentryPlugin = fp(sentryPluginImpl, {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const sentryPlugin = fp(sentryPluginImpl as any, {
   name: 'sentry-plugin',
 });

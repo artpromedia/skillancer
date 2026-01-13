@@ -5,7 +5,7 @@
  */
 
 import type { TimeEntryFilters, TimeEntrySource } from '../types/project.types.js';
-import type { Prisma, PrismaClient, CockpitTimeEntry } from '@skillancer/database';
+import type { Prisma, PrismaClient, CockpitTimeEntry } from '../types/prisma-shim.js';
 
 export class TimeEntryRepository {
   constructor(private readonly prisma: PrismaClient) {}

@@ -8,7 +8,7 @@ import type {
   PrismaClient,
   MarketMilestoneLink,
   MarketMilestoneLinkStatus,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface CreateMilestoneLinkParams {
   contractLinkId: string;

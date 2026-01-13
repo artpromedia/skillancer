@@ -52,7 +52,7 @@ import type {
   CalendarProvider,
   CalendarConnection,
   CalendarEvent,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 const logger = createLogger({ name: 'calendar-service' });
 

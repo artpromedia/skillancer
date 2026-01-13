@@ -14,7 +14,7 @@ import type {
   Prisma,
   PrismaClient,
   SystemMessageEventType,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface CreateMessageData {
   conversationId: string;

@@ -4,7 +4,7 @@
  * CRM Custom Field data access layer
  */
 
-import type { PrismaClient, CrmEntityType, CustomFieldType } from '@skillancer/database';
+import type { PrismaClient, CrmEntityType, CustomFieldType } from '../types/prisma-shim.js';
 
 export class CustomFieldRepository {
   constructor(private readonly prisma: PrismaClient) {}

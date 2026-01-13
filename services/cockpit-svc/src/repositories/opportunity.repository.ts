@@ -12,7 +12,7 @@ import type {
   OpportunityStage,
   OpportunityStatus,
   CrmPriority,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export class OpportunityRepository {
   constructor(private readonly prisma: PrismaClient) {}

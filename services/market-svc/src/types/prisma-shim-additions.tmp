@@ -1,0 +1,7 @@
+
+  // Additional input types
+  export type PayoutWhereInput = WhereInput;
+  export type RateAggregateWhereUniqueInput = WhereInput;
+  export type UserRatingAggregationUpdateInput = UpdateInput;
+  export type FreelancerRateHistoryWhereInput = WhereInput;
+  export type FreelancerRateHistoryCreateInput = CreateInput;

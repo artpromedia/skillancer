@@ -7,7 +7,7 @@
  * Contract Milestone V2 data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type {
   CreateContractMilestoneInput,
@@ -16,7 +16,7 @@ import type {
   MilestoneWithDetails,
   DeliverableSubmission,
 } from '../types/contract.types.js';
-import type { PrismaClient, MilestoneStatusV2 } from '@skillancer/database';
+import type { PrismaClient, MilestoneStatusV2 } from '../types/prisma-shim.js';
 
 /**
  * Contract Milestone Repository

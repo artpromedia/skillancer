@@ -4,8 +4,8 @@
  */
 
 import type { RecordPaymentParams } from '../types/invoice.types.js';
-import type { InvoicePayment, InvoicePaymentStatus } from '@prisma/client';
-import type { Prisma, PrismaClient } from '@skillancer/database';
+import type { InvoicePayment, InvoicePaymentStatus } from '../types/prisma-shim.js';
+import type { Prisma, PrismaClient } from '../types/prisma-shim.js';
 
 export class InvoicePaymentRepository {
   constructor(private readonly prisma: PrismaClient) {}

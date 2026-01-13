@@ -4,7 +4,7 @@
  * Client data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type {
   CreateClientParams,
@@ -21,7 +21,7 @@ import type {
   ClientSource,
   ClientType,
   CompanySize,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export class ClientRepository {
   constructor(private readonly prisma: PrismaClient) {}

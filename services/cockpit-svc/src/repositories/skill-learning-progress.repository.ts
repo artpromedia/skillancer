@@ -3,7 +3,7 @@
  * Skill Learning Progress Repository
  */
 
-import type { PrismaClient, SkillLearningProgress } from '@skillancer/database';
+import type { PrismaClient, SkillLearningProgress } from '../types/prisma-shim.js';
 
 export class SkillLearningProgressRepository {
   constructor(private readonly prisma: PrismaClient) {}

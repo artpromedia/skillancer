@@ -6,7 +6,7 @@
 import crypto from 'node:crypto';
 
 import type { CreateSignatureInput, SignatureWithDetails } from '../types/contract.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 
 /**
  * Contract Signature Repository

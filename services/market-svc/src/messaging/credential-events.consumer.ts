@@ -7,7 +7,7 @@
 
 import { CredentialSyncService } from '../services/credential-sync.service.js';
 
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type {
   CredentialEarnedEvent,

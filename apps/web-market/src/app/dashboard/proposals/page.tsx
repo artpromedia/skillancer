@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 
 import { BidBoostModal } from '@/components/bids/bid-boost-modal';
@@ -398,7 +398,7 @@ function StatsCards({ proposals }: Readonly<{ proposals: Proposal[] }>) {
 // Main Component
 // ============================================================================
 
-export default function FreelancerProposalsPage() {
+function FreelancerProposalsPageContent() {
   const searchParams = useSearchParams();
   const showSubmitted = searchParams.get('submitted') === 'true';
 
@@ -555,5 +555,21 @@ export default function FreelancerProposalsPage() {
         onOpenChange={(open) => !open && setBoostProposal(null)}
       />
     </div>
+  );
+}
+
+// Wrap with Suspense for useSearchParams
+export default function FreelancerProposalsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+          Loading proposals...
+        </div>
+      }
+    >
+      <FreelancerProposalsPageContent />
+    </Suspense>
   );
 }

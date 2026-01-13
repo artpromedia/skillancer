@@ -4,7 +4,7 @@
  * Time Tracking Settings data access layer
  */
 
-import type { PrismaClient, TimeTrackingSettings, Prisma } from '@skillancer/database';
+import type { PrismaClient, TimeTrackingSettings, Prisma } from '../types/prisma-shim.js';
 
 export class TimeSettingsRepository {
   constructor(private readonly prisma: PrismaClient) {}

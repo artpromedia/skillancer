@@ -24,7 +24,7 @@ import type {
   MarketClientInfo,
   ClientSyncResult,
 } from '../types/contract-project.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type {
   ContractCreatedEvent,

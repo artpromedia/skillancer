@@ -9,6 +9,7 @@
     "noImplicitAny": false,
     "exactOptionalPropertyTypes": false,
     "skipLibCheck": true,
+    "noEmitOnError": false,
     "paths": {
       "@/*": ["./src/*"],
       "@skillancer/types": ["../../packages/types/src"],

@@ -11,7 +11,7 @@ import type {
   ClientWithMetrics,
   SearchFacets,
 } from '../types/crm.types.js';
-import type { Client } from '@skillancer/database';
+import type { Client } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 

@@ -5,7 +5,7 @@
  */
 
 import type { CustomQuestion, PublicBookingLinkView } from '../types/calendar.types.js';
-import type { PrismaClient, BookingLink, Prisma, LocationType } from '@skillancer/database';
+import type { PrismaClient, BookingLink, Prisma, LocationType } from '../types/prisma-shim.js';
 
 export class BookingLinkRepository {
   constructor(private readonly prisma: PrismaClient) {}

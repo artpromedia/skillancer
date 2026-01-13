@@ -3,7 +3,7 @@
  * Project data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type {
   ProjectFilters,
@@ -13,7 +13,7 @@ import type {
   ProjectStatus,
   BudgetType,
 } from '../types/project.types.js';
-import type { PrismaClient, CrmPriority, CockpitProject } from '@skillancer/database';
+import type { PrismaClient, CrmPriority, CockpitProject } from '../types/prisma-shim.js';
 
 export class ProjectRepository {
   constructor(private readonly prisma: PrismaClient) {}

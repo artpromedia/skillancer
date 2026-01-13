@@ -11,7 +11,7 @@ import {
   type PricingRecommendation,
   type RecommendationStatus,
   type PricingRecommendationType,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import type { RecommendationCreateInput } from '@skillancer/types/cockpit';

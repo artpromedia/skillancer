@@ -16,7 +16,7 @@ import { ReviewInvitationService } from '../services/review-invitation.service.j
 import { ReviewService } from '../services/review.service.js';
 
 import type { FreelancerCategoryRatings, ClientCategoryRatings } from '../types/review.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance } from 'fastify';
 import type { Redis } from 'ioredis';

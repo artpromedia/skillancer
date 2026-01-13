@@ -3,14 +3,14 @@
  * Escrow Account and Transaction data access layer for ContractV2
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type {
   PrismaClient,
   EscrowAccountStatusV2,
   EscrowTransactionTypeV2,
   EscrowTransactionStatusV2,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 // =============================================================================
 // TYPES

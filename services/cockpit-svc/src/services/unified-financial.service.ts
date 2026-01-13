@@ -9,7 +9,7 @@ import {
   UnifiedTransactionSource,
   UnifiedTransactionType,
   UnifiedSyncStatus,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import { currencyService } from './currency.service';

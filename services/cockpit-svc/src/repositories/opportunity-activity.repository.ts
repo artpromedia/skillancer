@@ -4,9 +4,9 @@
  * Opportunity Activity data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
-import type { PrismaClient, OpportunityStage } from '@skillancer/database';
+import type { PrismaClient, OpportunityStage } from '../types/prisma-shim.js';
 
 export class OpportunityActivityRepository {
   constructor(private readonly prisma: PrismaClient) {}

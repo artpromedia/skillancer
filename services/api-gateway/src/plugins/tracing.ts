@@ -114,7 +114,8 @@ function tracingPluginImpl(app: FastifyInstance): void {
     const span = (request as any).span;
     if (!span) return;
 
-    const user = request.user as { userId?: string; email?: string } | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const user = (request as any).user as { userId?: string; email?: string } | undefined;
     if (user?.userId) {
       span.setAttribute('user.id', user.userId);
       if (user.email) {
@@ -167,7 +168,8 @@ function tracingPluginImpl(app: FastifyInstance): void {
   });
 }
 
-export const tracingPlugin = fp(tracingPluginImpl, {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const tracingPlugin = fp(tracingPluginImpl as any, {
   name: 'tracing-plugin',
 });
 

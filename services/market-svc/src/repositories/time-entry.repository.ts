@@ -7,7 +7,7 @@
  * Time Entry V2 data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type {
   CreateTimeEntryInput,
@@ -16,7 +16,7 @@ import type {
   TimeEntryWithDetails,
   TimeEntrySummary,
 } from '../types/contract.types.js';
-import type { PrismaClient, TimeEntryStatusV2 } from '@skillancer/database';
+import type { PrismaClient, TimeEntryStatusV2 } from '../types/prisma-shim.js';
 
 /**
  * Time Entry Repository

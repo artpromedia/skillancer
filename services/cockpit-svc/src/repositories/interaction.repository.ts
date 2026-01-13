@@ -4,10 +4,10 @@
  * Client Interaction data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type { InteractionSearchParams } from '../types/crm.types.js';
-import type { PrismaClient, InteractionType, Sentiment } from '@skillancer/database';
+import type { PrismaClient, InteractionType, Sentiment } from '../types/prisma-shim.js';
 
 export class InteractionRepository {
   constructor(private readonly prisma: PrismaClient) {}

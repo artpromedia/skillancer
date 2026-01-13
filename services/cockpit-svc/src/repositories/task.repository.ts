@@ -5,7 +5,7 @@
  */
 
 import type { TaskStats, TaskStatus } from '../types/project.types.js';
-import type { Prisma, PrismaClient, CrmPriority, ProjectTask } from '@skillancer/database';
+import type { Prisma, PrismaClient, CrmPriority, ProjectTask } from '../types/prisma-shim.js';
 
 export class TaskRepository {
   constructor(private readonly prisma: PrismaClient) {}

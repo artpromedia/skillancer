@@ -10,7 +10,7 @@ import type {
   ExperienceLevel,
   PeriodType,
   RateAggregate,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 /**
  * Build optional rate fields for create/update operations

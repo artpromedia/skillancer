@@ -5,7 +5,7 @@
 
 import type { RateDataRepository } from '../repositories/rate-data.repository.js';
 import type { RateHistoryRepository } from '../repositories/rate-history.repository.js';
-import type { RateType, ExperienceLevel } from '@skillancer/database';
+import type { RateType, ExperienceLevel } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 // =============================================================================

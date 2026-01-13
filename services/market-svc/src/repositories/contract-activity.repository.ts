@@ -8,7 +8,7 @@ import type {
   ActivityListOptions,
   ActivityWithDetails,
 } from '../types/contract.types.js';
-import type { PrismaClient, Prisma, ContractActivityType } from '@skillancer/database';
+import type { PrismaClient, Prisma, ContractActivityType } from '../types/prisma-shim.js';
 
 /** Actor type for contract activities */
 type ContractActorType = 'CLIENT' | 'FREELANCER' | 'ADMIN';

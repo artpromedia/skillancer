@@ -4,7 +4,7 @@
  */
 
 import type { ReminderSearchParams } from '../types/crm.types.js';
-import type { PrismaClient, ReminderType, ReminderStatus } from '@skillancer/database';
+import type { PrismaClient, ReminderType, ReminderStatus } from '../types/prisma-shim.js';
 
 export class ReminderRepository {
   constructor(private readonly prisma: PrismaClient) {}

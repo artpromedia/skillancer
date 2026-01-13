@@ -18,7 +18,7 @@ import type {
   ServiceCategory,
   ServiceStatus,
 } from '../types/service-catalog.types.js';
-import type { PrismaClient, Prisma } from '@skillancer/database';
+import type { PrismaClient, Prisma } from '../types/prisma-shim.js';
 
 /**
  * Service Repository

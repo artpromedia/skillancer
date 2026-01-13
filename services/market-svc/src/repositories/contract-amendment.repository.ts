@@ -8,7 +8,7 @@ import type {
   AmendmentListOptions,
   AmendmentWithDetails,
 } from '../types/contract.types.js';
-import type { PrismaClient, Prisma, AmendmentStatus } from '@skillancer/database';
+import type { PrismaClient, Prisma, AmendmentStatus } from '../types/prisma-shim.js';
 
 /**
  * Contract Amendment Repository

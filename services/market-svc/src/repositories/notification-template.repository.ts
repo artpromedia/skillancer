@@ -10,7 +10,7 @@ import type {
   NotificationCategory,
   PrismaClient,
   Prisma,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface NotificationTemplateRepository {
   create(data: CreateTemplateParams): Promise<NotificationTemplate>;

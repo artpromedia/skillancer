@@ -3,7 +3,7 @@
  * Deadline Reminder Worker - Sends notifications for upcoming project/task deadlines
  */
 
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 

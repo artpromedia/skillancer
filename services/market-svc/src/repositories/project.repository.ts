@@ -13,7 +13,8 @@ import type {
   JobVisibility,
   BudgetType,
 } from '../types/bidding.types.js';
-import type { PrismaClient, Prisma, JobDuration, ExperienceLevel } from '@skillancer/database';
+import type { PrismaClient, Prisma, ExperienceLevel } from '../types/prisma-shim.js';
+import type { JobDuration } from '../types/prisma-shim.js';
 
 /**
  * Project Repository

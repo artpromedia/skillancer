@@ -14,7 +14,7 @@
 import { ReviewAggregationService } from '../services/review-aggregation.service.js';
 import { ReviewInvitationService } from '../services/review-invitation.service.js';
 
-import type { PrismaClient, ReviewStatus } from '@skillancer/database';
+import type { PrismaClient, ReviewStatus } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 
@@ -166,7 +166,7 @@ export class ReviewJobs {
         distinct: ['revieweeId'],
       });
 
-      const userIds = [...new Set(recentReviews.map((r) => r.revieweeId))];
+      const userIds: string[] = [...new Set<string>(recentReviews.map((r) => String(r.revieweeId)))];
 
       for (const userId of userIds) {
         try {

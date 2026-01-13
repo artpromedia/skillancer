@@ -4,7 +4,7 @@
  * Market Client Cache data access layer
  */
 
-import type { PrismaClient, MarketClientCache } from '@skillancer/database';
+import type { PrismaClient, MarketClientCache } from '../types/prisma-shim.js';
 
 export interface UpsertClientCacheParams {
   marketUserId: string;

@@ -9,8 +9,8 @@ import type {
   NotificationCategory,
   NotificationPriority,
   PrismaClient,
-  Prisma,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
+import { Prisma } from '../types/prisma-shim.js';
 
 export interface CreateNotificationData {
   userId: string;

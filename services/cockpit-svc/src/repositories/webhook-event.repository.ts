@@ -4,8 +4,8 @@
  */
 
 import type { CreateWebhookEventParams } from '../types/integration.types.js';
-import type { WebhookEvent, WebhookEventStatus, IntegrationProvider } from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+import type { WebhookEvent, WebhookEventStatus, IntegrationProvider } from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 
 export interface WebhookEventFilters {
   integrationId?: string;

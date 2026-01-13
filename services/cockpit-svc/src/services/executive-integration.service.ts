@@ -7,7 +7,7 @@
  * and view engagement analytics.
  */
 
-import { prisma } from '@skillancer/database';
+import { prisma } from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 // Types

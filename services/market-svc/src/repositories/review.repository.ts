@@ -11,7 +11,7 @@
  * the updated schema.
  */
 
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 
 /**
  * Review Repository

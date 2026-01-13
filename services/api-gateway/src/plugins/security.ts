@@ -285,7 +285,8 @@ function securityPluginImpl(app: FastifyInstance, options: SecurityPluginOptions
   app.log.info('Security plugin registered with SOC 2 compliance controls');
 }
 
-export const securityPlugin = fp(securityPluginImpl, {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const securityPlugin = fp(securityPluginImpl as any, {
   name: 'security',
   fastify: '4.x',
 });

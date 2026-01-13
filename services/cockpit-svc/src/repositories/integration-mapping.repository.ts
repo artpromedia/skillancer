@@ -9,8 +9,8 @@ import type {
   MappingEntityType,
   IntegrationSyncDirection,
   Prisma,
-} from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+} from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 
 export class IntegrationMappingRepository {
   constructor(private readonly prisma: PrismaClient) {}

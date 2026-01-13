@@ -13,7 +13,7 @@ import type {
   TaskOrder,
   TaskStatus,
 } from '../types/project.types.js';
-import type { PrismaClient, ProjectTask } from '@skillancer/database';
+import type { PrismaClient, ProjectTask } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export class TaskService {

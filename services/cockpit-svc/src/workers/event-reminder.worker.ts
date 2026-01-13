@@ -12,7 +12,7 @@ import { Worker, Queue, type Job } from 'bullmq';
 import { CalendarEventRepository } from '../repositories/calendar-event.repository.js';
 
 import type { EventReminderJob } from '../types/calendar.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 
 const logger = createLogger({ name: 'event-reminder-worker' });
 

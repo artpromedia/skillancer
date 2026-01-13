@@ -16,7 +16,7 @@ import { ServiceCatalogError } from '../errors/service-catalog.errors.js';
 import { ServiceCatalogService } from '../services/service-catalog.service.js';
 
 import type { ServiceCategory } from '../types/service-catalog.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance } from 'fastify';
 import type { Redis } from 'ioredis';

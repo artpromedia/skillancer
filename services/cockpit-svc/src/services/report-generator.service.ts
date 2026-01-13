@@ -9,7 +9,7 @@ import {
   FinancialPeriodType,
   FinancialReportType,
   UnifiedTransactionType,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import { FinancialSummaryRepository } from '../repositories/financial-summary.repository';

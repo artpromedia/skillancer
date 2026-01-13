@@ -12,7 +12,7 @@ import type {
   UpdateContractTemplateInput,
   ContractTemplateWithDetails,
 } from '../types/contract.types.js';
-import type { PrismaClient, Prisma, ContractTypeV2 } from '@skillancer/database';
+import type { PrismaClient, Prisma, ContractTypeV2 } from '../types/prisma-shim.js';
 
 /**
  * Contract Template Repository

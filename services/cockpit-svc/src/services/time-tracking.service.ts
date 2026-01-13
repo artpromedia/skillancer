@@ -56,7 +56,7 @@ import type {
   ActiveTimer,
   Timesheet,
   TimeTrackingSettings,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export class TimeTrackingService {
   private readonly timerRepository: TimerRepository;

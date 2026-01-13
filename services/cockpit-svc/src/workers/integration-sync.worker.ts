@@ -6,7 +6,7 @@
 import { IntegrationPlatformService } from '../services/integrations/integration-platform.service.js';
 
 import type { EncryptionService } from '../services/encryption.service.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 /**

@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 import { InvoiceService, InvoiceError } from '../services/invoice.service.js';
 
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 

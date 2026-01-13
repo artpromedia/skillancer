@@ -19,7 +19,7 @@ import type {
   MappingEntityType,
   WebhookEventStatus,
   IntegrationAuthType,
-} from '@prisma/client';
+} from './prisma-shim.js';
 
 // Re-export enums
 export {
@@ -33,7 +33,7 @@ export {
   MappingEntityType,
   WebhookEventStatus,
   IntegrationAuthType,
-} from '@prisma/client';
+} from './prisma-shim.js';
 
 // ============================================================================
 // OAUTH TYPES

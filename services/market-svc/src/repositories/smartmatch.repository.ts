@@ -9,7 +9,7 @@
  * SmartMatch data access layer for intelligent matching system
  */
 
-import { Prisma, type PrismaClient } from '@skillancer/database';
+import { Prisma, type PrismaClient } from '../types/prisma-shim.js';
 
 import type {
   MatchingEventType,

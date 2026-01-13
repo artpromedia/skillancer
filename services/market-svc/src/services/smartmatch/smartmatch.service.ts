@@ -50,7 +50,7 @@ import type {
   VerificationLevel,
   ClearanceLevel,
 } from '../../types/smartmatch.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../../types/prisma-shim.js';
 
 // =============================================================================
 // TYPE DEFINITIONS FOR PRISMA RESULTS

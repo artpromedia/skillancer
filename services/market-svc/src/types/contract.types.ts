@@ -3,7 +3,6 @@
  * @module @skillancer/market-svc/types/contract
  * Contract Management System types - Aligned with existing repository interfaces
  */
-
 import type {
   ContractSignature,
   ContractInvoice,
@@ -14,31 +13,21 @@ import type {
   Tenant,
   Job,
   ContractSourceType,
-  ContractTypeV2,
-  RateTypeV2,
   ContractStatusV2,
   MilestoneStatusV2,
   TimeEntryStatusV2,
   EvidenceType,
   AmendmentStatus,
-  TerminationType,
   ContractActivityType,
   SignatureType,
-  ContractInvoiceStatus,
   ContractDisputeReason,
-  ContractDisputeStatus,
-  ContractDisputeResolution,
   Prisma,
-} from './prisma-shim.js';
-
-// Import actual Prisma models from database (may not be available in offline builds)
-import type {
   ContractV2,
   ContractMilestoneV2,
   TimeEntryV2,
   ContractAmendment,
   ContractActivity,
-} from '@skillancer/database';
+} from './prisma-shim.js';
 
 // Re-export enums for convenience
 export {

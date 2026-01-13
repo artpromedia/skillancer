@@ -11,7 +11,7 @@ import type {
   EmailFrequency,
   PrismaClient,
   Prisma,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface NotificationPreferenceRepository {
   findByUser(userId: string): Promise<NotificationPreference[]>;

@@ -9,8 +9,8 @@ import type {
   InvoiceFilters,
   CreateLineItemParams,
 } from '../types/invoice.types.js';
-import type { Invoice, InvoiceStatus, InvoiceLineItem } from '@prisma/client';
-import type { Prisma, PrismaClient } from '@skillancer/database';
+import type { Invoice, InvoiceStatus, InvoiceLineItem } from '../types/prisma-shim.js';
+import type { Prisma, PrismaClient } from '../types/prisma-shim.js';
 
 export class InvoiceRepository {
   constructor(private readonly prisma: PrismaClient) {}

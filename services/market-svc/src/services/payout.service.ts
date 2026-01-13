@@ -5,13 +5,13 @@
  * Payout management service for Stripe Connect freelancer payouts
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 import { createLogger } from '@skillancer/logger';
 
 import { getStripeService } from './stripe.service.js';
 
 import type { PayoutAccountSummary, PayoutResult } from '../types/contract.types.js';
-import type { PrismaClient, PayoutAccountStatus, PayoutStatus } from '@skillancer/database';
+import type { PrismaClient, PayoutAccountStatus, PayoutStatus } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 const logger = createLogger({ serviceName: 'payout-service' });

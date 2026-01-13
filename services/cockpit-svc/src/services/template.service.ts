@@ -18,7 +18,7 @@ import type {
   ProjectType,
   BudgetType,
 } from '../types/project.types.js';
-import type { PrismaClient, ProjectTemplate, ProjectTask } from '@skillancer/database';
+import type { PrismaClient, ProjectTemplate, ProjectTask } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export class TemplateService {

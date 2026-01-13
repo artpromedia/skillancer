@@ -10,8 +10,8 @@ import type {
   CategoryFilters,
   CategoryWithStats,
 } from '../types/finance.types.js';
-import type { TransactionCategory, FinancialTransactionType } from '@prisma/client';
-import type { Prisma, PrismaClient } from '@skillancer/database';
+import type { TransactionCategory, FinancialTransactionType } from '../types/prisma-shim.js';
+import type { Prisma, PrismaClient } from '../types/prisma-shim.js';
 
 // Default IRS Schedule C categories for freelancers
 export const DEFAULT_EXPENSE_CATEGORIES = [

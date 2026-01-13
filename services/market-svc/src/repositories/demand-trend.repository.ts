@@ -3,7 +3,7 @@
  * Skill Demand Trend repository
  */
 
-import type { PrismaClient, DemandLevel, SkillDemandTrend } from '@skillancer/database';
+import type { PrismaClient, DemandLevel, SkillDemandTrend } from '../types/prisma-shim.js';
 
 export interface DemandTrendData {
   skill: string;

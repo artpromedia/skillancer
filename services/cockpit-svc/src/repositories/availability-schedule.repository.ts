@@ -5,7 +5,7 @@
  */
 
 import type { WeeklyHours, DateOverrides } from '../types/calendar.types.js';
-import type { PrismaClient, AvailabilitySchedule, Prisma } from '@skillancer/database';
+import type { PrismaClient, AvailabilitySchedule, Prisma } from '../types/prisma-shim.js';
 
 export class AvailabilityScheduleRepository {
   constructor(private readonly prisma: PrismaClient) {}

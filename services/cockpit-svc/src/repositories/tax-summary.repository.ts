@@ -11,7 +11,7 @@ import {
   type TaxSummaryReport,
   FinancialReportStatus,
   type UnifiedTransactionSource,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import type { PaginationOptions, PaginatedResult } from '../types/unified-financial.types';

@@ -8,7 +8,7 @@
  * Data access layer for project questions (Q&A)
  */
 
-import type { PrismaClient, Prisma } from '@skillancer/database';
+import type { PrismaClient, Prisma } from '../types/prisma-shim.js';
 
 export class QuestionRepository {
   constructor(private readonly prisma: PrismaClient) {}

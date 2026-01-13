@@ -13,7 +13,7 @@ import type {
   EventSource,
   EventStatus,
   SyncStatus,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export class CalendarEventRepository {
   constructor(private readonly prisma: PrismaClient) {}

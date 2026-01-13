@@ -8,7 +8,7 @@ import {
   Prisma,
   type LearningTimeEntry,
   type LearningContentType,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface CreateLearningTimeEntryInput {
   userId: string;

@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 import { CredentialSyncService } from '../services/credential-sync.service.js';
 
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Redis } from 'ioredis';

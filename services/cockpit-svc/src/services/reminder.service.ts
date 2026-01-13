@@ -12,7 +12,7 @@ import type {
   ReminderSearchParams,
   ClientReminderSummary,
 } from '../types/crm.types.js';
-import type { PrismaClient, ReminderType, ReminderStatus } from '@skillancer/database';
+import type { PrismaClient, ReminderType, ReminderStatus } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 

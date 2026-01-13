@@ -4,7 +4,7 @@
  * Project Template data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type {
   TemplateTask,
@@ -13,7 +13,7 @@ import type {
   ProjectType,
   BudgetType,
 } from '../types/project.types.js';
-import type { PrismaClient, ProjectTemplate } from '@skillancer/database';
+import type { PrismaClient, ProjectTemplate } from '../types/prisma-shim.js';
 
 export class TemplateRepository {
   constructor(private readonly prisma: PrismaClient) {}

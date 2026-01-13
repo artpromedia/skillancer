@@ -11,7 +11,7 @@ import type {
   DigestStatus,
   PrismaClient,
   Prisma,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface NotificationDigestRepository {
   create(data: CreateDigestParams): Promise<NotificationDigest>;

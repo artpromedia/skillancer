@@ -5,6 +5,11 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "types": ["node"],
+    "strict": false,
+    "exactOptionalPropertyTypes": false,
+    "skipLibCheck": true,
+    "noEmitOnError": false,
+    "noImplicitReturns": false,
     "paths": {
       "@/*": ["./src/*"]
     }

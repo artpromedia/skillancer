@@ -9,8 +9,8 @@ import {
   InvoiceSettingsRepository,
 } from '../repositories/index.js';
 
-import type { Invoice } from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+import type { Invoice } from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 

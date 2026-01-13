@@ -8,8 +8,8 @@ import type {
   UpdateRecurringInvoiceParams,
   CreateLineItemParams,
 } from '../types/invoice.types.js';
-import type { RecurringInvoice } from '@prisma/client';
-import type { Prisma, PrismaClient } from '@skillancer/database';
+import type { RecurringInvoice } from '../types/prisma-shim.js';
+import type { Prisma, PrismaClient } from '../types/prisma-shim.js';
 
 export class RecurringInvoiceRepository {
   constructor(private readonly prisma: PrismaClient) {}

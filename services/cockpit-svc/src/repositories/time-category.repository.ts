@@ -4,7 +4,7 @@
  * Time Category data access layer
  */
 
-import type { PrismaClient, TimeCategory, Prisma } from '@skillancer/database';
+import type { PrismaClient, TimeCategory, Prisma } from '../types/prisma-shim.js';
 
 export class TimeCategoryRepository {
   constructor(private readonly prisma: PrismaClient) {}

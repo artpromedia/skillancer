@@ -1,7 +1,7 @@
 // @skillancer/cockpit-svc
 // Cockpit integrations and business logic service
 
-import { PrismaClient } from '@skillancer/database';
+import { PrismaClient } from './types/prisma-shim.js';
 import { createLogger, type Logger } from '@skillancer/logger';
 import Fastify from 'fastify';
 import { Redis } from 'ioredis';

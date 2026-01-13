@@ -10,8 +10,8 @@ import type {
   GoalFilters,
   GoalWithProgress,
 } from '../types/finance.types.js';
-import type { FinancialGoal, FinancialGoalType, FinancialGoalStatus } from '@prisma/client';
-import type { Prisma, PrismaClient } from '@skillancer/database';
+import type { FinancialGoal, FinancialGoalType, FinancialGoalStatus } from '../types/prisma-shim.js';
+import type { Prisma, PrismaClient } from '../types/prisma-shim.js';
 
 export class FinancialGoalRepository {
   constructor(private readonly prisma: PrismaClient) {}

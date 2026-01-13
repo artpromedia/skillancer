@@ -10,7 +10,7 @@ import {
   Prisma,
   type MarketRateBenchmark,
   type TrendDirection,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import type { BenchmarkCreateInput } from '@skillancer/types/cockpit';

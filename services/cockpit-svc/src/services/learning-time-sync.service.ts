@@ -4,7 +4,7 @@
  * Handles SkillPod learning events and syncs to Cockpit time tracking
  */
 
-import { type PrismaClient, type LearningContentType, GoalStatus } from '@skillancer/database';
+import { type PrismaClient, type LearningContentType, GoalStatus } from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import { LearningGoalRepository } from '../repositories/learning-goal.repository';

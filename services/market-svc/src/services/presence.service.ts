@@ -8,7 +8,7 @@ import type {
   UpdatePresenceParams,
   PushTokenData,
 } from '../types/messaging.types.js';
-import type { PrismaClient, Prisma } from '@skillancer/database';
+import type { PrismaClient, Prisma } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export interface PresenceService {

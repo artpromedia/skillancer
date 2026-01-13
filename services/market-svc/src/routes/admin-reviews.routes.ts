@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { ReviewInvitationService } from '../services/review-invitation.service.js';
 import { ReviewModerationService } from '../services/review-moderation.service.js';
 
-import type { PrismaClient, ReportStatus } from '@skillancer/database';
+import type { PrismaClient, ReportStatus } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance } from 'fastify';
 import type { Redis } from 'ioredis';

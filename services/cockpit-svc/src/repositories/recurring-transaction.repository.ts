@@ -8,8 +8,8 @@ import type {
   UpdateRecurringTransactionParams,
   RecurringTransactionWithDetails,
 } from '../types/finance.types.js';
-import type { RecurringTransaction, RecurrenceFrequency } from '@prisma/client';
-import type { Prisma, PrismaClient } from '@skillancer/database';
+import type { RecurringTransaction, RecurrenceFrequency } from '../types/prisma-shim.js';
+import type { Prisma, PrismaClient } from '../types/prisma-shim.js';
 
 export class RecurringTransactionRepository {
   constructor(private readonly prisma: PrismaClient) {}

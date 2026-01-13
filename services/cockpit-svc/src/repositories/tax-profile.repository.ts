@@ -8,8 +8,8 @@ import type {
   UpdateTaxProfileParams,
   TaxProfileWithEstimates,
 } from '../types/finance.types.js';
-import type { TaxProfile } from '@prisma/client';
-import type { Prisma, PrismaClient } from '@skillancer/database';
+import type { TaxProfile } from '../types/prisma-shim.js';
+import type { Prisma, PrismaClient } from '../types/prisma-shim.js';
 
 // 2024 Self-employment tax rate
 export const SELF_EMPLOYMENT_TAX_RATE = 0.153; // 15.3%

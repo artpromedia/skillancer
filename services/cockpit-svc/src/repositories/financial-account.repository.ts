@@ -8,8 +8,8 @@ import type {
   UpdateFinancialAccountParams,
   AccountFilters,
 } from '../types/finance.types.js';
-import type { FinancialAccount, FinancialAccountType } from '@prisma/client';
-import type { Prisma, PrismaClient } from '@skillancer/database';
+import type { FinancialAccount, FinancialAccountType } from '../types/prisma-shim.js';
+import type { Prisma, PrismaClient } from '../types/prisma-shim.js';
 
 export class FinancialAccountRepository {
   constructor(private readonly prisma: PrismaClient) {}

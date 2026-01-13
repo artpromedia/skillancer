@@ -19,8 +19,8 @@ import type {
   BulkCategorizeParams,
   BulkUpdateTransactionsParams,
 } from '../types/finance.types.js';
-import type { FinancialTransaction } from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+import type { FinancialTransaction } from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 export class FinancialTransactionService {

@@ -11,7 +11,7 @@ import type {
   UnsubscribeType,
   PrismaClient,
   Prisma,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 export interface EmailUnsubscribeRepository {
   create(data: UnsubscribeParams): Promise<EmailUnsubscribe>;

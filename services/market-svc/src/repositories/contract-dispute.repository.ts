@@ -3,7 +3,7 @@
  * Contract Dispute data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type {
   CreateDisputeInput,
@@ -15,7 +15,7 @@ import type {
   ContractDisputeStatus,
   ContractDisputeReason,
   ContractDisputeResolution,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 /**
  * Contract Dispute Repository

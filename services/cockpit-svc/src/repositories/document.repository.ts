@@ -3,7 +3,7 @@
  * Client Document data access layer
  */
 
-import type { PrismaClient, CrmDocumentType } from '@skillancer/database';
+import type { PrismaClient, CrmDocumentType } from '../types/prisma-shim.js';
 
 export class DocumentRepository {
   constructor(private readonly prisma: PrismaClient) {}

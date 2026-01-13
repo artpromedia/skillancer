@@ -12,7 +12,7 @@ import { Worker, Queue, type Job } from 'bullmq';
 import { BookingRepository } from '../repositories/booking.repository.js';
 
 import type { BookingReminderJob } from '../types/calendar.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 
 const logger = createLogger({ name: 'booking-reminder-worker' });
 

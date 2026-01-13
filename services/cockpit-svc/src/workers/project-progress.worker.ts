@@ -3,7 +3,7 @@
  * Project Progress Worker - Automatically updates project progress based on tasks
  */
 
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 // Default interval: 15 minutes

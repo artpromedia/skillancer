@@ -7,8 +7,8 @@ import type {
   CreateIntegrationParams,
   UpdateIntegrationParams,
 } from '../types/integration.types.js';
-import type { Integration, IntegrationProvider, IntegrationStatus, Prisma } from '@prisma/client';
-import type { PrismaClient } from '@skillancer/database';
+import type { Integration, IntegrationProvider, IntegrationStatus, Prisma } from '../types/prisma-shim.js';
+import type { PrismaClient } from '../types/prisma-shim.js';
 
 export class IntegrationRepository {
   constructor(private readonly prisma: PrismaClient) {}

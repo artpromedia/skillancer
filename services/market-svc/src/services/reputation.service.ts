@@ -13,7 +13,7 @@ import {
   CLIENT_RATING_DIMENSIONS,
 } from '../config/rating-dimensions.js';
 
-import type { PrismaClient, ReviewType as PrismaReviewType, Prisma } from '@skillancer/database';
+import type { PrismaClient, ReviewType as PrismaReviewType, Prisma } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { Redis } from 'ioredis';
 

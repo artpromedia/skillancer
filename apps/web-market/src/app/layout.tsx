@@ -1,5 +1,4 @@
 import { ThemeProvider, Toaster } from '@skillancer/ui';
-import { Inter } from 'next/font/google';
 import { Suspense } from 'react';
 
 import { Footer } from '@/components/layout/footer';
@@ -10,11 +9,9 @@ import type { Metadata, Viewport } from 'next';
 
 import '@/styles/globals.css';
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
+// CSS variable for font - using system fonts for offline builds
+// In production, this would be Inter from Google Fonts
+const fontClassName = 'font-system';
 
 export const metadata: Metadata = {
   title: {
@@ -101,7 +98,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html suppressHydrationWarning className={inter.variable} lang="en">
+    <html suppressHydrationWarning className={fontClassName} lang="en">
       <body className="bg-background min-h-screen font-sans antialiased">
         <ThemeProvider
           disableTransitionOnChange

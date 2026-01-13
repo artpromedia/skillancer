@@ -26,7 +26,7 @@ import type {
   BusinessType,
   FilingStatus,
   AccountingMethod,
-} from '@prisma/client';
+} from './prisma-shim.js';
 
 // Re-export enums using export...from for proper TypeScript module semantics
 export {
@@ -42,7 +42,7 @@ export {
   BusinessType,
   FilingStatus,
   AccountingMethod,
-} from '@prisma/client';
+} from './prisma-shim.js';
 
 // ============================================================================
 // FINANCIAL ACCOUNT TYPES

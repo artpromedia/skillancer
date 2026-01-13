@@ -14,7 +14,7 @@ import type {
   MatchingEventType,
   MatchingOutcome,
 } from '../types/smartmatch.types.js';
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply, FastifySchema } from 'fastify';
 
 // =============================================================================

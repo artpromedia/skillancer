@@ -7,7 +7,7 @@
  * Contract V2 data access layer
  */
 
-import { Prisma } from '@skillancer/database';
+import { Prisma } from '../types/prisma-shim.js';
 
 import type {
   ContractListOptions,
@@ -22,7 +22,7 @@ import type {
   TerminationType,
   ContractDisputeStatus,
   AmendmentStatus,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 /**
  * Contract Repository

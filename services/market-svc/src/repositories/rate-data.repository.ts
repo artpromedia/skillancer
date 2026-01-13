@@ -9,7 +9,7 @@ import type {
   UniqueSegment,
   UserBidStats,
 } from '../types/rate-intelligence.types.js';
-import type { PrismaClient, Prisma, RateSourceType, ExperienceLevel } from '@skillancer/database';
+import type { PrismaClient, Prisma, RateSourceType, ExperienceLevel } from '../types/prisma-shim.js';
 
 export class RateDataRepository {
   constructor(private readonly prisma: PrismaClient) {}

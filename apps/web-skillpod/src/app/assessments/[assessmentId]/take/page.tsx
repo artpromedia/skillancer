@@ -356,12 +356,8 @@ export default function TakeAssessmentPage() {
             answeredCount={answeredCount}
             currentIndex={currentQuestionIndex}
             flaggedCount={flaggedCount}
-            questions={questions.map((q) => ({
-              id: q.id,
-              number: questions.indexOf(q) + 1,
-              status: getQuestionStatus(q.id),
-            }))}
-            totalCount={questions.length}
+            getQuestionStatus={getQuestionStatus}
+            questions={questions}
             onNavigate={handleNavigate}
           />
         </div>

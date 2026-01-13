@@ -4,7 +4,7 @@
  * External Calendar Repository
  */
 
-import type { PrismaClient, ExternalCalendar } from '@skillancer/database';
+import type { PrismaClient, ExternalCalendar } from '../types/prisma-shim.js';
 
 export interface UpsertCalendarData {
   connectionId: string;

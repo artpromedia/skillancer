@@ -19,7 +19,7 @@ import type {
   Prisma,
   PackageTier,
   ServiceMessageType,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 
 
 /**

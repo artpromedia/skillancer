@@ -5,7 +5,7 @@
  */
 
 import type { TimeEntryFilters, TimeEntryWithDetails } from '../types/time-tracking.types.js';
-import type { Prisma, PrismaClient, CockpitTimeEntry } from '@skillancer/database';
+import type { Prisma, PrismaClient, CockpitTimeEntry } from '../types/prisma-shim.js';
 
 export class ComprehensiveTimeEntryRepository {
   constructor(private readonly prisma: PrismaClient) {}

@@ -7,7 +7,7 @@
 import { ProjectRepository, TaskRepository, TimeEntryRepository } from '../repositories/index.js';
 
 import type { WorkloadView, DailyWorkload, CapacitySettings } from '../types/project.types.js';
-import type { PrismaClient, CockpitProject, ProjectTask } from '@skillancer/database';
+import type { PrismaClient, CockpitProject, ProjectTask } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 // Default capacity settings

@@ -11,7 +11,7 @@ import {
   type SavedFinancialReport,
   type FinancialReportType,
   FinancialReportStatus,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import type {
