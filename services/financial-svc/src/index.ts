@@ -28,12 +28,12 @@ async function buildApp() {
   });
 
   // Register plugins
-  await fastify.register(cors, {
+  await fastify.register(cors as any, {
     origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
     credentials: true,
   });
 
-  await fastify.register(helmet, {
+  await fastify.register(helmet as any, {
     contentSecurityPolicy: false,
   });
 

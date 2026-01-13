@@ -200,7 +200,7 @@ export class TaxVaultService {
       new Date(now.getFullYear() + 1, 0, 15), // Q4 - January 15 next year
     ];
 
-    const nextQuarterlyDue = quarterlyDueDates.find((date) => date > now) || quarterlyDueDates[0];
+    const nextQuarterlyDue = quarterlyDueDates.find((date) => date > now) ?? quarterlyDueDates[0] ?? null;
 
     return {
       currentBalance: Number(vault.currentBalance),
@@ -325,14 +325,18 @@ export class TaxVaultService {
       }),
     ]);
 
-    const totalDeposited = deposits.reduce((sum, d) => sum + Number(d.amount), 0);
-    const totalWithdrawn = withdrawals.reduce((sum, w) => sum + Number(w.amount), 0);
+    type DepositRecord = { amount: unknown; createdAt: Date; source: string };
+    type WithdrawalRecord = { amount: unknown; createdAt: Date; reason: string; taxQuarter: number | null };
+
+    const totalDeposited = deposits.reduce((sum: number, d: DepositRecord) => sum + Number(d.amount), 0);
+    const totalWithdrawn = withdrawals.reduce((sum: number, w: WithdrawalRecord) => sum + Number(w.amount), 0);
 
     // Group withdrawals by quarter
-    const quarterlyWithdrawals = [0, 0, 0, 0];
-    for (const w of withdrawals) {
+    const quarterlyWithdrawals: [number, number, number, number] = [0, 0, 0, 0];
+    for (const w of withdrawals as WithdrawalRecord[]) {
       if (w.taxQuarter && w.taxQuarter >= 1 && w.taxQuarter <= 4) {
-        quarterlyWithdrawals[w.taxQuarter - 1] += Number(w.amount);
+        const idx = w.taxQuarter - 1;
+        quarterlyWithdrawals[idx as 0 | 1 | 2 | 3] += Number(w.amount);
       }
     }
 
@@ -347,12 +351,12 @@ export class TaxVaultService {
         q3: quarterlyWithdrawals[2],
         q4: quarterlyWithdrawals[3],
       },
-      deposits: deposits.map((d) => ({
+      deposits: (deposits as DepositRecord[]).map((d) => ({
         date: d.createdAt,
         amount: Number(d.amount),
         source: d.source,
       })),
-      withdrawals: withdrawals.map((w) => ({
+      withdrawals: (withdrawals as WithdrawalRecord[]).map((w) => ({
         date: w.createdAt,
         amount: Number(w.amount),
         reason: w.reason,

@@ -71,7 +71,7 @@ export class InvoiceFinancingService {
 
     // Calculate eligibility based on history
     const successfulFinancings = user.invoiceFinancingRequests.filter(
-      (f) => f.status === 'REPAID'
+      (f: { status: string }) => f.status === 'REPAID'
     ).length;
 
     // Base maximum is 80% of invoice, up to remaining limit
@@ -92,12 +92,15 @@ export class InvoiceFinancingService {
       maxTotalFinancing - outstandingAmount
     );
 
-    return {
+    const result: FinancingEligibility = {
       eligible: maxAmount > 0,
       maxAmount,
       estimatedFeePercentage: feePercentage,
-      reasons: maxAmount <= 0 ? ['Invoice amount exceeds available financing limit'] : undefined,
     };
+    if (maxAmount <= 0) {
+      result.reasons = ['Invoice amount exceeds available financing limit'];
+    }
+    return result;
   }
 
   /**

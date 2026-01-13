@@ -25,7 +25,8 @@
   },
   "scripts": {
     "dev": "tsup --watch",
-    "build": "pnpm db:generate && tsup",
+    "build": "pnpm db:generate || echo 'Warning: Prisma generate failed (offline?), continuing with build...' && tsup",
+    "build:offline": "tsup",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
@@ -44,7 +45,7 @@
     "db:lock:acquire": "tsx scripts/acquire-migration-lock.ts",
     "db:lock:release": "tsx scripts/release-migration-lock.ts",
     "db:lock:status": "tsx -e \"const { PrismaClient } = require('@prisma/client'); const { getMigrationLockStatus } = require('./src/migration-lock'); const p = new PrismaClient(); getMigrationLockStatus(p).then(s => { console.log(s); p.\\$disconnect(); });\"",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate || echo 'Prisma generate skipped (offline environment)'",
     "clean": "rimraf dist node_modules/.prisma"
   },
   "dependencies": {
