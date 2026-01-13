@@ -10,7 +10,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 
-import type { PrismaClient, MarketTrend, Prisma } from '@prisma/client';
+import type { PrismaClient, MarketTrend, Prisma } from '@/types/prisma-shim.js';
 import type { TrendDirection, TrendPeriod, CompetitionLevel } from '@skillancer/types';
 
 // =============================================================================

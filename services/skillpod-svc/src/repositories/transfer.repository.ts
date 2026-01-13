@@ -10,7 +10,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/require-await */
 
-import type { PrismaClient, DataTransferAttempt } from '@prisma/client';
+import type { PrismaClient, DataTransferAttempt } from '@/types/prisma-shim.js';
 
 // =============================================================================
 // TYPES

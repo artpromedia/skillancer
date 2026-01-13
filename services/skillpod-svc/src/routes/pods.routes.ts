@@ -18,7 +18,7 @@ import type {
   KasmSecurityConfig,
 } from '../services/kasm-workspaces.service.js';
 import type { SecurityPolicyService } from '../services/security-policy.service.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 import type { FastifyInstance } from 'fastify';
 
 // =============================================================================

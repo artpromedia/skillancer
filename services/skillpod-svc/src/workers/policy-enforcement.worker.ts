@@ -18,7 +18,7 @@ import type {
   KasmSecurityConfig,
 } from '../services/kasm-workspaces.service.js';
 import type { WebSocketEnforcementService } from '../services/websocket-enforcement.service.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 import type { Redis } from 'ioredis';
 
 // =============================================================================

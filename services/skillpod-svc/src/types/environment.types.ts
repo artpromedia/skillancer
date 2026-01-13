@@ -9,7 +9,7 @@ import type {
   ScalingEventType,
   OsType,
   RegistryType,
-} from '@prisma/client';
+} from '@/types/prisma-shim.js';
 
 // =============================================================================
 // RESOURCE SPECIFICATIONS

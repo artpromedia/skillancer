@@ -12,7 +12,7 @@
 
 import type { KasmWorkspacesService } from './kasm-workspaces.service.js';
 import type { WebSocketEnforcementService } from './websocket-enforcement.service.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 import type { Redis } from 'ioredis';
 
 // =============================================================================

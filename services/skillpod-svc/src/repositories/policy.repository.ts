@@ -10,9 +10,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/require-await */
 
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/types/prisma-shim.js';
 
-import type { PrismaClient, PodSecurityPolicy } from '@prisma/client';
+import type { PrismaClient, PodSecurityPolicy } from '@/types/prisma-shim.js';
 
 // =============================================================================
 // HELPER FUNCTIONS

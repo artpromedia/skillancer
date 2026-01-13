@@ -15,7 +15,7 @@ import type {
   PodSecurityPolicyInput,
   WatermarkConfig,
 } from '../types/containment.types.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 
 // =============================================================================
 // SERVICE INTERFACE

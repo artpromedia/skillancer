@@ -18,8 +18,8 @@ import type {
   DetectionSourceType,
   InvestigationStatus,
   WatermarkPayload as RepoWatermarkPayload,
+  WatermarkDetection,
 } from '../../repositories/watermark.repository.js';
-import type { WatermarkDetection } from '@prisma/client';
 
 // =============================================================================
 // TYPES

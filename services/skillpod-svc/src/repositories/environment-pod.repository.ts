@@ -24,7 +24,7 @@ import type {
   PodStatus,
   ScalingEventType,
   Prisma,
-} from '@prisma/client';
+} from '@/types/prisma-shim.js';
 import type {
   ResourceSpec,
   AutoScalingConfig,

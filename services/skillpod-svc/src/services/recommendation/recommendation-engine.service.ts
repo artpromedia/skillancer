@@ -18,7 +18,7 @@ import type {
   CreateLearningRecommendationInput,
   SkillGapWithRelations,
 } from '../../repositories/recommendation/index.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 import type {
   RecommendationType,
   ContentType,

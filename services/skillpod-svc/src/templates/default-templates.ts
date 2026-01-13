@@ -11,7 +11,7 @@ import type {
   ResourceSpec,
   CreateTemplateParams,
 } from '../types/environment.types.js';
-import type { TemplateCategory } from '@prisma/client';
+import type { TemplateCategory } from '@/types/prisma-shim.js';
 
 // =============================================================================
 // TOOL DEFINITIONS

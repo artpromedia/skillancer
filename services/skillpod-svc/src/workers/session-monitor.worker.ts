@@ -18,7 +18,7 @@ import type {
   CaptureType,
   ScreenCaptureEvent,
 } from '../services/screenshot-detection.service.js';
-import type { PrismaClient, SessionStatus } from '@prisma/client';
+import type { PrismaClient, SessionStatus } from '@/types/prisma-shim.js';
 import type { Redis } from 'ioredis';
 
 // =============================================================================

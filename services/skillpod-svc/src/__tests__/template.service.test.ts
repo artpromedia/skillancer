@@ -25,7 +25,7 @@ import type {
 } from '../repositories/template.repository.js';
 import type { ECRService } from '../services/ecr.service.js';
 import type { ResourceSpec, ToolDefinition } from '../types/environment.types.js';
-import type { PodTemplate, TemplateCategory } from '@prisma/client';
+import type { PodTemplate, TemplateCategory } from '@/types/prisma-shim.js';
 
 // =============================================================================
 // MOCKS

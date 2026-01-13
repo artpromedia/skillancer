@@ -19,8 +19,9 @@ import type {
   VisibleWatermarkConfig,
   InvisibleWatermarkConfig,
   WatermarkPayload,
+  WatermarkConfiguration,
+  WatermarkInstance,
 } from '../../repositories/watermark.repository.js';
-import type { WatermarkConfiguration, WatermarkInstance } from '@prisma/client';
 
 // =============================================================================
 // TYPES

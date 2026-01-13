@@ -29,7 +29,7 @@ import type {
   ToolDefinition,
   TemplateErrorCode,
 } from '../types/environment.types.js';
-import type { PodTemplate, TemplateCategory, BaseImage } from '@prisma/client';
+import type { PodTemplate, TemplateCategory, BaseImage } from '@/types/prisma-shim.js';
 import type { Redis as RedisType } from 'ioredis';
 
 // =============================================================================

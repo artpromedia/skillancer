@@ -31,7 +31,7 @@ import type {
   RecordingListFilter,
   RecordingListOptions,
 } from '../repositories/recording.repository.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 import type { Redis } from 'ioredis';
 
 // =============================================================================

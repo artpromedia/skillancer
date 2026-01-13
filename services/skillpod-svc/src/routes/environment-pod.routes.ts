@@ -16,7 +16,7 @@ import { z } from 'zod';
 import type { AutoScalingService } from '../services/auto-scaling.service.js';
 import type { PodService } from '../services/pod.service.js';
 import type { ResourcePoolService } from '../services/resource-pool.service.js';
-import type { PodStatus } from '@prisma/client';
+import type { PodStatus } from '@/types/prisma-shim.js';
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 
 // =============================================================================

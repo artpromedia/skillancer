@@ -14,7 +14,7 @@ import crypto from 'node:crypto';
 
 import type { SecurityPolicyService } from './security-policy.service.js';
 import type { TransferDirection } from '../types/containment.types.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 import type { Redis } from 'ioredis';
 
 // =============================================================================

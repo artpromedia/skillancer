@@ -20,7 +20,7 @@ import type {
   AutoScalingConfig,
   ScalingDecision,
 } from '../types/environment.types.js';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/types/prisma-shim.js';
 import type { Redis as RedisType } from 'ioredis';
 
 // =============================================================================

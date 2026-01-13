@@ -10,7 +10,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 
-import type { PrismaClient, SkillGap, Prisma } from '@prisma/client';
+import type { PrismaClient, SkillGap, Prisma } from '@/types/prisma-shim.js';
 import type {
   GapType,
   GapPriority,

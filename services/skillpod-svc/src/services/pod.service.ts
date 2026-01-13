@@ -28,7 +28,7 @@ import type {
   ResourceSpec,
   PodErrorCode,
 } from '../types/environment.types.js';
-import type { Pod, PodStatus, Prisma } from '@prisma/client';
+import type { Pod, PodStatus, Prisma } from '@/types/prisma-shim.js';
 import type { Redis as RedisType } from 'ioredis';
 
 // =============================================================================

@@ -10,7 +10,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable n/no-process-exit */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/types/prisma-shim.js';
 import Redis from 'ioredis';
 
 import { buildApp, getConfig } from './app.js';

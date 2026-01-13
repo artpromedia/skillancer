@@ -4,7 +4,7 @@
  * API key management and enterprise endpoints
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/types/prisma-shim.js';
 import { randomBytes, createHash, timingSafeEqual } from 'crypto';
 import { getLogger } from '@skillancer/logger';
 import { getAuditClient } from '@skillancer/audit-client';

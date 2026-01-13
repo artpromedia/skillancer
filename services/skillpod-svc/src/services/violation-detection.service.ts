@@ -18,7 +18,7 @@ import type {
   ViolationSummary,
   ViolationType,
 } from '../types/containment.types.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 import type { Redis } from 'ioredis';
 
 // Re-export types used by routes

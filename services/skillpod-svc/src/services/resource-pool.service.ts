@@ -14,7 +14,7 @@
 import type { EnvironmentPodRepository } from '../repositories/environment-pod.repository.js';
 import type { ResourcePoolRepository } from '../repositories/resource-pool.repository.js';
 import type { TenantQuota, ResourceSpec } from '../types/environment.types.js';
-import type { ResourcePool, TenantResourceQuota } from '@prisma/client';
+import type { ResourcePool, TenantResourceQuota } from '@/types/prisma-shim.js';
 import type { Redis as RedisType } from 'ioredis';
 
 // =============================================================================

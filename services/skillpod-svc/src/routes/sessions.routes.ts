@@ -23,7 +23,7 @@ import type {
   ScreenshotDetectionService,
   ScreenCaptureEvent,
 } from '../services/screenshot-detection.service.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 import type { FastifyInstance } from 'fastify';
 
 // =============================================================================

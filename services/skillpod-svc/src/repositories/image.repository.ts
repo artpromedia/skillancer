@@ -16,7 +16,7 @@
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 
 import type { ToolDefinition } from '../types/environment.types.js';
-import type { PrismaClient, BaseImage, OsType, RegistryType, Prisma } from '@prisma/client';
+import type { PrismaClient, BaseImage, OsType, RegistryType, Prisma } from '@/types/prisma-shim.js';
 
 // =============================================================================
 // TYPES

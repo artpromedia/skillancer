@@ -28,7 +28,7 @@ import type { MetricsService } from '../services/metrics.service.js';
 import type { StorageService } from '../services/storage.service.js';
 import type { TemplateService } from '../services/template.service.js';
 import type { ResourceSpec } from '../types/environment.types.js';
-import type { Pod, PodStatus } from '@prisma/client';
+import type { Pod, PodStatus } from '@/types/prisma-shim.js';
 
 // =============================================================================
 // MOCKS

@@ -18,7 +18,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
 import websocket from '@fastify/websocket';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/types/prisma-shim.js';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 
 import { getConfig } from './config/index.js';

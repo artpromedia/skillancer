@@ -10,7 +10,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 
-import type { PrismaClient, LearningRecommendation, Prisma } from '@prisma/client';
+import type { PrismaClient, LearningRecommendation, Prisma } from '@/types/prisma-shim.js';
 import type {
   RecommendationType,
   RecommendationStatus,

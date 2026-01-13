@@ -16,7 +16,7 @@ import type {
   LearningProfileRepository,
   CreateSkillGapInput,
 } from '../../repositories/recommendation/index.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 import type {
   JobViewedEvent,
   JobAppliedEvent,

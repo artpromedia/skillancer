@@ -14,7 +14,7 @@
 /* eslint-disable @typescript-eslint/promise-function-async */
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/types/prisma-shim.js';
 
 import type { CdnService } from './cdn.service.js';
 import type { KasmWorkspacesService } from './kasm-workspaces.service.js';
@@ -28,7 +28,7 @@ import type {
   KillSwitchReason as KillSwitchReasonEnum,
   KillSwitchStatus as KillSwitchStatusEnum,
   PrismaClient,
-} from '@prisma/client';
+} from '@/types/prisma-shim.js';
 import type { Redis } from 'ioredis';
 
 // =============================================================================

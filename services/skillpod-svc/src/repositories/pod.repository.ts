@@ -9,7 +9,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 
-import type { PrismaClient, Session, PodSecurityPolicy } from '@prisma/client';
+import type { PrismaClient, Session, PodSecurityPolicy } from '@/types/prisma-shim.js';
 
 // =============================================================================
 // TYPES

@@ -12,7 +12,7 @@
 import { z } from 'zod';
 
 import type { WebSocketEnforcementService } from '../services/websocket-enforcement.service.js';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@/types/prisma-shim.js';
 import type { FastifyInstance } from 'fastify';
 
 // =============================================================================

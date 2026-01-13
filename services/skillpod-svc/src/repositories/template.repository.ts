@@ -22,7 +22,7 @@ import type {
   TemplateRating,
   TemplateCategory,
   Prisma,
-} from '@prisma/client';
+} from '@/types/prisma-shim.js';
 
 // =============================================================================
 // TYPES

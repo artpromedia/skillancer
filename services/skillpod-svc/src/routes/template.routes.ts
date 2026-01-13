@@ -15,7 +15,7 @@
 import { z } from 'zod';
 
 import type { TemplateService } from '../services/template.service.js';
-import type { TemplateCategory } from '@prisma/client';
+import type { TemplateCategory } from '@/types/prisma-shim.js';
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 
 // =============================================================================
