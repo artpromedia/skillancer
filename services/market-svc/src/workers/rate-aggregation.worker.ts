@@ -12,7 +12,7 @@ import type {
   DemandLevel,
   RateDataPoint,
   ExperienceLevel,
-} from '@skillancer/database';
+} from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 // =============================================================================

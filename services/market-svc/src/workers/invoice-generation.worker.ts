@@ -3,7 +3,7 @@
  * Invoice Generation Worker - Automatically generates weekly invoices for hourly contracts
  */
 
-import type { PrismaClient } from '@skillancer/database';
+import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
 // =============================================================================

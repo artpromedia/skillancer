@@ -5,11 +5,6 @@
  */
 
 import type {
-  ContractV2,
-  ContractMilestoneV2,
-  TimeEntryV2,
-  ContractAmendment,
-  ContractActivity,
   ContractSignature,
   ContractInvoice,
   ContractDispute,
@@ -18,6 +13,31 @@ import type {
   User,
   Tenant,
   Job,
+  ContractSourceType,
+  ContractTypeV2,
+  RateTypeV2,
+  ContractStatusV2,
+  MilestoneStatusV2,
+  TimeEntryStatusV2,
+  EvidenceType,
+  AmendmentStatus,
+  TerminationType,
+  ContractActivityType,
+  SignatureType,
+  ContractInvoiceStatus,
+  ContractDisputeReason,
+  ContractDisputeStatus,
+  ContractDisputeResolution,
+  Prisma,
+} from './prisma-shim.js';
+
+// Import actual Prisma models from database (may not be available in offline builds)
+import type {
+  ContractV2,
+  ContractMilestoneV2,
+  TimeEntryV2,
+  ContractAmendment,
+  ContractActivity,
 } from '@skillancer/database';
 
 // Re-export enums for convenience
@@ -37,7 +57,7 @@ export {
   ContractDisputeReason,
   ContractDisputeStatus,
   ContractDisputeResolution,
-} from '@skillancer/database';
+} from './prisma-shim.js';
 
 // =============================================
 // Common User Type Aliases
@@ -80,9 +100,9 @@ export interface ContractSummary {
   id: string;
   title: string;
   contractNumber: string;
-  status: import('@skillancer/database').ContractStatusV2;
-  contractType: import('@skillancer/database').ContractTypeV2;
-  rateType: import('@skillancer/database').RateTypeV2;
+  status: ContractStatusV2;
+  contractType: import('./prisma-shim.js').ContractTypeV2;
+  rateType: import('./prisma-shim.js').RateTypeV2;
   totalBilled: number;
   totalPaid: number;
   totalInEscrow: number;
@@ -114,9 +134,9 @@ export interface CreateContractInput {
   projectId?: string | null;
   bidId?: string | null;
   serviceOrderId?: string | null;
-  sourceType: import('@skillancer/database').ContractSourceType;
-  contractType: import('@skillancer/database').ContractTypeV2;
-  rateType: import('@skillancer/database').RateTypeV2;
+  sourceType: ContractSourceType;
+  contractType: import('./prisma-shim.js').ContractTypeV2;
+  rateType: import('./prisma-shim.js').RateTypeV2;
   title: string;
   description?: string;
   scope: string;
@@ -171,14 +191,14 @@ export interface ContractListOptions {
   userId?: string;
   jobId?: string;
   status?:
-    | import('@skillancer/database').ContractStatusV2
-    | import('@skillancer/database').ContractStatusV2[];
+    | ContractStatusV2
+    | ContractStatusV2[];
   contractType?:
-    | import('@skillancer/database').ContractTypeV2
-    | import('@skillancer/database').ContractTypeV2[];
+    | import('./prisma-shim.js').ContractTypeV2
+    | import('./prisma-shim.js').ContractTypeV2[];
   rateType?:
-    | import('@skillancer/database').RateTypeV2
-    | import('@skillancer/database').RateTypeV2[];
+    | import('./prisma-shim.js').RateTypeV2
+    | import('./prisma-shim.js').RateTypeV2[];
   startDateFrom?: Date;
   startDateTo?: Date;
   endDateFrom?: Date;
@@ -231,8 +251,8 @@ export interface UpdateMilestoneInput {
 export interface MilestoneListOptions {
   contractId?: string;
   status?:
-    | import('@skillancer/database').MilestoneStatusV2
-    | import('@skillancer/database').MilestoneStatusV2[];
+    | MilestoneStatusV2
+    | MilestoneStatusV2[];
   dueDateFrom?: Date;
   dueDateTo?: Date;
   page?: number;
@@ -258,7 +278,7 @@ export interface TimeEntryWithDetails extends TimeEntryV2 {
     title: string;
     contractNumber: string;
     clientUserId: string;
-    hourlyRate: import('@prisma/client').Prisma.Decimal | null;
+    hourlyRate: Prisma.Decimal | null;
   };
   freelancer: UserBasicInfo;
 }
@@ -275,7 +295,7 @@ export interface CreateTimeEntryInput {
   taskCategory?: string;
   hourlyRate: number;
   currency?: string;
-  evidenceType?: import('@skillancer/database').EvidenceType;
+  evidenceType?: EvidenceType;
   evidence?: TimeEntryEvidence[];
   skillpodSessionId?: string;
   autoTracked?: boolean;
@@ -305,8 +325,8 @@ export interface TimeEntryListOptions {
   contractId?: string;
   freelancerId?: string;
   status?:
-    | import('@skillancer/database').TimeEntryStatusV2
-    | import('@skillancer/database').TimeEntryStatusV2[];
+    | TimeEntryStatusV2
+    | TimeEntryStatusV2[];
   dateFrom?: Date;
   dateTo?: Date;
   invoiced?: boolean;
@@ -337,7 +357,7 @@ export interface LogActivityInput {
   contractId: string;
   actorUserId?: string | null;
   actorType?: 'CLIENT' | 'FREELANCER' | 'SYSTEM' | 'ADMIN';
-  activityType: import('@skillancer/database').ContractActivityType;
+  activityType: ContractActivityType;
   description: string;
   milestoneId?: string | null;
   timeEntryId?: string | null;
@@ -353,8 +373,8 @@ export interface LogActivityInput {
 export interface ActivityListOptions {
   contractId: string;
   activityType?:
-    | import('@skillancer/database').ContractActivityType
-    | import('@skillancer/database').ContractActivityType[];
+    | ContractActivityType
+    | ContractActivityType[];
   actorUserId?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -403,8 +423,8 @@ export interface AmendmentListOptions {
   contractId?: string;
   proposedById?: string;
   status?:
-    | import('@skillancer/database').AmendmentStatus
-    | import('@skillancer/database').AmendmentStatus[];
+    | AmendmentStatus
+    | AmendmentStatus[];
   page?: number;
   limit?: number;
 }
@@ -423,7 +443,7 @@ export interface CreateSignatureInput {
   contractId: string;
   userId: string;
   signerRole: 'CLIENT' | 'FREELANCER';
-  signatureType: import('@skillancer/database').SignatureType;
+  signatureType: SignatureType;
   signatureImage?: string | null;
   signatureText?: string | null;
   ipAddress: string;
@@ -454,7 +474,7 @@ export interface DisputeWithDetails extends ContractDispute {
 export interface CreateDisputeInput {
   contractId: string;
   raisedById: string;
-  reason: import('@skillancer/database').ContractDisputeReason;
+  reason: ContractDisputeReason;
   description: string;
   milestoneId?: string;
   timeEntryId?: string;
@@ -468,8 +488,8 @@ export interface DisputeListOptions {
   contractId?: string;
   raisedById?: string;
   status?:
-    | import('@skillancer/database').ContractDisputeStatus
-    | import('@skillancer/database').ContractDisputeStatus[];
+    | import('./prisma-shim.js').ContractDisputeStatus
+    | import('./prisma-shim.js').ContractDisputeStatus[];
   page?: number;
   limit?: number;
 }
@@ -497,7 +517,7 @@ export interface InvoiceLineItem {
   description: string;
   quantity: number;
   unitPrice: number;
-  type: import('@skillancer/database').InvoiceLineItemType;
+  type: import('./prisma-shim.js').InvoiceLineItemType;
   milestoneId?: string;
   timeEntryId?: string;
   orderIndex?: number;
@@ -521,8 +541,8 @@ export interface InvoiceListOptions {
   clientUserId?: string;
   freelancerUserId?: string;
   status?:
-    | import('@skillancer/database').ContractInvoiceStatus
-    | import('@skillancer/database').ContractInvoiceStatus[];
+    | import('./prisma-shim.js').ContractInvoiceStatus
+    | import('./prisma-shim.js').ContractInvoiceStatus[];
   dateFrom?: Date;
   dateTo?: Date;
   page?: number;
@@ -544,8 +564,8 @@ export interface CreateContractTemplateInput {
   tenantId?: string | null;
   name: string;
   description?: string | null;
-  contractType: import('@skillancer/database').ContractTypeV2;
-  rateType: import('@skillancer/database').RateTypeV2;
+  contractType: import('./prisma-shim.js').ContractTypeV2;
+  rateType: import('./prisma-shim.js').RateTypeV2;
   templateContent: string;
   variables: unknown;
   clauses: unknown;
@@ -584,7 +604,7 @@ export {
   EscrowTransactionTypeV2,
   EscrowTransactionStatusV2,
   InvoiceLineItemType,
-} from '@skillancer/database';
+} from './prisma-shim.js';
 
 /** Fee calculation result */
 export interface FeeCalculation {
@@ -654,7 +674,7 @@ export interface UnfreezeEscrowParams {
 /** Parameters for resolving a dispute */
 export interface ResolveDisputeParams {
   disputeId: string;
-  resolution: import('@skillancer/database').ContractDisputeResolution;
+  resolution: import('./prisma-shim.js').ContractDisputeResolution;
   clientRefundAmount?: number | undefined;
   freelancerPayoutAmount?: number | undefined;
   resolvedBy: string;
@@ -672,7 +692,7 @@ export interface EscrowAccountSummary {
   disputedBalance: number;
   availableBalance: number;
   currency: string;
-  status: import('@skillancer/database').EscrowAccountStatusV2;
+  status: import('./prisma-shim.js').EscrowAccountStatusV2;
   contract: {
     id: string;
     title: string;
@@ -686,8 +706,8 @@ export interface EscrowAccountSummary {
 /** Escrow transaction summary */
 export interface EscrowTransactionSummary {
   id: string;
-  transactionType: import('@skillancer/database').EscrowTransactionTypeV2;
-  status: import('@skillancer/database').EscrowTransactionStatusV2;
+  transactionType: import('./prisma-shim.js').EscrowTransactionTypeV2;
+  status: import('./prisma-shim.js').EscrowTransactionStatusV2;
   amount: number;
   platformFee: number;
   processingFee: number;
@@ -731,7 +751,7 @@ export interface RefundEscrowResult {
 
 /** Input for creating an invoice line item */
 export interface CreateLineItemInput {
-  type: import('@skillancer/database').InvoiceLineItemType;
+  type: import('./prisma-shim.js').InvoiceLineItemType;
   description: string;
   quantity: number;
   unitPrice: number;
@@ -744,7 +764,7 @@ export interface CreateLineItemInput {
 export interface InvoiceWithLineItems extends InvoiceWithDetails {
   lineItems: Array<{
     id: string;
-    type: import('@skillancer/database').InvoiceLineItemType;
+    type: import('./prisma-shim.js').InvoiceLineItemType;
     description: string;
     quantity: number;
     unitPrice: number;

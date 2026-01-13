@@ -11,7 +11,7 @@ import type {
   RecommendationType,
   RecommendationStatus,
   DemandLevel,
-} from '@skillancer/database';
+} from './prisma-shim.js';
 
 // =============================================================================
 // RATE DATA TYPES
@@ -405,4 +405,4 @@ export type {
   RecommendationType,
   RecommendationStatus,
   DemandLevel,
-} from '@skillancer/database';
+} from './prisma-shim.js';
