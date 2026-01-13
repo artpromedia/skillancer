@@ -1,8 +1,8 @@
 import { PrismaClient } from '@prisma/client';
+import { RelationshipStrength } from '../types/talent-graph.types.js';
 import type {
   WorkRelationshipCreateInput,
   WorkRelationshipUpdateInput,
-  RelationshipStrength,
   NetworkStats,
   ConnectionSuggestion,
 } from '../types/talent-graph.types.js';
@@ -28,13 +28,13 @@ export class WorkRelationshipService {
     }
 
     // Calculate initial strength based on duration
-    let strength: RelationshipStrength = 'WEAK';
+    let strength: RelationshipStrength = RelationshipStrength.WEAK;
     if (input.endDate) {
       const durationMonths = this.monthsBetween(input.startDate, input.endDate);
       if (durationMonths >= 24) {
-        strength = 'STRONG';
+        strength = RelationshipStrength.STRONG;
       } else if (durationMonths >= 6) {
-        strength = 'MODERATE';
+        strength = RelationshipStrength.MODERATE;
       }
     }
 

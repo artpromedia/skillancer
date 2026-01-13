@@ -153,8 +153,8 @@ export async function registerOpenApi(app: FastifyInstance): Promise<void> {
     const swagger = await import('@fastify/swagger');
     const swaggerUi = await import('@fastify/swagger-ui');
 
-    await app.register(swagger.default, openApiConfig as any);
-    await app.register(swaggerUi.default, {
+    await app.register(swagger.default as any, openApiConfig as any);
+    await app.register(swaggerUi.default as any, {
       routePrefix: '/docs',
       uiConfig: { docExpansion: 'list', deepLinking: true },
     });

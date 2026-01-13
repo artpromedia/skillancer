@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { InteractionType } from '../types/copilot.types.js';
 import type {
   CopilotInteractionInput,
   CopilotResponse,
@@ -14,7 +15,6 @@ import type {
   MarketInsightResult,
   Suggestion,
   SuggestionType,
-  InteractionType,
 } from '../types/copilot.types.js';
 
 export class CopilotService {
@@ -525,7 +525,7 @@ ${userName}`;
     return {
       averageRate:
         contracts.length > 0
-          ? contracts.reduce((s, c) => s + Number(c.suggestedRate), 0) / contracts.length
+          ? contracts.reduce((s: number, c: { suggestedRate: unknown }) => s + Number(c.suggestedRate), 0) / contracts.length
           : 0,
       count: contracts.length,
     };
@@ -614,7 +614,8 @@ ${userName}`;
         'I wanted to follow up on our previous conversation. Please let me know if you have any updates.',
     };
 
-    return intents[input.intent || 'FOLLOW_UP'];
+    const key = (input.intent || 'FOLLOW_UP') as keyof typeof intents;
+    return intents[key] ?? intents.FOLLOW_UP;
   }
 
   private generateAlternativeMessages(input: MessageAssistInput, context: any): string[] {

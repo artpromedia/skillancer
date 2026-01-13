@@ -1,9 +1,8 @@
 import { PrismaClient } from '@prisma/client';
+import { RiskCategory, RiskLevel } from '../types/intelligence.types.js';
 import type {
   RiskAlertCreateInput,
   RiskAlertUpdateInput,
-  RiskCategory,
-  RiskLevel,
 } from '../types/intelligence.types.js';
 
 export class RiskAlertService {
@@ -150,11 +149,11 @@ export class RiskAlertService {
 
     // Inactivity alert
     if (metrics.daysSinceLastActivity && metrics.daysSinceLastActivity > 7) {
-      const level = metrics.daysSinceLastActivity > 14 ? 'HIGH' : 'MEDIUM';
+      const level = metrics.daysSinceLastActivity > 14 ? RiskLevel.HIGH : RiskLevel.MEDIUM;
       alerts.push({
         contractId,
-        riskCategory: 'COMMUNICATION',
-        riskLevel: level as RiskLevel,
+        riskCategory: RiskCategory.COMMUNICATION,
+        riskLevel: level,
         title: 'Project Inactivity Detected',
         description: `No activity recorded for ${metrics.daysSinceLastActivity} days`,
         indicators: [
@@ -173,11 +172,11 @@ export class RiskAlertService {
 
     // Milestone delay alert
     if (metrics.milestoneDelays && metrics.milestoneDelays > 0) {
-      const level = metrics.milestoneDelays > 2 ? 'HIGH' : 'MEDIUM';
+      const level = metrics.milestoneDelays > 2 ? RiskLevel.HIGH : RiskLevel.MEDIUM;
       alerts.push({
         contractId,
-        riskCategory: 'TIMELINE',
-        riskLevel: level as RiskLevel,
+        riskCategory: RiskCategory.TIMELINE,
+        riskLevel: level,
         title: 'Milestone Delays Detected',
         description: `${metrics.milestoneDelays} milestone(s) are past their due date`,
         indicators: [`${metrics.milestoneDelays} overdue milestones`, 'Project timeline at risk'],
@@ -192,11 +191,11 @@ export class RiskAlertService {
 
     // Budget overrun alert
     if (metrics.budgetOverrun && metrics.budgetOverrun > 0.1) {
-      const level = metrics.budgetOverrun > 0.2 ? 'HIGH' : 'MEDIUM';
+      const level = metrics.budgetOverrun > 0.2 ? RiskLevel.HIGH : RiskLevel.MEDIUM;
       alerts.push({
         contractId,
-        riskCategory: 'BUDGET',
-        riskLevel: level as RiskLevel,
+        riskCategory: RiskCategory.BUDGET,
+        riskLevel: level,
         title: 'Budget Overrun Risk',
         description: `Project is ${Math.round(metrics.budgetOverrun * 100)}% over budget`,
         indicators: [
@@ -216,8 +215,8 @@ export class RiskAlertService {
     if (metrics.communicationGaps && metrics.communicationGaps > 3) {
       alerts.push({
         contractId,
-        riskCategory: 'COMMUNICATION',
-        riskLevel: 'MEDIUM',
+        riskCategory: RiskCategory.COMMUNICATION,
+        riskLevel: RiskLevel.MEDIUM,
         title: 'Communication Gap Detected',
         description: `${metrics.communicationGaps} days without client communication`,
         indicators: ['No client responses to messages', 'Pending questions unanswered'],
@@ -232,11 +231,11 @@ export class RiskAlertService {
 
     // Scope creep alert
     if (metrics.scopeChanges && metrics.scopeChanges > 3) {
-      const level = metrics.scopeChanges > 5 ? 'HIGH' : 'MEDIUM';
+      const level = metrics.scopeChanges > 5 ? RiskLevel.HIGH : RiskLevel.MEDIUM;
       alerts.push({
         contractId,
-        riskCategory: 'SCOPE',
-        riskLevel: level as RiskLevel,
+        riskCategory: RiskCategory.SCOPE,
+        riskLevel: level,
         title: 'Significant Scope Changes',
         description: `${metrics.scopeChanges} scope changes recorded`,
         indicators: [
@@ -286,11 +285,11 @@ export class RiskAlertService {
       total,
       unresolved,
       resolved: total - unresolved,
-      byCategory: byCategory.map((c) => ({
+      byCategory: byCategory.map((c: { riskCategory: string; _count: number }) => ({
         category: c.riskCategory,
         count: c._count,
       })),
-      byLevel: byLevel.map((l) => ({
+      byLevel: byLevel.map((l: { riskLevel: string; _count: number }) => ({
         level: l.riskLevel,
         count: l._count,
       })),

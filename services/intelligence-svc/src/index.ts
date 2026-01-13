@@ -26,12 +26,12 @@ async function buildApp() {
     trustProxy: true,
   });
 
-  await fastify.register(cors, {
+  await fastify.register(cors as any, {
     origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
     credentials: true,
   });
 
-  await fastify.register(helmet, {
+  await fastify.register(helmet as any, {
     contentSecurityPolicy: false,
   });
 

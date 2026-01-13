@@ -86,7 +86,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           400: { description: 'Invalid request' },
           401: { description: 'Unauthorized' },
         },
-      },
+      } as any,
     },
     async (
       request: FastifyRequest<{ Body: z.infer<typeof GenerateProposalDraftSchema> }>,
@@ -99,7 +99,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
         const result = await copilotService.generateProposalDraft({
           userId: user.id,
           ...input,
-        });
+        } as any);
 
         return reply.status(201).send(result);
       } catch (error: any) {
@@ -144,7 +144,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           },
           404: { description: 'Draft not found' },
         },
-      },
+      } as any,
     },
     async (
       request: FastifyRequest<{ Params: z.infer<typeof DraftIdParamsSchema> }>,
@@ -193,7 +193,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           400: { description: 'Invalid request' },
           404: { description: 'Draft not found' },
         },
-      },
+      } as any,
     },
     async (
       request: FastifyRequest<{
@@ -242,7 +242,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           },
           401: { description: 'Unauthorized' },
         },
-      },
+      } as any,
     },
     async (
       request: FastifyRequest<{ Querystring: z.infer<typeof GetProposalDraftsQuerySchema> }>,
@@ -300,7 +300,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           400: { description: 'Invalid request' },
           401: { description: 'Unauthorized' },
         },
-      },
+      } as any,
     },
     async (
       request: FastifyRequest<{ Body: z.infer<typeof SuggestRateSchema> }>,
@@ -313,7 +313,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
         const result = await copilotService.suggestRate({
           userId: user.id,
           ...input,
-        });
+        } as any);
 
         return reply.send(result);
       } catch (error: any) {
@@ -360,7 +360,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           400: { description: 'Invalid request' },
           401: { description: 'Unauthorized' },
         },
-      },
+      } as any,
     },
     async (
       request: FastifyRequest<{ Body: z.infer<typeof AssistMessageSchema> }>,
@@ -373,7 +373,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
         const result = await copilotService.assistMessage({
           userId: user.id,
           ...input,
-        });
+        } as any);
 
         return reply.send(result);
       } catch (error: any) {
@@ -422,7 +422,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           400: { description: 'Invalid request' },
           401: { description: 'Unauthorized' },
         },
-      },
+      } as any,
     },
     async (
       request: FastifyRequest<{ Body: z.infer<typeof OptimizeProfileSchema> }>,
@@ -435,7 +435,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
         const result = await copilotService.optimizeProfile({
           userId: user.id,
           ...input,
-        });
+        } as any);
 
         return reply.send(result);
       } catch (error: any) {
@@ -483,7 +483,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           },
           400: { description: 'Invalid request' },
         },
-      },
+      } as any,
     },
     async (
       request: FastifyRequest<{ Body: z.infer<typeof GetMarketInsightsSchema> }>,
@@ -492,7 +492,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
       try {
         const input = GetMarketInsightsSchema.parse(request.body);
 
-        const result = await copilotService.getMarketInsights(input);
+        const result = await copilotService.getMarketInsights(input as any);
 
         return reply.send(result);
       } catch (error: any) {
@@ -528,7 +528,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           },
           401: { description: 'Unauthorized' },
         },
-      },
+      } as any,
     },
     async (
       request: FastifyRequest<{ Querystring: z.infer<typeof GetHistoryQuerySchema> }>,

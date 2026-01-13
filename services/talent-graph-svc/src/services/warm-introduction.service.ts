@@ -387,7 +387,8 @@ export class WarmIntroductionService {
     }
 
     // Check 2nd degree connections
-    const firstDegreeIds = directConnections.map((rel) =>
+    type ConnectionRecord = { userId: string; relatedUserId: string; relationshipType: string; company?: string | null };
+    const firstDegreeIds = (directConnections as ConnectionRecord[]).map((rel) =>
       rel.userId === userId ? rel.relatedUserId : rel.userId
     );
 
@@ -409,7 +410,7 @@ export class WarmIntroductionService {
       const introducer = rel.userId === targetUserId ? rel.relatedUser : rel.user;
 
       // Find the connection between user and introducer
-      const userToIntroducer = directConnections.find(
+      const userToIntroducer = (directConnections as ConnectionRecord[]).find(
         (dc) =>
           (dc.userId === userId && dc.relatedUserId === introducerId) ||
           (dc.relatedUserId === userId && dc.userId === introducerId)
@@ -421,7 +422,7 @@ export class WarmIntroductionService {
             userId: introducerId,
             name: `${introducer.firstName} ${introducer.lastName}`,
             relationshipType: userToIntroducer.relationshipType as any,
-            company: userToIntroducer.company,
+            company: userToIntroducer.company || '',
           },
           {
             userId: targetUserId,
@@ -430,7 +431,7 @@ export class WarmIntroductionService {
                 ? `${rel.user.firstName} ${rel.user.lastName}`
                 : `${rel.relatedUser.firstName} ${rel.relatedUser.lastName}`,
             relationshipType: rel.relationshipType as any,
-            company: rel.company,
+            company: rel.company || '',
           },
         ]);
       }

@@ -234,15 +234,15 @@ export class TeamReunionService {
       where: { teamReunionId },
     });
 
-    const confirmedCount = members.filter((m) => m.status === 'CONFIRMED').length;
-    const pendingCount = members.filter((m) => m.status === 'INVITED').length;
+    const confirmedCount = members.filter((m: { status: string }) => m.status === 'CONFIRMED').length;
+    const pendingCount = members.filter((m: { status: string }) => m.status === 'INVITED').length;
 
-    let newStatus: TeamReunionStatus = 'PROPOSED';
+    let newStatus: TeamReunionStatus = TeamReunionStatus.PROPOSED;
 
     if (confirmedCount >= 3 && pendingCount === 0) {
-      newStatus = 'CONFIRMED';
+      newStatus = TeamReunionStatus.CONFIRMED;
     } else if (confirmedCount >= 2) {
-      newStatus = 'PROPOSED'; // Still gathering team
+      newStatus = TeamReunionStatus.PROPOSED; // Still gathering team
     }
 
     await this.prisma.teamReunion.update({
@@ -355,8 +355,8 @@ export class TeamReunionService {
     const total = await this.prisma.teamReunionMember.count({ where: membershipWhere });
 
     return {
-      reunions: memberships.map((m) => ({
-        ...m.teamReunion,
+      reunions: memberships.map((m: { teamReunion: unknown; role?: string; proposedRole?: string; status: string }) => ({
+        ...m.teamReunion as object,
         userRole: m.role || m.proposedRole,
         userStatus: m.status,
       })),
@@ -450,7 +450,16 @@ export class TeamReunionService {
       take: limit,
     });
 
-    return relationships.map((rel) => {
+    type RelationshipWithUsers = {
+      userId: string;
+      user: { id: string; firstName: string; lastName: string; avatarUrl?: string | null; profile?: { title?: string; skills?: string[] } | null };
+      relatedUser: { id: string; firstName: string; lastName: string; avatarUrl?: string | null; profile?: { title?: string; skills?: string[] } | null };
+      relationshipType: string;
+      strength: string;
+      startDate: Date;
+      endDate?: Date | null;
+    };
+    return (relationships as RelationshipWithUsers[]).map((rel) => {
       const colleague = rel.userId === userId ? rel.relatedUser : rel.user;
       return {
         userId: colleague.id,
@@ -460,7 +469,7 @@ export class TeamReunionService {
         skills: colleague.profile?.skills || [],
         relationshipType: rel.relationshipType,
         strength: rel.strength,
-        workDuration: this.calculateWorkDuration(rel.startDate, rel.endDate),
+        workDuration: this.calculateWorkDuration(rel.startDate, rel.endDate ?? null),
       };
     });
   }

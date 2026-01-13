@@ -1,11 +1,9 @@
 import { PrismaClient } from '@prisma/client';
+import { PredictionConfidence, RiskCategory, RiskLevel } from '../types/intelligence.types.js';
 import type {
   SuccessPredictionInput,
   PredictionResult,
   RiskFactor,
-  RiskCategory,
-  RiskLevel,
-  PredictionConfidence,
 } from '../types/intelligence.types.js';
 
 export class PredictionService {
@@ -259,8 +257,8 @@ export class PredictionService {
     // Freelancer experience risk
     if (freelancerHistory.totalProjects < 3) {
       riskFactors.push({
-        category: 'RESOURCE',
-        level: 'MEDIUM',
+        category: RiskCategory.RESOURCE,
+        level: RiskLevel.MEDIUM,
         description: 'Limited freelancer track record on platform',
         mitigation: 'Request portfolio samples and conduct thorough interview',
       });
@@ -269,8 +267,8 @@ export class PredictionService {
     // Freelancer success rate risk
     if (freelancerHistory.successRate < 0.7) {
       riskFactors.push({
-        category: 'QUALITY',
-        level: freelancerHistory.successRate < 0.5 ? 'HIGH' : 'MEDIUM',
+        category: RiskCategory.QUALITY,
+        level: freelancerHistory.successRate < 0.5 ? RiskLevel.HIGH : RiskLevel.MEDIUM,
         description: 'Freelancer success rate below average',
         mitigation: 'Implement milestone-based payments and regular check-ins',
       });
@@ -279,8 +277,8 @@ export class PredictionService {
     // Client history risk
     if (clientHistory.totalProjects > 5 && clientHistory.successRate < 0.6) {
       riskFactors.push({
-        category: 'RELATIONSHIP',
-        level: 'MEDIUM',
+        category: RiskCategory.RELATIONSHIP,
+        level: RiskLevel.MEDIUM,
         description: 'Client has mixed project history',
         mitigation: 'Establish clear communication channels and expectations upfront',
       });
@@ -289,8 +287,8 @@ export class PredictionService {
     // Scope change risk
     if (clientHistory.scopeChangeAvg > 3) {
       riskFactors.push({
-        category: 'SCOPE',
-        level: clientHistory.scopeChangeAvg > 5 ? 'HIGH' : 'MEDIUM',
+        category: RiskCategory.SCOPE,
+        level: clientHistory.scopeChangeAvg > 5 ? RiskLevel.HIGH : RiskLevel.MEDIUM,
         description: 'Client has history of frequent scope changes',
         mitigation: 'Define detailed requirements document and change request process',
       });
@@ -299,8 +297,8 @@ export class PredictionService {
     // Communication risk
     if (clientHistory.communicationAvg < 0.5) {
       riskFactors.push({
-        category: 'COMMUNICATION',
-        level: 'MEDIUM',
+        category: RiskCategory.COMMUNICATION,
+        level: RiskLevel.MEDIUM,
         description: 'Client communication scores below average',
         mitigation: 'Set up regular scheduled check-ins and reporting',
       });
@@ -309,8 +307,8 @@ export class PredictionService {
     // Complexity risk
     if (input.complexity === 'HIGH') {
       riskFactors.push({
-        category: 'QUALITY',
-        level: 'MEDIUM',
+        category: RiskCategory.QUALITY,
+        level: RiskLevel.MEDIUM,
         description: 'High project complexity increases delivery risk',
         mitigation: 'Break project into smaller milestones with clear deliverables',
       });
@@ -319,8 +317,8 @@ export class PredictionService {
     // Timeline risk for long projects
     if (input.duration > 90) {
       riskFactors.push({
-        category: 'TIMELINE',
-        level: 'LOW',
+        category: RiskCategory.TIMELINE,
+        level: RiskLevel.LOW,
         description: 'Extended project duration may lead to scope drift',
         mitigation: 'Conduct monthly project health reviews',
       });
@@ -364,12 +362,12 @@ export class PredictionService {
     probability = Math.max(0.1, Math.min(0.95, probability));
 
     // Calculate confidence based on data availability
-    let confidence: PredictionConfidence = 'LOW';
+    let confidence: PredictionConfidence = PredictionConfidence.LOW;
     const dataPoints = freelancerHistory.totalProjects + clientHistory.totalProjects;
 
-    if (dataPoints >= 20) confidence = 'VERY_HIGH';
-    else if (dataPoints >= 10) confidence = 'HIGH';
-    else if (dataPoints >= 5) confidence = 'MEDIUM';
+    if (dataPoints >= 20) confidence = PredictionConfidence.VERY_HIGH;
+    else if (dataPoints >= 10) confidence = PredictionConfidence.HIGH;
+    else if (dataPoints >= 5) confidence = PredictionConfidence.MEDIUM;
 
     return {
       probability: Math.round(probability * 100) / 100,

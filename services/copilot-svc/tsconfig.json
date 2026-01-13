@@ -5,6 +5,12 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "types": ["node"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitAny": false,
+    "strict": false,
     "paths": {
       "@/*": ["./src/*"]
     }
