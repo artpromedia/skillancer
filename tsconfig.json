@@ -8,7 +8,6 @@
     { "path": "packages/database" },
     { "path": "packages/cache" },
     { "path": "packages/api-client" },
-    { "path": "apps/web" },
     { "path": "apps/web-market" },
     { "path": "apps/web-cockpit" },
     { "path": "apps/web-skillpod" },

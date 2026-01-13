@@ -67,9 +67,7 @@ function tracingPluginImpl(app: FastifyInstance): void {
   const config = getConfig();
 
   // Initialize SDK if not already done
-  if (!sdk) {
-    sdk = initializeTracing();
-  }
+  sdk ??= initializeTracing();
 
   if (!sdk) {
     return;

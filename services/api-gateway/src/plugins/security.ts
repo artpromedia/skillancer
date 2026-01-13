@@ -59,16 +59,31 @@ const SECURITY_HEADERS = {
   Expires: '0',
 };
 
-// Request validation patterns
+// Request validation patterns - split into smaller regexes to reduce complexity
+const SQL_INJECTION_BASIC = /('|"|;|--|\/\*|\*\/)/i;
+const SQL_INJECTION_COMMANDS = /(xp_|exec\s|execute\s)/i;
+const SQL_INJECTION_STATEMENTS =
+  /(union\s+select|insert\s+into|delete\s+from|drop\s+table|update\s+set)/i;
+
 const INJECTION_PATTERNS = {
-  sqlInjection:
-    /('|"|;|--|\/\*|\*\/|xp_|exec\s|execute\s|union\s+select|insert\s+into|delete\s+from|drop\s+table|update\s+set)/i,
+  sqlInjectionBasic: SQL_INJECTION_BASIC,
+  sqlInjectionCommands: SQL_INJECTION_COMMANDS,
+  sqlInjectionStatements: SQL_INJECTION_STATEMENTS,
   noSqlInjection:
     /(\$where|\$gt|\$lt|\$gte|\$lte|\$ne|\$in|\$nin|\$or|\$and|\$not|\$nor|\$exists|\$type|\$regex)/i,
   pathTraversal: /(\.\.\/|\.\.\\|%2e%2e%2f|%2e%2e\/|\.\.%2f|%2e%2e%5c)/i,
   commandInjection: /(;|\||`|\$\(|&&|\|\||>|<|&)/,
   xssPatterns: /(<script|javascript:|on\w+\s*=|<iframe|<object|<embed|<svg|<img.*onerror)/i,
 };
+
+/** Check for SQL injection patterns */
+function hasSqlInjection(input: string): boolean {
+  return (
+    SQL_INJECTION_BASIC.test(input) ||
+    SQL_INJECTION_COMMANDS.test(input) ||
+    SQL_INJECTION_STATEMENTS.test(input)
+  );
+}
 
 interface SecurityPluginOptions {
   /**
@@ -139,7 +154,7 @@ function securityPluginImpl(app: FastifyInstance, options: SecurityPluginOptions
       if (request.body && typeof request.body === 'object') {
         const bodyString = JSON.stringify(request.body);
 
-        if (INJECTION_PATTERNS.sqlInjection.test(bodyString)) {
+        if (hasSqlInjection(bodyString)) {
           request.log.warn(
             { type: 'sql_injection_attempt', ip: request.ip },
             'SQL injection attempt detected'
@@ -172,10 +187,7 @@ function securityPluginImpl(app: FastifyInstance, options: SecurityPluginOptions
 
       // Validate query parameters
       const queryString = JSON.stringify(request.query);
-      if (
-        INJECTION_PATTERNS.sqlInjection.test(queryString) ||
-        INJECTION_PATTERNS.noSqlInjection.test(queryString)
-      ) {
+      if (hasSqlInjection(queryString) || INJECTION_PATTERNS.noSqlInjection.test(queryString)) {
         request.log.warn(
           { type: 'query_injection_attempt', ip: request.ip },
           'Query injection attempt detected'
@@ -263,7 +275,7 @@ function securityPluginImpl(app: FastifyInstance, options: SecurityPluginOptions
     const str = components.join('|');
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
+      const char = str.codePointAt(i) ?? 0;
       hash = (hash << 5) - hash + char;
       hash = hash & hash;
     }
