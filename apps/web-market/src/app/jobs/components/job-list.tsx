@@ -42,7 +42,7 @@ const sortOptions = [
   { value: 'budget_high', label: 'Budget: High to Low' },
   { value: 'budget_low', label: 'Budget: Low to High' },
   { value: 'bids_count', label: 'Fewest Proposals' },
-];
+] as const;
 
 // ============================================================================
 // Component

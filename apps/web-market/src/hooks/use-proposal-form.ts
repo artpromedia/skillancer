@@ -59,6 +59,7 @@ export interface UseProposalFormOptions {
   initialContractType?: ContractType;
   minBudget?: number;
   maxBudget?: number;
+  suggestedBidAmount?: number;
   onSubmitSuccess?: (proposalId: string) => void;
   onSubmitError?: (error: Error) => void;
 }

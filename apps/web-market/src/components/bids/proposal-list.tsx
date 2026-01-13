@@ -267,12 +267,16 @@ function ProposalCard({
             {/* Skill Match Indicators */}
             {proposal.freelancer?.skills && proposal.freelancer.skills.length > 0 && (
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                {proposal.freelancer.skills.slice(0, 4).map((skill) => (
-                  <Badge key={skill} className="bg-slate-100 text-slate-700" variant="secondary">
-                    <BadgeCheck className="mr-1 h-3 w-3 text-green-600" />
-                    {skill}
-                  </Badge>
-                ))}
+                {proposal.freelancer.skills.slice(0, 4).map((skill, idx) => {
+                  const skillName = typeof skill === 'string' ? skill : skill.name;
+                  const skillKey = typeof skill === 'string' ? skill : skill.id;
+                  return (
+                    <Badge key={skillKey ?? idx} className="bg-slate-100 text-slate-700" variant="secondary">
+                      <BadgeCheck className="mr-1 h-3 w-3 text-green-600" />
+                      {skillName}
+                    </Badge>
+                  );
+                })}
                 {proposal.freelancer.skills.length > 4 && (
                   <span className="text-muted-foreground text-xs">
                     +{proposal.freelancer.skills.length - 4} more

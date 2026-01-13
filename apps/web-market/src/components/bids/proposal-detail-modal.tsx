@@ -138,11 +138,15 @@ function FreelancerProfile({ proposal }: Readonly<{ proposal: Proposal }>) {
         <div>
           <h4 className="mb-2 font-medium">Skills</h4>
           <div className="flex flex-wrap gap-2">
-            {freelancer.skills.map((skill) => (
-              <Badge key={skill.id} variant="secondary">
-                {skill.name}
-              </Badge>
-            ))}
+            {freelancer.skills.map((skill, idx) => {
+              const skillName = typeof skill === 'string' ? skill : skill.name;
+              const skillKey = typeof skill === 'string' ? skill : skill.id;
+              return (
+                <Badge key={skillKey ?? idx} variant="secondary">
+                  {skillName}
+                </Badge>
+              );
+            })}
           </div>
         </div>
       )}

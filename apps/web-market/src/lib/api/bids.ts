@@ -123,7 +123,7 @@ export interface Proposal {
     jobsCompleted: number;
     completedJobs?: number;
     verificationLevel: string;
-    skills: string[];
+    skills: (string | { id: string; name: string })[];
     hourlyRate: number;
     successRate: number;
     responseTime: string;
@@ -274,10 +274,13 @@ export interface FreelancerProposalStats {
   averageBidAmount: number;
 }
 
-export interface BoostOptions {
-  duration: '24h' | '3d' | '7d';
+export type BoostType = 'BASIC' | 'FEATURED' | 'PREMIUM';
+
+export type BoostOptions = BoostType | {
+  type?: BoostType;
+  duration?: '24h' | '3d' | '7d';
   paymentMethodId?: string;
-}
+};
 
 export interface BoostPricing {
   duration: '24h' | '3d' | '7d';
@@ -289,8 +292,10 @@ export interface BoostPricing {
 
 export interface HireData {
   proposalId: string;
-  contractType: ContractType;
+  contractType?: ContractType;
   totalAmount?: number;
+  agreedAmount?: number;
+  agreedDeliveryDays?: number;
   hourlyRate?: number;
   estimatedHours?: number;
   milestones?: {
@@ -300,9 +305,10 @@ export interface HireData {
     durationDays: number;
     dueDate?: string;
   }[];
-  startDate: string;
+  startDate?: string;
   deadline?: string;
   messageToFreelancer?: string;
+  welcomeMessage?: string;
   enableSkillPod?: boolean;
   skillPodSecurityPolicy?: 'STANDARD' | 'HIGH' | 'MAXIMUM';
   initialFundingMilestoneId?: string;
@@ -704,8 +710,15 @@ export async function bulkArchiveProposals(proposalIds: string[]): Promise<Propo
 
 /**
  * Hire freelancer and create contract
+ * Can be called as hireFreelancer(data) or hireFreelancer(proposalId, options)
  */
-export async function hireFreelancer(data: HireData): Promise<Contract> {
+export async function hireFreelancer(
+  dataOrProposalId: HireData | string,
+  options?: Omit<HireData, 'proposalId'>
+): Promise<Contract> {
+  const data: HireData = typeof dataOrProposalId === 'string'
+    ? { proposalId: dataOrProposalId, ...options } as HireData
+    : dataOrProposalId;
   return apiFetch<Contract>(`${API_BASE_URL}/bids/${data.proposalId}/hire`, {
     method: 'POST',
     body: JSON.stringify(data),
@@ -1020,6 +1033,16 @@ export function getProposalStatusInfo(status: ProposalStatus): {
       label: 'Expired',
       color: 'gray',
       description: 'Proposal has expired',
+    },
+    INTERVIEWING: {
+      label: 'Interviewing',
+      color: 'orange',
+      description: 'Interview process in progress',
+    },
+    ARCHIVED: {
+      label: 'Archived',
+      color: 'gray',
+      description: 'Proposal has been archived',
     },
   };
 

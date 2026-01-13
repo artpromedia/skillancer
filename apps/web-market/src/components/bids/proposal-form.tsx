@@ -64,7 +64,7 @@ interface GuildOption {
 interface ProposalFormProps {
   jobId: string;
   jobTitle: string;
-  jobDescription: string;
+  jobDescription?: string;
   jobBudget: {
     type: ContractType;
     minAmount?: number;

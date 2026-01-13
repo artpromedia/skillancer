@@ -64,6 +64,7 @@ export interface Milestone {
   escrowReleasedAt?: string;
   fundedAt?: string;
   completedAt?: string;
+  releasedAt?: string;
   submission?: MilestoneSubmission;
   revision?: MilestoneRevision;
   revisions?: MilestoneRevision[];
@@ -104,8 +105,8 @@ export interface TimeEntry {
   activityLevel?: number; // 0-100 from SkillPod
   screenshot?: string;
   memo?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Attachment {
@@ -184,8 +185,14 @@ export interface PaymentInfo {
   escrowBalance: number;
   totalPaid: number;
   pendingAmount: number;
+  releasedAmount?: number;
   nextPaymentDate?: string;
   nextPaymentAmount?: number;
+  nextPayment?: {
+    amount: number;
+    dueDate: string;
+    milestone?: string;
+  };
   transactions: PaymentTransaction[];
 }
 
@@ -899,6 +906,8 @@ export function calculateContractProgress(contract: Contract): {
   percentage: number;
   completed: number;
   total: number;
+  completedMilestones: number;
+  totalMilestones: number;
 } {
   if (contract.type === 'FIXED') {
     const completed = contract.milestones.filter((m) =>
@@ -909,6 +918,8 @@ export function calculateContractProgress(contract: Contract): {
       percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
       completed,
       total,
+      completedMilestones: completed,
+      totalMilestones: total,
     };
   } else {
     // For hourly, calculate based on budget vs spent
@@ -918,6 +929,8 @@ export function calculateContractProgress(contract: Contract): {
       percentage: budget > 0 ? Math.round((spent / budget) * 100) : 0,
       completed: Math.round(contract.totalHours || 0),
       total: contract.weeklyLimit ? contract.weeklyLimit * 4 : 160,
+      completedMilestones: 0,
+      totalMilestones: 0,
     };
   }
 }

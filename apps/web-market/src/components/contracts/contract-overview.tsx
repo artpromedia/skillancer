@@ -220,19 +220,19 @@ export function ContractOverview({
               <div>
                 <p className="text-muted-foreground text-xs">Funded</p>
                 <p className="text-lg font-semibold text-green-600">
-                  {formatCurrency(contract.escrowBalance.funded)}
+                  {formatCurrency(contract.escrowDetails?.funded ?? contract.escrowBalance)}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Released</p>
                 <p className="text-lg font-semibold">
-                  {formatCurrency(contract.escrowBalance.released)}
+                  {formatCurrency(contract.escrowDetails?.released ?? contract.totalPaid)}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Pending</p>
                 <p className="text-lg font-semibold text-amber-600">
-                  {formatCurrency(contract.escrowBalance.pending)}
+                  {formatCurrency(contract.escrowDetails?.pending ?? 0)}
                 </p>
               </div>
             </div>

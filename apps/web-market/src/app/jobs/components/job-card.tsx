@@ -182,7 +182,9 @@ export function JobCard({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 {job.client.isPaymentVerified && (
-                  <Shield className="h-3 w-3 text-green-500" title="Payment Verified" />
+                  <span title="Payment Verified">
+                    <Shield className="h-3 w-3 text-green-500" />
+                  </span>
                 )}
                 {job.client.reviewScore && (
                   <span className="flex items-center gap-0.5 text-sm">

@@ -209,13 +209,16 @@ export function ProposalComparison({
   const hourlyRates = proposals.map((p) => p.freelancer?.hourlyRate ?? 0);
 
   // Skills overlap
+  const getSkillName = (s: string | { id: string; name: string }): string =>
+    typeof s === 'string' ? s : s.name;
+
   const allSkills = new Set<string>();
   proposals.forEach((p) => {
-    p.freelancer?.skills?.forEach((s) => allSkills.add(s.name));
+    p.freelancer?.skills?.forEach((s) => allSkills.add(getSkillName(s)));
   });
 
   const skillsOverlap = proposals.map((p) => {
-    const freelancerSkills = new Set(p.freelancer?.skills?.map((s) => s.name) ?? []);
+    const freelancerSkills = new Set(p.freelancer?.skills?.map((s) => getSkillName(s)) ?? []);
     return freelancerSkills.size;
   });
 
