@@ -169,7 +169,7 @@ async function handlePaymentMethodAttached(
   const stripeService = getStripeService();
 
   if (!paymentMethod.customer) {
-    console.log('[Stripe Webhook] Payment method attached without customer, skipping');
+    logger.info('[Stripe Webhook] Payment method attached without customer, skipping');
     return { handled: true, message: 'No customer attached' };
   }
 
@@ -445,7 +445,7 @@ async function handleSetupIntentSucceeded(
   const paymentMethodId = setupIntent.payment_method;
 
   if (!paymentMethodId) {
-    console.log('[Stripe Webhook] Setup intent succeeded without payment method');
+    logger.info('[Stripe Webhook] Setup intent succeeded without payment method');
     return { handled: true, message: 'No payment method in setup intent' };
   }
 
@@ -678,7 +678,7 @@ async function handleSubscriptionStatusChange(
 
   try {
     await subscriptionService.syncSubscriptionStatus(subscription);
-    console.log(
+    logger.info(
       `[Stripe Webhook] Subscription ${subscription.id} status changed to ${subscription.status}`
     );
     return { handled: true, message: `Subscription status changed to ${subscription.status}` };
@@ -757,7 +757,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<Webh
       }
     }
 
-    console.log(
+    logger.info(
       `[Stripe Webhook] Invoice ${invoice.id} payment failed (attempt ${invoice.attempt_count})`
     );
     return { handled: true, message: 'Invoice payment failure processed' };
@@ -917,11 +917,11 @@ async function handlePaymentIntentSucceeded(
         },
       });
 
-      console.log(
+      logger.info(
         `[Stripe Webhook] Payment intent ${paymentIntent.id} succeeded for transaction ${transaction.id}`
       );
     } else {
-      console.log(
+      logger.info(
         `[Stripe Webhook] Payment intent ${paymentIntent.id} succeeded (no matching transaction)`
       );
     }
@@ -989,12 +989,12 @@ async function handleEscrowPaymentSucceeded(
         paymentIntent.currency.toUpperCase()
       );
 
-      console.log(
+      logger.info(
         `[Stripe Webhook] Escrow payment ${paymentIntent.id} succeeded for contract ${contractId}`
       );
     } else {
       // Transaction not found - might be direct capture without authorization
-      console.log(
+      logger.info(
         `[Stripe Webhook] Escrow payment ${paymentIntent.id} succeeded (no prior transaction)`
       );
     }
@@ -1027,7 +1027,7 @@ async function handlePaymentIntentFailed(
         },
       });
 
-      console.log(
+      logger.info(
         `[Stripe Webhook] Payment intent ${paymentIntent.id} failed for transaction ${transaction.id}`
       );
     }
@@ -1213,7 +1213,7 @@ async function handleTransferCreated(transfer: Stripe.Transfer): Promise<Webhook
           transfer.currency.toUpperCase()
         );
 
-        console.log(
+        logger.info(
           `[Stripe Webhook] Escrow transfer ${transfer.id} created for contract ${escrowContractId}`
         );
         return { handled: true, message: 'Escrow transfer created processed' };
@@ -1270,7 +1270,7 @@ async function handleTransferFailed(transfer: Stripe.Transfer): Promise<WebhookH
         escrowTransaction.amount
       );
 
-      console.log(
+      logger.info(
         `[Stripe Webhook] Escrow transfer ${transfer.id} failed for contract ${escrowTransaction.contractId}`
       );
     }
@@ -1427,7 +1427,7 @@ async function handlePaymentIntentAmountCapturableUpdated(
         },
       });
 
-      console.log(
+      logger.info(
         `[Stripe Webhook] Escrow payment ${paymentIntent.id} authorized for ${paymentIntent.amount_capturable}`
       );
     }
