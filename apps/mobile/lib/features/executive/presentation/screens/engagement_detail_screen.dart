@@ -199,7 +199,7 @@ class EngagementDetailScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -274,7 +274,7 @@ class EngagementDetailScreen extends ConsumerWidget {
           Card(
             elevation: 0,
             color:
-                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
             child: const Padding(
               padding: EdgeInsets.all(24),
               child: Center(
@@ -403,7 +403,7 @@ class EngagementDetailScreen extends ConsumerWidget {
                 elevation: 0,
                 color: Theme.of(context)
                     .colorScheme
-                    .surfaceVariant
+                    .surfaceContainerHighest
                     .withOpacity(0.5),
                 child: const Padding(
                   padding: EdgeInsets.all(24),
@@ -496,7 +496,7 @@ class EngagementDetailScreen extends ConsumerWidget {
                 elevation: 0,
                 color: Theme.of(context)
                     .colorScheme
-                    .surfaceVariant
+                    .surfaceContainerHighest
                     .withOpacity(0.5),
                 child: const Padding(
                   padding: EdgeInsets.all(24),

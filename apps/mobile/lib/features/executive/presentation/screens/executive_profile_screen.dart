@@ -324,7 +324,7 @@ class ExecutiveProfileScreen extends ConsumerWidget {
   Widget _buildVerificationSection(BuildContext context, ExecutiveProfile profile) {
     return Card(
       elevation: 0,
-      color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),

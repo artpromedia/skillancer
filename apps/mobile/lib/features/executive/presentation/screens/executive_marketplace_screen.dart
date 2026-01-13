@@ -418,7 +418,7 @@ class _ExecutiveMarketplaceScreenState extends ConsumerState<ExecutiveMarketplac
                   children: executive.industries.take(3).map((i) => Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(

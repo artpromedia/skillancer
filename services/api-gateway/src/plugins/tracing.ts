@@ -3,13 +3,16 @@
  * OpenTelemetry distributed tracing integration
  */
 
-import { NodeSDK } from '@opentelemetry/sdk-node';
+import { SpanStatusCode, trace, context, propagation } from '@opentelemetry/api';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { Resource } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION, ATTR_DEPLOYMENT_ENVIRONMENT } from '@opentelemetry/semantic-conventions';
-import { SpanStatusCode, trace, context, propagation } from '@opentelemetry/api';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import fp from 'fastify-plugin';
+
+// Define deployment environment attribute (not exported by semantic-conventions)
+const ATTR_DEPLOYMENT_ENVIRONMENT = 'deployment.environment';
 
 import { getConfig } from '../config/index.js';
 
@@ -60,7 +63,7 @@ function initializeTracing(): NodeSDK | null {
   return nodeSdk;
 }
 
-async function tracingPluginImpl(app: FastifyInstance): Promise<void> {
+function tracingPluginImpl(app: FastifyInstance): void {
   const config = getConfig();
 
   // Initialize SDK if not already done
@@ -75,6 +78,7 @@ async function tracingPluginImpl(app: FastifyInstance): Promise<void> {
   const tracer = trace.getTracer(config.service.name, config.service.version);
 
   // Add tracing context to requests
+  // eslint-disable-next-line @typescript-eslint/require-await
   app.addHook('onRequest', async (request: FastifyRequest, _reply: FastifyReply) => {
     // Extract trace context from incoming headers
     const extractedContext = propagation.extract(context.active(), request.headers);
@@ -95,16 +99,20 @@ async function tracingPluginImpl(app: FastifyInstance): Promise<void> {
     );
 
     // Store span in request for later use
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (request as any).span = span;
 
     // Add trace context to request for downstream services
     const traceContext: Record<string, string> = {};
     propagation.inject(trace.setSpan(context.active(), span), traceContext);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (request as any).traceContext = traceContext;
   });
 
   // Add user context when available
+  // eslint-disable-next-line @typescript-eslint/require-await
   app.addHook('preHandler', async (request: FastifyRequest) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const span = (request as any).span;
     if (!span) return;
 
@@ -118,7 +126,9 @@ async function tracingPluginImpl(app: FastifyInstance): Promise<void> {
   });
 
   // Complete span on response
+  // eslint-disable-next-line @typescript-eslint/require-await
   app.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const span = (request as any).span;
     if (!span) return;
 
@@ -137,7 +147,9 @@ async function tracingPluginImpl(app: FastifyInstance): Promise<void> {
   });
 
   // Handle errors
+  // eslint-disable-next-line @typescript-eslint/require-await
   app.addHook('onError', async (request: FastifyRequest, _reply: FastifyReply, error: Error) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const span = (request as any).span;
     if (!span) return;
 
@@ -165,5 +177,6 @@ export const tracingPlugin = fp(tracingPluginImpl, {
  * Get trace context headers for propagating to downstream services
  */
 export function getTraceHeaders(request: FastifyRequest): Record<string, string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return
   return (request as any).traceContext || {};
 }

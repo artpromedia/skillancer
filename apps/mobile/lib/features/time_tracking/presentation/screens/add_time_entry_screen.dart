@@ -72,7 +72,7 @@ class _AddTimeEntryScreenState extends ConsumerState<AddTimeEntryScreen> {
                   }
 
                   return DropdownButtonFormField<Contract>(
-                    value: _selectedContract,
+                    initialValue: _selectedContract,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       hintText: 'Select a contract',

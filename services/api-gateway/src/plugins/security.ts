@@ -3,8 +3,9 @@
  * Advanced security plugin integrating SOC 2 compliance controls
  */
 
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
+
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 // Import type extensions to ensure authenticate/optionalAuth decorators are available
 import '../types/index.js';
@@ -106,10 +107,7 @@ interface SecurityPluginOptions {
   auditLogging?: boolean;
 }
 
-async function securityPluginImpl(
-  app: FastifyInstance,
-  options: SecurityPluginOptions = {}
-): Promise<void> {
+function securityPluginImpl(app: FastifyInstance, options: SecurityPluginOptions = {}): void {
   const {
     headers = true,
     validation = true,
@@ -121,9 +119,10 @@ async function securityPluginImpl(
 
   // Add security headers to all responses
   if (headers) {
+    // eslint-disable-next-line @typescript-eslint/require-await
     app.addHook('onSend', async (_request: FastifyRequest, reply: FastifyReply) => {
       for (const [header, value] of Object.entries(SECURITY_HEADERS)) {
-        reply.header(header, value);
+        void reply.header(header, value);
       }
     });
   }
@@ -274,8 +273,7 @@ async function securityPluginImpl(
   app.log.info('Security plugin registered with SOC 2 compliance controls');
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const securityPlugin = fp(securityPluginImpl as any, {
+export const securityPlugin = fp(securityPluginImpl, {
   name: 'security',
-  fastify: '5.x',
+  fastify: '4.x',
 });
