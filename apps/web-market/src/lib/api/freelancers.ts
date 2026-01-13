@@ -57,19 +57,28 @@ export interface FreelancerCredential {
 export interface PortfolioItem {
   id: string;
   title: string;
-  description: string;
-  thumbnailUrl: string;
-  mediaUrls: string[];
-  mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
+  description?: string;
+  thumbnailUrl?: string;
+  mediaUrl?: string;
+  mediaUrls?: string[];
+  images?: string[];
+  type: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
+  mediaType?: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
+  projectUrl?: string;
   externalUrl?: string;
-  skills: string[];
+  category?: string;
+  tags?: string[];
+  skills?: string[];
+  client?: string;
   clientName?: string;
+  role?: string;
+  duration?: string;
   clientTestimonial?: string;
   projectDate?: string;
   isFeatured: boolean;
-  viewCount: number;
-  displayOrder: number;
-  createdAt: string;
+  viewCount?: number;
+  displayOrder?: number;
+  createdAt?: string;
 }
 
 export interface WorkHistoryItem {
@@ -176,6 +185,30 @@ export interface FreelancerProfile {
   featuredPortfolio: PortfolioItem[];
   totalPortfolioItems: number;
 
+  // Social Links
+  socialLinks?: {
+    linkedIn?: string;
+    github?: string;
+    twitter?: string;
+    website?: string;
+  };
+
+  // Work History
+  workHistory?: WorkHistoryItem[];
+
+  // Verification (detailed)
+  verification?: {
+    identity: boolean;
+    email: boolean;
+    phone: boolean;
+    payment: boolean;
+    premium: boolean;
+    level: VerificationLevel;
+  };
+
+  // Last seen
+  lastSeen?: string;
+
   // SEO
   profileUrl: string;
   metaTitle?: string;
@@ -242,6 +275,29 @@ export interface FreelancerSearchParams extends FreelancerSearchFilters {
   sortBy?: FreelancerSortBy;
   page?: number;
   limit?: number;
+}
+
+/**
+ * Data structure for updating freelancer profile
+ */
+export interface UpdateProfileData {
+  displayName?: string;
+  title?: string;
+  bio?: string;
+  headline?: string;
+  hourlyRate?: number;
+  location?: string;
+  country?: string;
+  timezone?: string;
+  availability?: AvailabilityStatus;
+  hoursPerWeek?: number;
+  preferredWorkingHours?: { start: string; end: string; timezone: string };
+  socialLinks?: {
+    linkedIn?: string;
+    github?: string;
+    twitter?: string;
+    website?: string;
+  };
 }
 
 export interface FreelancerSearchResponse {
@@ -439,17 +495,7 @@ export async function getMyProfile(token: string): Promise<FreelancerProfile> {
  */
 export async function updateProfile(
   token: string,
-  data: Partial<{
-    title: string;
-    bio: string;
-    headline: string;
-    hourlyRate: number;
-    location: string;
-    timezone: string;
-    availability: AvailabilityStatus;
-    hoursPerWeek: number;
-    preferredWorkingHours: { start: string; end: string; timezone: string };
-  }>
+  data: UpdateProfileData
 ): Promise<FreelancerProfile> {
   return apiFetch<FreelancerProfile>(`${API_BASE_URL}/profiles/me`, {
     method: 'PUT',
@@ -544,11 +590,20 @@ export async function addPortfolioItem(
   token: string,
   data: {
     title: string;
-    description: string;
-    mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
+    description?: string;
+    type?: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
+    mediaType?: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
+    thumbnailUrl?: string;
+    mediaUrl?: string;
+    projectUrl?: string;
     externalUrl?: string;
-    skills: string[];
+    category?: string;
+    tags?: string[];
+    skills?: string[];
+    client?: string;
     clientName?: string;
+    role?: string;
+    duration?: string;
     clientTestimonial?: string;
     projectDate?: string;
     isFeatured?: boolean;
@@ -656,6 +711,47 @@ export async function updateWorkHistoryItem(
 export async function deleteWorkHistoryItem(token: string, itemId: string): Promise<void> {
   await apiFetch<void>(`${API_BASE_URL}/profiles/me/work-history/${itemId}`, {
     method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// ============================================================================
+// Simplified Portfolio Functions (for components without token context)
+// ============================================================================
+
+/**
+ * Get current user's portfolio items (simplified - uses stored token)
+ */
+export async function getMyPortfolio(): Promise<{ items: PortfolioItem[] }> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? '' : '';
+  const items = await apiFetch<PortfolioItem[]>(`${API_BASE_URL}/profiles/me/portfolio`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return { items };
+}
+
+/**
+ * Set portfolio item as featured (simplified)
+ */
+export async function setPortfolioItemFeatured(itemId: string, isFeatured: boolean): Promise<void> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? '' : '';
+  await apiFetch<void>(`${API_BASE_URL}/profiles/me/portfolio/${itemId}/featured`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ isFeatured }),
+  });
+}
+
+// ============================================================================
+// Simplified Skills Functions (for components without token context)
+// ============================================================================
+
+/**
+ * Get current user's skills (simplified)
+ */
+export async function getMySkills(): Promise<FreelancerSkill[]> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? '' : '';
+  return apiFetch<FreelancerSkill[]>(`${API_BASE_URL}/profiles/me/skills`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 }

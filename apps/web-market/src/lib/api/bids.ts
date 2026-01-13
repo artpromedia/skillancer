@@ -16,10 +16,12 @@ export type ProposalStatus =
   | 'VIEWED'
   | 'SHORTLISTED'
   | 'INTERVIEW'
+  | 'INTERVIEWING'
   | 'HIRED'
   | 'DECLINED'
   | 'WITHDRAWN'
-  | 'EXPIRED';
+  | 'EXPIRED'
+  | 'ARCHIVED';
 
 export type ContractType = 'FIXED' | 'HOURLY';
 
@@ -29,7 +31,8 @@ export interface ProposalMilestone {
   description: string;
   amount: number;
   durationDays: number;
-  order: number;
+  order?: number;
+  status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 }
 
 export interface ProposalAttachment {
@@ -38,7 +41,7 @@ export interface ProposalAttachment {
   url: string;
   mimeType: string;
   size: number;
-  uploadedAt: string;
+  uploadedAt?: string;
 }
 
 export interface ProposalSubmission {
@@ -100,6 +103,7 @@ export interface Proposal {
     client: {
       id: string;
       displayName: string;
+      name?: string;
       avatarUrl?: string;
       companyName?: string;
       verificationLevel: string;
@@ -109,16 +113,21 @@ export interface Proposal {
     id: string;
     username: string;
     displayName: string;
+    name?: string;
     avatarUrl?: string;
     title: string;
+    bio?: string;
+    location?: string;
     rating: number;
     reviewCount: number;
     jobsCompleted: number;
+    completedJobs?: number;
     verificationLevel: string;
     skills: string[];
     hourlyRate: number;
     successRate: number;
     responseTime: string;
+    totalEarnings?: number;
   };
   coverLetter: string;
   contractType: ContractType;
@@ -132,6 +141,8 @@ export interface Proposal {
     id: string;
     title: string;
     thumbnailUrl: string;
+    imageUrl?: string;
+    url?: string;
   }[];
   status: ProposalStatus;
   statusHistory: {
@@ -142,14 +153,26 @@ export interface Proposal {
   qualityScore?: QualityScore;
   smartMatchScore?: SmartMatchScore;
   isBoosted: boolean;
+  boostType?: 'FEATURED' | 'PREMIUM' | 'STANDARD' | 'BASIC';
   boostExpiresAt?: string;
   viewedAt?: string;
+  clientViewed?: boolean;
+  clientViewedAt?: string;
   shortlistedAt?: string;
   interviewScheduledAt?: string;
+  interviewSlots?: {
+    id: string;
+    startTime: string;
+    endTime: string;
+    isAvailable: boolean;
+  }[];
   hiredAt?: string;
   declinedAt?: string;
   declineReason?: string;
   withdrawnAt?: string;
+  contractId?: string;
+  matchScore?: SmartMatchScore;
+  submittedAt: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -162,10 +185,11 @@ export interface QualityScore {
     portfolioRelevance: number;
     rateCompetitiveness: number;
     completeness: number;
+    clarity?: number;
   };
   suggestions: {
     type: 'IMPROVEMENT' | 'WARNING' | 'SUCCESS';
-    field: string;
+    field?: string;
     message: string;
   }[];
 }
@@ -174,9 +198,12 @@ export interface SmartMatchScore {
   overall: number; // 0-100
   breakdown: {
     skillsMatch: number;
+    skills?: number;
     experienceRelevance: number;
+    experience?: number;
     trustScore: number;
     rateCompetitiveness: number;
+    budget?: number;
     availabilityFit: number;
     communicationScore: number;
   };
@@ -875,24 +902,27 @@ export function subscribeToProposalUpdates(
 }
 
 /**
+ * Job proposal event types for WebSocket subscription
+ */
+export type JobProposalEvent =
+  | { type: 'NEW_PROPOSAL'; proposal: Proposal }
+  | { type: 'PROPOSAL_UPDATED'; proposal: Proposal }
+  | { type: 'PROPOSAL_WITHDRAWN'; proposalId: string };
+
+/**
  * Subscribe to job proposals updates (for clients)
  */
 export function subscribeToJobProposals(
   jobId: string,
-  onNewProposal: (proposal: Proposal) => void,
-  onProposalUpdated: (proposal: Proposal) => void
+  onEvent: (event: JobProposalEvent) => void
 ): () => void {
   const wsUrl = process.env.NEXT_PUBLIC_WS_URL ?? 'wss://api.skillancer.com/ws';
   const ws = new WebSocket(`${wsUrl}/jobs/${jobId}/bids`);
 
   ws.onmessage = (event) => {
     try {
-      const data = JSON.parse(event.data as string) as { type: string; proposal: Proposal };
-      if (data.type === 'NEW_PROPOSAL') {
-        onNewProposal(data.proposal);
-      } else if (data.type === 'PROPOSAL_UPDATED') {
-        onProposalUpdated(data.proposal);
-      }
+      const data = JSON.parse(event.data as string) as JobProposalEvent;
+      onEvent(data);
     } catch {
       // Ignore parse errors
     }

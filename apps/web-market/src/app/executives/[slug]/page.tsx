@@ -18,18 +18,21 @@ import {
   Shield,
   Linkedin,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@skillancer/ui/card';
-import { Button } from '@skillancer/ui/button';
-import { Badge } from '@skillancer/ui/badge';
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+  Badge,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@skillancer/ui/dialog';
-import { Textarea } from '@skillancer/ui/textarea';
-import { Input } from '@skillancer/ui/input';
+  Textarea,
+  Input,
+} from '@skillancer/ui';
 
 // Mock executive data
 const executive = {

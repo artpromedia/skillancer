@@ -5,18 +5,22 @@
  * Clients submit requirements to get matched with executives
  */
 
-import { Button } from '@skillancer/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@skillancer/ui/card';
-import { Input } from '@skillancer/ui/input';
-import { Label } from '@skillancer/ui/label';
 import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@skillancer/ui/select';
-import { Textarea } from '@skillancer/ui/textarea';
+  Textarea,
+} from '@skillancer/ui';
 import { ArrowLeft, Users, Briefcase, Clock, DollarSign, Send, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';

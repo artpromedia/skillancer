@@ -23,7 +23,7 @@ export interface Job {
   durationUnit?: 'HOURS' | 'DAYS' | 'WEEKS' | 'MONTHS';
   experienceLevel?: 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
   visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY';
-  status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED' | 'COMPLETED';
+  status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED' | 'COMPLETED' | 'OPEN';
   skills: Skill[];
   client: ClientInfo;
   proposalCount: number;

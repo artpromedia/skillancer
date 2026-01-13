@@ -7,14 +7,13 @@ import {
   Clock,
   DollarSign,
   FileText,
-  Handshake,
+  UserCheck,
   MessageSquare,
   Search,
   Shield,
   Sparkles,
   Star,
   User,
-  UserCheck,
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -78,7 +77,7 @@ export default function HowItWorksPage() {
                 />
                 <StepCard
                   description="Once accepted, work directly with clients through our platform. Use SkillPod for secure, monitored work sessions."
-                  icon={Handshake}
+                  icon={UserCheck}
                   step={4}
                   title="Get Hired"
                 />

@@ -5,19 +5,22 @@
  * 3-step onboarding for clients hiring executives
  */
 
-import { Button } from '@skillancer/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@skillancer/ui/card';
-import { Input } from '@skillancer/ui/input';
-import { Label } from '@skillancer/ui/label';
-import { Progress } from '@skillancer/ui/progress';
 import {
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  Input,
+  Label,
+  Progress,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@skillancer/ui/select';
-import { Textarea } from '@skillancer/ui/textarea';
+  Textarea,
+} from '@skillancer/ui';
 import { Building2, Target, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';

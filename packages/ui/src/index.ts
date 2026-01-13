@@ -82,6 +82,19 @@ export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './compon
 // Collapsible
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './components/collapsible';
 
+// Command
+export {
+  Command,
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandShortcut,
+  CommandSeparator,
+} from './components/command';
+
 // Toast (Sonner)
 export { Toaster, toast } from './components/sonner';
 

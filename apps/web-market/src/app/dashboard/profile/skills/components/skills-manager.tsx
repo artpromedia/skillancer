@@ -27,8 +27,45 @@ import {
 import { Award, Check, GraduationCap, Loader2, Plus, Search, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
-import { type FreelancerSkill, getMySkills, addSkill, removeSkill } from '@/lib/api/freelancers';
-import { searchSkills, type Skill, startSkillAssessment } from '@/lib/api/skills';
+import {
+  type FreelancerSkill,
+  type ProficiencyLevel,
+  getMySkills,
+  addSkill as addSkillApi,
+  removeSkill as removeSkillApi,
+} from '@/lib/api/freelancers';
+import { searchSkills as searchSkillsApi, type Skill, startSkillAssessment as startSkillAssessmentApi } from '@/lib/api/skills';
+
+// Helper to get auth token
+function getAuthToken(): string {
+  return typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? '' : '';
+}
+
+// Wrapper functions with token handling
+async function addSkill(data: {
+  skillId: string;
+  proficiencyLevel: ProficiencyLevel;
+  yearsOfExperience: number;
+}): Promise<FreelancerSkill> {
+  return addSkillApi(getAuthToken(), {
+    skillId: data.skillId,
+    proficiencyLevel: data.proficiencyLevel,
+    yearsOfExperience: data.yearsOfExperience,
+  });
+}
+
+async function removeSkill(skillId: string): Promise<void> {
+  return removeSkillApi(getAuthToken(), skillId);
+}
+
+async function searchSkills(params: { query: string; limit?: number }): Promise<{ skills: Skill[] }> {
+  return searchSkillsApi(params.query, { limit: params.limit });
+}
+
+async function startSkillAssessment(skillId: string): Promise<{ assessmentUrl: string }> {
+  const result = await startSkillAssessmentApi(getAuthToken(), skillId);
+  return { assessmentUrl: result.sessionUrl };
+}
 
 // ============================================================================
 // Types
@@ -55,7 +92,7 @@ export function SkillsManager({ userId: _userId }: Readonly<SkillsManagerProps>)
   const [_isSearching, setIsSearching] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [proficiency, setProficiency] = useState<string>('INTERMEDIATE');
-  const [yearsExperience, setYearsExperience] = useState<number>(1);
+  const [yearsOfExperience, setYearsExperience] = useState<number>(1);
   const [adding, setAdding] = useState(false);
 
   // Verify dialog state
@@ -116,7 +153,7 @@ export function SkillsManager({ userId: _userId }: Readonly<SkillsManagerProps>)
       await addSkill({
         skillId: selectedSkill.id,
         proficiencyLevel: proficiency as FreelancerSkill['proficiencyLevel'],
-        yearsExperience,
+        yearsOfExperience,
       });
       await loadSkills();
       setAddDialogOpen(false);
@@ -234,7 +271,7 @@ export function SkillsManager({ userId: _userId }: Readonly<SkillsManagerProps>)
                           {getProficiencyLabel(skill.proficiencyLevel)}
                         </Badge>
                         <span className="text-muted-foreground text-xs">
-                          {skill.yearsExperience} yr{skill.yearsExperience === 1 ? '' : 's'}
+                          {skill.yearsOfExperience} yr{skill.yearsOfExperience === 1 ? '' : 's'}
                         </span>
                       </div>
                     </div>
@@ -348,7 +385,7 @@ export function SkillsManager({ userId: _userId }: Readonly<SkillsManagerProps>)
                 max={50}
                 min={0}
                 type="number"
-                value={yearsExperience}
+                value={yearsOfExperience}
                 onChange={(e) => setYearsExperience(Number.parseInt(e.target.value, 10) || 0)}
               />
             </div>

@@ -43,11 +43,29 @@ import { z } from 'zod';
 import {
   type PortfolioItem,
   getMyPortfolio,
-  addPortfolioItem,
-  updatePortfolioItem,
-  deletePortfolioItem,
+  addPortfolioItem as addPortfolioItemApi,
+  updatePortfolioItem as updatePortfolioItemApi,
+  deletePortfolioItem as deletePortfolioItemApi,
   setPortfolioItemFeatured,
 } from '@/lib/api/freelancers';
+
+// Helper to get auth token
+function getAuthToken(): string {
+  return typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? '' : '';
+}
+
+// Wrapper functions with token handling
+async function addPortfolioItem(data: Parameters<typeof addPortfolioItemApi>[1]): Promise<PortfolioItem> {
+  return addPortfolioItemApi(getAuthToken(), data);
+}
+
+async function updatePortfolioItem(itemId: string, data: Partial<PortfolioItem>): Promise<PortfolioItem> {
+  return updatePortfolioItemApi(getAuthToken(), itemId, data);
+}
+
+async function deletePortfolioItem(itemId: string): Promise<void> {
+  return deletePortfolioItemApi(getAuthToken(), itemId);
+}
 
 // ============================================================================
 // Schema

@@ -592,7 +592,7 @@ export function useProposalForm(options: UseProposalFormOptions): UseProposalFor
         hourlyRate: formData.hourlyRate,
         estimatedHours: formData.estimatedHours,
         deliveryDays: formData.deliveryDays,
-        milestones: formData.milestones.map(({ id: _id, ...m }) => m),
+        milestones: formData.milestones.map(({ id: _id, ...m }, index) => ({ ...m, order: index })),
         attachmentIds: formData.attachmentIds,
         portfolioItemIds: formData.portfolioItemIds,
         currentStep,
@@ -619,7 +619,7 @@ export function useProposalForm(options: UseProposalFormOptions): UseProposalFor
         hourlyRate: formData.hourlyRate,
         estimatedHours: formData.estimatedHours,
         deliveryDays: formData.deliveryDays,
-        milestones: formData.milestones.map(({ id: _id, ...m }) => m),
+        milestones: formData.milestones.map(({ id: _id, ...m }, index) => ({ ...m, order: index })),
         attachments: formData.attachmentIds,
         portfolioItems: formData.portfolioItemIds,
       };
@@ -654,7 +654,7 @@ export function useProposalForm(options: UseProposalFormOptions): UseProposalFor
         deliveryDays: formData.deliveryDays,
         milestones:
           formData.milestones.length > 0
-            ? formData.milestones.map(({ id: _id, ...m }) => m)
+            ? formData.milestones.map(({ id: _id, ...m }, index) => ({ ...m, order: index }))
             : undefined,
         attachments: formData.attachmentIds.length > 0 ? formData.attachmentIds : undefined,
         portfolioItems:

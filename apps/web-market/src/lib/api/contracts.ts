@@ -42,6 +42,7 @@ export interface ContractParty {
   name: string;
   avatarUrl?: string;
   title?: string;
+  company?: string;
   country?: string;
   rating?: number;
   reviewCount?: number;
@@ -61,8 +62,12 @@ export interface Milestone {
   order: number;
   escrowFunded: boolean;
   escrowReleasedAt?: string;
+  fundedAt?: string;
+  completedAt?: string;
   submission?: MilestoneSubmission;
   revision?: MilestoneRevision;
+  revisions?: MilestoneRevision[];
+  deliverables?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -81,6 +86,7 @@ export interface MilestoneRevision {
   id: string;
   milestoneId: string;
   notes: string;
+  feedback?: string;
   requestedAt: string;
   requestedBy: string;
 }
@@ -124,6 +130,7 @@ export interface Amendment {
   requestedAt: string;
   respondedAt?: string;
   respondedBy?: string;
+  createdAt?: string;
 }
 
 export interface Dispute {
@@ -189,18 +196,42 @@ export interface Contract {
   type: ContractType;
   status: ContractStatus;
   amount: number;
+  budget?: number;
   hourlyRate?: number;
   weeklyLimit?: number;
+  weeklyHoursLimit?: number;
   startDate: string;
   endDate?: string;
   estimatedEndDate?: string;
   terms?: string;
+  paymentTerms?: string;
+  noticePeriodDays?: number;
   client: ContractParty;
   freelancer: ContractParty;
+  clientSignature?: {
+    signedAt: string;
+    signedBy: string;
+  };
+  freelancerSignature?: {
+    signedAt: string;
+    signedBy: string;
+  };
   skills: { id: string; name: string }[];
   deliverables?: string[];
   milestones: Milestone[];
+  progress?: {
+    percentage: number;
+    completed: number;
+    total: number;
+    completedMilestones?: number;
+    totalMilestones?: number;
+  };
   escrowBalance: number;
+  escrowDetails?: {
+    funded?: number;
+    released?: number;
+    pending?: number;
+  };
   totalPaid: number;
   totalHours?: number;
   skillPodEnabled: boolean;

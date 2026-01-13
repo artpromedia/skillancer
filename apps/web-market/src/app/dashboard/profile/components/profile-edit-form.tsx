@@ -26,7 +26,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { getMyProfile, updateProfile, type UpdateProfileData } from '@/lib/api/freelancers';
+import {
+  getMyProfile,
+  updateProfile,
+  type UpdateProfileData,
+  type AvailabilityStatus,
+} from '@/lib/api/freelancers';
 
 // ============================================================================
 // Schema
@@ -45,7 +50,7 @@ const profileSchema = z.object({
   country: z.string().optional(),
   timezone: z.string().optional(),
   availability: z
-    .enum(['AVAILABLE', 'PARTIALLY_AVAILABLE', 'NOT_AVAILABLE', 'ON_VACATION'])
+    .enum(['AVAILABLE', 'PARTIALLY_AVAILABLE', 'NOT_AVAILABLE'])
     .optional(),
   hoursPerWeek: z.coerce.number().min(0).max(80).optional(),
   linkedIn: z.string().url('Must be a valid URL').optional().or(z.literal('')),
@@ -86,21 +91,24 @@ export function ProfileEditForm({ userId: _userId }: ProfileEditFormProps) {
   // Load profile data
   const loadProfile = useCallback(async () => {
     try {
-      const profile = await getMyProfile();
+      // Token would typically come from auth context
+      const token = localStorage.getItem('auth_token') ?? '';
+      const profile = await getMyProfile(token);
 
       setValue('displayName', profile.displayName);
       setValue('title', profile.title);
       setValue('bio', profile.bio ?? '');
       setValue('hourlyRate', profile.hourlyRate ?? undefined);
-      setValue('city', profile.location?.city ?? '');
-      setValue('country', profile.location?.country ?? '');
-      setValue('timezone', profile.availability?.timezone ?? '');
-      setValue('availability', profile.availability?.status ?? 'AVAILABLE');
-      setValue('hoursPerWeek', profile.availability?.hoursPerWeek ?? 40);
-      setValue('linkedIn', profile.socialLinks?.linkedIn ?? '');
-      setValue('github', profile.socialLinks?.github ?? '');
-      setValue('twitter', profile.socialLinks?.twitter ?? '');
-      setValue('website', profile.socialLinks?.website ?? '');
+      setValue('city', profile.location ?? '');
+      setValue('country', profile.country ?? '');
+      setValue('timezone', profile.timezone ?? '');
+      setValue('availability', profile.availability ?? 'AVAILABLE');
+      setValue('hoursPerWeek', profile.hoursPerWeek ?? 40);
+      // Social links not available on FreelancerProfile - leaving empty
+      setValue('linkedIn', '');
+      setValue('github', '');
+      setValue('twitter', '');
+      setValue('website', '');
       setAvatarUrl(profile.avatarUrl);
     } catch (err) {
       setError('Failed to load profile');
@@ -121,23 +129,18 @@ export function ProfileEditForm({ userId: _userId }: ProfileEditFormProps) {
     setSuccess(false);
 
     try {
+      // Token would typically come from auth context
+      const token = localStorage.getItem('auth_token') ?? '';
       const updateData: UpdateProfileData = {
         displayName: data.displayName,
         title: data.title,
         bio: data.bio || undefined,
         hourlyRate: data.hourlyRate,
-        location:
-          data.city || data.country
-            ? {
-                city: data.city || '',
-                country: data.country || '',
-              }
-            : undefined,
-        availability: {
-          status: data.availability ?? 'AVAILABLE',
-          hoursPerWeek: data.hoursPerWeek ?? 40,
-          timezone: data.timezone,
-        },
+        location: data.city || undefined,
+        country: data.country || undefined,
+        timezone: data.timezone || undefined,
+        availability: (data.availability ?? 'AVAILABLE') as AvailabilityStatus,
+        hoursPerWeek: data.hoursPerWeek ?? 40,
         socialLinks: {
           linkedIn: data.linkedIn || undefined,
           github: data.github || undefined,
@@ -146,7 +149,7 @@ export function ProfileEditForm({ userId: _userId }: ProfileEditFormProps) {
         },
       };
 
-      await updateProfile(updateData);
+      await updateProfile(token, updateData);
       setSuccess(true);
 
       // Clear success message after 3 seconds
@@ -328,7 +331,6 @@ export function ProfileEditForm({ userId: _userId }: ProfileEditFormProps) {
                   <SelectItem value="AVAILABLE">Available</SelectItem>
                   <SelectItem value="PARTIALLY_AVAILABLE">Partially Available</SelectItem>
                   <SelectItem value="NOT_AVAILABLE">Not Available</SelectItem>
-                  <SelectItem value="ON_VACATION">On Vacation</SelectItem>
                 </SelectContent>
               </Select>
             </div>

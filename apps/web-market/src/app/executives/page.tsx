@@ -5,17 +5,18 @@
  * Browse and search for fractional executives
  */
 
-import { Badge } from '@skillancer/ui/badge';
-import { Button } from '@skillancer/ui/button';
-import { Card, CardContent } from '@skillancer/ui/card';
-import { Input } from '@skillancer/ui/input';
 import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@skillancer/ui/select';
+} from '@skillancer/ui';
 import { Search, Filter, Users, Briefcase, Clock, MapPin, Star, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
