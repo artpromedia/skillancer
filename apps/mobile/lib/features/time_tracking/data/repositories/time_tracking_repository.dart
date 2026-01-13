@@ -1,5 +1,5 @@
-import '../../../core/network/api_client.dart';
-import '../domain/models/time_entry.dart';
+import '../../../../core/network/api_client.dart';
+import '../../domain/models/time_entry.dart';
 
 /// Time tracking repository for managing time logs
 class TimeTrackingRepository {

@@ -19,7 +19,8 @@ class FinancesScreen extends ConsumerWidget {
     final balanceAsync = ref.watch(balanceProvider);
     final cardsAsync = ref.watch(cardsProvider);
     final taxVaultAsync = ref.watch(taxVaultProvider);
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
+    // ignore: unused_local_variable
+    final _ = NumberFormat.currency(symbol: '\$');
 
     return Scaffold(
       appBar: AppBar(

@@ -179,7 +179,7 @@ final jobsFilterProvider = StateProvider<JobFilter>((ref) {
 
 /// Jobs list provider
 final jobsProvider = FutureProvider.autoDispose<List<Job>>((ref) async {
-  final filter = ref.watch(jobsFilterProvider);
+  final filter = ref.watch(jobsFilterProvider); // Watch for reactivity
   final isOnline = ref.watch(isOnlineProvider);
   final jobsRepo = ref.watch(jobsRepositoryProvider);
 
@@ -370,8 +370,8 @@ class ActiveTimer {
 }
 
 /// Time entries provider (for a specific contract)
-final timeEntriesProvider =
-    FutureProvider.autoDispose.family<List<TimeEntry>, String>((ref, contractId) async {
+final timeEntriesProvider = FutureProvider.autoDispose
+    .family<List<TimeEntry>, String>((ref, contractId) async {
   final timeTrackingRepo = ref.watch(timeTrackingRepositoryProvider);
   final isOnline = ref.watch(isOnlineProvider);
 
@@ -384,6 +384,36 @@ final timeEntriesProvider =
   } catch (_) {
     return [];
   }
+});
+
+/// All time entries provider (aggregates entries from all active contracts)
+final allTimeEntriesProvider =
+    FutureProvider.autoDispose<List<TimeEntry>>((ref) async {
+  final contractsAsync = ref.watch(contractsProvider);
+  final timeTrackingRepo = ref.watch(timeTrackingRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    return []; // No offline cache for time entries
+  }
+
+  return contractsAsync.maybeWhen(
+    data: (contracts) async {
+      final allEntries = <TimeEntry>[];
+      for (final contract in contracts) {
+        try {
+          final entries = await timeTrackingRepo.getTimeEntries(contract.id);
+          allEntries.addAll(entries);
+        } catch (_) {
+          // Skip failed contract entries
+        }
+      }
+      // Sort by start time descending
+      allEntries.sort((a, b) => b.startTime.compareTo(a.startTime));
+      return allEntries;
+    },
+    orElse: () => <TimeEntry>[],
+  );
 });
 
 // ============================================================================
@@ -411,9 +441,9 @@ final contractsProvider =
 final myContractsProvider =
     FutureProvider.autoDispose<List<Contract>>((ref) async {
   return ref.watch(contractsProvider).maybeWhen(
-    data: (contracts) => contracts,
-    orElse: () => [],
-  );
+        data: (contracts) => contracts,
+        orElse: () => [],
+      );
 });
 
 /// Contract detail provider
@@ -471,13 +501,32 @@ final unreadMessagesCountProvider = FutureProvider<int>((ref) async {
   }
 });
 
+/// Conversation detail provider
+final conversationDetailProvider =
+    FutureProvider.family<Conversation?, String>((ref, conversationId) async {
+  // TODO: Fetch from API
+  await Future.delayed(const Duration(milliseconds: 500));
+  final conversations = await ref.watch(conversationsProvider.future);
+  return conversations.where((c) => c.id == conversationId).firstOrNull;
+});
+
+/// Messages provider for a conversation
+final messagesProvider =
+    FutureProvider.family<List<Message>, String>((ref, conversationId) async {
+  // TODO: Fetch from API
+  await Future.delayed(const Duration(milliseconds: 500));
+  return _mockMessages
+      .where((m) => m.conversationId == conversationId)
+      .toList();
+});
+
 // ============================================================================
 // Notifications Providers
 // ============================================================================
 
 /// Notifications provider
 final notificationsProvider =
-    FutureProvider.autoDispose<List<app.Notification>>((ref) async {
+    FutureProvider.autoDispose<List<app.AppNotification>>((ref) async {
   // TODO: Fetch from API
   await Future.delayed(const Duration(seconds: 1));
   return _mockNotifications;
@@ -493,9 +542,10 @@ final unreadNotificationsCountProvider = Provider<int>((ref) {
 });
 
 // ============================================================================
-// Mock Data
+// Mock Data (for development/testing - to be removed in production)
 // ============================================================================
 
+// ignore: unused_element
 final _mockJobs = <Job>[
   Job(
     id: '1',
@@ -531,6 +581,7 @@ final _mockJobs = <Job>[
   ),
 ];
 
+// ignore: unused_element
 final _mockProposals = <Proposal>[
   Proposal(
     id: '1',
@@ -544,6 +595,7 @@ final _mockProposals = <Proposal>[
   ),
 ];
 
+// ignore: unused_element
 final _mockTimeEntries = <TimeEntry>[
   TimeEntry(
     id: '1',
@@ -557,6 +609,7 @@ final _mockTimeEntries = <TimeEntry>[
   ),
 ];
 
+// ignore: unused_element
 final _mockContracts = <Contract>[
   Contract(
     id: '1',
@@ -588,6 +641,7 @@ final _mockContracts = <Contract>[
   ),
 ];
 
+// ignore: unused_element
 final _mockConversations = <Conversation>[
   Conversation(
     id: '1',
@@ -608,10 +662,29 @@ final _mockConversations = <Conversation>[
   ),
 ];
 
-final _mockNotifications = <app.Notification>[
-  app.Notification(
+final _mockMessages = <Message>[
+  Message(
     id: '1',
-    type: app.NotificationType.jobMatch,
+    conversationId: '1',
+    senderId: 'client1',
+    content: 'Hi! I saw your proposal and I am interested.',
+    sentAt: DateTime.now().subtract(const Duration(hours: 1)),
+    isRead: true,
+  ),
+  Message(
+    id: '2',
+    conversationId: '1',
+    senderId: 'me',
+    content: 'Thank you for reaching out! I would love to discuss the project.',
+    sentAt: DateTime.now().subtract(const Duration(minutes: 30)),
+    isRead: true,
+  ),
+];
+
+final _mockNotifications = <app.AppNotification>[
+  app.AppNotification(
+    id: '1',
+    type: app.NotificationType.job,
     title: 'New Job Match',
     body: 'A new job matching your skills has been posted',
     createdAt: DateTime.now().subtract(const Duration(hours: 1)),

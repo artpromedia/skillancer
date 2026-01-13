@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 import '../../domain/models/engagement.dart';
 import '../../domain/providers/executive_providers.dart';
@@ -41,7 +40,8 @@ class EngagementDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, WidgetRef ref, ExecutiveEngagement engagement) {
+  Widget _buildContent(
+      BuildContext context, WidgetRef ref, ExecutiveEngagement engagement) {
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(engagementProvider(engagementId));
@@ -78,7 +78,8 @@ class EngagementDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderCard(BuildContext context, ExecutiveEngagement engagement) {
+  Widget _buildHeaderCard(
+      BuildContext context, ExecutiveEngagement engagement) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -102,11 +103,13 @@ class EngagementDetailScreen extends ConsumerWidget {
                   child: engagement.clientLogoUrl != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.network(engagement.clientLogoUrl!, fit: BoxFit.cover),
+                          child: Image.network(engagement.clientLogoUrl!,
+                              fit: BoxFit.cover),
                         )
                       : Icon(
                           Icons.business,
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          color:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                 ),
                 const SizedBox(width: 16),
@@ -117,15 +120,17 @@ class EngagementDetailScreen extends ConsumerWidget {
                       Text(
                         engagement.title,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         engagement.clientName ?? 'Client',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                     ],
                   ),
@@ -142,11 +147,14 @@ class EngagementDetailScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                _buildInfoChip(context, Icons.work_outline, engagement.role.displayName),
+                _buildInfoChip(
+                    context, Icons.work_outline, engagement.role.displayName),
                 const SizedBox(width: 12),
-                _buildInfoChip(context, Icons.schedule, '${engagement.hoursPerWeek}h/week'),
+                _buildInfoChip(context, Icons.schedule,
+                    '${engagement.hoursPerWeek}h/week'),
                 const SizedBox(width: 12),
-                _buildInfoChip(context, Icons.payments_outlined, engagement.compensationDisplay),
+                _buildInfoChip(context, Icons.payments_outlined,
+                    engagement.compensationDisplay),
               ],
             ),
             if (engagement.startDate != null) ...[
@@ -154,8 +162,8 @@ class EngagementDetailScreen extends ConsumerWidget {
               Text(
                 'Started ${DateFormat.yMMMd().format(engagement.startDate!)}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
             ],
           ],
@@ -167,7 +175,10 @@ class EngagementDetailScreen extends ConsumerWidget {
   Widget _buildStatusBadge(BuildContext context, EngagementStatus status) {
     final (color, bgColor) = switch (status) {
       EngagementStatus.active => (Colors.green, Colors.green.withOpacity(0.1)),
-      EngagementStatus.paused => (Colors.orange, Colors.orange.withOpacity(0.1)),
+      EngagementStatus.paused => (
+          Colors.orange,
+          Colors.orange.withOpacity(0.1)
+        ),
       _ => (Colors.blue, Colors.blue.withOpacity(0.1)),
     };
 
@@ -202,7 +213,8 @@ class EngagementDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickStats(BuildContext context, ExecutiveEngagement engagement) {
+  Widget _buildQuickStats(
+      BuildContext context, ExecutiveEngagement engagement) {
     return Row(
       children: [
         Expanded(
@@ -227,7 +239,8 @@ class EngagementDetailScreen extends ConsumerWidget {
           child: StatsCard(
             icon: Icons.check_circle_outline,
             label: 'Completed',
-            value: '${engagement.completedObjectives}/${engagement.objectives.length}',
+            value:
+                '${engagement.completedObjectives}/${engagement.objectives.length}',
             color: Theme.of(context).colorScheme.tertiary,
           ),
         ),
@@ -235,7 +248,8 @@ class EngagementDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOKRsSection(BuildContext context, WidgetRef ref, ExecutiveEngagement engagement) {
+  Widget _buildOKRsSection(
+      BuildContext context, WidgetRef ref, ExecutiveEngagement engagement) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -245,8 +259,8 @@ class EngagementDetailScreen extends ConsumerWidget {
             Text(
               'Objectives & Key Results',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             TextButton.icon(
               onPressed: () => context.push('/executive/okr/new/$engagementId'),
@@ -259,7 +273,8 @@ class EngagementDetailScreen extends ConsumerWidget {
         if (engagement.objectives.isEmpty)
           Card(
             elevation: 0,
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+            color:
+                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
             child: const Padding(
               padding: EdgeInsets.all(24),
               child: Center(
@@ -292,12 +307,13 @@ class EngagementDetailScreen extends ConsumerWidget {
                   child: Text(
                     objective.title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: objective.completed
                         ? Colors.green.withOpacity(0.1)
@@ -322,8 +338,8 @@ class EngagementDetailScreen extends ConsumerWidget {
               Text(
                 'Due ${DateFormat.yMMMd().format(objective.dueDate!)}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
             ],
             if (objective.keyResults.isNotEmpty) ...[
@@ -333,12 +349,16 @@ class EngagementDetailScreen extends ConsumerWidget {
                     child: Row(
                       children: [
                         Icon(
-                          kr.completed ? Icons.check_circle : Icons.radio_button_unchecked,
+                          kr.completed
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
                           size: 16,
                           color: kr.completed ? Colors.green : Colors.grey,
                         ),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(kr.description, style: Theme.of(context).textTheme.bodySmall)),
+                        Expanded(
+                            child: Text(kr.description,
+                                style: Theme.of(context).textTheme.bodySmall)),
                       ],
                     ),
                   )),
@@ -350,7 +370,8 @@ class EngagementDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildMilestonesSection(BuildContext context, WidgetRef ref) {
-    final milestonesAsync = ref.watch(engagementMilestonesProvider(engagementId));
+    final milestonesAsync =
+        ref.watch(engagementMilestonesProvider(engagementId));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,11 +382,12 @@ class EngagementDetailScreen extends ConsumerWidget {
             Text(
               'Milestones',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             TextButton.icon(
-              onPressed: () => context.push('/executive/milestone/new/$engagementId'),
+              onPressed: () =>
+                  context.push('/executive/milestone/new/$engagementId'),
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Add'),
             ),
@@ -379,7 +401,10 @@ class EngagementDetailScreen extends ConsumerWidget {
             if (milestones.isEmpty) {
               return Card(
                 elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceVariant
+                    .withOpacity(0.5),
                 child: const Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(child: Text('No milestones yet')),
@@ -387,7 +412,10 @@ class EngagementDetailScreen extends ConsumerWidget {
               );
             }
             return Column(
-              children: milestones.take(3).map((m) => _buildMilestoneCard(context, m)).toList(),
+              children: milestones
+                  .take(3)
+                  .map((m) => _buildMilestoneCard(context, m))
+                  .toList(),
             );
           },
         ),
@@ -395,7 +423,8 @@ class EngagementDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMilestoneCard(BuildContext context, ExecutiveMilestone milestone) {
+  Widget _buildMilestoneCard(
+      BuildContext context, ExecutiveMilestone milestone) {
     final isOverdue = milestone.isOverdue;
 
     return Card(
@@ -419,7 +448,8 @@ class EngagementDetailScreen extends ConsumerWidget {
         title: Text(
           milestone.title,
           style: TextStyle(
-            decoration: milestone.isCompleted ? TextDecoration.lineThrough : null,
+            decoration:
+                milestone.isCompleted ? TextDecoration.lineThrough : null,
           ),
         ),
         subtitle: milestone.dueDate != null
@@ -446,11 +476,12 @@ class EngagementDetailScreen extends ConsumerWidget {
             Text(
               'Recent Time Entries',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             TextButton(
-              onPressed: () => context.push('/executive/time-entries/$engagementId'),
+              onPressed: () =>
+                  context.push('/executive/time-entries/$engagementId'),
               child: const Text('View All'),
             ),
           ],
@@ -463,7 +494,10 @@ class EngagementDetailScreen extends ConsumerWidget {
             if (entries.isEmpty) {
               return Card(
                 elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceVariant
+                    .withOpacity(0.5),
                 child: const Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(child: Text('No time entries yet')),
@@ -471,7 +505,10 @@ class EngagementDetailScreen extends ConsumerWidget {
               );
             }
             return Column(
-              children: entries.take(5).map((e) => _buildTimeEntryCard(context, e)).toList(),
+              children: entries
+                  .take(5)
+                  .map((e) => _buildTimeEntryCard(context, e))
+                  .toList(),
             );
           },
         ),

@@ -29,5 +29,6 @@ module.exports = {
     '@typescript-eslint/no-unsafe-enum-comparison': 'off',
     'n/no-process-exit': 'off',
     'no-case-declarations': 'off',
+    'unicorn/prefer-top-level-await': 'off',
   },
 };

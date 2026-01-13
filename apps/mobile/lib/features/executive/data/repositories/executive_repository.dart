@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/engagement.dart';
@@ -43,7 +42,8 @@ class ExecutiveSearchFilters {
       'page': page,
       'limit': limit,
     };
-    if (executiveType != null) params['executiveType'] = executiveType!.apiValue;
+    if (executiveType != null)
+      params['executiveType'] = executiveType!.apiValue;
     if (industries != null && industries!.isNotEmpty) {
       params['industries'] = industries!.join(',');
     }
@@ -55,9 +55,11 @@ class ExecutiveSearchFilters {
     }
     if (minExperience != null) params['minExperience'] = minExperience;
     if (maxHourlyRate != null) params['maxHourlyRate'] = maxHourlyRate;
-    if (maxMonthlyRetainer != null) params['maxMonthlyRetainer'] = maxMonthlyRetainer;
+    if (maxMonthlyRetainer != null)
+      params['maxMonthlyRetainer'] = maxMonthlyRetainer;
     if (availableNow != null) params['availableNow'] = availableNow;
-    if (hasBackgroundCheck != null) params['hasBackgroundCheck'] = hasBackgroundCheck;
+    if (hasBackgroundCheck != null)
+      params['hasBackgroundCheck'] = hasBackgroundCheck;
     if (boardExperience != null) params['boardExperience'] = boardExperience;
     if (publicCompanyExp != null) params['publicCompanyExp'] = publicCompanyExp;
     return params;
@@ -177,19 +179,22 @@ class ExecutiveRepository {
       if (yearsExecutiveExp != null) 'yearsExecutiveExp': yearsExecutiveExp,
       if (industries != null) 'industries': industries,
       if (specializations != null) 'specializations': specializations,
-      if (companyStagesExpertise != null) 'companyStagesExpertise': companyStagesExpertise,
+      if (companyStagesExpertise != null)
+        'companyStagesExpertise': companyStagesExpertise,
     });
     return ExecutiveProfile.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// Update executive profile
   Future<ExecutiveProfile> updateProfile(Map<String, dynamic> updates) async {
-    final response = await _apiClient.patch('$_basePath/profile', data: updates);
+    final response =
+        await _apiClient.patch('$_basePath/profile', data: updates);
     return ExecutiveProfile.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// Search approved executives
-  Future<PaginatedExecutives> searchExecutives(ExecutiveSearchFilters filters) async {
+  Future<PaginatedExecutives> searchExecutives(
+      ExecutiveSearchFilters filters) async {
     final response = await _apiClient.get(
       '$_basePath/search',
       queryParameters: filters.toQueryParams(),
@@ -214,7 +219,8 @@ class ExecutiveRepository {
     String? referencePhone,
     required String relationshipType,
   }) async {
-    final response = await _apiClient.post('$_basePath/profile/references', data: {
+    final response =
+        await _apiClient.post('$_basePath/profile/references', data: {
       'referenceName': referenceName,
       'referenceTitle': referenceTitle,
       'referenceCompany': referenceCompany,
@@ -282,7 +288,8 @@ class ExecutiveRepository {
       if (hoursPerWeek != null) 'hoursPerWeek': hoursPerWeek,
       if (monthlyRetainer != null) 'monthlyRetainer': monthlyRetainer,
       if (hourlyRate != null) 'hourlyRate': hourlyRate,
-      if (expectedEndDate != null) 'expectedEndDate': expectedEndDate.toIso8601String(),
+      if (expectedEndDate != null)
+        'expectedEndDate': expectedEndDate.toIso8601String(),
     });
     return ExecutiveEngagement.fromJson(response.data as Map<String, dynamic>);
   }
@@ -292,13 +299,15 @@ class ExecutiveRepository {
     String id,
     Map<String, dynamic> updates,
   ) async {
-    final response = await _apiClient.patch('$_basePath/engagements/$id', data: updates);
+    final response =
+        await _apiClient.patch('$_basePath/engagements/$id', data: updates);
     return ExecutiveEngagement.fromJson(response.data as Map<String, dynamic>);
   }
 
   /// Approve engagement
   Future<ExecutiveEngagement> approveEngagement(String id) async {
-    final response = await _apiClient.post('$_basePath/engagements/$id/approve');
+    final response =
+        await _apiClient.post('$_basePath/engagements/$id/approve');
     return ExecutiveEngagement.fromJson(response.data as Map<String, dynamic>);
   }
 
@@ -341,7 +350,8 @@ class ExecutiveRepository {
     final response = await _apiClient.get(
       '$_basePath/engagements/$engagementId/time-entries',
       queryParameters: {
-        if (startDate != null) 'startDate': startDate.toIso8601String().split('T')[0],
+        if (startDate != null)
+          'startDate': startDate.toIso8601String().split('T')[0],
         if (endDate != null) 'endDate': endDate.toIso8601String().split('T')[0],
       },
     );
@@ -376,7 +386,8 @@ class ExecutiveRepository {
 
   /// Get milestones for engagement
   Future<List<ExecutiveMilestone>> getMilestones(String engagementId) async {
-    final response = await _apiClient.get('$_basePath/engagements/$engagementId/milestones');
+    final response =
+        await _apiClient.get('$_basePath/engagements/$engagementId/milestones');
     return (response.data as List<dynamic>)
         .map((e) => ExecutiveMilestone.fromJson(e as Map<String, dynamic>))
         .toList();

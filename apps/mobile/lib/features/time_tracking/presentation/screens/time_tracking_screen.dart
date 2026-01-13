@@ -25,7 +25,7 @@ class _TimeTrackingScreenState extends ConsumerState<TimeTrackingScreen> {
   @override
   Widget build(BuildContext context) {
     final timerService = ref.watch(timerServiceProvider);
-    final entriesAsync = ref.watch(timeEntriesProvider);
+    final entriesAsync = ref.watch(allTimeEntriesProvider);
 
     return Scaffold(
       appBar: AppBar(

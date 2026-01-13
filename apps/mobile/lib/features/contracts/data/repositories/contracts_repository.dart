@@ -1,5 +1,5 @@
-import '../../../core/network/api_client.dart';
-import '../domain/models/contract.dart';
+import '../../../../core/network/api_client.dart';
+import '../../domain/models/contract.dart';
 
 /// Contracts repository for fetching and managing contracts/service orders
 class ContractsRepository {
@@ -162,7 +162,8 @@ class ContractsRepository {
     } on ApiError {
       rethrow;
     } catch (e) {
-      throw ApiError(code: 'CANCEL_ERROR', message: 'Failed to cancel contract');
+      throw ApiError(
+          code: 'CANCEL_ERROR', message: 'Failed to cancel contract');
     }
   }
 
@@ -186,7 +187,7 @@ class ContractsRepository {
     // Extract nested objects
     final service = order['service'] as Map<String, dynamic>?;
     final buyer = order['buyer'] as Map<String, dynamic>?;
-    final seller = order['seller'] as Map<String, dynamic>?;
+    // seller data available in order['seller'] if needed
 
     return Contract.fromJson({
       'id': order['id'],

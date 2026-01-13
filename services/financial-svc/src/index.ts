@@ -102,15 +102,13 @@ async function start() {
 }
 
 // Connect to database and start server
-prisma
-  .$connect()
-  .then(() => {
-    process.stdout.write('[financial-svc] Connected to database\n');
-    return start();
-  })
-  .catch((error) => {
-    process.stderr.write(`[financial-svc] Failed to connect to database: ${error}\n`);
-    process.exit(1);
-  });
+try {
+  await prisma.$connect();
+  process.stdout.write('[financial-svc] Connected to database\n');
+  await start();
+} catch (error) {
+  process.stderr.write(`[financial-svc] Failed to connect to database: ${error}\n`);
+  process.exit(1);
+}
 
 export { buildApp };

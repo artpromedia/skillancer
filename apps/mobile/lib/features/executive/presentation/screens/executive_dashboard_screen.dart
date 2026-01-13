@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
-import '../../data/repositories/executive_repository.dart';
-import '../../domain/models/engagement.dart';
 import '../../domain/models/executive_profile.dart';
 import '../../domain/providers/executive_providers.dart';
 import '../widgets/engagement_card.dart';
@@ -72,7 +69,9 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: () {
-                ref.read(executiveProfileNotifierProvider.notifier).loadProfile();
+                ref
+                    .read(executiveProfileNotifierProvider.notifier)
+                    .loadProfile();
               },
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
@@ -106,16 +105,16 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
             Text(
               'Become a Fractional Executive',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
               'Join our network of vetted C-suite executives and connect with companies seeking fractional leadership.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -135,7 +134,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDashboard(BuildContext context, WidgetRef ref, ExecutiveProfile profile) {
+  Widget _buildDashboard(
+      BuildContext context, WidgetRef ref, ExecutiveProfile profile) {
     return RefreshIndicator(
       onRefresh: () async {
         ref.read(executiveProfileNotifierProvider.notifier).loadProfile();
@@ -164,8 +164,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
                   Text(
                     'Welcome back',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -173,14 +173,18 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           profile.executiveType.displayName,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                       ),
                       if (profile.isVerified)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.green.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
@@ -188,7 +192,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.verified, size: 16, color: Colors.green),
+                              Icon(Icons.verified,
+                                  size: 16, color: Colors.green),
                               SizedBox(width: 4),
                               Text(
                                 'Verified',
@@ -223,8 +228,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
                   Text(
                     'Active Engagements',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   TextButton(
                     onPressed: () => context.push('/executive/engagements'),
@@ -248,8 +253,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
                   Text(
                     'Quick Actions',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 12),
                   _buildQuickActions(context),
@@ -264,7 +269,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickStats(BuildContext context, WidgetRef ref, ExecutiveProfile profile) {
+  Widget _buildQuickStats(
+      BuildContext context, WidgetRef ref, ExecutiveProfile profile) {
     final statsAsync = ref.watch(executiveStatsProvider(profile.id));
 
     return Padding(
@@ -309,7 +315,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEngagementsList(BuildContext context, WidgetRef ref, String profileId) {
+  Widget _buildEngagementsList(
+      BuildContext context, WidgetRef ref, String profileId) {
     final engagementsAsync = ref.watch(activeEngagementsProvider(profileId));
 
     return engagementsAsync.when(
@@ -341,8 +348,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
                   Text(
                     'No active engagements',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   TextButton(
@@ -363,7 +370,8 @@ class ExecutiveDashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: EngagementCard(
                   engagement: engagements[index],
-                  onTap: () => context.push('/executive/engagement/${engagements[index].id}'),
+                  onTap: () => context
+                      .push('/executive/engagement/${engagements[index].id}'),
                 ),
               ),
               childCount: engagements.length.clamp(0, 3),

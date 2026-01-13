@@ -1,7 +1,7 @@
-import '../../../core/network/api_client.dart';
-import '../../../core/storage/local_cache.dart';
-import '../domain/models/job.dart';
-import '../domain/models/job_filter.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/storage/local_cache.dart';
+import '../../domain/models/job.dart';
+import '../../domain/models/job_filter.dart';
 
 /// Jobs repository for fetching and caching jobs
 class JobsRepository {

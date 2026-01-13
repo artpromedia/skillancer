@@ -22,7 +22,7 @@ class ConnectivityService {
       StreamController<ConnectivityStatus>.broadcast();
 
   ConnectivityStatus _currentStatus = ConnectivityStatus.online;
-  StreamSubscription<List<ConnectivityResult>>? _subscription;
+  StreamSubscription<ConnectivityResult>? _subscription;
 
   ConnectivityService._() {
     _init();
@@ -38,27 +38,27 @@ class ConnectivityService {
     _checkConnectivity();
 
     // Listen for changes
-    _subscription = _connectivity.onConnectivityChanged.listen((results) {
-      _updateStatus(results);
+    _subscription = _connectivity.onConnectivityChanged.listen((result) {
+      _updateStatus(result);
     });
   }
 
   Future<void> _checkConnectivity() async {
-    final results = await _connectivity.checkConnectivity();
-    _updateStatus(results);
+    final result = await _connectivity.checkConnectivity();
+    _updateStatus(result);
   }
 
-  void _updateStatus(List<ConnectivityResult> results) {
+  void _updateStatus(ConnectivityResult result) {
     ConnectivityStatus newStatus;
 
-    if (results.contains(ConnectivityResult.none)) {
+    if (result == ConnectivityResult.none) {
       newStatus = ConnectivityStatus.offline;
-    } else if (results.contains(ConnectivityResult.wifi) ||
-        results.contains(ConnectivityResult.ethernet)) {
+    } else if (result == ConnectivityResult.wifi ||
+        result == ConnectivityResult.ethernet) {
       newStatus = ConnectivityStatus.online;
-    } else if (results.contains(ConnectivityResult.mobile)) {
+    } else if (result == ConnectivityResult.mobile) {
       newStatus = ConnectivityStatus.online;
-    } else if (results.contains(ConnectivityResult.vpn)) {
+    } else if (result == ConnectivityResult.vpn) {
       newStatus = ConnectivityStatus.online;
     } else {
       newStatus = ConnectivityStatus.limited;

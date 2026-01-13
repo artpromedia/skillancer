@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/providers/providers.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/message.dart';
 

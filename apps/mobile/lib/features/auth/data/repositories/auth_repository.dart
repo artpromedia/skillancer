@@ -1,6 +1,6 @@
-import '../../../core/network/api_client.dart';
-import '../../../core/storage/secure_storage.dart';
-import '../domain/models/user.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/storage/secure_storage.dart';
+import '../../domain/models/user.dart';
 
 /// Auth repository for handling authentication API calls
 class AuthRepository {

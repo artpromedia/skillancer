@@ -81,7 +81,7 @@ class AppTheme {
           color: neutral900,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: Colors.white,
         surfaceTintColor: Colors.transparent,
@@ -227,7 +227,7 @@ class AppTheme {
           color: neutral100,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: neutral800,
         surfaceTintColor: Colors.transparent,

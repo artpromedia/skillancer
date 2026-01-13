@@ -1,5 +1,5 @@
-import '../../../core/network/api_client.dart';
-import '../domain/models/message.dart';
+import '../../../../core/network/api_client.dart';
+import '../../domain/models/message.dart';
 
 /// Messages repository for fetching and managing conversations
 class MessagesRepository {
@@ -155,7 +155,9 @@ class MessagesRepository {
     try {
       final response = await _apiClient.get('/conversations/unread/total');
       final data = response.data as Map<String, dynamic>;
-      return (data['data'] as Map<String, dynamic>?)?['totalUnreadCount'] as int? ?? 0;
+      return (data['data'] as Map<String, dynamic>?)?['totalUnreadCount']
+              as int? ??
+          0;
     } on ApiError {
       rethrow;
     } catch (e) {
@@ -224,8 +226,8 @@ class MessagesRepository {
       conversationId: msg['conversationId'] as String,
       senderId: msg['senderId'] as String,
       content: msg['content'] as String? ?? '',
-      sentAt:
-          DateTime.tryParse(msg['createdAt'] as String? ?? '') ?? DateTime.now(),
+      sentAt: DateTime.tryParse(msg['createdAt'] as String? ?? '') ??
+          DateTime.now(),
       isRead: msg['isRead'] as bool? ?? false,
     );
   }

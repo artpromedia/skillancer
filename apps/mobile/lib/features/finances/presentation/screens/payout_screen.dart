@@ -21,6 +21,7 @@ class _PayoutScreenState extends ConsumerState<PayoutScreen> {
   PayoutSpeed _selectedSpeed = PayoutSpeed.instant;
   PayoutDestination _selectedDestination = PayoutDestination.skillancerCard;
   String? _selectedDestinationId;
+  // ignore: unused_field
   bool _isSubmitting = false;
 
   @override

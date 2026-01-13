@@ -20,9 +20,9 @@ class ContractDetailScreen extends ConsumerWidget {
     return contractsAsync.when(
       data: (contracts) {
         final contract = contracts.cast<Contract?>().firstWhere(
-          (c) => c?.id == contractId,
-          orElse: () => null,
-        );
+              (c) => c?.id == contractId,
+              orElse: () => null,
+            );
 
         if (contract == null) {
           return Scaffold(
@@ -121,7 +121,7 @@ class _ContractHeader extends StatelessWidget {
             ),
             const SizedBox(height: AppTheme.spacingSm),
             Text(
-              contract.description,
+              contract.description ?? '',
               style: Theme.of(context).textTheme.bodyMedium,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,

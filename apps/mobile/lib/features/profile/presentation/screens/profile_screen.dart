@@ -12,172 +12,169 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
+    final user = authState.user;
 
-    return authState.when(
-      data: (state) {
-        final user = state.user;
-        if (user == null) {
-          return const Center(child: Text('Not logged in'));
-        }
+    if (authState.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-        return Scaffold(
-          body: CustomScrollView(
-            slivers: [
-              // Profile header
-              SliverAppBar(
-                expandedHeight: 200,
-                pinned: true,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () => context.push('/profile/edit'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.settings),
-                    onPressed: () => context.push('/settings'),
-                  ),
-                ],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppTheme.primaryColor,
-                          AppTheme.primaryColor.withOpacity(0.8),
-                        ],
-                      ),
-                    ),
-                    child: SafeArea(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Colors.white,
-                            child: Text(
-                              user.fullName[0].toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: AppTheme.spacingSm),
-                          Text(
-                            user.fullName,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  color: Colors.white,
-                                ),
-                          ),
-                          Text(
-                            '@${user.email.split('@').first}',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.white70,
-                                    ),
-                          ),
-                        ],
-                      ),
-                    ),
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text('Not logged in')),
+      );
+    }
+
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          // Profile header
+          SliverAppBar(
+            expandedHeight: 200,
+            pinned: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => context.push('/profile/edit'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () => context.push('/settings'),
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppTheme.primaryColor,
+                      AppTheme.primaryColor.withOpacity(0.8),
+                    ],
                   ),
                 ),
-              ),
-
-              // Stats
-              SliverToBoxAdapter(
-                child: Container(
-                  padding: const EdgeInsets.all(AppTheme.spacingMd),
-                  child: Row(
+                child: SafeArea(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(child: _StatCard(label: 'Jobs', value: '23')),
-                      const SizedBox(width: AppTheme.spacingSm),
-                      Expanded(
-                          child:
-                              _StatCard(label: 'Earnings', value: '\$12.5k')),
-                      const SizedBox(width: AppTheme.spacingSm),
-                      Expanded(child: _StatCard(label: 'Rating', value: '4.9')),
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          user.fullName[0].toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppTheme.spacingSm),
+                      Text(
+                        user.fullName,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                            ),
+                      ),
+                      Text(
+                        '@${user.email.split('@').first}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.white70,
+                            ),
+                      ),
                     ],
                   ),
                 ),
               ),
-
-              // Menu sections
-              SliverList(
-                delegate: SliverChildListDelegate([
-                  const _SectionHeader(title: 'Account'),
-                  _MenuTile(
-                    icon: Icons.person_outline,
-                    title: 'Edit Profile',
-                    onTap: () => context.push('/profile/edit'),
-                  ),
-                  _MenuTile(
-                    icon: Icons.badge_outlined,
-                    title: 'Skills & Portfolio',
-                    onTap: () {},
-                  ),
-                  _MenuTile(
-                    icon: Icons.verified_outlined,
-                    title: 'Verification',
-                    onTap: () {},
-                  ),
-                  const _SectionHeader(title: 'Billing'),
-                  _MenuTile(
-                    icon: Icons.account_balance_wallet_outlined,
-                    title: 'Payment Methods',
-                    onTap: () {},
-                  ),
-                  _MenuTile(
-                    icon: Icons.receipt_long_outlined,
-                    title: 'Transaction History',
-                    onTap: () {},
-                  ),
-                  const _SectionHeader(title: 'Settings'),
-                  _MenuTile(
-                    icon: Icons.notifications_outlined,
-                    title: 'Notifications',
-                    onTap: () => context.push('/notifications'),
-                  ),
-                  _MenuTile(
-                    icon: Icons.security_outlined,
-                    title: 'Security',
-                    onTap: () {},
-                  ),
-                  _MenuTile(
-                    icon: Icons.help_outline,
-                    title: 'Help & Support',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: AppTheme.spacingLg),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.spacingMd,
-                    ),
-                    child: OutlinedButton(
-                      onPressed: () {
-                        ref.read(authStateProvider.notifier).logout();
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.errorColor,
-                        side: const BorderSide(color: AppTheme.errorColor),
-                      ),
-                      child: const Text('Log Out'),
-                    ),
-                  ),
-                  const SizedBox(height: AppTheme.spacing2xl),
-                ]),
-              ),
-            ],
+            ),
           ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+
+          // Stats
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(AppTheme.spacingMd),
+              child: Row(
+                children: [
+                  Expanded(child: _StatCard(label: 'Jobs', value: '23')),
+                  const SizedBox(width: AppTheme.spacingSm),
+                  Expanded(
+                      child: _StatCard(label: 'Earnings', value: '\$12.5k')),
+                  const SizedBox(width: AppTheme.spacingSm),
+                  Expanded(child: _StatCard(label: 'Rating', value: '4.9')),
+                ],
+              ),
+            ),
+          ),
+
+          // Menu sections
+          SliverList(
+            delegate: SliverChildListDelegate([
+              const _SectionHeader(title: 'Account'),
+              _MenuTile(
+                icon: Icons.person_outline,
+                title: 'Edit Profile',
+                onTap: () => context.push('/profile/edit'),
+              ),
+              _MenuTile(
+                icon: Icons.badge_outlined,
+                title: 'Skills & Portfolio',
+                onTap: () {},
+              ),
+              _MenuTile(
+                icon: Icons.verified_outlined,
+                title: 'Verification',
+                onTap: () {},
+              ),
+              const _SectionHeader(title: 'Billing'),
+              _MenuTile(
+                icon: Icons.account_balance_wallet_outlined,
+                title: 'Payment Methods',
+                onTap: () {},
+              ),
+              _MenuTile(
+                icon: Icons.receipt_long_outlined,
+                title: 'Transaction History',
+                onTap: () {},
+              ),
+              const _SectionHeader(title: 'Settings'),
+              _MenuTile(
+                icon: Icons.notifications_outlined,
+                title: 'Notifications',
+                onTap: () => context.push('/notifications'),
+              ),
+              _MenuTile(
+                icon: Icons.security_outlined,
+                title: 'Security',
+                onTap: () {},
+              ),
+              _MenuTile(
+                icon: Icons.help_outline,
+                title: 'Help & Support',
+                onTap: () {},
+              ),
+              const SizedBox(height: AppTheme.spacingLg),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spacingMd,
+                ),
+                child: OutlinedButton(
+                  onPressed: () {
+                    ref.read(authStateProvider.notifier).logout();
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.errorColor,
+                    side: const BorderSide(color: AppTheme.errorColor),
+                  ),
+                  child: const Text('Log Out'),
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacing2xl),
+            ]),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:local_auth/local_auth.dart';
 
-import '../../../core/storage/secure_storage.dart';
-import '../domain/models/user.dart';
+import '../../../../core/storage/secure_storage.dart';
+import '../models/user.dart';
 
 /// Auth service for managing authentication state
 class AuthService {

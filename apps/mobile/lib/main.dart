@@ -49,7 +49,7 @@ void main() async {
         await LocalCache.initialize();
 
         // Initialize push notifications
-        await PushNotificationService.initialize();
+        await PushNotificationService().initialize();
       } catch (e, stackTrace) {
         debugPrint('Initialization error: $e');
         await CrashReportingService.recordError(e, stackTrace, fatal: true);

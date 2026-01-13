@@ -1,5 +1,5 @@
-import '../../../core/network/api_client.dart';
-import '../domain/models/proposal.dart';
+import '../../../../core/network/api_client.dart';
+import '../../domain/models/proposal.dart';
 
 /// Proposals repository for fetching and managing proposals/bids
 class ProposalsRepository {
@@ -87,7 +87,8 @@ class ProposalsRepository {
     } on ApiError {
       rethrow;
     } catch (e) {
-      throw ApiError(code: 'SUBMIT_ERROR', message: 'Failed to submit proposal');
+      throw ApiError(
+          code: 'SUBMIT_ERROR', message: 'Failed to submit proposal');
     }
   }
 
@@ -110,7 +111,8 @@ class ProposalsRepository {
     } on ApiError {
       rethrow;
     } catch (e) {
-      throw ApiError(code: 'UPDATE_ERROR', message: 'Failed to update proposal');
+      throw ApiError(
+          code: 'UPDATE_ERROR', message: 'Failed to update proposal');
     }
   }
 
@@ -156,7 +158,9 @@ class ProposalsRepository {
       'bidAmount': bid['proposedRate'] ?? bid['bidAmount'] ?? 0,
       'coverLetter': bid['coverLetter'] ?? '',
       'status': mappedStatus,
-      'submittedAt': bid['createdAt'] ?? bid['submittedAt'] ?? DateTime.now().toIso8601String(),
+      'submittedAt': bid['createdAt'] ??
+          bid['submittedAt'] ??
+          DateTime.now().toIso8601String(),
       'deliveryDays': bid['deliveryDays'],
       'milestones': bid['proposedMilestones'],
     });
