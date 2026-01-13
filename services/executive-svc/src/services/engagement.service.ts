@@ -14,7 +14,7 @@ import type {
   ExecutiveType,
   BillingModel,
   EngagementBillingCycle,
-} from '@prisma/client';
+} from '../types/prisma-shim.js';
 
 // Types
 export interface CreateEngagementInput {

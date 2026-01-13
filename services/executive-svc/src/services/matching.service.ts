@@ -7,7 +7,7 @@
 
 import { prisma, Prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
-import type { ExecutiveType, CompanyStage } from '@prisma/client';
+import type { ExecutiveType, CompanyStage } from '../types/prisma-shim.js';
 
 interface ClientRequest {
   executiveType: ExecutiveType;

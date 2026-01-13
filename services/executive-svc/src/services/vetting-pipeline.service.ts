@@ -21,7 +21,7 @@ import type {
   InterviewType,
   InterviewRecommendation,
   InterviewStatus,
-} from '@prisma/client';
+} from '../types/prisma-shim.js';
 import { getConfig } from '../config/index.js';
 
 // Types

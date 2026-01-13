@@ -1,5 +1,5 @@
 import { prisma } from '@skillancer/database';
-import type { PRD, PRDComment, PRDVersion, PRDTemplate, Prisma } from '@prisma/client';
+import type { PRD, PRDComment, PRDVersion, PRDTemplate, Prisma } from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 import type {
   CreatePRDInput,
@@ -249,6 +249,7 @@ export class PRDBuilderService {
       appendix: content.appendix as string | undefined,
       ownerId,
       templateId,
+      reviewers: (content.reviewers as string[]) || [],
     });
 
     log.info({ prdId: prd.id, templateId }, 'PRD created from template');

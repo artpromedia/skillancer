@@ -14,7 +14,7 @@ import type {
   ExecutiveReference,
   ReferenceStatus,
   ReferenceRelationship,
-} from '@prisma/client';
+} from '../types/prisma-shim.js';
 import jwt from 'jsonwebtoken';
 import { getConfig } from '../config/index.js';
 

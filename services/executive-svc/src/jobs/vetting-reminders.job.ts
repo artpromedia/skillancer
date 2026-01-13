@@ -12,7 +12,7 @@ import {
   VettingStatus,
   BackgroundCheckStatus,
   ReferenceStatus,
-} from '@prisma/client';
+} from '../types/prisma-shim.js';
 
 interface ReminderConfig {
   stage: VettingStage;

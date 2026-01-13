@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { okrService } from '../services/okr.service';
-import { OKRStatus } from '@prisma/client';
+import { OKRStatus } from '../types/prisma-shim.js';
 
 // OKR Routes - Objectives, Key Results, Check-ins
 

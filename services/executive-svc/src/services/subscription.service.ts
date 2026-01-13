@@ -7,7 +7,7 @@
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '../types/prisma-shim.js';
 
 // Tier Configuration
 export const TIER_CONFIG = {

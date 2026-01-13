@@ -7,7 +7,7 @@
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
-import { VettingStatus } from '@prisma/client';
+import { VettingStatus } from '../types/prisma-shim.js';
 
 const REVERIFICATION_INTERVAL_DAYS = 180; // 6 months
 const GRACE_PERIOD_DAYS = 30;

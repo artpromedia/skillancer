@@ -9,7 +9,7 @@
  */
 
 import { prisma } from '@skillancer/database';
-import type { ExecutiveProfile, BackgroundCheckStatus } from '@prisma/client';
+import type { ExecutiveProfile, BackgroundCheckStatus } from '../types/prisma-shim.js';
 import { getConfig } from '../config/index.js';
 
 // Types

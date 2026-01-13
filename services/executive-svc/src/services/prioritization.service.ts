@@ -4,7 +4,7 @@ import type {
   PrioritizedFeature,
   PrioritizationFramework,
   Prisma,
-} from '@prisma/client';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 import type {
   CreatePrioritizationInput,

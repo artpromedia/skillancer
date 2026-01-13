@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { roadmapService } from '../services/roadmap.service';
-import { InitiativeStatus } from '@prisma/client';
+import { InitiativeStatus } from '../types/prisma-shim.js';
 import { z } from 'zod';
 
 // ==================== Validation Schemas ====================

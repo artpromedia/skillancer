@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ExecutiveEngagementService } from '../services/executive-engagement.service';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../types/prisma-shim.js';
 
 const prisma = new PrismaClient();
 const engagementService = new ExecutiveEngagementService(prisma);

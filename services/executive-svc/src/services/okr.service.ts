@@ -1,4 +1,4 @@
-import { PrismaClient, OKRStatus } from '@prisma/client';
+import { PrismaClient, OKRStatus } from '../types/prisma-shim.js';
 
 // OKR Service
 // Manages objectives, key results, check-ins, and alignment

@@ -7,7 +7,7 @@
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
-import type { ExecutiveWorkspace, ExecutiveType } from '@prisma/client';
+import type { ExecutiveWorkspace, ExecutiveType } from '../types/prisma-shim.js';
 
 // Types
 export interface WidgetPosition {

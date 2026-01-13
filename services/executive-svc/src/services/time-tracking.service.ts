@@ -7,8 +7,8 @@
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
-import { ExecutiveTimeCategory } from '@prisma/client';
-import type { ExecutiveTimeEntry, TimeEntryStatus } from '@prisma/client';
+import { ExecutiveTimeCategory } from '../types/prisma-shim.js';
+import type { ExecutiveTimeEntry, TimeEntryStatus } from '../types/prisma-shim.js';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // Types

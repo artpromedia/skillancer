@@ -16,7 +16,7 @@ import type {
   CompanyStage,
   VettingStatus,
   Prisma,
-} from '@prisma/client';
+} from '../types/prisma-shim.js';
 
 // Types
 export interface CreateExecutiveProfileInput {

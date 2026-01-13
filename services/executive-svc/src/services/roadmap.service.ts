@@ -5,7 +5,7 @@ import {
   RoadmapInitiative,
   InitiativeMilestone,
   InitiativeStatus,
-} from '@prisma/client';
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 const log = logger.child({ service: 'roadmap-service' });

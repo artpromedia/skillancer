@@ -8,7 +8,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { engagementService } from '../services/engagement.service.js';
 import { workspaceService, WidgetPosition, PinnedDocument } from '../services/workspace.service.js';
 import { timeTrackingService } from '../services/time-tracking.service.js';
-import { ExecutiveTimeCategory } from '@prisma/client';
+import { ExecutiveTimeCategory } from '../types/prisma-shim.js';
 import { z } from 'zod';
 
 // Validation schemas

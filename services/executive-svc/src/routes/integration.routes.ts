@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { IntegrationHubService } from '../services/integration-hub.service';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../types/prisma-shim.js';
 
 const prisma = new PrismaClient();
 const integrationService = new IntegrationHubService(prisma);
@@ -56,13 +56,13 @@ export async function integrationRoutes(fastify: FastifyInstance) {
           config?: Record<string, unknown>;
         };
 
-        const integration = await integrationService.connectIntegration(
+        const integration = await integrationService.connectIntegration({
           engagementId,
-          integrationTypeId,
+          integrationTypeSlug: integrationTypeId,
           accessToken,
           refreshToken,
-          config
-        );
+          config,
+        });
 
         return reply.status(201).send(integration);
       } catch (error: any) {
@@ -123,12 +123,12 @@ export async function integrationRoutes(fastify: FastifyInstance) {
           errorMessage?: string;
         };
 
-        const integration = await integrationService.updateSyncStatus(
-          integrationId,
-          status,
-          cachedData,
-          errorMessage
-        );
+        const integration = await integrationService.updateSyncStatus(integrationId, {
+          success: status === 'SUCCESS',
+          data: cachedData,
+          error: errorMessage,
+          syncedAt: new Date(),
+        });
 
         return reply.send(integration);
       } catch (error: any) {
@@ -145,7 +145,10 @@ export async function integrationRoutes(fastify: FastifyInstance) {
         const { integrationId } = request.params as { integrationId: string };
 
         // Mark as syncing
-        await integrationService.updateSyncStatus(integrationId, 'SYNCING');
+        await integrationService.updateSyncStatus(integrationId, {
+          success: true,
+          syncedAt: new Date(),
+        });
 
         // In a real implementation, this would trigger an async job
         // For now, we just acknowledge the request

@@ -1,5 +1,5 @@
 import { prisma } from '@skillancer/database';
-import { RACIRole } from '@prisma/client';
+import { RACIRole } from '../types/prisma-shim.js';
 import { EventEmitter } from 'node:events';
 
 // Org Chart & RACI Service for COO Suite

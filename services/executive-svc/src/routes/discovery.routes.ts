@@ -7,7 +7,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '@skillancer/database';
 import { matchingService } from '../services/matching.service.js';
-import type { ExecutiveType, CompanyStage } from '@prisma/client';
+import type { ExecutiveType, CompanyStage } from '../types/prisma-shim.js';
 
 interface ExecutiveParams {
   slug: string;
