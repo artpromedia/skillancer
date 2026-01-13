@@ -14,6 +14,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "types": ["node", "react", "react-dom"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],

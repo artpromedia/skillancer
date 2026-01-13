@@ -792,11 +792,11 @@ export class SkillancerIntelligence {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as { message?: string } & Record<string, unknown>;
       throw new SkillancerError(error.message || 'API request failed', response.status, error);
     }
 
-    return response.json();
+    return (await response.json()) as ApiResponse<T>;
   }
 
   async requestPost<T>(
@@ -817,11 +817,11 @@ export class SkillancerIntelligence {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as { message?: string } & Record<string, unknown>;
       throw new SkillancerError(error.message || 'API request failed', response.status, error);
     }
 
-    return response.json();
+    return (await response.json()) as ApiResponse<T>;
   }
 }
 
