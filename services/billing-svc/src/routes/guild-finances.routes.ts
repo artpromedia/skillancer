@@ -4,7 +4,7 @@
  * Sprint M8: Guild & Agency Accounts
  */
 
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 import { Router } from 'express';
 
 import {

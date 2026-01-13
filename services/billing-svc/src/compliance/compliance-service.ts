@@ -6,7 +6,7 @@
  */
 
 import { prisma } from '@skillancer/database';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {

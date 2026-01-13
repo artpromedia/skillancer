@@ -7,7 +7,7 @@
  * See docs/database/migrations.md for instructions.
  */
 
-import type { Prisma } from '@skillancer/database';
+import type { Prisma } from '../types/prisma-shim.js';
 
 // =============================================================================
 // TYPES

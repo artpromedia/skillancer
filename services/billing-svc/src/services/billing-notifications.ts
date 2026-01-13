@@ -4,7 +4,7 @@
  */
 
 import { notificationClient } from '@skillancer/service-client';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 
 // ============================================================================
 // Types
@@ -66,15 +66,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.info('Escrow funded notification sent', {
-        userId: freelancer.userId,
-        contractId: data.contractId,
-      });
+      logger.info({ userId: freelancer.userId, contractId: data.contractId }, 'Escrow funded notification sent');
     } catch (error) {
-      logger.error('Failed to send escrow funded notification', {
-        userId: freelancer.userId,
-        error,
-      });
+      logger.error({ userId: freelancer.userId, error }, 'Failed to send escrow funded notification');
     }
   }
 
@@ -99,16 +93,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.info('Milestone submitted notification sent', {
-        userId: client.userId,
-        contractId: data.contractId,
-        milestoneId: data.milestoneId,
-      });
+      logger.info({ userId: client.userId, contractId: data.contractId, milestoneId: data.milestoneId }, 'Milestone submitted notification sent');
     } catch (error) {
-      logger.error('Failed to send milestone submitted notification', {
-        userId: client.userId,
-        error,
-      });
+      logger.error({ userId: client.userId, error }, 'Failed to send milestone submitted notification');
     }
   }
 
@@ -133,15 +120,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.info('Milestone approved notification sent', {
-        userId: freelancer.userId,
-        milestoneId: data.milestoneId,
-      });
+      logger.info({ userId: freelancer.userId, milestoneId: data.milestoneId }, 'Milestone approved notification sent');
     } catch (error) {
-      logger.error('Failed to send milestone approved notification', {
-        userId: freelancer.userId,
-        error,
-      });
+      logger.error({ userId: freelancer.userId, error }, 'Failed to send milestone approved notification');
     }
   }
 
@@ -166,15 +147,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.info('Milestone rejected notification sent', {
-        userId: freelancer.userId,
-        milestoneId: data.milestoneId,
-      });
+      logger.info({ userId: freelancer.userId, milestoneId: data.milestoneId }, 'Milestone rejected notification sent');
     } catch (error) {
-      logger.error('Failed to send milestone rejected notification', {
-        userId: freelancer.userId,
-        error,
-      });
+      logger.error({ userId: freelancer.userId, error }, 'Failed to send milestone rejected notification');
     }
   }
 
@@ -214,13 +189,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.info('Milestone auto-approved notifications sent', {
-        clientId: client.userId,
-        freelancerId: freelancer.userId,
-        milestoneId: data.milestoneId,
-      });
+      logger.info({ clientId: client.userId, freelancerId: freelancer.userId, milestoneId: data.milestoneId }, 'Milestone auto-approved notifications sent');
     } catch (error) {
-      logger.error('Failed to send milestone auto-approved notification', { error });
+      logger.error({ error }, 'Failed to send milestone auto-approved notification');
     }
   }
 
@@ -252,15 +223,9 @@ class BillingNotificationService {
         });
       }
 
-      logger.info('Payment received notification sent', {
-        userId: user.userId,
-        amount: data.amount,
-      });
+      logger.info({ userId: user.userId, amount: data.amount }, 'Payment received notification sent');
     } catch (error) {
-      logger.error('Failed to send payment received notification', {
-        userId: user.userId,
-        error,
-      });
+      logger.error({ userId: user.userId, error }, 'Failed to send payment received notification');
     }
   }
 
@@ -284,15 +249,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.info('Payment failed notification sent', {
-        userId: user.userId,
-        amount: data.amount,
-      });
+      logger.info({ userId: user.userId, amount: data.amount }, 'Payment failed notification sent');
     } catch (error) {
-      logger.error('Failed to send payment failed notification', {
-        userId: user.userId,
-        error,
-      });
+      logger.error({ userId: user.userId, error }, 'Failed to send payment failed notification');
     }
   }
 
@@ -318,12 +277,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.info('Dispute opened notifications sent', {
-        disputeId: data.disputeId,
-        contractId: data.contractId,
-      });
+      logger.info({ disputeId: data.disputeId, contractId: data.contractId }, 'Dispute opened notifications sent');
     } catch (error) {
-      logger.error('Failed to send dispute opened notification', { error });
+      logger.error({ error }, 'Failed to send dispute opened notification');
     }
   }
 
@@ -348,12 +304,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.info('Dispute resolved notifications sent', {
-        disputeId: data.disputeId,
-        contractId: data.contractId,
-      });
+      logger.info({ disputeId: data.disputeId, contractId: data.contractId }, 'Dispute resolved notifications sent');
     } catch (error) {
-      logger.error('Failed to send dispute resolved notification', { error });
+      logger.error({ error }, 'Failed to send dispute resolved notification');
     }
   }
 
@@ -378,15 +331,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.info('Card expiring notification sent', {
-        userId: user.userId,
-        last4: data.last4,
-      });
+      logger.info({ userId: user.userId, last4: data.last4 }, 'Card expiring notification sent');
     } catch (error) {
-      logger.error('Failed to send card expiring notification', {
-        userId: user.userId,
-        error,
-      });
+      logger.error({ userId: user.userId, error }, 'Failed to send card expiring notification');
     }
   }
 
@@ -410,14 +357,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.info('Card auto-updated notification sent', {
-        userId: user.userId,
-      });
+      logger.info({ userId: user.userId }, 'Card auto-updated notification sent');
     } catch (error) {
-      logger.error('Failed to send card auto-updated notification', {
-        userId: user.userId,
-        error,
-      });
+      logger.error({ userId: user.userId, error }, 'Failed to send card auto-updated notification');
     }
   }
 
@@ -449,15 +391,9 @@ class BillingNotificationService {
         },
       });
 
-      logger.warn('Security alert sent', {
-        userId: user.userId,
-        alertType: data.alertType,
-      });
+      logger.warn({ userId: user.userId, alertType: data.alertType }, 'Security alert sent');
     } catch (error) {
-      logger.error('Failed to send security alert', {
-        userId: user.userId,
-        error,
-      });
+      logger.error({ userId: user.userId, error }, 'Failed to send security alert');
     }
   }
 
@@ -473,11 +409,7 @@ class BillingNotificationService {
     // In production, this would alert to Slack, PagerDuty, etc.
     // For now, log with high visibility
     const logMethod = data.severity === 'critical' ? 'error' : 'warn';
-    logger[logMethod](`[OPS ALERT - ${data.severity.toUpperCase()}] ${data.title}`, {
-      message: data.message,
-      context: data.context,
-      timestamp: new Date().toISOString(),
-    });
+    logger[logMethod]({ message: data.message, context: data.context, timestamp: new Date().toISOString() }, `[OPS ALERT - ${data.severity.toUpperCase()}] ${data.title}`);
 
     // TODO: Integrate with actual alerting services
     // - Slack webhook for non-critical

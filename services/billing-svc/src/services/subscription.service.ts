@@ -27,7 +27,7 @@ import {
   PaymentMethodRequiredError,
 } from '../errors/index.js';
 
-import type { Prisma } from '@skillancer/database';
+import type { Prisma } from '../types/prisma-shim.js';
 import type Stripe from 'stripe';
 
 // Import Prisma types - these will be available after running prisma generate

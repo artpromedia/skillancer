@@ -13,7 +13,7 @@
  */
 
 import { prisma } from '@skillancer/database';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 import { addHours, addDays, setHours, isWeekend, isBefore, addMinutes } from 'date-fns';
 
 import { getPaymentOrchestrator, PaymentState } from './payment-orchestrator.js';

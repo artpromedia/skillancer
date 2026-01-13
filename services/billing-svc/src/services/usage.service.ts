@@ -5,7 +5,7 @@
  * Tracks and manages metered usage for billing purposes
  */
 
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 
 export interface UsageRecord {
   id: string;

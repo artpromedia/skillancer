@@ -12,7 +12,7 @@
 
 import { createAuditLog } from '@skillancer/audit-client';
 import { prisma } from '@skillancer/database';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 import Stripe from 'stripe';
 import { z } from 'zod';
 

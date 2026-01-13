@@ -12,7 +12,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/require-await */
 
-import { createLogger } from '@skillancer/logger';
+import { createLogger } from '../lib/logger.js';
 
 import {
   getExchangeRateRepository,

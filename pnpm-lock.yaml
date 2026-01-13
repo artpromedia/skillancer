@@ -1575,6 +1575,9 @@ importers:
       '@skillancer/logger':
         specifier: workspace:*
         version: link:../../packages/logger
+      '@skillancer/service-client':
+        specifier: workspace:*
+        version: link:../../packages/service-client
       '@skillancer/types':
         specifier: workspace:*
         version: link:../../packages/types

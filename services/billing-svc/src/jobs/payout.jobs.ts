@@ -10,7 +10,7 @@
  * - Reconciliation
  */
 
-import { createLogger } from '@skillancer/logger';
+import { createLogger } from '../lib/logger.js';
 
 import { getPayoutRepository, type PayoutRepository } from '../repositories/payout.repository.js';
 import {

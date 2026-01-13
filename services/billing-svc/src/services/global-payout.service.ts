@@ -20,7 +20,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { createLogger } from '@skillancer/logger';
+import { createLogger } from '../lib/logger.js';
 import Stripe from 'stripe';
 
 import { getExchangeRateService, type ExchangeRateService } from './exchange-rate.service.js';

@@ -5,7 +5,7 @@
  * Sprint M5: Freelancer Financial Services
  */
 
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 

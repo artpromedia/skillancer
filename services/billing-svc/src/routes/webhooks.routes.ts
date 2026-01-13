@@ -9,7 +9,7 @@
  * - Error handling
  */
 
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 
 import { getWebhookProcessor } from '../webhooks/webhook-processor.js';
 

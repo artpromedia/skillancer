@@ -5,7 +5,7 @@
  * Sprint M5: Freelancer Financial Services
  */
 
-import { createLogger } from '@skillancer/logger';
+import { createLogger } from '../lib/logger.js';
 
 const logger = createLogger({ serviceName: 'financial-audit' });
 

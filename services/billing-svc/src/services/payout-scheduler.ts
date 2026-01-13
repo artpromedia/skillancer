@@ -14,7 +14,7 @@
  */
 
 import { prisma } from '@skillancer/database';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 import { startOfDay, endOfDay, addDays, subDays, getDay, getDate } from 'date-fns';
 
 import { getStripe } from './stripe.service.js';

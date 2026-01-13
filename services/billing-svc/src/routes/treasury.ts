@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { getTreasuryService } from '../../treasury/treasury-service';
 import { getInstantPayoutService } from '../../treasury/instant-payout';
 import { getBalanceManager } from '../../treasury/balance-manager';
-import { createLogger } from '@skillancer/logger';
+import { createLogger } from '../lib/logger.js';
 
 const router = Router();
 const logger = createLogger({ name: 'TreasuryRoutes' });

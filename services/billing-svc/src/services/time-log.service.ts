@@ -4,7 +4,7 @@
  * Time tracking service for hourly contracts
  */
 
-import { createLogger } from '@skillancer/logger';
+import { createLogger } from '../lib/logger.js';
 
 const logger = createLogger({ serviceName: 'time-log-service' });
 

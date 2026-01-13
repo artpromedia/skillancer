@@ -7,7 +7,7 @@
  */
 
 import { db } from '@skillancer/database';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 

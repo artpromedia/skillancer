@@ -5,7 +5,7 @@
 
 import { type Job, Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 
 import { getConfig } from '../config/index.js';
 import { getPaymentMethodService } from '../services/payment-method.service.js';

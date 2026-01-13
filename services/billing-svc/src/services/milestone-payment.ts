@@ -13,7 +13,7 @@
  */
 
 import { prisma } from '@skillancer/database';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 import { addDays, differenceInDays } from 'date-fns';
 
 import { billingNotifications } from './billing-notifications.js';

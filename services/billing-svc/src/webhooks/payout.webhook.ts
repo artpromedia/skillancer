@@ -6,7 +6,7 @@
  * Handles webhook events for payout status updates from Stripe.
  */
 
-import { createLogger } from '@skillancer/logger';
+import { createLogger } from '../lib/logger.js';
 
 import { getGlobalPayoutService } from '../services/global-payout.service.js';
 

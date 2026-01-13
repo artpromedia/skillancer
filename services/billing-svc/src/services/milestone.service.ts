@@ -4,7 +4,7 @@
  * Milestone management service for escrow-based contracts
  */
 
-import { createLogger } from '@skillancer/logger';
+import { createLogger } from '../lib/logger.js';
 
 const logger = createLogger({ serviceName: 'milestone-service' });
 

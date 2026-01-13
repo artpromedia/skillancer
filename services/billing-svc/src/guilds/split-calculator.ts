@@ -5,7 +5,7 @@
  * Utility service for calculating revenue splits
  */
 
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 
 // =============================================================================
 // TYPES

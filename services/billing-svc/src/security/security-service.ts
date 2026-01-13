@@ -8,7 +8,7 @@
 import crypto from 'crypto';
 
 import { prisma } from '@skillancer/database';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 
 // ============================================================================
 // TYPES

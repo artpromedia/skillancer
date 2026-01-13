@@ -6,7 +6,7 @@
  */
 
 import { prisma } from '@skillancer/database';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 import { getTaxVaultService } from './tax-vault-service.js';
 import { getTaxCalculator } from './tax-calculator.js';
 

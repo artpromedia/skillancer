@@ -10,7 +10,7 @@
  * - Webhook processing stats
  */
 
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 import { Counter, Histogram, Gauge, Registry } from 'prom-client';
 
 // =============================================================================

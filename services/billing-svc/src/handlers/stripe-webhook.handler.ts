@@ -5,7 +5,7 @@
  */
 
 import { prisma } from '@skillancer/database';
-import { logger } from '@skillancer/logger';
+import { logger } from '../lib/logger.js';
 
 import { getPaymentMethodService } from '../services/payment-method.service.js';
 import { getStripeService } from '../services/stripe.service.js';

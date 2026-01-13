@@ -16,7 +16,7 @@ import {
   UnauthorizedPaymentMethodAccessError,
 } from '../errors/index.js';
 
-import type { PaymentMethod, PaymentMethodType, PaymentMethodStatus } from '@skillancer/database';
+import type { PaymentMethod, PaymentMethodType, PaymentMethodStatus } from '../types/prisma-shim.js';
 import type Stripe from 'stripe';
 
 // =============================================================================

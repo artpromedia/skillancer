@@ -5,7 +5,7 @@
  * Sprint M6: Invoice Financing & Advanced Tax Tools
  */
 
-import { createLogger } from '@skillancer/logger';
+import { createLogger } from '../lib/logger.js';
 import { Router, type Request, type Response } from 'express';
 
 import { getContributionManager } from '../retirement/contribution-manager.js';
