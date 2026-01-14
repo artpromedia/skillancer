@@ -9,6 +9,8 @@ import crypto from 'crypto';
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
+import { triggerSecurityAlert, triggerCriticalAlert } from '@skillancer/alerting';
+import { notificationClient } from '@skillancer/service-client';
 
 // ============================================================================
 // TYPES
@@ -436,7 +438,34 @@ export class SecurityService {
     // Alert on critical events
     if (severity === 'critical') {
       logger.error('Critical security event', { userId, type, data });
-      // TODO: Send immediate alert to security team
+
+      // Send immediate alert to security team via PagerDuty
+      await triggerSecurityAlert(
+        `Critical security event: ${type} for user ${userId}`,
+        'critical',
+        {
+          userId,
+          eventType: type,
+          description: data.description,
+          ipAddress: data.ipAddress,
+          timestamp: new Date().toISOString(),
+        }
+      );
+
+      // Get user email and send security alert notification
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, firstName: true },
+      });
+
+      if (user?.email) {
+        await notificationClient.sendSecurityAlert(userId, user.email, {
+          alertType: this.getDefaultDescription(type),
+          description: String(data.description || ''),
+          ipAddress: data.ipAddress,
+          timestamp: new Date().toISOString(),
+        }).catch((err) => logger.error('Failed to send security alert email', { error: err, userId }));
+      }
     }
   }
 
@@ -553,9 +582,42 @@ export class SecurityService {
     });
 
     // Re-enable features based on KYC level
-    // TODO: Check KYC level and set appropriate features
+    const kycVerification = await prisma.kycVerification.findUnique({
+      where: { userId },
+      select: { status: true, tier: true },
+    });
 
-    logger.info('Financial account unlocked', { userId, approvedBy });
+    const features: Record<string, boolean> = {
+      instantPayouts: false,
+      higherLimits: false,
+      internationalPayouts: false,
+    };
+
+    // Set features based on KYC tier
+    if (kycVerification?.status === 'verified') {
+      switch (kycVerification.tier) {
+        case 'tier3':
+          features.internationalPayouts = true;
+          features.higherLimits = true;
+          features.instantPayouts = true;
+          break;
+        case 'tier2':
+          features.higherLimits = true;
+          features.instantPayouts = true;
+          break;
+        case 'tier1':
+        default:
+          features.instantPayouts = true;
+          break;
+      }
+    }
+
+    await prisma.treasuryAccount.updateMany({
+      where: { userId },
+      data: { features },
+    });
+
+    logger.info('Financial account unlocked', { userId, approvedBy, features });
   }
 
   /**

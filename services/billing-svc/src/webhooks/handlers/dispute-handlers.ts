@@ -11,6 +11,8 @@
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
+import { triggerCriticalAlert, triggerWarningAlert, createDedupKey } from '@skillancer/alerting';
+import { notificationClient } from '@skillancer/service-client';
 
 import type Stripe from 'stripe';
 
@@ -301,36 +303,70 @@ async function sendDisputeAlerts(dispute: Stripe.Dispute): Promise<void> {
     ? new Date(dispute.evidence_details.due_by * 1000).toLocaleDateString()
     : 'Unknown';
 
-  // TODO: Send Slack alert
-  logger.error(
-    {
-      channel: '#payments-alerts',
-      message: `🚨 DISPUTE ALERT: ${formattedAmount} dispute filed\nReason: ${dispute.reason}\nCharge: ${dispute.charge}\nDue: ${dueDate}\nAction required immediately!`,
-    },
-    'Slack alert queued'
-  );
+  const alertMessage = `Dispute ${dispute.id}: ${formattedAmount} - ${dispute.reason}. Due: ${dueDate}`;
 
-  // TODO: Send email to payments team
-  logger.error(
-    {
-      to: 'payments@skillancer.com',
-      subject: `[URGENT] Dispute ${dispute.id} - ${formattedAmount}`,
-      body: `A new dispute has been filed that requires immediate attention.`,
-    },
-    'Email alert queued'
-  );
-
-  // TODO: PagerDuty for live mode disputes
+  // Send PagerDuty alert for live mode disputes (CRITICAL)
   if (dispute.livemode) {
-    logger.error(
+    await triggerCriticalAlert(
+      `DISPUTE: ${formattedAmount} dispute filed - ${dispute.reason}`,
       {
-        service: 'billing',
-        severity: 'critical',
-        summary: `Live dispute: ${formattedAmount} - ${dispute.reason}`,
-      },
-      'PagerDuty alert queued'
-    );
+        source: 'billing-svc',
+        component: 'disputes',
+        group: 'payments',
+        class: 'dispute-alert',
+        dedupKey: createDedupKey(['dispute', 'created', dispute.id]),
+        customDetails: {
+          disputeId: dispute.id,
+          chargeId: dispute.charge,
+          amount: dispute.amount,
+          currency: dispute.currency,
+          reason: dispute.reason,
+          dueDate,
+          evidenceRequired: true,
+          livemode: true,
+        },
+      }
+    ).catch((err) => logger.error({ err }, 'Failed to send PagerDuty alert for dispute'));
+  } else {
+    // Warning for test mode
+    await triggerWarningAlert(
+      `[TEST] Dispute: ${formattedAmount} - ${dispute.reason}`,
+      {
+        source: 'billing-svc',
+        component: 'disputes',
+        group: 'payments',
+        dedupKey: createDedupKey(['dispute', 'test', dispute.id]),
+        customDetails: {
+          disputeId: dispute.id,
+          chargeId: dispute.charge,
+          amount: dispute.amount,
+          livemode: false,
+        },
+      }
+    ).catch((err) => logger.error({ err }, 'Failed to send test dispute alert'));
   }
+
+  // Send email notification to payments team via notification service
+  await notificationClient.sendEmail({
+    to: process.env.PAYMENTS_TEAM_EMAIL || 'payments@skillancer.com',
+    subject: `[${dispute.livemode ? 'URGENT' : 'TEST'}] Dispute ${dispute.id} - ${formattedAmount}`,
+    html: `
+      <h1>🚨 Dispute Alert</h1>
+      <p><strong>Amount:</strong> ${formattedAmount}</p>
+      <p><strong>Reason:</strong> ${dispute.reason}</p>
+      <p><strong>Charge ID:</strong> ${dispute.charge}</p>
+      <p><strong>Evidence Due:</strong> ${dueDate}</p>
+      <p><strong>Mode:</strong> ${dispute.livemode ? 'LIVE' : 'TEST'}</p>
+      <p>Action required immediately!</p>
+    `,
+    data: {
+      disputeId: dispute.id,
+      amount: formattedAmount,
+      reason: dispute.reason,
+    },
+  }).catch((err) => logger.error({ err }, 'Failed to send dispute email alert'));
+
+  logger.info({ disputeId: dispute.id, alertMessage }, 'Dispute alerts sent');
 }
 
 // =============================================================================
@@ -679,7 +715,30 @@ async function sendDisputeOutcomeNotification(
     `Dispute outcome notification: ${won ? '✅ Won' : '❌ Lost'}`
   );
 
-  // TODO: Send to appropriate channels
+  // Send outcome notification to payments team
+  await notificationClient.sendEmail({
+    to: process.env.PAYMENTS_TEAM_EMAIL || 'payments@skillancer.com',
+    subject: `Dispute ${dispute.id} ${won ? 'WON ✅' : 'LOST ❌'} - ${formattedAmount}`,
+    html: `
+      <h1>Dispute Outcome: ${won ? '✅ Won' : '❌ Lost'}</h1>
+      <p><strong>Dispute ID:</strong> ${dispute.id}</p>
+      <p><strong>Amount:</strong> ${formattedAmount}</p>
+      <p><strong>Reason:</strong> ${dispute.reason}</p>
+      <p><strong>Outcome:</strong> ${won ? 'Funds returned to Skillancer' : 'Funds awarded to cardholder'}</p>
+    `,
+    data: {
+      disputeId: dispute.id,
+      outcome: won ? 'won' : 'lost',
+      amount: formattedAmount,
+    },
+  }).catch((err) => logger.error({ err }, 'Failed to send dispute outcome email'));
+
+  // Send info alert to close the PagerDuty incident
+  if (dispute.livemode) {
+    const { resolveAlert } = await import('@skillancer/alerting');
+    await resolveAlert(createDedupKey(['dispute', 'created', dispute.id]))
+      .catch((err) => logger.error({ err }, 'Failed to resolve PagerDuty alert'));
+  }
 }
 
 // =============================================================================

@@ -15,6 +15,7 @@
 import Stripe from 'stripe';
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
+import { triggerCriticalAlert, createDedupKey } from '@skillancer/alerting';
 import { subDays, startOfDay, endOfDay, format } from 'date-fns';
 
 import { getStripe } from './stripe.service.js';
@@ -833,23 +834,53 @@ export class ReconciliationService {
         'CRITICAL: Reconciliation issues detected'
       );
 
-      // TODO: Integrate with alerting service
-      // await alertingService.sendAlert({
-      //   severity: 'CRITICAL',
-      //   title: 'Payment Reconciliation Issues Detected',
-      //   details: {
-      //     date: report.date,
-      //     criticalDiscrepancies,
-      //     missingWebhooks: highSeverityMissingWebhooks,
-      //   },
-      // });
+      // Send alert via PagerDuty
+      await triggerCriticalAlert(
+        `Payment Reconciliation Issues Detected - ${report.date}`,
+        {
+          source: 'billing-svc',
+          component: 'reconciliation',
+          group: 'payments',
+          class: 'reconciliation-issue',
+          dedupKey: createDedupKey(['reconciliation', 'issues', report.date]),
+          customDetails: {
+            date: report.date,
+            criticalDiscrepancies: criticalDiscrepancies.length,
+            highSeverityMissingWebhooks: highSeverityMissingWebhooks.length,
+            discrepancyDetails: criticalDiscrepancies.slice(0, 5).map((d) => ({
+              type: d.type,
+              stripeId: d.stripeId,
+              description: d.description,
+            })),
+            missingWebhookDetails: highSeverityMissingWebhooks.slice(0, 5).map((w) => ({
+              eventType: w.eventType,
+              stripeId: w.stripeId,
+            })),
+          },
+        }
+      ).catch((err) => logger.error({ err }, 'Failed to send reconciliation alert'));
     }
   }
 
   private async alertOnReconciliationFailure(date: string, error: string): Promise<void> {
     logger.error({ date, error }, 'CRITICAL: Reconciliation job failed');
 
-    // TODO: Integrate with alerting service
+    // Send alert via PagerDuty
+    await triggerCriticalAlert(
+      `Reconciliation Job Failed - ${date}`,
+      {
+        source: 'billing-svc',
+        component: 'reconciliation',
+        group: 'payments',
+        class: 'reconciliation-failure',
+        dedupKey: createDedupKey(['reconciliation', 'failure', date]),
+        customDetails: {
+          date,
+          error,
+          timestamp: new Date().toISOString(),
+        },
+      }
+    ).catch((err) => logger.error({ err }, 'Failed to send reconciliation failure alert'));
   }
 }
 

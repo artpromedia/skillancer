@@ -3,6 +3,10 @@
  * Multi-provider SMS delivery
  */
 
+import { createLogger } from '@skillancer/logger';
+
+const logger = createLogger({ name: 'SMSProvider' });
+
 export interface SMSConfig {
   provider: 'twilio' | 'nexmo' | 'aws_sns';
   accountSid?: string;
@@ -101,7 +105,7 @@ export class SMSProvider {
         timestamp: new Date(),
       });
 
-      console.log(`[SMS] Sent ${id} to ${message.to}`);
+      logger.info({ id, to: message.to }, 'SMS sent successfully');
 
       return result;
     } catch (error) {

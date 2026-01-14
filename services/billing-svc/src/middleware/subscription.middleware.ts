@@ -6,6 +6,7 @@
  */
 
 import { prisma } from '@skillancer/database';
+import { logger } from '@skillancer/logger';
 
 import { getSubscriptionService } from '../services/subscription.service.js';
 
@@ -159,7 +160,7 @@ export function requireFeature(featureKey: string) {
 
     // Feature checking requires plan configuration
     // For now, just pass through - implement when plan config is available
-    console.log(`[Feature Check] Checking feature: ${featureKey} for plan: ${subscription.plan}`);
+    logger.debug({ featureKey, plan: subscription.plan }, 'Checking feature access');
 
     if (done) {
       done();
@@ -261,7 +262,7 @@ export function requireSeatAvailable() {
 
     // Seat management requires extended schema
     // For now, pass through
-    console.log('[Seat Check] Seat management requires extended schema');
+    logger.debug('Seat management requires extended schema');
 
     if (done) {
       done();

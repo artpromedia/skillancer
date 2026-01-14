@@ -4,6 +4,8 @@
  * Invoice Settings Service - User settings management
  */
 
+import Stripe from 'stripe';
+
 import { InvoiceError, InvoiceErrorCode } from '../errors/invoice.errors.js';
 import { InvoiceSettingsRepository } from '../repositories/index.js';
 
@@ -62,7 +64,31 @@ export class InvoiceSettingsService {
    * Update Stripe Connect account
    */
   async updateStripeAccount(userId: string, stripeAccountId: string): Promise<InvoiceSettings> {
-    // TODO: Verify Stripe account with Stripe API
+    // Verify Stripe account with Stripe API
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (stripeSecretKey) {
+      const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+      try {
+        const account = await stripe.accounts.retrieve(stripeAccountId);
+
+        // Verify account is properly set up
+        if (!account.charges_enabled || !account.payouts_enabled) {
+          throw new InvoiceError(InvoiceErrorCode.STRIPE_ACCOUNT_INVALID, {
+            reason: 'Stripe account is not fully set up. Please complete onboarding.',
+            chargesEnabled: account.charges_enabled,
+            payoutsEnabled: account.payouts_enabled,
+          });
+        }
+
+        this.logger.info({ stripeAccountId, chargesEnabled: account.charges_enabled }, 'Stripe account verified');
+      } catch (error: any) {
+        if (error instanceof InvoiceError) throw error;
+        throw new InvoiceError(InvoiceErrorCode.STRIPE_ACCOUNT_INVALID, {
+          reason: 'Failed to verify Stripe account',
+          error: error.message,
+        });
+      }
+    }
 
     const settings = await this.settingsRepository.updateStripeAccount(userId, stripeAccountId);
 

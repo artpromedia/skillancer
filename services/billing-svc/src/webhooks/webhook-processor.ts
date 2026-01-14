@@ -14,6 +14,7 @@
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
+import { triggerCriticalAlert, createDedupKey } from '@skillancer/alerting';
 import Stripe from 'stripe';
 
 // Handler imports
@@ -430,7 +431,24 @@ export class WebhookProcessor {
       '🚨 CRITICAL: Webhook processing failure requires immediate attention'
     );
 
-    // TODO: Send to PagerDuty/Slack
+    // Send to PagerDuty for immediate alerting
+    await triggerCriticalAlert(
+      `Critical webhook failure: ${event.type} (${event.id})`,
+      {
+        source: 'billing-svc',
+        component: 'webhook-processor',
+        group: 'payments',
+        class: 'webhook-failure',
+        dedupKey: createDedupKey(['webhook', 'failure', event.type, event.id]),
+        customDetails: {
+          eventId: event.id,
+          eventType: event.type,
+          error,
+          livemode: event.livemode,
+          environment: process.env.NODE_ENV,
+        },
+      }
+    ).catch((err) => logger.error({ err }, 'Failed to send PagerDuty alert'));
   }
 
   /**

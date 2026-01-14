@@ -5,6 +5,7 @@
 
 import { randomBytes } from 'crypto';
 
+import { notificationClient } from '@skillancer/service-client';
 import { InvoiceError, InvoiceErrorCode, recurringErrors } from '../errors/invoice.errors.js';
 import {
   RecurringInvoiceRepository,
@@ -284,7 +285,22 @@ export class RecurringInvoiceService {
     // Auto-send if enabled
     if (recurring.autoSend) {
       await this.invoiceRepository.updateStatus(invoice.id, 'SENT');
-      // TODO: Actually send via notification service
+
+      // Send via notification service
+      const client = await this.prisma.client.findUnique({
+        where: { id: recurring.clientId },
+        select: { email: true, companyName: true, firstName: true },
+      });
+
+      if (client?.email) {
+        await notificationClient.sendInvoiceCreated(client.email, {
+          invoiceNumber: invoice.invoiceNumber,
+          clientName: client.companyName || client.firstName || 'Client',
+          amount: (Number(invoice.total) / 100).toLocaleString('en-US', { style: 'currency', currency: invoice.currency || 'USD' }),
+          dueDate: invoice.dueDate.toLocaleDateString(),
+          viewUrl: `${process.env.APP_URL}/invoices/view/${invoice.viewToken}`,
+        }).catch((err) => this.logger.error({ err, invoiceId: invoice.id }, 'Failed to send recurring invoice email'));
+      }
     }
 
     this.logger.info(

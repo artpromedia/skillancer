@@ -16,6 +16,7 @@ import { createHash, createCipheriv, createDecipheriv, randomBytes } from 'crypt
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
+import { triggerSecurityAlert, triggerCriticalAlert, createDedupKey } from '@skillancer/alerting';
 
 // =============================================================================
 // TYPES
@@ -245,7 +246,20 @@ export class PCIComplianceService {
     // Log critical actions to external SIEM
     if (entry.severity === 'CRITICAL' || entry.severity === 'HIGH') {
       logger.warn(entry, 'Critical payment action logged');
-      // TODO: Forward to SIEM/security monitoring
+
+      // Forward to SIEM/security monitoring via PagerDuty
+      await triggerSecurityAlert(
+        `PCI Audit: ${entry.action} (${entry.severity})`,
+        entry.severity === 'CRITICAL' ? 'critical' : 'warning',
+        {
+          userId: entry.userId,
+          action: entry.action,
+          resource: entry.resource,
+          severity: entry.severity,
+          timestamp: entry.timestamp.toISOString(),
+          ipAddress: entry.ipAddress,
+        }
+      ).catch((err) => logger.error({ err }, 'Failed to forward to SIEM'));
     }
   }
 
@@ -582,11 +596,24 @@ export async function runDailyComplianceCheck(): Promise<void> {
       'PCI DSS COMPLIANCE FAILURE - Immediate action required'
     );
 
-    // TODO: Alert security team
-    // await alertingService.sendCriticalAlert({
-    //   type: 'PCI_COMPLIANCE_FAILURE',
-    //   details: result,
-    // });
+    // Alert security team via PagerDuty
+    await triggerCriticalAlert(
+      `PCI DSS COMPLIANCE FAILURE - ${result.criticalIssues} critical issues`,
+      {
+        source: 'billing-svc',
+        component: 'pci-compliance',
+        group: 'security',
+        class: 'compliance-failure',
+        dedupKey: createDedupKey(['pci', 'compliance', 'failure']),
+        customDetails: {
+          criticalIssues: result.criticalIssues,
+          warningIssues: result.warningIssues,
+          overallScore: result.overallScore,
+          failedChecks: result.checks.filter((c) => c.status === 'FAIL').map((c) => c.name),
+          timestamp: result.timestamp.toISOString(),
+        },
+      }
+    ).catch((err) => logger.error({ err }, 'Failed to send PCI compliance failure alert'));
   }
 }
 

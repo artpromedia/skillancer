@@ -12,6 +12,8 @@
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
+import { notificationClient } from '@skillancer/service-client';
+import { triggerWarningAlert, createDedupKey } from '@skillancer/alerting';
 
 import type Stripe from 'stripe';
 
@@ -185,8 +187,17 @@ async function notifyAccountStatusChange(
         return; // Don't notify for in-progress statuses
     }
 
-    // TODO: Integrate with notification service
-    logger.info({ userId, status, message }, 'Account status notification queued');
+    // Send notification via notification service
+    await notificationClient.sendNotification({
+      userId,
+      type: 'account_update',
+      title: 'Payout Account Update',
+      message,
+      channels: ['email', 'in_app'],
+      data: { status, accountId: account.id },
+    });
+
+    logger.info({ userId, status, message }, 'Account status notification sent');
   } catch (error) {
     logger.error({ error, accountId: account.id }, 'Failed to send account status notification');
   }
@@ -318,14 +329,43 @@ async function sendPayoutNotification(payout: Stripe.Payout, event: Stripe.Event
       currency: payout.currency.toUpperCase(),
     });
 
-    // TODO: Integrate with notification service
+    const arrivalDate = new Date(payout.arrival_date * 1000).toLocaleDateString();
+
+    // Send notification via notification service
+    await notificationClient.sendNotification({
+      userId: connectAccount.userId,
+      type: 'payment_received',
+      title: 'Payout Completed',
+      message: `Your payout of ${formattedAmount} is on its way and should arrive by ${arrivalDate}.`,
+      channels: ['email', 'push', 'in_app'],
+      data: {
+        payoutId: payout.id,
+        amount: payout.amount,
+        currency: payout.currency,
+        arrivalDate: payout.arrival_date,
+      },
+    });
+
+    // Also send email with receipt
+    if (connectAccount.user?.email) {
+      await notificationClient.sendPaymentReceived(
+        connectAccount.userId,
+        connectAccount.user.email,
+        {
+          amount: formattedAmount,
+          description: 'Freelancer payout',
+          date: arrivalDate,
+        }
+      );
+    }
+
     logger.info(
       {
         userId: connectAccount.userId,
         amount: formattedAmount,
-        arrivalDate: new Date(payout.arrival_date * 1000).toLocaleDateString(),
+        arrivalDate,
       },
-      'Payout notification queued'
+      'Payout notification sent'
     );
   } catch (error) {
     logger.error({ error, payoutId: payout.id }, 'Failed to send payout notification');
@@ -433,7 +473,25 @@ export async function handlePayoutFailed(event: Stripe.Event): Promise<void> {
           { userId: connectAccount.userId, failureCount: recentFailures },
           'Multiple payout failures detected'
         );
-        // TODO: Trigger investigation
+
+        // Trigger investigation alert via PagerDuty
+        await triggerWarningAlert(
+          `Multiple payout failures for user ${connectAccount.userId}`,
+          {
+            source: 'billing-svc',
+            component: 'payouts',
+            group: 'payments',
+            class: 'payout-investigation',
+            dedupKey: createDedupKey(['payout', 'failures', connectAccount.userId]),
+            customDetails: {
+              userId: connectAccount.userId,
+              failureCount: recentFailures,
+              latestPayoutId: payout.id,
+              latestFailureCode: payout.failure_code,
+              investigation: 'Review user bank account details and contact if necessary',
+            },
+          }
+        ).catch((err) => logger.error({ err }, 'Failed to trigger investigation alert'));
       }
     }
 
@@ -477,15 +535,35 @@ async function sendPayoutFailureNotification(
     if (!connectAccount) return;
 
     const remediationSteps = getPayoutFailureRemediation(payout.failure_code);
+    const formattedAmount = (payout.amount / 100).toLocaleString('en-US', {
+      style: 'currency',
+      currency: payout.currency.toUpperCase(),
+    });
 
-    // TODO: Integrate with notification service
+    // Send failure notification via notification service
+    await notificationClient.sendNotification({
+      userId: connectAccount.userId,
+      type: 'payment_sent', // Using closest available type for payout failure
+      title: 'Payout Failed',
+      message: `Your payout of ${formattedAmount} could not be completed. ${payout.failure_message || 'Please check your bank details.'}`,
+      channels: ['email', 'push', 'in_app'],
+      data: {
+        payoutId: payout.id,
+        amount: payout.amount,
+        currency: payout.currency,
+        failureCode: payout.failure_code,
+        failureMessage: payout.failure_message,
+        remediationSteps,
+      },
+    });
+
     logger.info(
       {
         userId: connectAccount.userId,
         failureCode: payout.failure_code,
         remediationSteps,
       },
-      'Payout failure notification queued'
+      'Payout failure notification sent'
     );
   } catch (error) {
     logger.error({ error, payoutId: payout.id }, 'Failed to send payout failure notification');

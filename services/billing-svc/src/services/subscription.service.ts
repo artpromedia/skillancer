@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '@skillancer/database';
+import { logger } from '@skillancer/logger';
 
 import { getStripeService } from './stripe.service.js';
 import { getConfig } from '../config/index.js';
@@ -717,9 +718,7 @@ export class SubscriptionService {
       const newUsage = subscription.usageThisPeriod + minutes;
       // We allow going over, but log it and potentially charge overage
       if (newUsage > subscription.usageLimit) {
-        console.log(
-          `[Usage] Subscription ${subscriptionId} exceeding limit: ${newUsage}/${subscription.usageLimit}`
-        );
+        logger.warn({ subscriptionId, newUsage, usageLimit: subscription.usageLimit }, 'Subscription exceeding usage limit');
       }
     }
 
@@ -858,7 +857,7 @@ export class SubscriptionService {
 
     const subscription = await this.getSubscriptionByStripeId(stripeInvoice.subscription);
     if (!subscription) {
-      console.log(`[Invoice] No local subscription for Stripe sub ${stripeInvoice.subscription}`);
+      logger.warn({ stripeSubscriptionId: stripeInvoice.subscription }, 'No local subscription found for Stripe subscription');
       return null;
     }
 

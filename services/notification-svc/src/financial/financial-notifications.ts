@@ -5,6 +5,11 @@
  */
 
 import { createLogger } from '@skillancer/logger';
+import { prisma } from '@skillancer/database';
+import { emailProvider } from '../providers/email.js';
+import { pushProvider } from '../providers/push.js';
+import { smsProvider } from '../providers/sms.js';
+import { queueManager, QueueNames, JobNames } from '@skillancer/service-client';
 
 const baseLogger = createLogger({ name: 'FinancialNotifications' });
 
@@ -460,16 +465,26 @@ class FinancialNotificationsService {
       templateId,
     });
 
-    // TODO: Integrate with email service (SendGrid, SES, etc.)
-    // await emailService.send({
-    //   to: user.email,
-    //   templateId,
-    //   dynamicTemplateData: {
-    //     title: notification.title,
-    //     body: notification.body,
-    //     ...notification.data,
-    //   },
-    // });
+    // Get user email from database
+    const user = await prisma.user.findUnique({
+      where: { id: notification.userId },
+      select: { email: true, firstName: true },
+    });
+
+    if (!user?.email) {
+      this.logger.warn('User email not found for notification', { userId: notification.userId });
+      return;
+    }
+
+    // Send via email provider
+    await emailProvider.sendTemplate(templateId, user.email, {
+      name: user.firstName || 'User',
+      title: notification.title,
+      body: notification.body,
+      ...notification.data,
+    });
+
+    this.logger.info('Email notification sent', { userId: notification.userId, templateId });
   }
 
   private async sendPush(notification: FinancialNotification): Promise<void> {
@@ -478,14 +493,19 @@ class FinancialNotificationsService {
       type: notification.type,
     });
 
-    // TODO: Integrate with push service (Firebase, OneSignal, etc.)
-    // await pushService.send({
-    //   userId: notification.userId,
-    //   title: notification.title,
-    //   body: notification.body,
-    //   data: notification.data,
-    //   priority: notification.priority,
-    // });
+    // Send via push provider
+    const pushPriority = notification.priority === 'urgent' ? 'high' : notification.priority === 'high' ? 'high' : 'normal';
+    await pushProvider.send({
+      userId: notification.userId,
+      title: notification.title,
+      body: notification.body,
+      data: Object.fromEntries(
+        Object.entries(notification.data).map(([k, v]) => [k, String(v)])
+      ),
+      priority: pushPriority,
+    });
+
+    this.logger.info('Push notification sent', { userId: notification.userId, type: notification.type });
   }
 
   private async sendInApp(notification: FinancialNotification): Promise<void> {
@@ -504,11 +524,25 @@ class FinancialNotificationsService {
       type: notification.type,
     });
 
-    // TODO: Integrate with SMS service (Twilio, etc.)
-    // await smsService.send({
-    //   userId: notification.userId,
-    //   body: notification.body,
-    // });
+    // Get user phone from database
+    const user = await prisma.user.findUnique({
+      where: { id: notification.userId },
+      select: { phone: true },
+    });
+
+    if (!user?.phone) {
+      this.logger.warn('User phone not found for SMS notification', { userId: notification.userId });
+      return;
+    }
+
+    // Send via SMS provider
+    await smsProvider.send({
+      to: user.phone,
+      body: notification.body,
+      priority: notification.priority === 'urgent' ? 'high' : 'normal',
+    });
+
+    this.logger.info('SMS notification sent', { userId: notification.userId, type: notification.type });
   }
 
   // ---------------------------------------------------------------------------
@@ -516,8 +550,28 @@ class FinancialNotificationsService {
   // ---------------------------------------------------------------------------
 
   async getPreferences(userId: string): Promise<NotificationPreferences> {
-    // TODO: Fetch from database
-    // For now, return defaults
+    // Fetch from database
+    const dbPrefs = await prisma.notificationPreference.findUnique({
+      where: { userId },
+    });
+
+    // Return database preferences or defaults
+    if (dbPrefs) {
+      return {
+        userId,
+        payouts: (dbPrefs.payouts as NotificationChannel) || { email: true, push: true, inApp: true, sms: false },
+        cards: (dbPrefs.cards as NotificationChannel) || { email: true, push: true, inApp: true, sms: false },
+        taxes: (dbPrefs.taxes as NotificationChannel) || { email: true, push: true, inApp: true, sms: false },
+        security: (dbPrefs.security as NotificationChannel) || { email: true, push: true, inApp: true, sms: true },
+        marketing: (dbPrefs.marketing as NotificationChannel) || { email: false, push: false, inApp: false, sms: false },
+        quietHoursEnabled: dbPrefs.quietHoursEnabled ?? true,
+        quietHoursStart: dbPrefs.quietHoursStart || '22:00',
+        quietHoursEnd: dbPrefs.quietHoursEnd || '08:00',
+        timezone: dbPrefs.timezone || 'America/New_York',
+      };
+    }
+
+    // Return defaults if no preferences found
     return {
       userId,
       payouts: { email: true, push: true, inApp: true, sms: false },
@@ -539,7 +593,34 @@ class FinancialNotificationsService {
     const current = await this.getPreferences(userId);
     const updated = { ...current, ...updates };
 
-    // TODO: Save to database
+    // Save to database
+    await prisma.notificationPreference.upsert({
+      where: { userId },
+      create: {
+        userId,
+        payouts: updated.payouts as object,
+        cards: updated.cards as object,
+        taxes: updated.taxes as object,
+        security: updated.security as object,
+        marketing: updated.marketing as object,
+        quietHoursEnabled: updated.quietHoursEnabled,
+        quietHoursStart: updated.quietHoursStart,
+        quietHoursEnd: updated.quietHoursEnd,
+        timezone: updated.timezone,
+      },
+      update: {
+        payouts: updated.payouts as object,
+        cards: updated.cards as object,
+        taxes: updated.taxes as object,
+        security: updated.security as object,
+        marketing: updated.marketing as object,
+        quietHoursEnabled: updated.quietHoursEnabled,
+        quietHoursStart: updated.quietHoursStart,
+        quietHoursEnd: updated.quietHoursEnd,
+        timezone: updated.timezone,
+      },
+    });
+
     this.logger.info('Notification preferences updated', { userId });
 
     return updated;
@@ -555,22 +636,75 @@ class FinancialNotificationsService {
   ): Promise<{ notifications: FinancialNotification[]; unreadCount: number }> {
     const { unreadOnly = false, limit = 50, offset = 0 } = options;
 
-    // TODO: Fetch from database
     this.logger.info('Fetching in-app notifications', { userId, unreadOnly, limit });
 
+    // Fetch from database
+    const whereClause = {
+      userId,
+      ...(unreadOnly ? { read: false } : {}),
+    };
+
+    const [notifications, unreadCount] = await Promise.all([
+      prisma.notification.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.notification.count({
+        where: { userId, read: false },
+      }),
+    ]);
+
     return {
-      notifications: [],
-      unreadCount: 0,
+      notifications: notifications.map((n) => ({
+        id: n.id,
+        userId: n.userId,
+        type: n.type as FinancialNotificationType,
+        title: n.title,
+        body: n.body,
+        data: (n.data as Record<string, unknown>) || {},
+        channels: (n.channels as (keyof NotificationChannel)[]) || [],
+        priority: (n.priority as 'low' | 'normal' | 'high' | 'urgent') || 'normal',
+        read: n.read,
+        createdAt: n.createdAt,
+        sentAt: n.sentAt || undefined,
+        readAt: n.readAt || undefined,
+      })),
+      unreadCount,
     };
   }
 
   async markAsRead(userId: string, notificationIds: string[]): Promise<void> {
-    // TODO: Update in database
+    // Update in database
+    await prisma.notification.updateMany({
+      where: {
+        id: { in: notificationIds },
+        userId,
+        read: false,
+      },
+      data: {
+        read: true,
+        readAt: new Date(),
+      },
+    });
+
     this.logger.info('Marking notifications as read', { userId, count: notificationIds.length });
   }
 
   async markAllAsRead(userId: string): Promise<void> {
-    // TODO: Update all unread in database
+    // Update all unread in database
+    await prisma.notification.updateMany({
+      where: {
+        userId,
+        read: false,
+      },
+      data: {
+        read: true,
+        readAt: new Date(),
+      },
+    });
+
     this.logger.info('Marking all notifications as read', { userId });
   }
 
@@ -625,15 +759,61 @@ class FinancialNotificationsService {
     notification: FinancialNotification,
     preferences: NotificationPreferences
   ): Promise<void> {
-    // TODO: Add to delayed queue (Redis, SQS, etc.)
-    this.logger.info('Notification queued for after quiet hours', {
-      notificationId: notification.id,
-      quietHoursEnd: preferences.quietHoursEnd,
-    });
+    // Calculate delay until quiet hours end
+    const now = new Date();
+    const [endHour, endMin] = preferences.quietHoursEnd.split(':').map(Number);
+    const quietHoursEnd = new Date(now);
+    quietHoursEnd.setHours(endHour, endMin, 0, 0);
+
+    // If quiet hours end is before now, add a day
+    if (quietHoursEnd <= now) {
+      quietHoursEnd.setDate(quietHoursEnd.getDate() + 1);
+    }
+
+    const delayMs = quietHoursEnd.getTime() - now.getTime();
+
+    // Add to delayed queue using BullMQ
+    try {
+      await queueManager.addJob(
+        QueueNames.NOTIFICATIONS,
+        JobNames.SEND_NOTIFICATION,
+        {
+          notification,
+          preferences,
+        },
+        { delay: delayMs }
+      );
+
+      this.logger.info('Notification queued for after quiet hours', {
+        notificationId: notification.id,
+        quietHoursEnd: preferences.quietHoursEnd,
+        delayMs,
+      });
+    } catch (error) {
+      // Fallback: store with scheduled flag if queue fails
+      await this.storeNotification({ ...notification, data: { ...notification.data, scheduledFor: quietHoursEnd.toISOString() } });
+      this.logger.warn('Queue unavailable, notification stored with schedule', { notificationId: notification.id, error });
+    }
   }
 
   private async storeNotification(notification: FinancialNotification): Promise<void> {
-    // TODO: Save to database
+    // Save to database
+    await prisma.notification.create({
+      data: {
+        id: notification.id,
+        userId: notification.userId,
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
+        data: notification.data as object,
+        channels: notification.channels,
+        priority: notification.priority,
+        read: notification.read,
+        createdAt: notification.createdAt,
+        sentAt: notification.sentAt,
+      },
+    });
+
     this.logger.info('Notification stored', { notificationId: notification.id });
   }
 

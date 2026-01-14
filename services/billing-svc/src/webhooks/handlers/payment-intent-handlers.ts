@@ -11,6 +11,7 @@
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
+import { notificationClient } from '@skillancer/service-client';
 
 import type Stripe from 'stripe';
 
@@ -250,14 +251,37 @@ async function sendPaymentConfirmationNotification(
   metadata: PaymentMetadata
 ): Promise<void> {
   try {
-    // TODO: Integrate with notification service
+    if (!metadata.clientId) return;
+
+    const formattedAmount = (paymentIntent.amount / 100).toLocaleString('en-US', {
+      style: 'currency',
+      currency: paymentIntent.currency.toUpperCase(),
+    });
+
+    // Send notification via notification service
+    await notificationClient.sendNotification({
+      userId: metadata.clientId,
+      type: 'payment_sent',
+      title: 'Payment Successful',
+      message: `Your payment of ${formattedAmount} was processed successfully.`,
+      channels: ['email', 'in_app'],
+      data: {
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        contractId: metadata.contractId,
+        milestoneId: metadata.milestoneId,
+        invoiceId: metadata.invoiceId,
+      },
+    });
+
     logger.info(
       {
         clientId: metadata.clientId,
         amount: paymentIntent.amount,
         currency: paymentIntent.currency,
       },
-      'Payment confirmation notification queued'
+      'Payment confirmation notification sent'
     );
   } catch (error) {
     logger.error(
@@ -486,7 +510,31 @@ async function sendPaymentFailureNotification(
   failureCategory: FailureCategory
 ): Promise<void> {
   try {
-    // TODO: Integrate with notification service
+    if (!metadata.clientId) return;
+
+    const formattedAmount = (paymentIntent.amount / 100).toLocaleString('en-US', {
+      style: 'currency',
+      currency: paymentIntent.currency.toUpperCase(),
+    });
+
+    // Send notification via notification service
+    await notificationClient.sendNotification({
+      userId: metadata.clientId,
+      type: 'payment_sent',
+      title: 'Payment Failed',
+      message: `Your payment of ${formattedAmount} could not be processed. ${failureCategory.customerMessage}`,
+      channels: ['email', 'push', 'in_app'],
+      data: {
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        failureCategory: failureCategory.category,
+        actionItems: failureCategory.actionItems,
+        contractId: metadata.contractId,
+        milestoneId: metadata.milestoneId,
+      },
+    });
+
     logger.info(
       {
         clientId: metadata.clientId,
@@ -494,7 +542,7 @@ async function sendPaymentFailureNotification(
         failureCategory: failureCategory.category,
         actionItems: failureCategory.actionItems,
       },
-      'Payment failure notification queued'
+      'Payment failure notification sent'
     );
   } catch (error) {
     logger.error(
@@ -569,6 +617,8 @@ async function sendRequiresActionNotification(
   metadata: PaymentMetadata
 ): Promise<void> {
   try {
+    if (!metadata.clientId) return;
+
     const nextAction = paymentIntent.next_action?.type;
     let message = 'Your payment requires additional verification.';
 
@@ -576,14 +626,35 @@ async function sendRequiresActionNotification(
       message = 'Please complete the 3D Secure verification to finalize your payment.';
     }
 
-    // TODO: Integrate with notification service
+    const formattedAmount = (paymentIntent.amount / 100).toLocaleString('en-US', {
+      style: 'currency',
+      currency: paymentIntent.currency.toUpperCase(),
+    });
+
+    // Send notification via notification service
+    await notificationClient.sendNotification({
+      userId: metadata.clientId,
+      type: 'payment_sent',
+      title: 'Action Required for Payment',
+      message: `Your payment of ${formattedAmount} requires verification. ${message}`,
+      channels: ['email', 'push', 'in_app'],
+      data: {
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        nextActionType: nextAction,
+        contractId: metadata.contractId,
+        milestoneId: metadata.milestoneId,
+      },
+    });
+
     logger.info(
       {
         clientId: metadata.clientId,
         nextAction,
         message,
       },
-      'Requires action notification queued'
+      'Requires action notification sent'
     );
   } catch (error) {
     logger.error(

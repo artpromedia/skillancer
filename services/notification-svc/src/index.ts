@@ -16,8 +16,11 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
+import { createLogger } from '@skillancer/logger';
 
 import { validateConfig, getConfig } from './config/index.js';
+
+const logger = createLogger({ name: 'notification-svc' });
 import { healthRoutes } from './routes/health.routes.js';
 import { notificationRoutes } from './routes/notification.routes.js';
 import { webhookRoutes } from './routes/webhook.routes.js';
@@ -114,10 +117,10 @@ async function start() {
 
     await app.listen({ port: config.port, host: config.host });
 
-    console.log(`Notification Service running on http://${config.host}:${config.port}`);
-    console.log(`Health check: http://${config.host}:${config.port}/health`);
+    logger.info({ host: config.host, port: config.port }, 'Notification Service started');
+    logger.info({ url: `http://${config.host}:${config.port}/health` }, 'Health check endpoint');
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error({ error }, 'Failed to start server');
     process.exit(1);
   }
 }
@@ -125,11 +128,11 @@ async function start() {
 prisma
   .$connect()
   .then(() => {
-    console.log('Connected to database');
+    logger.info('Connected to database');
     return start();
   })
   .catch((error) => {
-    console.error('Failed to connect to database:', error);
+    logger.error({ error }, 'Failed to connect to database');
     process.exit(1);
   });
 

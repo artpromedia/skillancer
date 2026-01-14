@@ -3,7 +3,10 @@
  * Unified notification delivery with preferences and retry logic
  */
 
+import { createLogger } from '@skillancer/logger';
 import { emailProvider, type EmailMessage, type EmailResult } from './providers/email.js';
+
+const logger = createLogger({ name: 'NotificationOrchestrator' });
 import { pushProvider, type PushMessage, type PushResult } from './providers/push.js';
 import { smsProvider, type SMSMessage, type SMSResult } from './providers/sms.js';
 
@@ -177,7 +180,7 @@ export class NotificationService {
       // For non-critical notifications, defer until quiet hours end
       if (request.priority !== 'high' && request.type !== NotificationType.SECURITY_ALERT) {
         // Schedule for later (implementation would use a job queue)
-        console.log(`[NOTIFY] Deferred ${id} due to quiet hours`);
+        logger.info({ notificationId: id }, 'Notification deferred due to quiet hours');
       }
     }
 
@@ -458,7 +461,7 @@ export class NotificationService {
 
   private async storeInApp(request: NotificationRequest): Promise<void> {
     // In production, store in database for retrieval via API
-    console.log(`[IN_APP] Stored notification for ${request.userId}: ${request.title}`);
+    logger.info({ userId: request.userId, title: request.title }, 'In-app notification stored');
   }
 
   private queueRetry(request: NotificationRequest, failedChannels: NotificationChannel[]): void {

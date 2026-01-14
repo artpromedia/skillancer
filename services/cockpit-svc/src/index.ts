@@ -3,6 +3,7 @@
 
 import { PrismaClient } from '@skillancer/database';
 import { createLogger, type Logger } from '@skillancer/logger';
+import { notificationClient } from '@skillancer/service-client';
 import Fastify from 'fastify';
 import { Redis } from 'ioredis';
 
@@ -42,7 +43,24 @@ const reminderWorker = new ReminderWorker(
   logger,
   undefined,
   async (notification) => {
-    // TODO: Integrate with notification-svc to send actual notifications
+    // Send notification via notification service
+    await notificationClient.sendNotification({
+      userId: notification.freelancerUserId,
+      type: 'system',
+      title: notification.isOverdue ? `Overdue: ${notification.title}` : notification.title,
+      message: notification.body || (notification.isOverdue
+        ? `Reminder: "${notification.title}" is overdue and needs attention.`
+        : `Reminder: ${notification.title}`),
+      channels: ['push', 'in_app'],
+      data: {
+        reminderId: notification.reminderId,
+        type: notification.type,
+        isOverdue: notification.isOverdue,
+      },
+    }).catch((err) => {
+      logger.error({ err, reminderId: notification.reminderId }, 'Failed to send reminder notification');
+    });
+
     logger.info(
       {
         reminderId: notification.reminderId,
@@ -50,7 +68,7 @@ const reminderWorker = new ReminderWorker(
         title: notification.title,
         isOverdue: notification.isOverdue,
       },
-      'Reminder notification'
+      'Reminder notification sent'
     );
   }
 );

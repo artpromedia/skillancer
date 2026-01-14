@@ -13,6 +13,7 @@
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
+import { notificationClient } from '@skillancer/service-client';
 
 import type Stripe from 'stripe';
 
@@ -178,14 +179,31 @@ async function sendSubscriptionWelcomeEmail(
   metadata: SubscriptionMetadata
 ): Promise<void> {
   try {
-    // TODO: Integrate with notification service
+    if (!metadata.userId) return;
+
+    const tierName = metadata.tier ? metadata.tier.charAt(0).toUpperCase() + metadata.tier.slice(1) : 'Premium';
+
+    // Send welcome notification via notification service
+    await notificationClient.sendNotification({
+      userId: metadata.userId,
+      type: 'account_update',
+      title: `Welcome to Skillancer ${tierName}!`,
+      message: `Your ${tierName} subscription is now active. Enjoy all the premium features!`,
+      channels: ['email', 'in_app'],
+      data: {
+        subscriptionId: subscription.id,
+        tier: metadata.tier,
+        planId: metadata.planId,
+      },
+    });
+
     logger.info(
       {
         userId: metadata.userId,
         tier: metadata.tier,
         subscriptionId: subscription.id,
       },
-      'Subscription welcome email queued'
+      'Subscription welcome email sent'
     );
   } catch (error) {
     logger.error(
@@ -402,7 +420,22 @@ async function triggerRetentionOutreach(
   metadata: SubscriptionMetadata
 ): Promise<void> {
   try {
-    // TODO: Integrate with notification service
+    if (!metadata.userId) return;
+
+    // Send retention notification via notification service
+    await notificationClient.sendNotification({
+      userId: metadata.userId,
+      type: 'account_update',
+      title: 'We\'re sorry to see you go',
+      message: 'Your subscription has been cancelled. We\'d love to hear your feedback and hope to see you back soon!',
+      channels: ['email', 'in_app'],
+      data: {
+        subscriptionId: subscription.id,
+        tier: metadata.tier,
+        feedbackUrl: `${process.env.APP_URL}/feedback/cancellation`,
+      },
+    });
+
     logger.info(
       {
         userId: metadata.userId,

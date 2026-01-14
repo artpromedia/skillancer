@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '@skillancer/database';
+import { logger } from '@skillancer/logger';
 
 import { getStripeService } from './stripe.service.js';
 import { getConfig } from '../config/index.js';
@@ -874,13 +875,14 @@ export class PaymentMethodService {
     user: { id: string; email: string; firstName: string },
     card: PaymentMethod
   ): void {
-    console.log(`[NOTIFICATION] Card expiring for user ${user.email}:`, {
+    logger.info({
       userId: user.id,
+      email: user.email,
       cardLast4: card.cardLast4,
       cardBrand: card.cardBrand,
       expMonth: card.cardExpMonth,
       expYear: card.cardExpYear,
-    });
+    }, 'Card expiration warning notification triggered');
   }
 }
 

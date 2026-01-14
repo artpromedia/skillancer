@@ -4,6 +4,7 @@
  */
 
 import { randomBytes } from 'crypto';
+import { startOfMonth, startOfYear, differenceInDays } from 'date-fns';
 
 import {
   InvoiceError,
@@ -18,6 +19,7 @@ import {
   InvoiceActivityRepository,
   InvoiceSettingsRepository,
 } from '../repositories/index.js';
+import { notificationClient } from '@skillancer/service-client';
 
 import type {
   CreateInvoiceParams,
@@ -227,7 +229,10 @@ export class InvoiceService {
       ...amountUpdates,
     });
 
-    // TODO: Handle lineItems update separately if needed
+    // Handle lineItems update if provided
+    if (lineItems && lineItems.length > 0) {
+      await this.invoiceRepository.updateLineItems(invoiceId, lineItems);
+    }
 
     await this.activityRepository.logUpdated(invoiceId, userId, Object.keys(params));
 
@@ -277,7 +282,16 @@ export class InvoiceService {
     // Log activity
     await this.activityRepository.logSent(invoiceId, userId, recipients);
 
-    // TODO: Actually send the email via notification service
+    // Send email via notification service
+    for (const recipient of recipients) {
+      await notificationClient.sendInvoiceCreated(recipient, {
+        invoiceNumber: invoice.invoiceNumber,
+        clientName: invoice.client?.companyName || invoice.client?.firstName || 'Client',
+        amount: (Number(invoice.total) / 100).toLocaleString('en-US', { style: 'currency', currency: invoice.currency || 'USD' }),
+        dueDate: invoice.dueDate.toLocaleDateString(),
+        viewUrl: `${process.env.APP_URL}/invoices/view/${invoice.viewToken}`,
+      }).catch((err) => this.logger.error({ err, invoiceId, recipient }, 'Failed to send invoice email'));
+    }
 
     this.logger.info({ invoiceId, recipients, userId }, 'Invoice sent');
 
@@ -540,15 +554,23 @@ export class InvoiceService {
 
     const now = new Date();
 
+    // Calculate payment statistics
+    const monthStart = startOfMonth(now);
+    const yearStart = startOfYear(now);
+
+    const paidThisMonth = await this.invoiceRepository.getPaidAmount(userId, monthStart, now);
+    const paidThisYear = await this.invoiceRepository.getPaidAmount(userId, yearStart, now);
+    const avgDaysToPayment = await this.invoiceRepository.getAverageDaysToPayment(userId);
+
     return {
       summary: {
         totalOutstanding: stats.totalOutstanding,
         totalOverdue: stats.totalOverdue,
         overdueCount: stats.overdueCount,
         pendingCount: stats.pendingCount,
-        totalPaidThisMonth: 0, // TODO: Calculate
-        totalPaidThisYear: 0, // TODO: Calculate
-        avgDaysToPayment: 0, // TODO: Calculate
+        totalPaidThisMonth: paidThisMonth,
+        totalPaidThisYear: paidThisYear,
+        avgDaysToPayment: avgDaysToPayment,
       },
       recentInvoices: recentInvoices.map((inv) => {
         const invoiceWithClient = inv as InvoiceWithRelations;

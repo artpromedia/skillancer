@@ -5,6 +5,7 @@
 
 import { notificationClient } from '@skillancer/service-client';
 import { logger } from '@skillancer/logger';
+import { triggerCriticalAlert, triggerWarningAlert, createDedupKey } from '@skillancer/alerting';
 
 // ============================================================================
 // Types
@@ -470,8 +471,7 @@ class BillingNotificationService {
     message: string;
     context?: Record<string, unknown>;
   }): Promise<void> {
-    // In production, this would alert to Slack, PagerDuty, etc.
-    // For now, log with high visibility
+    // Log with high visibility
     const logMethod = data.severity === 'critical' ? 'error' : 'warn';
     logger[logMethod](`[OPS ALERT - ${data.severity.toUpperCase()}] ${data.title}`, {
       message: data.message,
@@ -479,10 +479,38 @@ class BillingNotificationService {
       timestamp: new Date().toISOString(),
     });
 
-    // TODO: Integrate with actual alerting services
-    // - Slack webhook for non-critical
-    // - PagerDuty for critical
-    // - Email to ops@skillancer.com
+    // Send to PagerDuty based on severity
+    const alertFn = data.severity === 'critical' ? triggerCriticalAlert : triggerWarningAlert;
+    await alertFn(
+      `${data.title}: ${data.message}`,
+      {
+        source: 'billing-svc',
+        component: 'billing-notifications',
+        group: 'operations',
+        class: 'ops-alert',
+        dedupKey: createDedupKey(['ops', data.severity, data.title.slice(0, 30)]),
+        customDetails: {
+          ...data.context,
+          message: data.message,
+          timestamp: new Date().toISOString(),
+        },
+      }
+    ).catch((err) => logger.error({ err }, 'Failed to send ops alert'));
+
+    // Send email to ops team for critical alerts
+    if (data.severity === 'critical') {
+      await notificationClient.sendEmail({
+        to: process.env.OPS_TEAM_EMAIL || 'ops@skillancer.com',
+        subject: `[CRITICAL] ${data.title}`,
+        html: `
+          <h1>🚨 Critical Alert</h1>
+          <p><strong>Title:</strong> ${data.title}</p>
+          <p><strong>Message:</strong> ${data.message}</p>
+          <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+          ${data.context ? `<pre>${JSON.stringify(data.context, null, 2)}</pre>` : ''}
+        `,
+      }).catch((err) => logger.error({ err }, 'Failed to send ops email alert'));
+    }
   }
 }
 
