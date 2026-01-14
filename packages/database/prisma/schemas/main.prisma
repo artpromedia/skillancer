@@ -264,6 +264,53 @@ enum VerificationLevel {
 }
 
 // ============================================================================
+// PARENT/GUARDIAN RELATIONSHIP (FERPA, COPPA, GDPR Compliance)
+// ============================================================================
+
+enum ParentRelationshipType {
+  PARENT
+  GUARDIAN
+  LEGAL_CUSTODIAN
+}
+
+enum ParentRelationshipStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  REVOKED
+  EXPIRED
+}
+
+model ParentStudentRelationship {
+  id               String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  parentId         String                    @map("parent_id") @db.Uuid
+  studentId        String                    @map("student_id") @db.Uuid
+  relationshipType ParentRelationshipType    @default(PARENT) @map("relationship_type")
+  status           ParentRelationshipStatus  @default(PENDING_VERIFICATION)
+
+  // Verification details
+  verifiedAt       DateTime?                 @map("verified_at")
+  verifiedBy       String?                   @map("verified_by") @db.Uuid // Admin who verified
+  verificationDoc  String?                   @map("verification_doc") @db.VarChar(500) // Document reference
+
+  // Consent and permissions
+  canAccessRecords Boolean                   @default(true) @map("can_access_records")
+  canRequestDelete Boolean                   @default(true) @map("can_request_delete")
+  canReceiveAlerts Boolean                   @default(true) @map("can_receive_alerts") // For crisis notifications
+
+  // Audit trail
+  createdAt        DateTime                  @default(now()) @map("created_at")
+  updatedAt        DateTime                  @updatedAt @map("updated_at")
+  revokedAt        DateTime?                 @map("revoked_at")
+  revokedReason    String?                   @map("revoked_reason") @db.VarChar(500)
+
+  @@unique([parentId, studentId])
+  @@index([parentId])
+  @@index([studentId])
+  @@index([status])
+  @@map("parent_student_relationships")
+}
+
+// ============================================================================
 // MULTI-FACTOR AUTHENTICATION
 // ============================================================================
 
@@ -281,17 +328,23 @@ model UserMfa {
   primaryMethod MfaMethod @default(TOTP) @map("primary_method")
 
   // TOTP
-  totpSecret   String? @map("totp_secret") @db.VarChar(500) // Encrypted
-  totpVerified Boolean @default(false) @map("totp_verified")
+  totpSecret     String?   @map("totp_secret") @db.VarChar(500) // Encrypted
+  totpVerified   Boolean   @default(false) @map("totp_verified")
+  totpVerifiedAt DateTime? @map("totp_verified_at")
 
   // SMS
-  phoneNumber   String? @map("phone_number") @db.VarChar(20)
-  phoneVerified Boolean @default(false) @map("phone_verified")
+  phoneNumber     String?   @map("phone_number") @db.VarChar(20)
+  phoneVerified   Boolean   @default(false) @map("phone_verified")
+  phoneVerifiedAt DateTime? @map("phone_verified_at")
 
   // Recovery codes (hashed)
   recoveryCodes            String[]  @map("recovery_codes")
   recoveryCodesGeneratedAt DateTime? @map("recovery_codes_generated_at")
   recoveryCodesUsedCount   Int       @default(0) @map("recovery_codes_used_count")
+
+  // Recovery email for MFA recovery
+  recoveryEmail         String?  @map("recovery_email") @db.VarChar(255)
+  recoveryEmailVerified Boolean  @default(false) @map("recovery_email_verified")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -299,6 +352,27 @@ model UserMfa {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_mfa")
+}
+
+model TrustedDevice {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  deviceFingerprint String    @map("device_fingerprint") @db.VarChar(64) // SHA-256 hash of device info
+  deviceName        String    @map("device_name") @db.VarChar(100)
+  browser           String?   @db.VarChar(50)
+  os                String?   @db.VarChar(50)
+  ipAddress         String?   @map("ip_address") @db.VarChar(45)
+  location          String?   @db.VarChar(100)
+  trustedAt         DateTime  @default(now()) @map("trusted_at")
+  lastUsedAt        DateTime  @default(now()) @map("last_used_at")
+  expiresAt         DateTime  @map("expires_at")
+  revokedAt         DateTime? @map("revoked_at")
+  revokedReason     String?   @map("revoked_reason") @db.VarChar(255)
+
+  @@unique([userId, deviceFingerprint])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("trusted_devices")
 }
 
 model MfaChallenge {

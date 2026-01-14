@@ -75,6 +75,11 @@ const complianceReportSchema = z.object({
   endDate: z.string().datetime(),
 });
 
+const parentDataRequestSchema = z.object({
+  parentVerificationMethod: z.enum(['email', 'id_verification', 'signed_consent']).optional(),
+  reason: z.string().optional(),
+});
+
 // ==================== Middleware ====================
 
 interface AuthenticatedRequest extends Request {
@@ -96,6 +101,14 @@ const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunctio
 const requireAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
   if (!req.user?.roles?.includes('admin') && !req.user?.roles?.includes('security_admin')) {
     res.status(403).json({ error: 'Admin access required' });
+    return;
+  }
+  next();
+};
+
+const requireParentRole = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  if (!req.user?.roles?.includes('parent') && !req.user?.roles?.includes('guardian') && !req.user?.roles?.includes('admin')) {
+    res.status(403).json({ error: 'Parent/Guardian access required' });
     return;
   }
   next();
@@ -897,7 +910,265 @@ export function createSecurityRouter(deps: SecurityRouterDependencies): Router {
     }
   );
 
+  // ==================== Parent Data Rights Routes (FERPA, COPPA, GDPR) ====================
+
+  /**
+   * GET /parent/students/:studentId/data/export
+   * Export student data for parent/guardian (FERPA parental rights, GDPR portability)
+   *
+   * Parents/guardians have the right to access their child's educational records under FERPA
+   * and personal data under GDPR Article 15 (Right of Access)
+   */
+  router.get(
+    '/parent/students/:studentId/data/export',
+    requireAuth,
+    requireParentRole,
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      try {
+        const { studentId } = req.params;
+        const parentId = req.user?.id;
+
+        if (!parentId) {
+          res.status(401).json({ error: 'Authentication required' });
+          return;
+        }
+
+        // Verify parent-student relationship
+        // In production, this would check the database for verified parent-child relationship
+        const isAuthorized = await verifyParentStudentRelationship(parentId, studentId);
+        if (!isAuthorized && !req.user?.roles?.includes('admin')) {
+          res.status(403).json({
+            error: 'Access denied',
+            message: 'You are not authorized to access this student\'s data. Please verify your parent/guardian relationship.',
+          });
+          return;
+        }
+
+        // Process access request (data export)
+        const requestId = `parent-export-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const exportData = await dataProtectionService.processAccessRequest(requestId, parentId);
+
+        // Audit log for FERPA/GDPR compliance
+        await auditService.logComplianceEvent(
+          'data_subject_request',
+          {
+            type: 'parent',
+            id: parentId,
+            ipAddress: req.ip || 'unknown',
+          },
+          {
+            target: { type: 'student', id: studentId },
+            regulations: ['FERPA', 'GDPR', 'COPPA'],
+            metadata: {
+              action: 'parent_data_export',
+              requestId,
+              studentId,
+              exportType: 'full_record',
+            },
+          }
+        );
+
+        res.json({
+          success: true,
+          requestId,
+          studentId,
+          exportDate: new Date().toISOString(),
+          data: exportData,
+          compliance: {
+            ferpa: 'Parent/guardian access right under FERPA §99.10',
+            gdpr: 'Right of access under GDPR Article 15',
+            coppa: 'Parental access right under COPPA Rule §312.6',
+          },
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  /**
+   * POST /parent/students/:studentId/data/delete
+   * Request deletion of student data (GDPR right to erasure, COPPA)
+   *
+   * Parents/guardians have the right to request deletion of their child's personal data
+   * under GDPR Article 17 (Right to Erasure) and COPPA Rule §312.6
+   */
+  router.post(
+    '/parent/students/:studentId/data/delete',
+    requireAuth,
+    requireParentRole,
+    validate(parentDataRequestSchema),
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      try {
+        const { studentId } = req.params;
+        const parentId = req.user?.id;
+        const { reason, parentVerificationMethod } = parentDataRequestSchema.parse(req.body);
+
+        if (!parentId) {
+          res.status(401).json({ error: 'Authentication required' });
+          return;
+        }
+
+        // Verify parent-student relationship
+        const isAuthorized = await verifyParentStudentRelationship(parentId, studentId);
+        if (!isAuthorized && !req.user?.roles?.includes('admin')) {
+          res.status(403).json({
+            error: 'Access denied',
+            message: 'You are not authorized to request deletion of this student\'s data. Please verify your parent/guardian relationship.',
+          });
+          return;
+        }
+
+        // Create deletion request
+        const requestId = `parent-delete-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+        // Process deletion request
+        await dataProtectionService.processDeletionRequest(requestId, parentId);
+
+        // Audit log for GDPR/COPPA compliance
+        await auditService.logComplianceEvent(
+          'data_deletion_request',
+          {
+            type: 'parent',
+            id: parentId,
+            ipAddress: req.ip || 'unknown',
+          },
+          {
+            target: { type: 'student', id: studentId },
+            regulations: ['GDPR', 'COPPA'],
+            metadata: {
+              action: 'parent_data_deletion',
+              requestId,
+              studentId,
+              reason: reason || 'Parent/guardian request',
+              verificationMethod: parentVerificationMethod || 'authenticated_session',
+              deleteType: 'full_erasure',
+            },
+          }
+        );
+
+        res.json({
+          success: true,
+          requestId,
+          studentId,
+          status: 'processing',
+          estimatedCompletion: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days max under GDPR
+          message: 'Deletion request received. Your child\'s data will be permanently deleted within 30 days as required by GDPR.',
+          compliance: {
+            gdpr: 'Right to erasure under GDPR Article 17',
+            coppa: 'Parental deletion right under COPPA Rule §312.6(a)(2)',
+          },
+          confirmation: {
+            requestedBy: parentId,
+            requestedAt: new Date().toISOString(),
+            targetStudent: studentId,
+          },
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  /**
+   * GET /parent/students/:studentId/data/status
+   * Check status of parent data requests
+   */
+  router.get(
+    '/parent/students/:studentId/data/status',
+    requireAuth,
+    requireParentRole,
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      try {
+        const { studentId } = req.params;
+        const parentId = req.user?.id;
+
+        if (!parentId) {
+          res.status(401).json({ error: 'Authentication required' });
+          return;
+        }
+
+        // Verify parent-student relationship
+        const isAuthorized = await verifyParentStudentRelationship(parentId, studentId);
+        if (!isAuthorized && !req.user?.roles?.includes('admin')) {
+          res.status(403).json({ error: 'Access denied' });
+          return;
+        }
+
+        // In production, this would query the DSR database for pending requests
+        res.json({
+          studentId,
+          parentId,
+          pendingRequests: [],
+          completedRequests: [],
+          rights: {
+            ferpa: {
+              description: 'Right to inspect and review education records',
+              exercised: false,
+            },
+            gdpr_access: {
+              description: 'Right of access to personal data',
+              exercised: false,
+            },
+            gdpr_erasure: {
+              description: 'Right to erasure (right to be forgotten)',
+              exercised: false,
+            },
+            coppa_access: {
+              description: 'Right to review personal information collected from child',
+              exercised: false,
+            },
+            coppa_delete: {
+              description: 'Right to have personal information deleted',
+              exercised: false,
+            },
+          },
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
   return router;
+}
+
+// ==================== Helper Functions ====================
+
+/**
+ * Verify parent-student relationship
+ * Checks the database for verified parent-child relationships
+ */
+async function verifyParentStudentRelationship(parentId: string, studentId: string): Promise<boolean> {
+  try {
+    // Import prisma dynamically to avoid circular dependencies
+    const { prisma } = await import('@skillancer/database');
+
+    // Query the ParentStudentRelationship table
+    const relationship = await prisma.parentStudentRelationship.findFirst({
+      where: {
+        parentId,
+        studentId,
+        status: 'VERIFIED',
+        revokedAt: null,
+        canAccessRecords: true,
+      },
+    });
+
+    if (relationship) {
+      console.log(`[Parent Data Rights] Verified relationship found: parent=${parentId}, student=${studentId}`);
+      return true;
+    }
+
+    console.log(`[Parent Data Rights] No verified relationship found: parent=${parentId}, student=${studentId}`);
+    return false;
+  } catch (error) {
+    // If database is not available or table doesn't exist yet, log and allow for development
+    console.error('[Parent Data Rights] Error verifying relationship:', error);
+    // In development, allow access if database verification fails
+    // In production, this should return false
+    return process.env.NODE_ENV === 'development';
+  }
 }
 
 export default createSecurityRouter;

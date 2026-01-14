@@ -9,6 +9,7 @@ import { getLogger } from '@skillancer/logger';
 import { getMetrics } from '@skillancer/metrics';
 
 import { type PrivacyFilter, createPrivacyFilter, FilterResult } from './privacy-filter.js';
+import { CrisisPreFilter, createPreFilter, type UserContext as CrisisUserContext, CRISIS_RESOURCES } from './preFilter.js';
 
 const logger = getLogger('containment-ai-proxy');
 const metrics = getMetrics();
@@ -35,6 +36,9 @@ export interface AIResponse {
   provider: AIProvider;
   processingTime: number;
   cached: boolean;
+  crisisDetected?: boolean;
+  crisisResources?: string;
+  crisisMessage?: string;
 }
 
 export interface ProxyConfig {
@@ -48,6 +52,7 @@ export interface ProxyConfig {
   maxContextLength: number;
   cacheEnabled: boolean;
   cacheTTLSeconds: number;
+  enableCrisisDetection?: boolean;
 }
 
 export interface ContainmentContext {
@@ -56,6 +61,12 @@ export interface ContainmentContext {
   contractId: string;
   containmentLevel: 'strict' | 'standard' | 'relaxed';
   allowedOperations: string[];
+  // User context for crisis detection
+  userId: string;
+  isMinor?: boolean;
+  parentGuardianId?: string;
+  schoolId?: string;
+  tenantId?: string;
 }
 
 // =============================================================================
@@ -64,6 +75,7 @@ export interface ContainmentContext {
 
 export class ContainmentAIProxy {
   private privacyFilter: PrivacyFilter;
+  private crisisFilter: CrisisPreFilter;
   private config: ProxyConfig;
   private cache: Map<string, { response: AIResponse; expiry: number }> = new Map();
   private requestQueue: Map<string, Promise<AIResponse>> = new Map();
@@ -76,6 +88,13 @@ export class ContainmentAIProxy {
       enableCredentials: true,
       enableHealth: true,
       redactionMethod: 'placeholder',
+    });
+    this.crisisFilter = createPreFilter({
+      enableCrisisDetection: config.enableCrisisDetection ?? true,
+      enableParentNotification: true,
+      parentNotificationThreshold: 'high',
+      blockHighSeverity: false,
+      auditAllDetections: true,
     });
   }
 
@@ -96,6 +115,47 @@ export class ContainmentAIProxy {
     });
 
     try {
+      // Step 0: Crisis detection (pre-filter)
+      const crisisUserContext: CrisisUserContext = {
+        userId: containment.userId,
+        sessionId: containment.sessionId,
+        isMinor: containment.isMinor ?? false,
+        parentGuardianId: containment.parentGuardianId,
+        schoolId: containment.schoolId,
+        tenantId: containment.tenantId,
+      };
+
+      const crisisResult = await this.crisisFilter.analyze(request.prompt, crisisUserContext);
+
+      // If crisis detected, include resources in response
+      let crisisInfo: { crisisDetected?: boolean; crisisResources?: string; crisisMessage?: string } = {};
+      if (crisisResult.crisisDetection) {
+        crisisInfo = {
+          crisisDetected: true,
+          crisisResources: CrisisPreFilter.formatResourcesForDisplay(crisisResult.crisisDetection.response.resources),
+          crisisMessage: crisisResult.crisisDetection.response.message,
+        };
+
+        logger.warn('Crisis content detected in AI request', {
+          userId: containment.userId,
+          severity: crisisResult.crisisDetection.severity,
+          categories: crisisResult.crisisDetection.categories,
+          auditId: crisisResult.crisisDetection.auditId,
+        });
+
+        // If content was blocked, return early with crisis resources
+        if (crisisResult.wasBlocked) {
+          return {
+            content: crisisResult.crisisDetection.response.message,
+            tokensUsed: 0,
+            provider: 'local',
+            processingTime: Date.now() - startTime,
+            cached: false,
+            ...crisisInfo,
+          };
+        }
+      }
+
       // Step 1: Validate containment permissions
       this.validateContainmentPermissions(request, containment);
 
@@ -107,7 +167,7 @@ export class ContainmentAIProxy {
       const cached = this.getFromCache(cacheKey);
       if (cached) {
         logger.debug('Returning cached response', { cacheKey });
-        return { ...cached, cached: true };
+        return { ...cached, cached: true, ...crisisInfo };
       }
 
       // Step 4: Deduplicate concurrent requests
@@ -143,6 +203,7 @@ export class ContainmentAIProxy {
           ...filteredResponse,
           processingTime,
           cached: false,
+          ...crisisInfo,
         };
       } finally {
         this.requestQueue.delete(cacheKey);
