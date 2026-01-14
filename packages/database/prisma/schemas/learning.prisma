@@ -1,0 +1,747 @@
+// ============================================================================
+// Learning & Development Schema
+// Brain Training Module, Executive Function Tools, and Teacher PD Tracking
+// ============================================================================
+
+// =============================================================================
+// BRAIN TRAINING MODULE
+// =============================================================================
+
+model BrainTrainingExercise {
+  id              String   @id @default(uuid())
+
+  // Exercise Identity
+  name            String
+  description     String?  @db.Text
+  instructions    String   @db.Text
+
+  // Categorization
+  category        BrainTrainingCategory
+  targetSkills    String[] // cognitive skills targeted
+  difficulty      ExerciseDifficulty @default(BEGINNER)
+
+  // Content
+  exerciseType    ExerciseType
+  config          Json     // Exercise-specific configuration
+
+  // Timing
+  estimatedMinutes Int     @default(5)
+
+  // Metadata
+  isActive        Boolean  @default(true)
+  isPremium       Boolean  @default(false)
+  sortOrder       Int      @default(0)
+
+  // Relations
+  sessions        BrainTrainingSession[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category, isActive])
+  @@index([difficulty])
+  @@map("brain_training_exercises")
+}
+
+model BrainTrainingSession {
+  id              String   @id @default(uuid())
+  userId          String   @db.Uuid
+  exerciseId      String
+  exercise        BrainTrainingExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  // Session Details
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  // Results
+  score           Int?     // Points earned
+  accuracy        Decimal? @db.Decimal(5, 2) // Percentage
+  timeSpentSeconds Int?
+
+  // Performance Metrics (exercise-specific)
+  metrics         Json?    // { reactionTime, errorCount, streakLength, etc. }
+
+  // Status
+  status          SessionStatus @default(IN_PROGRESS)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, exerciseId])
+  @@index([userId, startedAt])
+  @@index([status])
+  @@map("brain_training_sessions")
+}
+
+model BrainTrainingProgress {
+  id              String   @id @default(uuid())
+  userId          String   @unique @db.Uuid
+
+  // Overall Stats
+  totalSessions   Int      @default(0)
+  totalTimeMinutes Int     @default(0)
+  currentStreak   Int      @default(0) // Days in a row
+  longestStreak   Int      @default(0)
+  lastActivityAt  DateTime?
+
+  // Category Progress
+  categoryProgress Json     @default("{}") // { "MEMORY": { level: 3, xp: 450 }, ... }
+
+  // Skill Levels
+  overallLevel    Int      @default(1)
+  experiencePoints Int     @default(0)
+
+  // Achievements
+  achievements    String[] @default([])
+
+  // Goals
+  dailyGoalMinutes Int     @default(10)
+  weeklyGoalSessions Int   @default(5)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@map("brain_training_progress")
+}
+
+enum BrainTrainingCategory {
+  MEMORY           // Working memory, recall
+  ATTENTION        // Focus, concentration
+  PROBLEM_SOLVING  // Logic, reasoning
+  FLEXIBILITY      // Task switching, adaptability
+  SPEED            // Processing speed
+  LANGUAGE         // Verbal fluency, vocabulary
+  SPATIAL          // Visual-spatial reasoning
+  PLANNING         // Executive planning, organization
+}
+
+enum ExerciseDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum ExerciseType {
+  MEMORY_GRID       // Remember positions on a grid
+  SEQUENCE_RECALL   // Remember sequences
+  DUAL_N_BACK       // Classic n-back task
+  WORD_ASSOCIATION  // Find related words
+  PATTERN_MATCH     // Identify patterns
+  MATH_SPEED        // Quick mental math
+  STROOP_TASK       // Cognitive interference
+  WORD_PUZZLE       // Word construction
+  SPATIAL_ROTATION  // Mental rotation
+  TASK_SWITCHING    // Alternating rules
+  FOCUS_TRAINING    // Sustained attention
+  PLANNING_PUZZLE   // Sequencing tasks
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+// =============================================================================
+// EXECUTIVE FUNCTION TOOLS
+// =============================================================================
+
+model ExecutiveFunctionAssessment {
+  id              String   @id @default(uuid())
+  userId          String   @db.Uuid
+
+  // Assessment Details
+  assessmentType  ExecutiveFunctionType
+  assessmentDate  DateTime @default(now())
+
+  // Scores (0-100)
+  overallScore    Int
+  subScores       Json     // { "inhibition": 75, "workingMemory": 82, ... }
+
+  // Context
+  notes           String?  @db.Text
+  assessedBy      String?  // Assessor user ID (if applicable)
+
+  // Goals
+  goals           ExecutiveFunctionGoal[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, assessmentType])
+  @@index([userId, assessmentDate])
+  @@map("executive_function_assessments")
+}
+
+model ExecutiveFunctionGoal {
+  id              String   @id @default(uuid())
+  assessmentId    String
+  assessment      ExecutiveFunctionAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  userId          String   @db.Uuid
+
+  // Goal Details
+  targetArea      ExecutiveFunctionArea
+  title           String
+  description     String?  @db.Text
+  targetScore     Int?
+
+  // Progress
+  currentProgress Int      @default(0)
+  startDate       DateTime @default(now())
+  targetDate      DateTime?
+
+  // Status
+  status          GoalStatus @default(NOT_STARTED)
+  completedAt     DateTime?
+
+  // Strategies
+  strategies      String[] @default([])
+
+  // Check-ins
+  checkIns        ExecutiveFunctionCheckIn[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([assessmentId])
+  @@map("executive_function_goals")
+}
+
+model ExecutiveFunctionCheckIn {
+  id              String   @id @default(uuid())
+  goalId          String
+  goal            ExecutiveFunctionGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  // Check-in Details
+  checkInDate     DateTime @default(now())
+  progress        Int      // 0-100
+  notes           String?  @db.Text
+  challenges      String[] @default([])
+  wins            String[] @default([])
+
+  // Next Steps
+  nextSteps       String[] @default([])
+
+  createdAt       DateTime @default(now())
+
+  @@index([goalId])
+  @@map("executive_function_check_ins")
+}
+
+model ExecutiveFunctionStrategy {
+  id              String   @id @default(uuid())
+
+  // Strategy Details
+  title           String
+  description     String   @db.Text
+  targetArea      ExecutiveFunctionArea
+
+  // Instructions
+  steps           Json     // Array of step objects
+  tips            String[] @default([])
+  resources       Json[]   @default([]) // { title, url, type }
+
+  // Metadata
+  difficulty      ExerciseDifficulty @default(BEGINNER)
+  estimatedTimeMinutes Int @default(5)
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([targetArea, isActive])
+  @@map("executive_function_strategies")
+}
+
+enum ExecutiveFunctionType {
+  SELF_ASSESSMENT
+  PROFESSIONAL_ASSESSMENT
+  SCREENING
+  FOLLOW_UP
+}
+
+enum ExecutiveFunctionArea {
+  INHIBITION           // Response inhibition, impulse control
+  WORKING_MEMORY       // Holding and manipulating information
+  COGNITIVE_FLEXIBILITY // Shifting between tasks/perspectives
+  PLANNING             // Goal-directed behavior
+  ORGANIZATION         // Ordering information, materials
+  TIME_MANAGEMENT      // Temporal awareness, estimation
+  SELF_MONITORING      // Tracking own performance
+  EMOTIONAL_CONTROL    // Managing emotional responses
+  TASK_INITIATION      // Getting started
+  SUSTAINED_ATTENTION  // Maintaining focus
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ACHIEVED
+  PAUSED
+  CANCELLED
+}
+
+// =============================================================================
+// TEACHER PROFESSIONAL DEVELOPMENT TRACKING
+// =============================================================================
+
+model TeacherProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique @db.Uuid
+
+  // Professional Information
+  currentRole     TeacherRole
+  gradeLevel      String[] // Array of grade levels taught
+  subjects        String[] // Array of subjects taught
+  schoolName      String?
+  district        String?
+  state           String?
+
+  // Certification
+  certifications  TeacherCertification[]
+
+  // PD Requirements
+  annualPDHoursRequired Int @default(30)
+  currentPDYearStart DateTime?
+
+  // PD Progress
+  pdActivities    PDActivity[]
+  pdPlans         PDPlan[]
+
+  // Goals
+  professionalGoals TeacherProfessionalGoal[]
+
+  // Portfolio
+  portfolioItems  TeacherPortfolioItem[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@map("teacher_profiles")
+}
+
+model TeacherCertification {
+  id              String   @id @default(uuid())
+  teacherId       String
+  teacher         TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Certification Details
+  type            CertificationType
+  name            String
+  issuingAuthority String
+  certificationNumber String?
+
+  // Dates
+  issueDate       DateTime
+  expirationDate  DateTime?
+
+  // Status
+  status          CertificationStatus @default(ACTIVE)
+
+  // Verification
+  verificationUrl String?
+  documentUrl     String?
+
+  // Renewal
+  renewalRequirements String?
+  renewalPDHours  Int?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([teacherId, status])
+  @@map("teacher_certifications")
+}
+
+model PDActivity {
+  id              String   @id @default(uuid())
+  teacherId       String
+  teacher         TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Activity Details
+  title           String
+  description     String?  @db.Text
+  activityType    PDActivityType
+  category        PDCategory
+
+  // Provider
+  provider        String?
+  providerType    PDProviderType?
+
+  // Timing
+  startDate       DateTime
+  endDate         DateTime?
+  totalHours      Decimal  @db.Decimal(5, 2)
+
+  // Verification
+  status          PDStatus @default(PENDING)
+  verificationCode String?
+  certificateUrl  String?
+  approvedBy      String?
+  approvedAt      DateTime?
+
+  // Learning Outcomes
+  learningOutcomes String[] @default([])
+  reflections     String?  @db.Text
+
+  // Application
+  applicationPlan String?  @db.Text
+
+  // Tags
+  tags            String[] @default([])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([teacherId, startDate])
+  @@index([teacherId, category])
+  @@index([status])
+  @@map("pd_activities")
+}
+
+model PDPlan {
+  id              String   @id @default(uuid())
+  teacherId       String
+  teacher         TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Plan Details
+  title           String
+  description     String?  @db.Text
+  schoolYear      String   // "2025-2026"
+
+  // Goals
+  targetHours     Int
+  focusAreas      PDCategory[]
+
+  // Items
+  items           PDPlanItem[]
+
+  // Status
+  status          PlanStatus @default(DRAFT)
+  approvedBy      String?
+  approvedAt      DateTime?
+
+  // Progress (calculated)
+  completedHours  Decimal  @default(0) @db.Decimal(5, 2)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([teacherId, schoolYear])
+  @@map("pd_plans")
+}
+
+model PDPlanItem {
+  id              String   @id @default(uuid())
+  planId          String
+  plan            PDPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  // Item Details
+  title           String
+  description     String?  @db.Text
+  category        PDCategory
+  targetHours     Int
+
+  // Scheduling
+  targetQuarter   String?  // "Q1", "Q2", etc.
+  targetMonth     String?
+
+  // Status
+  status          PDItemStatus @default(PLANNED)
+  completedAt     DateTime?
+  actualHours     Decimal? @db.Decimal(5, 2)
+
+  // Link to actual activity
+  linkedActivityId String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([planId])
+  @@map("pd_plan_items")
+}
+
+model TeacherProfessionalGoal {
+  id              String   @id @default(uuid())
+  teacherId       String
+  teacher         TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Goal Details
+  title           String
+  description     String?  @db.Text
+  category        PDCategory
+
+  // Timeline
+  startDate       DateTime @default(now())
+  targetDate      DateTime?
+
+  // Progress
+  status          GoalStatus @default(NOT_STARTED)
+  progress        Int      @default(0) // 0-100
+
+  // Milestones
+  milestones      Json[]   @default([]) // { title, completed, completedAt }
+
+  // Evidence
+  evidence        String[] @default([])
+
+  // Reflection
+  reflection      String?  @db.Text
+
+  completedAt     DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([teacherId, status])
+  @@map("teacher_professional_goals")
+}
+
+model TeacherPortfolioItem {
+  id              String   @id @default(uuid())
+  teacherId       String
+  teacher         TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Item Details
+  title           String
+  description     String?  @db.Text
+  itemType        PortfolioItemType
+
+  // Content
+  fileUrl         String?
+  externalUrl     String?
+  content         String?  @db.Text // For text-based items
+
+  // Metadata
+  tags            String[] @default([])
+  category        PDCategory?
+
+  // Visibility
+  isPublic        Boolean  @default(false)
+
+  // Dates
+  createdDate     DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([teacherId])
+  @@map("teacher_portfolio_items")
+}
+
+enum TeacherRole {
+  CLASSROOM_TEACHER
+  SPECIAL_EDUCATION
+  INTERVENTION_SPECIALIST
+  INSTRUCTIONAL_COACH
+  CURRICULUM_SPECIALIST
+  DEPARTMENT_HEAD
+  ASSISTANT_PRINCIPAL
+  PRINCIPAL
+  DISTRICT_ADMINISTRATOR
+  OTHER
+}
+
+enum CertificationType {
+  TEACHING_LICENSE
+  SUBJECT_ENDORSEMENT
+  SPECIAL_EDUCATION
+  GIFTED_EDUCATION
+  ESL_ELL
+  READING_SPECIALIST
+  ADMINISTRATION
+  NATIONAL_BOARD
+  OTHER
+}
+
+enum CertificationStatus {
+  ACTIVE
+  EXPIRED
+  PENDING_RENEWAL
+  REVOKED
+}
+
+enum PDActivityType {
+  WORKSHOP
+  CONFERENCE
+  WEBINAR
+  COURSE
+  SELF_STUDY
+  BOOK_STUDY
+  PEER_OBSERVATION
+  MENTORING
+  ACTION_RESEARCH
+  PROFESSIONAL_LEARNING_COMMUNITY
+  CERTIFICATION_PROGRAM
+  GRADUATE_COURSE
+  OTHER
+}
+
+enum PDCategory {
+  INSTRUCTIONAL_STRATEGIES
+  CONTENT_KNOWLEDGE
+  ASSESSMENT
+  TECHNOLOGY
+  CLASSROOM_MANAGEMENT
+  SPECIAL_EDUCATION
+  ELL_ESL
+  SOCIAL_EMOTIONAL_LEARNING
+  EQUITY_INCLUSION
+  LEADERSHIP
+  FAMILY_ENGAGEMENT
+  DATA_LITERACY
+  CURRICULUM_DEVELOPMENT
+  STUDENT_SUPPORT
+  PROFESSIONAL_ETHICS
+  OTHER
+}
+
+enum PDProviderType {
+  SCHOOL_DISTRICT
+  STATE_AGENCY
+  UNIVERSITY
+  PROFESSIONAL_ORGANIZATION
+  VENDOR
+  ONLINE_PLATFORM
+  PEER_LED
+  SELF_DIRECTED
+  OTHER
+}
+
+enum PDStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+  REJECTED
+}
+
+enum PlanStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum PDItemStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  DEFERRED
+  CANCELLED
+}
+
+enum PortfolioItemType {
+  LESSON_PLAN
+  STUDENT_WORK_SAMPLE
+  ASSESSMENT
+  CURRICULUM_UNIT
+  REFLECTION
+  CERTIFICATE
+  PRESENTATION
+  RESEARCH
+  ARTIFACT
+  VIDEO
+  OTHER
+}
+
+// =============================================================================
+// GDPR DATA RIGHTS
+// =============================================================================
+
+model GDPRDataRequest {
+  id              String   @id @default(uuid())
+  userId          String   @db.Uuid
+
+  // Request Details
+  requestType     GDPRRequestType
+  requestedAt     DateTime @default(now())
+
+  // Status
+  status          GDPRRequestStatus @default(PENDING)
+  processedAt     DateTime?
+  completedAt     DateTime?
+
+  // For Export Requests
+  exportUrl       String?
+  expiresAt       DateTime?
+
+  // For Deletion Requests
+  deletionReason  String?
+  recordsDeleted  Int?
+
+  // Verification
+  verifiedAt      DateTime?
+  verifiedBy      String?  // Admin user ID
+
+  // Audit
+  ipAddress       String?
+  userAgent       String?
+
+  // Notes
+  notes           String?  @db.Text
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, requestType])
+  @@index([status])
+  @@map("gdpr_data_requests")
+}
+
+model GDPRConsentRecord {
+  id              String   @id @default(uuid())
+  userId          String   @db.Uuid
+
+  // Consent Details
+  consentType     ConsentType
+  version         String   // Consent version/policy version
+
+  // Status
+  granted         Boolean
+  grantedAt       DateTime?
+  revokedAt       DateTime?
+
+  // Context
+  ipAddress       String?
+  userAgent       String?
+  source          String?  // Where consent was collected
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, consentType])
+  @@map("gdpr_consent_records")
+}
+
+enum GDPRRequestType {
+  DATA_EXPORT       // Right to access
+  DATA_DELETION     // Right to erasure
+  DATA_PORTABILITY  // Right to data portability
+  RECTIFICATION     // Right to rectification
+  PROCESSING_RESTRICTION // Right to restrict processing
+}
+
+enum GDPRRequestStatus {
+  PENDING
+  VERIFIED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+  EXPIRED
+}
+
+enum ConsentType {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+  MARKETING_EMAIL
+  MARKETING_SMS
+  ANALYTICS
+  THIRD_PARTY_SHARING
+  PROFILING
+  AUTOMATED_DECISIONS
+}

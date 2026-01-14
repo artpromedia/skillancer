@@ -4,10 +4,13 @@
  */
 
 import { registerAdminReviewRoutes } from './admin-reviews.routes.js';
+import { registerBrainTrainingRoutes } from './brain-training.routes.js';
 import { registerConversationRoutes } from './conversations.routes.js';
 import { registerCredentialRoutes } from './credentials.routes.js';
 import { registerEnhancedReviewRoutes } from './enhanced-reviews.routes.js';
 import { registerEscrowRoutes } from './escrow.routes.js';
+import { registerExecutiveFunctionRoutes } from './executive-function.routes.js';
+import { registerGDPRRoutes } from './gdpr.routes.js';
 import { registerInvoiceRoutes } from './invoices.routes.js';
 import { registerMessageRoutes } from './messages.routes.js';
 import { registerNotificationRoutes } from './notifications.routes.js';
@@ -19,6 +22,7 @@ import { registerReviewRoutes } from './reviews.routes.js';
 import { registerServiceOrderRoutes } from './service-orders.routes.js';
 import { registerServiceRoutes } from './services.routes.js';
 import { registerStripeWebhookRoutes } from './stripe-webhooks.routes.js';
+import { registerTeacherPDRoutes } from './teacher-pd.routes.js';
 
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
@@ -171,6 +175,38 @@ export async function registerRoutes(
     { prefix: '/profiles' }
   );
 
+  // Register GDPR data rights routes
+  await fastify.register(
+    (instance) => {
+      registerGDPRRoutes(instance, deps);
+    },
+    { prefix: '/gdpr' }
+  );
+
+  // Register brain training routes
+  await fastify.register(
+    (instance) => {
+      registerBrainTrainingRoutes(instance, deps);
+    },
+    { prefix: '/brain-training' }
+  );
+
+  // Register executive function tools routes
+  await fastify.register(
+    (instance) => {
+      registerExecutiveFunctionRoutes(instance, deps);
+    },
+    { prefix: '/executive-function' }
+  );
+
+  // Register teacher professional development routes
+  await fastify.register(
+    (instance) => {
+      registerTeacherPDRoutes(instance, deps);
+    },
+    { prefix: '/teacher-pd' }
+  );
+
   // FUTURE: Register contract management routes when service implementations are complete
 }
 
@@ -191,6 +227,10 @@ export { registerPresenceRoutes } from './presence.routes.js';
 export { registerNotificationRoutes } from './notifications.routes.js';
 export { registerCredentialRoutes } from './credentials.routes.js';
 export { registerProfileRoutes } from './profiles.routes.js';
+export { registerGDPRRoutes } from './gdpr.routes.js';
+export { registerBrainTrainingRoutes } from './brain-training.routes.js';
+export { registerExecutiveFunctionRoutes } from './executive-function.routes.js';
+export { registerTeacherPDRoutes } from './teacher-pd.routes.js';
 // FUTURE: Export contract routes when implemented
 // export { contractRoutes } from './contract.routes.js';
 // export { contractSubRoutes } from './contract-sub.routes.js';
