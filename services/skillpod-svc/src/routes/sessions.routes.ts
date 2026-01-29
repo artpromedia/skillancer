@@ -13,6 +13,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import type {
   DLPService,
   TransferAction,
@@ -128,6 +129,7 @@ export function sessionRoutes(
   app.get<{ Params: SessionParams }>(
     '/sessions/:sessionId',
     {
+      preHandler: [requireAuth],
       schema: {
         params: SessionIdParam,
       },
@@ -196,6 +198,7 @@ export function sessionRoutes(
   }>(
     '/sessions/:sessionId/transfers',
     {
+      preHandler: [requireAuth],
       schema: {
         params: SessionIdParam,
         querystring: TransferQuerySchema,
@@ -267,6 +270,7 @@ export function sessionRoutes(
   }>(
     '/sessions/:sessionId/transfers/evaluate',
     {
+      preHandler: [requireAuth],
       schema: {
         params: SessionIdParam,
         body: TransferRequestSchema,
@@ -325,6 +329,7 @@ export function sessionRoutes(
   }>(
     '/sessions/:sessionId/transfers/:attemptId',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           sessionId: z.string().uuid(),
@@ -402,6 +407,7 @@ export function sessionRoutes(
   }>(
     '/sessions/:sessionId/screen-captures',
     {
+      preHandler: [requireAuth],
       schema: {
         params: SessionIdParam,
         querystring: ScreenCaptureQuerySchema,
@@ -471,6 +477,7 @@ export function sessionRoutes(
   }>(
     '/sessions/:sessionId/screen-captures',
     {
+      preHandler: [requireAuth],
       schema: {
         params: SessionIdParam,
         body: ScreenCaptureEventSchema,
@@ -518,6 +525,7 @@ export function sessionRoutes(
   app.get<{ Params: SessionParams }>(
     '/sessions/:sessionId/security-summary',
     {
+      preHandler: [requireAuth],
       schema: {
         params: SessionIdParam,
       },
@@ -624,6 +632,7 @@ export function sessionRoutes(
   }>(
     '/sessions/:sessionId/audit-log',
     {
+      preHandler: [requireAuth],
       schema: {
         params: SessionIdParam,
         querystring: z.object({
@@ -685,4 +694,3 @@ export function sessionRoutes(
     }
   );
 }
-

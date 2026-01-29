@@ -12,6 +12,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import type { DataContainmentService } from '../services/data-containment.service.js';
 import type {
   KasmWorkspacesService,
@@ -81,6 +82,7 @@ export function podRoutes(
   }>(
     '/pods',
     {
+      preHandler: [requireAuth],
       schema: {
         body: CreatePodSchema,
         response: {
@@ -203,6 +205,7 @@ export function podRoutes(
   app.get<{ Querystring: PodStatusQuery }>(
     '/pods',
     {
+      preHandler: [requireAuth],
       schema: {
         querystring: z.object({
           tenantId: z.string().uuid(),
@@ -269,6 +272,7 @@ export function podRoutes(
   app.get<{ Params: PodParams }>(
     '/pods/:podId',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           podId: z.string().uuid(),
@@ -350,6 +354,7 @@ export function podRoutes(
   }>(
     '/pods/:podId/policy',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           podId: z.string().uuid(),
@@ -440,6 +445,7 @@ export function podRoutes(
   }>(
     '/pods/:podId/action',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           podId: z.string().uuid(),
@@ -558,6 +564,7 @@ export function podRoutes(
   app.get<{ Params: PodParams }>(
     '/pods/:podId/metrics',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           podId: z.string().uuid(),
@@ -605,6 +612,7 @@ export function podRoutes(
   app.get<{ Params: PodParams }>(
     '/pods/:podId/watermark',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           podId: z.string().uuid(),

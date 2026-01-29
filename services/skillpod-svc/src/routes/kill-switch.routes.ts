@@ -13,6 +13,7 @@
 
 import { z } from 'zod';
 
+import { requireAdmin } from '../plugins/auth.js';
 import type { KillSwitchService } from '../services/kill-switch.service.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
@@ -99,6 +100,7 @@ export function killSwitchRoutes(killSwitchService: KillSwitchService) {
     fastify.post(
       '/kill-switch',
       {
+        preHandler: [requireAdmin],
         schema: {
           description: 'Execute kill switch to immediately terminate access',
           tags: ['Kill Switch'],
@@ -186,6 +188,7 @@ export function killSwitchRoutes(killSwitchService: KillSwitchService) {
     fastify.get(
       '/kill-switch/:eventId',
       {
+        preHandler: [requireAdmin],
         schema: {
           description: 'Get kill switch event details',
           tags: ['Kill Switch'],
@@ -236,6 +239,7 @@ export function killSwitchRoutes(killSwitchService: KillSwitchService) {
     fastify.get(
       '/kill-switch',
       {
+        preHandler: [requireAdmin],
         schema: {
           description: 'List kill switch events with filtering',
           tags: ['Kill Switch'],
@@ -318,6 +322,7 @@ export function killSwitchRoutes(killSwitchService: KillSwitchService) {
     fastify.get(
       '/access-status/:userId',
       {
+        preHandler: [requireAdmin],
         schema: {
           description: 'Check if user access is blocked',
           tags: ['Kill Switch'],
@@ -366,6 +371,7 @@ export function killSwitchRoutes(killSwitchService: KillSwitchService) {
     fastify.post(
       '/access/reinstate',
       {
+        preHandler: [requireAdmin],
         schema: {
           description: 'Reinstate user access after kill switch',
           tags: ['Kill Switch'],
@@ -431,6 +437,7 @@ export function killSwitchRoutes(killSwitchService: KillSwitchService) {
     fastify.get(
       '/revocations/:userId',
       {
+        preHandler: [requireAdmin],
         schema: {
           description: 'Get user revocation history',
           tags: ['Kill Switch'],
@@ -481,6 +488,7 @@ export function killSwitchRoutes(killSwitchService: KillSwitchService) {
     fastify.post(
       '/kill-switch/tenant/:tenantId',
       {
+        preHandler: [requireAdmin],
         schema: {
           description: 'Execute kill switch for entire tenant (emergency)',
           tags: ['Kill Switch'],
@@ -564,6 +572,7 @@ export function killSwitchRoutes(killSwitchService: KillSwitchService) {
     fastify.post(
       '/kill-switch/user/:userId',
       {
+        preHandler: [requireAdmin],
         schema: {
           description: 'Execute kill switch for specific user',
           tags: ['Kill Switch'],
@@ -649,6 +658,7 @@ export function killSwitchRoutes(killSwitchService: KillSwitchService) {
     fastify.get(
       '/kill-switch/stats',
       {
+        preHandler: [requireAdmin],
         schema: {
           description: 'Get kill switch statistics',
           tags: ['Kill Switch'],
@@ -759,4 +769,3 @@ export function killSwitchRoutes(killSwitchService: KillSwitchService) {
     );
   };
 }
-

@@ -12,6 +12,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import type { ViolationDetectionService } from '../services/violation-detection.service.js';
 import type { ViolationType } from '../types/containment.types.js';
 import type { FastifyInstance } from 'fastify';
@@ -109,6 +110,7 @@ export function violationRoutes(
   }>(
     '/violations',
     {
+      preHandler: [requireAuth],
       schema: {
         body: CreateViolationSchema,
       },
@@ -130,6 +132,7 @@ export function violationRoutes(
   app.get<{ Params: ViolationParams }>(
     '/violations/:violationId',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           violationId: z.string().uuid(),
@@ -157,6 +160,7 @@ export function violationRoutes(
   }>(
     '/violations',
     {
+      preHandler: [requireAuth],
       schema: {
         querystring: ListViolationsQuerySchema,
       },
@@ -200,6 +204,7 @@ export function violationRoutes(
   }>(
     '/violations/:violationId/review',
     {
+      preHandler: [requireAdmin],
       schema: {
         params: z.object({
           violationId: z.string().uuid(),
@@ -230,6 +235,7 @@ export function violationRoutes(
   app.get<{ Querystring: TenantQuery }>(
     '/violations/summary',
     {
+      preHandler: [requireAuth],
       schema: {
         querystring: z.object({
           tenantId: z.string().uuid(),
@@ -257,6 +263,7 @@ export function violationRoutes(
   app.get<{ Params: SessionParams }>(
     '/violations/session/:sessionId/count',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           sessionId: z.string().uuid(),
@@ -277,6 +284,7 @@ export function violationRoutes(
   app.get<{ Params: SessionParams }>(
     '/violations/session/:sessionId/threshold-check',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           sessionId: z.string().uuid(),
@@ -293,4 +301,3 @@ export function violationRoutes(
     }
   );
 }
-

@@ -10,6 +10,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import type { FastifyInstance } from 'fastify';
 import type { SecurityPolicyService } from '../services/security-policy.service.js';
 import type { PodSecurityPolicyInput } from '../types/containment.types.js';
@@ -135,6 +136,7 @@ export function securityPolicyRoutes(
   app.get<{ Querystring: TenantQuery }>(
     '/policies',
     {
+      preHandler: [requireAuth],
       schema: {
         querystring: z.object({
           tenantId: z.string().uuid(),
@@ -160,6 +162,7 @@ export function securityPolicyRoutes(
   app.get<{ Params: PolicyParams }>(
     '/policies/:policyId',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           policyId: z.string().uuid(),
@@ -185,6 +188,7 @@ export function securityPolicyRoutes(
   app.get<{ Querystring: TenantQuery }>(
     '/policies/default',
     {
+      preHandler: [requireAuth],
       schema: {
         querystring: z.object({
           tenantId: z.string().uuid(),
@@ -210,6 +214,7 @@ export function securityPolicyRoutes(
   app.post<{ Querystring: TenantQuery; Body: PodSecurityPolicyInput }>(
     '/policies',
     {
+      preHandler: [requireAdmin],
       schema: {
         querystring: z.object({
           tenantId: z.string().uuid(),
@@ -242,6 +247,7 @@ export function securityPolicyRoutes(
   app.patch<{ Params: PolicyParams; Body: Partial<PodSecurityPolicyInput> }>(
     '/policies/:policyId',
     {
+      preHandler: [requireAdmin],
       schema: {
         params: z.object({
           policyId: z.string().uuid(),
@@ -272,6 +278,7 @@ export function securityPolicyRoutes(
   app.delete<{ Params: PolicyParams }>(
     '/policies/:policyId',
     {
+      preHandler: [requireAdmin],
       schema: {
         params: z.object({
           policyId: z.string().uuid(),
@@ -305,6 +312,7 @@ export function securityPolicyRoutes(
   app.post<{ Params: PolicyParams; Querystring: TenantQuery }>(
     '/policies/:policyId/set-default',
     {
+      preHandler: [requireAdmin],
       schema: {
         params: z.object({
           policyId: z.string().uuid(),
@@ -337,6 +345,7 @@ export function securityPolicyRoutes(
   app.post<{ Params: PolicyParams; Body: CloneBody }>(
     '/policies/:policyId/clone',
     {
+      preHandler: [requireAdmin],
       schema: {
         params: z.object({
           policyId: z.string().uuid(),
@@ -369,6 +378,7 @@ export function securityPolicyRoutes(
   app.post<{ Body: PodSecurityPolicyInput }>(
     '/policies/validate',
     {
+      preHandler: [requireAuth],
       schema: {
         body: CreatePolicySchema,
       },

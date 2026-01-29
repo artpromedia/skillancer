@@ -14,6 +14,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import type { TemplateService } from '../services/template.service.js';
 import type { TemplateCategory } from '@/types/prisma-shim.js';
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';

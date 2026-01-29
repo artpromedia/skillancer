@@ -12,6 +12,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import type { PrismaClient } from '@/types/prisma-shim.js';
 import type { FastifyInstance } from 'fastify';
 

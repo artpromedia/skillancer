@@ -14,6 +14,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import { createMarketActivityQueue } from '../workers/market-activity.worker.js';
 
 import type {
@@ -756,4 +757,3 @@ export function recommendationRoutes(app: FastifyInstance, deps: RecommendationR
     }
   );
 }
-

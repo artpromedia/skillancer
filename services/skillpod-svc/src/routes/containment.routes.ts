@@ -12,6 +12,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth } from '../plugins/auth.js';
 import type { DataContainmentService } from '../services/data-containment.service.js';
 import type { TransferDirection } from '../types/containment.types.js';
 import type { FastifyInstance } from 'fastify';
@@ -98,6 +99,7 @@ export function containmentRoutes(
   }>(
     '/containment/clipboard/check',
     {
+      preHandler: [requireAuth],
       schema: {
         body: ClipboardCheckSchema,
       },
@@ -117,6 +119,7 @@ export function containmentRoutes(
   }>(
     '/containment/file-transfer/check',
     {
+      preHandler: [requireAuth],
       schema: {
         body: FileTransferCheckSchema,
       },
@@ -139,6 +142,7 @@ export function containmentRoutes(
   }>(
     '/containment/network/check',
     {
+      preHandler: [requireAuth],
       schema: {
         body: NetworkAccessCheckSchema,
       },
@@ -158,6 +162,7 @@ export function containmentRoutes(
   }>(
     '/containment/peripheral/check',
     {
+      preHandler: [requireAuth],
       schema: {
         body: PeripheralAccessCheckSchema,
       },
@@ -175,6 +180,7 @@ export function containmentRoutes(
   app.post<{ Params: SessionParams }>(
     '/containment/print/check/:sessionId',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           sessionId: z.string().uuid(),
@@ -195,6 +201,7 @@ export function containmentRoutes(
   app.post<{ Params: SessionParams }>(
     '/containment/screen-capture/check/:sessionId',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           sessionId: z.string().uuid(),
@@ -217,6 +224,7 @@ export function containmentRoutes(
   }>(
     '/containment/file-transfer/request',
     {
+      preHandler: [requireAuth],
       schema: {
         body: FileTransferRequestSchema,
       },
@@ -233,6 +241,7 @@ export function containmentRoutes(
   app.post<{ Params: RequestParams; Body: ApprovalBody }>(
     '/containment/file-transfer/:requestId/approve',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           requestId: z.string().uuid(),
@@ -253,6 +262,7 @@ export function containmentRoutes(
   app.post<{ Params: RequestParams; Body: RejectionBody }>(
     '/containment/file-transfer/:requestId/reject',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           requestId: z.string().uuid(),
@@ -278,6 +288,7 @@ export function containmentRoutes(
   app.get<{ Params: SessionParams }>(
     '/containment/session/:sessionId/context',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           sessionId: z.string().uuid(),
@@ -303,6 +314,7 @@ export function containmentRoutes(
   app.get<{ Params: SessionParams }>(
     '/containment/session/:sessionId/watermark',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           sessionId: z.string().uuid(),
@@ -316,4 +328,3 @@ export function containmentRoutes(
     }
   );
 }
-

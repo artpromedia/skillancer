@@ -13,6 +13,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import type { AutoScalingService } from '../services/auto-scaling.service.js';
 import type { PodService } from '../services/pod.service.js';
 import type { ResourcePoolService } from '../services/resource-pool.service.js';

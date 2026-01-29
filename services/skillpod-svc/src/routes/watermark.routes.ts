@@ -14,6 +14,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import {
   createWatermarkApplierService,
   createWatermarkDetectorService,

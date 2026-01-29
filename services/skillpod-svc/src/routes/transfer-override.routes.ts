@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import type { WebSocketEnforcementService } from '../services/websocket-enforcement.service.js';
 import type { PrismaClient } from '@/types/prisma-shim.js';
 import type { FastifyInstance } from 'fastify';
@@ -80,6 +81,7 @@ export function transferOverrideRoutes(
   }>(
     '/override-requests',
     {
+      preHandler: [requireAuth],
       schema: {
         body: CreateOverrideRequestSchema,
       },
@@ -158,6 +160,7 @@ export function transferOverrideRoutes(
   app.get<{ Params: RequestParams }>(
     '/override-requests/:requestId',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           requestId: z.string().uuid(),
@@ -210,6 +213,7 @@ export function transferOverrideRoutes(
   }>(
     '/override-requests',
     {
+      preHandler: [requireAuth],
       schema: {
         querystring: ListOverridesQuerySchema,
       },
@@ -278,6 +282,7 @@ export function transferOverrideRoutes(
   }>(
     '/override-requests/:requestId/approve',
     {
+      preHandler: [requireAdmin],
       schema: {
         params: z.object({
           requestId: z.string().uuid(),
@@ -373,6 +378,7 @@ export function transferOverrideRoutes(
   }>(
     '/override-requests/:requestId/reject',
     {
+      preHandler: [requireAdmin],
       schema: {
         params: z.object({
           requestId: z.string().uuid(),
@@ -442,6 +448,7 @@ export function transferOverrideRoutes(
   app.post<{ Params: RequestParams }>(
     '/override-requests/:requestId/cancel',
     {
+      preHandler: [requireAuth],
       schema: {
         params: z.object({
           requestId: z.string().uuid(),
@@ -497,7 +504,7 @@ export function transferOverrideRoutes(
   // GET PENDING COUNT (for admin dashboard)
   // ===========================================================================
 
-  app.get('/override-requests/pending-count', async (request) => {
+  app.get('/override-requests/pending-count', { preHandler: [requireAuth] }, async (request) => {
     const tenantId = (request.headers['x-tenant-id'] as string) ?? 'unknown';
 
     const count = await prisma.transferOverrideRequest.count({

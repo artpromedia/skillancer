@@ -16,6 +16,7 @@
 
 import { z } from 'zod';
 
+import { requireAuth, requireAdmin } from '../plugins/auth.js';
 import type { MarkerType, RecordingAccessType } from '../repositories/recording.repository.js';
 import type { RecordingService } from '../services/recording.service.js';
 import type { FastifyInstance } from 'fastify';
@@ -178,7 +179,7 @@ export function recordingRoutes(recordingService: RecordingService) {
      * Start a new recording for a session
      * POST /recordings
      */
-    fastify.post('/recordings', async (request, reply) => {
+    fastify.post('/recordings', { preHandler: [requireAuth] }, async (request, reply) => {
       const body = StartRecordingSchema.parse(request.body);
 
       const result = await recordingService.startRecording({
@@ -203,118 +204,138 @@ export function recordingRoutes(recordingService: RecordingService) {
      * Stop a recording
      * POST /recordings/:recordingId/stop
      */
-    fastify.post('/recordings/:recordingId/stop', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
-      const body = StopRecordingSchema.parse(request.body);
+    fastify.post(
+      '/recordings/:recordingId/stop',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
+        const body = StopRecordingSchema.parse(request.body);
 
-      const result = await recordingService.stopRecording({
-        recordingId,
-        kasmRecordingId: body.kasmRecordingId,
-        kasmId: body.kasmId,
-      });
+        const result = await recordingService.stopRecording({
+          recordingId,
+          kasmRecordingId: body.kasmRecordingId,
+          kasmId: body.kasmId,
+        });
 
-      return reply.send({
-        success: true,
-        data: result,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: result,
+        });
+      }
+    );
 
     /**
      * Get a recording by ID
      * GET /recordings/:recordingId
      */
-    fastify.get('/recordings/:recordingId', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
+    fastify.get(
+      '/recordings/:recordingId',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
 
-      const recording = await recordingService.getRecording(recordingId);
+        const recording = await recordingService.getRecording(recordingId);
 
-      if (!recording) {
-        return reply.status(404).send({
-          success: false,
-          error: 'Recording not found',
+        if (!recording) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Recording not found',
+          });
+        }
+
+        return reply.send({
+          success: true,
+          data: recording,
         });
       }
-
-      return reply.send({
-        success: true,
-        data: recording,
-      });
-    });
+    );
 
     /**
      * List recordings for a tenant
      * GET /tenants/:tenantId/recordings
      */
-    fastify.get('/tenants/:tenantId/recordings', async (request, reply) => {
-      const { tenantId } = TenantIdParam.parse(request.params);
-      const query = ListRecordingsQuery.parse(request.query);
+    fastify.get(
+      '/tenants/:tenantId/recordings',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { tenantId } = TenantIdParam.parse(request.params);
+        const query = ListRecordingsQuery.parse(request.query);
 
-      const { recordings, total } = await recordingService.listRecordings(
-        {
-          tenantId,
-          sessionId: query.sessionId,
-          userId: query.userId,
-          status: query.status,
-          processingStatus: query.processingStatus,
-          ocrStatus: query.ocrStatus,
-          startDate: query.startDate ? new Date(query.startDate) : undefined,
-          endDate: query.endDate ? new Date(query.endDate) : undefined,
-        },
-        {
-          page: query.page,
-          limit: query.limit,
-          orderBy: query.orderBy,
-          orderDirection: query.orderDirection,
-          includeChunks: query.includeChunks,
-          includeMarkers: query.includeMarkers,
-        }
-      );
+        const { recordings, total } = await recordingService.listRecordings(
+          {
+            tenantId,
+            sessionId: query.sessionId,
+            userId: query.userId,
+            status: query.status,
+            processingStatus: query.processingStatus,
+            ocrStatus: query.ocrStatus,
+            startDate: query.startDate ? new Date(query.startDate) : undefined,
+            endDate: query.endDate ? new Date(query.endDate) : undefined,
+          },
+          {
+            page: query.page,
+            limit: query.limit,
+            orderBy: query.orderBy,
+            orderDirection: query.orderDirection,
+            includeChunks: query.includeChunks,
+            includeMarkers: query.includeMarkers,
+          }
+        );
 
-      return reply.send({
-        success: true,
-        data: recordings,
-        pagination: {
-          page: query.page,
-          limit: query.limit,
-          total,
-          totalPages: Math.ceil(total / query.limit),
-        },
-      });
-    });
+        return reply.send({
+          success: true,
+          data: recordings,
+          pagination: {
+            page: query.page,
+            limit: query.limit,
+            total,
+            totalPages: Math.ceil(total / query.limit),
+          },
+        });
+      }
+    );
 
     /**
      * Get recordings for a session
      * GET /sessions/:sessionId/recordings
      */
-    fastify.get('/sessions/:sessionId/recordings', async (request, reply) => {
-      const { sessionId } = SessionIdParam.parse(request.params);
+    fastify.get(
+      '/sessions/:sessionId/recordings',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { sessionId } = SessionIdParam.parse(request.params);
 
-      const recordings = await recordingService.listRecordings(
-        { tenantId: '', sessionId },
-        { limit: 100 }
-      );
+        const recordings = await recordingService.listRecordings(
+          { tenantId: '', sessionId },
+          { limit: 100 }
+        );
 
-      return reply.send({
-        success: true,
-        data: recordings.recordings,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: recordings.recordings,
+        });
+      }
+    );
 
     /**
      * Delete a recording
      * DELETE /recordings/:recordingId
      */
-    fastify.delete('/recordings/:recordingId', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
-      const body = DeleteRecordingSchema.parse(request.body);
+    fastify.delete(
+      '/recordings/:recordingId',
+      { preHandler: [requireAdmin] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
+        const body = DeleteRecordingSchema.parse(request.body);
 
-      await recordingService.deleteRecording(recordingId, body.deletedBy, body.reason);
+        await recordingService.deleteRecording(recordingId, body.deletedBy, body.reason);
 
-      return reply.send({
-        success: true,
-        message: 'Recording deleted successfully',
-      });
-    });
+        return reply.send({
+          success: true,
+          message: 'Recording deleted successfully',
+        });
+      }
+    );
 
     // =========================================================================
     // PLAYBACK
@@ -324,24 +345,28 @@ export function recordingRoutes(recordingService: RecordingService) {
      * Get playback URL for a recording
      * GET /recordings/:recordingId/playback
      */
-    fastify.get('/recordings/:recordingId/playback', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
-      const userId = (request.query as { userId?: string }).userId;
+    fastify.get(
+      '/recordings/:recordingId/playback',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
+        const userId = (request.query as { userId?: string }).userId;
 
-      if (!userId) {
-        return reply.status(400).send({
-          success: false,
-          error: 'userId is required',
+        if (!userId) {
+          return reply.status(400).send({
+            success: false,
+            error: 'userId is required',
+          });
+        }
+
+        const result = await recordingService.getPlaybackUrl(recordingId, userId);
+
+        return reply.send({
+          success: true,
+          data: result,
         });
       }
-
-      const result = await recordingService.getPlaybackUrl(recordingId, userId);
-
-      return reply.send({
-        success: true,
-        data: result,
-      });
-    });
+    );
 
     // =========================================================================
     // CHUNKS
@@ -351,42 +376,50 @@ export function recordingRoutes(recordingService: RecordingService) {
      * Upload a recording chunk
      * POST /recordings/:recordingId/chunks
      */
-    fastify.post('/recordings/:recordingId/chunks', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
-      const query = ChunkUploadSchema.parse(request.query);
+    fastify.post(
+      '/recordings/:recordingId/chunks',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
+        const query = ChunkUploadSchema.parse(request.query);
 
-      // Get raw body as buffer
-      const data = request.body as Buffer;
+        // Get raw body as buffer
+        const data = request.body as Buffer;
 
-      const result = await recordingService.uploadChunk({
-        recordingId,
-        chunkIndex: query.chunkIndex,
-        startOffset: query.startOffset,
-        durationSeconds: query.durationSeconds,
-        data,
-        contentType: query.contentType,
-      });
+        const result = await recordingService.uploadChunk({
+          recordingId,
+          chunkIndex: query.chunkIndex,
+          startOffset: query.startOffset,
+          durationSeconds: query.durationSeconds,
+          data,
+          contentType: query.contentType,
+        });
 
-      return reply.status(201).send({
-        success: true,
-        data: result,
-      });
-    });
+        return reply.status(201).send({
+          success: true,
+          data: result,
+        });
+      }
+    );
 
     /**
      * Get chunks for a recording
      * GET /recordings/:recordingId/chunks
      */
-    fastify.get('/recordings/:recordingId/chunks', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
+    fastify.get(
+      '/recordings/:recordingId/chunks',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
 
-      const chunks = await recordingService.getChunks(recordingId);
+        const chunks = await recordingService.getChunks(recordingId);
 
-      return reply.send({
-        success: true,
-        data: chunks,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: chunks,
+        });
+      }
+    );
 
     // =========================================================================
     // PROCESSING
@@ -396,46 +429,58 @@ export function recordingRoutes(recordingService: RecordingService) {
      * Trigger processing for a recording
      * POST /recordings/:recordingId/process
      */
-    fastify.post('/recordings/:recordingId/process', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
+    fastify.post(
+      '/recordings/:recordingId/process',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
 
-      const result = await recordingService.processRecording(recordingId);
+        const result = await recordingService.processRecording(recordingId);
 
-      return reply.send({
-        success: true,
-        data: result,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: result,
+        });
+      }
+    );
 
     /**
      * Trigger OCR processing for a recording
      * POST /recordings/:recordingId/ocr
      */
-    fastify.post('/recordings/:recordingId/ocr', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
+    fastify.post(
+      '/recordings/:recordingId/ocr',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
 
-      const result = await recordingService.performOcr(recordingId);
+        const result = await recordingService.performOcr(recordingId);
 
-      return reply.send({
-        success: true,
-        data: result,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: result,
+        });
+      }
+    );
 
     /**
      * Generate thumbnail for a recording
      * POST /recordings/:recordingId/thumbnail
      */
-    fastify.post('/recordings/:recordingId/thumbnail', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
+    fastify.post(
+      '/recordings/:recordingId/thumbnail',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
 
-      const thumbnailUrl = await recordingService.generateThumbnail(recordingId);
+        const thumbnailUrl = await recordingService.generateThumbnail(recordingId);
 
-      return reply.send({
-        success: true,
-        data: { thumbnailUrl },
-      });
-    });
+        return reply.send({
+          success: true,
+          data: { thumbnailUrl },
+        });
+      }
+    );
 
     // =========================================================================
     // SEARCH
@@ -445,25 +490,29 @@ export function recordingRoutes(recordingService: RecordingService) {
      * Search recordings by OCR text
      * GET /tenants/:tenantId/recordings/search
      */
-    fastify.get('/tenants/:tenantId/recordings/search', async (request, reply) => {
-      const { tenantId } = TenantIdParam.parse(request.params);
-      const query = SearchRecordingsQuery.parse(request.query);
+    fastify.get(
+      '/tenants/:tenantId/recordings/search',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { tenantId } = TenantIdParam.parse(request.params);
+        const query = SearchRecordingsQuery.parse(request.query);
 
-      const results = await recordingService.searchRecordings({
-        tenantId,
-        query: query.query,
-        dateFrom: query.dateFrom ? new Date(query.dateFrom) : undefined,
-        dateTo: query.dateTo ? new Date(query.dateTo) : undefined,
-        userId: query.userId,
-        sessionId: query.sessionId,
-        limit: query.limit,
-      });
+        const results = await recordingService.searchRecordings({
+          tenantId,
+          query: query.query,
+          dateFrom: query.dateFrom ? new Date(query.dateFrom) : undefined,
+          dateTo: query.dateTo ? new Date(query.dateTo) : undefined,
+          userId: query.userId,
+          sessionId: query.sessionId,
+          limit: query.limit,
+        });
 
-      return reply.send({
-        success: true,
-        data: results,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: results,
+        });
+      }
+    );
 
     // =========================================================================
     // MARKERS
@@ -473,55 +522,67 @@ export function recordingRoutes(recordingService: RecordingService) {
      * Add a marker to a recording
      * POST /recordings/:recordingId/markers
      */
-    fastify.post('/recordings/:recordingId/markers', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
-      const body = AddMarkerSchema.parse(request.body);
+    fastify.post(
+      '/recordings/:recordingId/markers',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
+        const body = AddMarkerSchema.parse(request.body);
 
-      const marker = await recordingService.addMarker({
-        recordingId,
-        markerType: body.markerType as MarkerType,
-        timestamp: body.timestamp,
-        label: body.label,
-        description: body.description,
-        metadata: body.metadata,
-        createdBy: body.createdBy,
-      });
+        const marker = await recordingService.addMarker({
+          recordingId,
+          markerType: body.markerType as MarkerType,
+          timestamp: body.timestamp,
+          label: body.label,
+          description: body.description,
+          metadata: body.metadata,
+          createdBy: body.createdBy,
+        });
 
-      return reply.status(201).send({
-        success: true,
-        data: marker,
-      });
-    });
+        return reply.status(201).send({
+          success: true,
+          data: marker,
+        });
+      }
+    );
 
     /**
      * Get markers for a recording
      * GET /recordings/:recordingId/markers
      */
-    fastify.get('/recordings/:recordingId/markers', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
+    fastify.get(
+      '/recordings/:recordingId/markers',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
 
-      const markers = await recordingService.getMarkers(recordingId);
+        const markers = await recordingService.getMarkers(recordingId);
 
-      return reply.send({
-        success: true,
-        data: markers,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: markers,
+        });
+      }
+    );
 
     /**
      * Delete a marker
      * DELETE /recordings/:recordingId/markers/:markerId
      */
-    fastify.delete('/recordings/:recordingId/markers/:markerId', async (request, reply) => {
-      const { markerId } = MarkerIdParam.parse(request.params);
+    fastify.delete(
+      '/recordings/:recordingId/markers/:markerId',
+      { preHandler: [requireAdmin] },
+      async (request, reply) => {
+        const { markerId } = MarkerIdParam.parse(request.params);
 
-      await recordingService.deleteMarker(markerId);
+        await recordingService.deleteMarker(markerId);
 
-      return reply.send({
-        success: true,
-        message: 'Marker deleted successfully',
-      });
-    });
+        return reply.send({
+          success: true,
+          message: 'Marker deleted successfully',
+        });
+      }
+    );
 
     // =========================================================================
     // ACCESS LOGS
@@ -531,57 +592,69 @@ export function recordingRoutes(recordingService: RecordingService) {
      * Log access to a recording
      * POST /recordings/:recordingId/access
      */
-    fastify.post('/recordings/:recordingId/access', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
-      const body = LogAccessSchema.parse(request.body);
+    fastify.post(
+      '/recordings/:recordingId/access',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
+        const body = LogAccessSchema.parse(request.body);
 
-      const accessLog = await recordingService.logAccess({
-        recordingId,
-        accessType: body.accessType as RecordingAccessType,
-        accessedBy: body.accessedBy,
-        ipAddress: body.ipAddress,
-        userAgent: body.userAgent,
-        playbackStartTime: body.playbackStartTime,
-        playbackEndTime: body.playbackEndTime,
-        accessReason: body.accessReason,
-      });
+        const accessLog = await recordingService.logAccess({
+          recordingId,
+          accessType: body.accessType as RecordingAccessType,
+          accessedBy: body.accessedBy,
+          ipAddress: body.ipAddress,
+          userAgent: body.userAgent,
+          playbackStartTime: body.playbackStartTime,
+          playbackEndTime: body.playbackEndTime,
+          accessReason: body.accessReason,
+        });
 
-      return reply.status(201).send({
-        success: true,
-        data: accessLog,
-      });
-    });
+        return reply.status(201).send({
+          success: true,
+          data: accessLog,
+        });
+      }
+    );
 
     /**
      * Get access logs for a recording
      * GET /recordings/:recordingId/access
      */
-    fastify.get('/recordings/:recordingId/access', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
+    fastify.get(
+      '/recordings/:recordingId/access',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
 
-      const logs = await recordingService.getAccessLogs(recordingId);
+        const logs = await recordingService.getAccessLogs(recordingId);
 
-      return reply.send({
-        success: true,
-        data: logs,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: logs,
+        });
+      }
+    );
 
     /**
      * Get user's access history
      * GET /users/:userId/recording-access
      */
-    fastify.get('/users/:userId/recording-access', async (request, reply) => {
-      const { userId } = z.object({ userId: z.string().uuid() }).parse(request.params);
-      const limit = (request.query as { limit?: number }).limit ?? 100;
+    fastify.get(
+      '/users/:userId/recording-access',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { userId } = z.object({ userId: z.string().uuid() }).parse(request.params);
+        const limit = (request.query as { limit?: number }).limit ?? 100;
 
-      const history = await recordingService.getUserAccessHistory(userId, limit);
+        const history = await recordingService.getUserAccessHistory(userId, limit);
 
-      return reply.send({
-        success: true,
-        data: history,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: history,
+        });
+      }
+    );
 
     // =========================================================================
     // RETENTION POLICIES
@@ -591,87 +664,107 @@ export function recordingRoutes(recordingService: RecordingService) {
      * Create a retention policy
      * POST /tenants/:tenantId/retention-policies
      */
-    fastify.post('/tenants/:tenantId/retention-policies', async (request, reply) => {
-      const { tenantId } = TenantIdParam.parse(request.params);
-      const body = CreateRetentionPolicySchema.parse(request.body);
+    fastify.post(
+      '/tenants/:tenantId/retention-policies',
+      { preHandler: [requireAdmin] },
+      async (request, reply) => {
+        const { tenantId } = TenantIdParam.parse(request.params);
+        const body = CreateRetentionPolicySchema.parse(request.body);
 
-      const policy = await recordingService.createRetentionPolicy({
-        tenantId,
-        name: body.name,
-        description: body.description,
-        isDefault: body.isDefault,
-        retentionDays: body.retentionDays,
-        complianceTags: body.complianceTags,
-        autoDeleteEnabled: body.autoDeleteEnabled,
-      });
+        const policy = await recordingService.createRetentionPolicy({
+          tenantId,
+          name: body.name,
+          description: body.description,
+          isDefault: body.isDefault,
+          retentionDays: body.retentionDays,
+          complianceTags: body.complianceTags,
+          autoDeleteEnabled: body.autoDeleteEnabled,
+        });
 
-      return reply.status(201).send({
-        success: true,
-        data: policy,
-      });
-    });
+        return reply.status(201).send({
+          success: true,
+          data: policy,
+        });
+      }
+    );
 
     /**
      * Get retention policies for a tenant
      * GET /tenants/:tenantId/retention-policies
      */
-    fastify.get('/tenants/:tenantId/retention-policies', async (request, reply) => {
-      const { tenantId } = TenantIdParam.parse(request.params);
+    fastify.get(
+      '/tenants/:tenantId/retention-policies',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { tenantId } = TenantIdParam.parse(request.params);
 
-      const policies = await recordingService.getRetentionPolicies(tenantId);
+        const policies = await recordingService.getRetentionPolicies(tenantId);
 
-      return reply.send({
-        success: true,
-        data: policies,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: policies,
+        });
+      }
+    );
 
     /**
      * Update a retention policy
      * PATCH /tenants/:tenantId/retention-policies/:policyId
      */
-    fastify.patch('/tenants/:tenantId/retention-policies/:policyId', async (request, reply) => {
-      const { policyId } = PolicyIdParam.parse(request.params);
-      const body = UpdateRetentionPolicySchema.parse(request.body);
+    fastify.patch(
+      '/tenants/:tenantId/retention-policies/:policyId',
+      { preHandler: [requireAdmin] },
+      async (request, reply) => {
+        const { policyId } = PolicyIdParam.parse(request.params);
+        const body = UpdateRetentionPolicySchema.parse(request.body);
 
-      const policy = await recordingService.updateRetentionPolicy(policyId, body);
+        const policy = await recordingService.updateRetentionPolicy(policyId, body);
 
-      return reply.send({
-        success: true,
-        data: policy,
-      });
-    });
+        return reply.send({
+          success: true,
+          data: policy,
+        });
+      }
+    );
 
     /**
      * Delete a retention policy
      * DELETE /tenants/:tenantId/retention-policies/:policyId
      */
-    fastify.delete('/tenants/:tenantId/retention-policies/:policyId', async (request, reply) => {
-      const { policyId } = PolicyIdParam.parse(request.params);
+    fastify.delete(
+      '/tenants/:tenantId/retention-policies/:policyId',
+      { preHandler: [requireAdmin] },
+      async (request, reply) => {
+        const { policyId } = PolicyIdParam.parse(request.params);
 
-      await recordingService.deleteRetentionPolicy(policyId);
+        await recordingService.deleteRetentionPolicy(policyId);
 
-      return reply.send({
-        success: true,
-        message: 'Retention policy deleted successfully',
-      });
-    });
+        return reply.send({
+          success: true,
+          message: 'Retention policy deleted successfully',
+        });
+      }
+    );
 
     /**
      * Apply a retention policy to a recording
      * POST /recordings/:recordingId/retention-policy
      */
-    fastify.post('/recordings/:recordingId/retention-policy', async (request, reply) => {
-      const { recordingId } = RecordingIdParam.parse(request.params);
-      const body = ApplyRetentionPolicySchema.parse(request.body);
+    fastify.post(
+      '/recordings/:recordingId/retention-policy',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { recordingId } = RecordingIdParam.parse(request.params);
+        const body = ApplyRetentionPolicySchema.parse(request.body);
 
-      await recordingService.applyRetentionPolicy(recordingId, body.policyId);
+        await recordingService.applyRetentionPolicy(recordingId, body.policyId);
 
-      return reply.send({
-        success: true,
-        message: 'Retention policy applied successfully',
-      });
-    });
+        return reply.send({
+          success: true,
+          message: 'Retention policy applied successfully',
+        });
+      }
+    );
 
     // =========================================================================
     // STATS & CLEANUP
@@ -681,25 +774,29 @@ export function recordingRoutes(recordingService: RecordingService) {
      * Get recording stats for a tenant
      * GET /tenants/:tenantId/recordings/stats
      */
-    fastify.get('/tenants/:tenantId/recordings/stats', async (request, reply) => {
-      const { tenantId } = TenantIdParam.parse(request.params);
+    fastify.get(
+      '/tenants/:tenantId/recordings/stats',
+      { preHandler: [requireAuth] },
+      async (request, reply) => {
+        const { tenantId } = TenantIdParam.parse(request.params);
 
-      const stats = await recordingService.getStats(tenantId);
+        const stats = await recordingService.getStats(tenantId);
 
-      return reply.send({
-        success: true,
-        data: {
-          ...stats,
-          totalStorageBytes: stats.totalStorageBytes.toString(),
-        },
-      });
-    });
+        return reply.send({
+          success: true,
+          data: {
+            ...stats,
+            totalStorageBytes: stats.totalStorageBytes.toString(),
+          },
+        });
+      }
+    );
 
     /**
      * Cleanup expired recordings (admin endpoint)
      * POST /recordings/cleanup
      */
-    fastify.post('/recordings/cleanup', async (request, reply) => {
+    fastify.post('/recordings/cleanup', { preHandler: [requireAdmin] }, async (request, reply) => {
       const deletedCount = await recordingService.cleanupExpiredRecordings();
 
       return reply.send({

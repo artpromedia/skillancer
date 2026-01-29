@@ -23,6 +23,7 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastif
 
 import { getConfig } from './config/index.js';
 import { createContainmentMiddleware, createWatermarkMiddleware } from './middleware/index.js';
+import { authPlugin } from './plugins/auth.js';
 import {
   createLearningProfileRepository,
   createSkillGapRepository,
@@ -115,6 +116,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(sensible as any);
 
   await app.register(websocket as any);
+
+  // Register JWT authentication plugin (early in chain)
+  await app.register(authPlugin);
 
   // ===========================================================================
   // SERVICES
@@ -385,4 +389,3 @@ export * from './services/index.js';
 export * from './middleware/index.js';
 export * from './routes/index.js';
 export * from './types/index.js';
-
