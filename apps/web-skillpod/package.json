@@ -12,6 +12,7 @@
     "clean": "rm -rf .next dist node_modules"
   },
   "dependencies": {
+    "jose": "^5.2.0",
     "lucide-react": "^0.330.0",
     "next": "^16.1.1",
     "react": "^18.2.0",
