@@ -36,6 +36,7 @@ import { createTrustScoreRoutes } from './routes/trust-score.js';
 import { verificationRoutes } from './routes/verification.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { workHistoryRoutes } from './routes/work-history.js';
+import { gdprRoutes } from './routes/gdpr.js';
 import { initializeAuthService } from './services/auth.service.js';
 import { initializeAvatarService } from './services/avatar.service.js';
 import { initializeCertificationService } from './services/certification.service.js';

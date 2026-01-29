@@ -21,6 +21,7 @@ import { validateConfig, getConfig } from './config/index.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { notificationRoutes } from './routes/notification.routes.js';
 import { webhookRoutes } from './routes/webhook.routes.js';
+import { unsubscribeRoutes } from './routes/unsubscribe.routes.js';
 
 const prisma = new PrismaClient();
 
@@ -71,6 +72,7 @@ async function buildApp() {
   await fastify.register(healthRoutes);
   await fastify.register(notificationRoutes, { prefix: '/api/v1/notifications' });
   await fastify.register(webhookRoutes, { prefix: '/webhooks' });
+  await fastify.register(unsubscribeRoutes, { prefix: '/api/notifications' });
 
   // Error handler
   fastify.setErrorHandler((error, request, reply) => {

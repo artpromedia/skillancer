@@ -16,6 +16,16 @@
       "types": "./dist/index.d.ts"
     },
     "./globals.css": "./src/globals.css",
+    "./lib/utils": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./components/*": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
     "./button": {
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",

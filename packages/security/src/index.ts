@@ -9,6 +9,12 @@
 export {
   AuditService,
   SecurityEventSchema,
+  consentRequirements,
+  severityLevels,
+  highRiskEventTypes,
+  complianceRegulations,
+} from './audit';
+export type {
   SecurityEvent,
   SecurityEventType,
   SecurityEventCategory,
@@ -19,20 +25,17 @@ export {
   PIICategory,
   ConsentType,
   ConsentRecord,
-  consentRequirements,
   DataSubjectRequest,
   RetentionPolicy,
-  severityLevels,
-  highRiskEventTypes,
-  complianceRegulations,
 } from './audit';
 
 // ==================== Data Protection Module ====================
-export { DataProtectionService, EncryptedData, AnonymizationConfig } from './data-protection';
+export { DataProtectionService } from './data-protection';
+export type { EncryptedData, AnonymizationConfig } from './data-protection';
 
 // ==================== Threat Detection Module ====================
-export {
-  ThreatDetectionService,
+export { ThreatDetectionService } from './threat-detection';
+export type {
   LoginAttempt,
   LoginRiskAnalysis,
   LoginRiskLevel,
@@ -43,8 +46,8 @@ export {
 } from './threat-detection';
 
 // ==================== Compliance Module ====================
-export {
-  ComplianceReportingService,
+export { ComplianceReportingService } from './compliance';
+export type {
   ComplianceReport,
   ComplianceReportType,
   ComplianceReportSummary,
@@ -55,7 +58,8 @@ export {
 } from './compliance';
 
 // ==================== Routes Module ====================
-export { createSecurityRouter, SecurityRouterDependencies } from './routes';
+export { createSecurityRouter } from './routes';
+export type { SecurityRouterDependencies } from './routes';
 
 // ==================== Middleware Module ====================
 export {
@@ -64,10 +68,8 @@ export {
   createSensitiveOperationMiddleware,
   createSecureCORSMiddleware,
   createSecurityHeadersMiddleware,
-  SecurityMiddlewareConfig,
-  AuthenticatedRequest,
-  CORSConfig,
 } from './middleware';
+export type { SecurityMiddlewareConfig, AuthenticatedRequest, CORSConfig } from './middleware';
 
 // ==================== Brute Force Protection Module ====================
 export {
@@ -75,17 +77,19 @@ export {
   initializeBruteForceProtection,
   getBruteForceProtection,
   resetBruteForceProtection,
-  type BruteForceConfig,
-  type LoginAttemptResult,
-  type LockoutInfo,
-  // @ts-nocheck - TODO: Factory function parameters need alignment with service constructors
-  type NotificationCallback,
+} from './brute-force';
+export type {
+  BruteForceConfig,
+  LoginAttemptResult,
+  LockoutInfo,
+  NotificationCallback,
 } from './brute-force';
 
 // ==================== Factory Function ====================
 
 import { AuditService } from './audit';
-import { BruteForceProtection, type BruteForceConfig } from './brute-force';
+import { BruteForceProtection } from './brute-force';
+import type { BruteForceConfig } from './brute-force';
 import { ComplianceReportingService } from './compliance';
 import { DataProtectionService } from './data-protection';
 import { ThreatDetectionService } from './threat-detection';
@@ -188,9 +192,8 @@ export function createSecurityServices(config: SecurityServicesConfig): Security
 }
 
 // ==================== Vulnerability Management ====================
-export {
-  VulnerabilityScanner,
-  vulnerabilityScanner,
+export { VulnerabilityScanner, vulnerabilityScanner } from './vulnerability-scanner';
+export type {
   Vulnerability,
   VulnerabilitySeverity,
   VulnerabilityStatus,

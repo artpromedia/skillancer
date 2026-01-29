@@ -17,8 +17,8 @@
     "build": "tsup src/index.ts --format cjs,esm",
     "dev": "tsc --watch",
     "lint": "eslint src/",
-    "typecheck": "echo 'TODO: Fix 57 TypeScript errors - see SECURITY_TECH_DEBT.md' && exit 0",
-    "typecheck:strict": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "typecheck:strict": "tsc --noEmit --strict",
     "test": "vitest run",
     "test:watch": "vitest"
   },
