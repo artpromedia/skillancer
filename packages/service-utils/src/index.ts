@@ -78,3 +78,23 @@ export {
   type CsrfToken,
   type CsrfFetchOptions,
 } from './csrf/index.js';
+
+// HTTP Response Caching
+export {
+  cachingPlugin,
+  cacheControl,
+  noCache,
+  buildCacheControlHeader,
+  generateETag,
+  generateCacheKey,
+  hashCacheKey,
+  parseIfNoneMatch,
+  etagMatches,
+  parseIfModifiedSince,
+  wasModifiedSince,
+  formatLastModified,
+  CachePresets,
+  type CacheControlOptions,
+  type ETagOptions,
+  type CachingPluginConfig,
+} from './caching/index.js';

@@ -51,10 +51,7 @@ export {
 } from './client';
 
 // Cache Service
-export {
-  CacheService,
-  type CacheOptions,
-} from './cache-service';
+export { CacheService, type CacheOptions } from './cache-service';
 
 // Session Store
 export {
@@ -106,3 +103,14 @@ export {
   type ClusterNode,
   type ConfigValidationResult,
 } from './config';
+
+// Repository Cache
+export {
+  RepositoryCache,
+  createRepositoryCache,
+  hashFilters,
+  compoundKey,
+  type RepositoryCacheConfig,
+  type ListCacheOptions,
+  type CachedList,
+} from './repository-cache';

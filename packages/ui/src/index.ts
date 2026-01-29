@@ -265,6 +265,20 @@ export type {
 export { FileUpload } from './components/file-upload';
 export type { UploadedFile, FileUploadProps } from './components/file-upload';
 
+// Optimized Image - Performance-optimized image components
+export {
+  OptimizedImage,
+  AvatarImage as OptimizedAvatar,
+  BackgroundImage,
+  ImageGallery,
+} from './components/optimized-image';
+export type {
+  OptimizedImageProps,
+  AvatarImageProps,
+  BackgroundImageProps,
+  ImageGalleryProps,
+} from './components/optimized-image';
+
 // ============================================================================
 // Theme Provider
 // ============================================================================

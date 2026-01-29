@@ -134,10 +134,7 @@ function validateToken(
 
   // Verify signature
   const expectedSignature = signToken(cookieToken.value, cookieToken.timestamp, config.secret);
-  if (!crypto.timingSafeEqual(
-    Buffer.from(cookieToken.signature),
-    Buffer.from(expectedSignature)
-  )) {
+  if (!crypto.timingSafeEqual(Buffer.from(cookieToken.signature), Buffer.from(expectedSignature))) {
     return { valid: false, reason: 'Invalid CSRF cookie signature' };
   }
 
@@ -216,12 +213,12 @@ function extractToken(request: FastifyRequest, config: CsrfConfig): string | und
  */
 function shouldExclude(path: string, config: CsrfConfig): boolean {
   // Check exact paths
-  if (config.excludePaths.some(excluded => path.startsWith(excluded))) {
+  if (config.excludePaths.some((excluded) => path.startsWith(excluded))) {
     return true;
   }
 
   // Check patterns
-  if (config.excludePatterns.some(pattern => pattern.test(path))) {
+  if (config.excludePatterns.some((pattern) => pattern.test(path))) {
     return true;
   }
 
@@ -262,11 +259,17 @@ const csrfPluginImpl: FastifyPluginAsync<Partial<CsrfConfig>> = async (
       const age = Date.now() - existingToken.timestamp;
       if (age < config.tokenExpiry * 1000) {
         // Verify signature
-        const expectedSignature = signToken(existingToken.value, existingToken.timestamp, config.secret);
-        if (crypto.timingSafeEqual(
-          Buffer.from(existingToken.signature),
-          Buffer.from(expectedSignature)
-        )) {
+        const expectedSignature = signToken(
+          existingToken.value,
+          existingToken.timestamp,
+          config.secret
+        );
+        if (
+          crypto.timingSafeEqual(
+            Buffer.from(existingToken.signature),
+            Buffer.from(expectedSignature)
+          )
+        ) {
           // Token is valid, attach to request
           (request as any).csrfToken = existingToken;
           return;
@@ -313,11 +316,14 @@ const csrfPluginImpl: FastifyPluginAsync<Partial<CsrfConfig>> = async (
     const validation = validateToken(submittedToken, cookieToken, config);
 
     if (!validation.valid) {
-      request.log.warn({ 
-        reason: validation.reason,
-        path: request.url,
-        method: request.method,
-      }, 'CSRF validation failed');
+      request.log.warn(
+        {
+          reason: validation.reason,
+          path: request.url,
+          method: request.method,
+        },
+        'CSRF validation failed'
+      );
 
       return reply.status(403).send({
         statusCode: 403,
@@ -383,18 +389,18 @@ export interface CsrfFetchOptions extends RequestInit {
 export function createCsrfFetch(csrfToken: string) {
   return async (url: string, options: RequestInit = {}): Promise<Response> => {
     const method = options.method?.toUpperCase() || 'GET';
-    
+
     // Only add token for state-changing methods
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
       const headers = new Headers(options.headers);
       headers.set(defaultConfig.headerName, csrfToken);
-      
+
       return fetch(url, {
         ...options,
         headers,
       });
     }
-    
+
     return fetch(url, options);
   };
 }
@@ -441,9 +447,8 @@ export function createExpressCsrfMiddleware(options: Partial<CsrfConfig> = {}) {
     }
 
     // Validate token
-    const submittedToken = 
-      req.headers[config.headerName.toLowerCase()] ||
-      req.body?.[config.formFieldName];
+    const submittedToken =
+      req.headers[config.headerName.toLowerCase()] || req.body?.[config.formFieldName];
 
     const validation = validateToken(submittedToken, existingToken, config);
 
