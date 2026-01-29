@@ -65,11 +65,11 @@ void main() {
         page: anyNamed('page'),
         limit: anyNamed('limit'),
       )).thenAnswer((_) async => JobsPage(
-        jobs: testJobs,
-        total: 2,
-        page: 1,
-        totalPages: 1,
-      ));
+            jobs: testJobs,
+            total: 2,
+            page: 1,
+            totalPages: 1,
+          ));
 
       container = ProviderContainer(
         overrides: [
@@ -80,7 +80,7 @@ void main() {
       );
 
       final jobs = await container.read(jobsProvider.future);
-      
+
       expect(jobs, hasLength(2));
       expect(jobs.first.title, 'Senior Flutter Developer');
     });
@@ -108,7 +108,7 @@ void main() {
       notifier.state = filter;
 
       final filteredJobs = await container.read(filteredJobsProvider.future);
-      
+
       expect(filteredJobs, hasLength(1));
       expect(filteredJobs.first.skills, contains('Flutter'));
     });
@@ -118,11 +118,11 @@ void main() {
         page: anyNamed('page'),
         limit: anyNamed('limit'),
       )).thenAnswer((_) async => JobsPage(
-        jobs: [],
-        total: 0,
-        page: 1,
-        totalPages: 0,
-      ));
+            jobs: [],
+            total: 0,
+            page: 1,
+            totalPages: 0,
+          ));
 
       container = ProviderContainer(
         overrides: [
@@ -133,7 +133,7 @@ void main() {
       );
 
       final jobs = await container.read(jobsProvider.future);
-      
+
       expect(jobs, isEmpty);
     });
 
@@ -162,11 +162,11 @@ void main() {
         page: anyNamed('page'),
         limit: anyNamed('limit'),
       )).thenAnswer((_) async => JobsPage(
-        jobs: testJobs,
-        total: 2,
-        page: 1,
-        totalPages: 1,
-      ));
+            jobs: testJobs,
+            total: 2,
+            page: 1,
+            totalPages: 1,
+          ));
 
       when(mockLocalCache.set(any, any)).thenAnswer((_) async => {});
 
@@ -179,14 +179,13 @@ void main() {
       );
 
       await container.read(jobsProvider.future);
-      
+
       // Verify cache was called
       // This depends on actual implementation
     });
 
     test('should return cached jobs when offline', () async {
-      when(mockLocalCache.get('jobs_cache'))
-          .thenAnswer((_) async => testJobs);
+      when(mockLocalCache.get('jobs_cache')).thenAnswer((_) async => testJobs);
 
       container = ProviderContainer(
         overrides: [
@@ -216,7 +215,7 @@ void main() {
       );
 
       final job = await container.read(jobByIdProvider('job-1').future);
-      
+
       expect(job, isNotNull);
       expect(job!.id, 'job-1');
       expect(job.title, 'Senior Flutter Developer');
@@ -235,7 +234,7 @@ void main() {
       );
 
       final job = await container.read(jobByIdProvider('non-existent').future);
-      
+
       expect(job, isNull);
     });
   });
@@ -250,7 +249,7 @@ void main() {
       );
 
       final filter = container.read(jobFilterProvider);
-      
+
       expect(filter, equals(JobFilter.empty));
     });
 
@@ -263,14 +262,14 @@ void main() {
       );
 
       final notifier = container.read(jobFilterProvider.notifier);
-      
+
       final newFilter = JobFilter(
         category: 'Web Development',
         skills: ['React', 'Node.js'],
       );
-      
+
       notifier.state = newFilter;
-      
+
       expect(container.read(jobFilterProvider).category, 'Web Development');
       expect(container.read(jobFilterProvider).skills, contains('React'));
     });
@@ -284,21 +283,20 @@ void main() {
       );
 
       final notifier = container.read(jobFilterProvider.notifier);
-      
+
       // Set a filter
       notifier.state = JobFilter(category: 'Design');
-      
+
       // Reset
       notifier.state = JobFilter.empty;
-      
+
       expect(container.read(jobFilterProvider), equals(JobFilter.empty));
     });
   });
 
   group('SavedJobsProvider', () {
     test('should save job to favorites', () async {
-      when(mockJobsRepository.saveJob('job-1'))
-          .thenAnswer((_) async => true);
+      when(mockJobsRepository.saveJob('job-1')).thenAnswer((_) async => true);
 
       container = ProviderContainer(
         overrides: [
@@ -315,8 +313,7 @@ void main() {
     });
 
     test('should remove job from favorites', () async {
-      when(mockJobsRepository.unsaveJob('job-1'))
-          .thenAnswer((_) async => true);
+      when(mockJobsRepository.unsaveJob('job-1')).thenAnswer((_) async => true);
 
       container = ProviderContainer(
         overrides: [

@@ -48,7 +48,7 @@ void main() {
       );
 
       final authState = container.read(authStateProvider);
-      
+
       // Initial async state should be loading
       expect(authState, isA<AsyncLoading>());
     });
@@ -67,10 +67,10 @@ void main() {
         email: 'test@example.com',
         password: 'password123',
       )).thenAnswer((_) async => AuthState.authenticated(
-        user: testUser,
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
-      ));
+            user: testUser,
+            accessToken: 'access-token',
+            refreshToken: 'refresh-token',
+          ));
 
       when(mockSecureStorage.write(
         key: anyNamed('key'),
@@ -109,7 +109,7 @@ void main() {
       );
 
       final notifier = container.read(authStateProvider.notifier);
-      
+
       expect(
         () => notifier.login(email: 'wrong@example.com', password: 'wrong'),
         throwsException,

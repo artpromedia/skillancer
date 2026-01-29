@@ -25,7 +25,7 @@ void main() {
         final mockClient = MockClient((request) async {
           expect(request.method, 'GET');
           expect(request.url.path, '/api/v1/users/me');
-          
+
           return http.Response(
             jsonEncode({'id': 'user-123', 'email': 'test@example.com'}),
             200,
@@ -43,7 +43,7 @@ void main() {
         );
 
         final response = await apiClient.get('/api/v1/users/me');
-        
+
         expect(response.statusCode, 200);
         expect(response.data['id'], 'user-123');
       });
@@ -134,11 +134,11 @@ void main() {
         final mockClient = MockClient((request) async {
           expect(request.method, 'POST');
           expect(request.headers['Content-Type'], contains('application/json'));
-          
+
           final body = jsonDecode(request.body);
           expect(body['email'], 'test@example.com');
           expect(body['password'], 'password123');
-          
+
           return http.Response(
             jsonEncode({
               'access_token': 'new-token',
@@ -259,7 +259,7 @@ void main() {
         );
 
         final response = await apiClient.delete('/api/v1/sessions/123');
-        
+
         expect(response.statusCode, 204);
       });
     });
@@ -267,10 +267,10 @@ void main() {
     group('Token refresh', () {
       test('should automatically refresh token on 401', () async {
         var requestCount = 0;
-        
+
         final mockClient = MockClient((request) async {
           requestCount++;
-          
+
           if (requestCount == 1) {
             // First request fails with 401
             return http.Response(
@@ -300,7 +300,8 @@ void main() {
             .thenAnswer((_) async => 'expired-token');
         when(mockSecureStorage.read(key: 'refresh_token'))
             .thenAnswer((_) async => 'valid-refresh-token');
-        when(mockSecureStorage.write(key: anyNamed('key'), value: anyNamed('value')))
+        when(mockSecureStorage.write(
+                key: anyNamed('key'), value: anyNamed('value')))
             .thenAnswer((_) async => {});
 
         apiClient = ApiClient(
@@ -339,7 +340,7 @@ void main() {
     group('Retry logic', () {
       test('should retry on 500 server error', () async {
         var attempts = 0;
-        
+
         final mockClient = MockClient((request) async {
           attempts++;
           if (attempts < 3) {
@@ -356,7 +357,7 @@ void main() {
         );
 
         final response = await apiClient.get('/api/v1/users');
-        
+
         expect(attempts, 3);
         expect(response.statusCode, 200);
       });

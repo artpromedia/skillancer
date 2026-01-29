@@ -47,3 +47,34 @@ export {
   type DateRangeQuery,
   type SearchQuery,
 } from './validation/index.js';
+
+// Input Sanitization
+export {
+  sanitizationPlugin,
+  sanitizeString,
+  sanitizeObject,
+  sanitizeUrl,
+  sanitizeEmail,
+  sanitizeFilename,
+  encodeHtmlEntities,
+  decodeHtmlEntities,
+  stripDangerousHtml,
+  stripAllHtml,
+  detectSqlInjection,
+  escapeSqlString,
+  type SanitizationConfig,
+  type SanitizedResult,
+  type SanitizationPluginConfig,
+} from './sanitization/index.js';
+
+// CSRF Protection
+export {
+  csrfPlugin,
+  getCsrfToken,
+  createCsrfFetch,
+  createExpressCsrfMiddleware,
+  csrfClientConfig,
+  type CsrfConfig,
+  type CsrfToken,
+  type CsrfFetchOptions,
+} from './csrf/index.js';
