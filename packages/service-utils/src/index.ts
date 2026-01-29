@@ -108,3 +108,14 @@ export {
   type DependencyHealth,
   type HealthDashboard,
 } from './health-dashboard/index.js';
+
+// Rate Limiting
+export {
+  rateLimitingPlugin,
+  rateLimit,
+  keyGenerators,
+  RateLimitPresets,
+  type RateLimitConfig,
+  type RateLimitInfo,
+  type RateLimitStore,
+} from './rate-limiting/index.js';

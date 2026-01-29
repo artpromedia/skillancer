@@ -3,6 +3,8 @@
  * Multi-platform push notification delivery
  */
 
+import { logger } from '@skillancer/logger';
+
 export interface PushConfig {
   fcmServiceAccount?: Record<string, unknown>;
   apnsKeyId?: string;
@@ -98,7 +100,7 @@ export class PushProvider {
     }
     userSubscriptions.get(userId)!.add(id);
 
-    console.log(`[PUSH] Registered device ${deviceId} for user ${userId}`);
+    logger.info({ deviceId, userId, platform }, 'Push device registered');
 
     return subscription;
   }
@@ -177,8 +179,9 @@ export class PushProvider {
 
     pushLog.push(result);
 
-    console.log(
-      `[PUSH] Sent to ${message.userId}: ${deliveredTo.length} delivered, ${failedDevices.length} failed`
+    logger.info(
+      { userId: message.userId, delivered: deliveredTo.length, failed: failedDevices.length },
+      'Push notification sent'
     );
 
     return result;

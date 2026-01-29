@@ -3,6 +3,8 @@
  * SOC 2 compliant email delivery with tracking
  */
 
+import { logger } from '@skillancer/logger';
+
 export interface EmailConfig {
   provider: 'sendgrid' | 'ses' | 'mailgun' | 'smtp';
   apiKey?: string;
@@ -122,7 +124,10 @@ export class EmailProvider {
         this.logDelivery(id, messageId, email, 'sent');
       }
 
-      console.log(`[EMAIL] Sent ${id} to ${recipients.to.join(', ')}`);
+      logger.info(
+        { id, recipients: recipients.to, provider: this.config.provider },
+        'Email sent successfully'
+      );
 
       return result;
     } catch (error) {

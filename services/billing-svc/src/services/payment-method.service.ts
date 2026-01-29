@@ -5,6 +5,7 @@
 
 import { prisma } from '@skillancer/database';
 
+import { logger } from '../lib/logger.js';
 import { getStripeService } from './stripe.service.js';
 import { getConfig } from '../config/index.js';
 import {
@@ -16,7 +17,11 @@ import {
   UnauthorizedPaymentMethodAccessError,
 } from '../errors/index.js';
 
-import type { PaymentMethod, PaymentMethodType, PaymentMethodStatus } from '../types/prisma-shim.js';
+import type {
+  PaymentMethod,
+  PaymentMethodType,
+  PaymentMethodStatus,
+} from '../types/prisma-shim.js';
 import type Stripe from 'stripe';
 
 // =============================================================================
@@ -874,13 +879,17 @@ export class PaymentMethodService {
     user: { id: string; email: string; firstName: string },
     card: PaymentMethod
   ): void {
-    console.log(`[NOTIFICATION] Card expiring for user ${user.email}:`, {
-      userId: user.id,
-      cardLast4: card.cardLast4,
-      cardBrand: card.cardBrand,
-      expMonth: card.cardExpMonth,
-      expYear: card.cardExpYear,
-    });
+    logger.info(
+      {
+        userId: user.id,
+        email: user.email,
+        cardLast4: card.cardLast4,
+        cardBrand: card.cardBrand,
+        expMonth: card.cardExpMonth,
+        expYear: card.cardExpYear,
+      },
+      'Card expiring notification sent'
+    );
   }
 }
 

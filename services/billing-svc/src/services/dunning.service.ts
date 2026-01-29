@@ -11,6 +11,7 @@
 import Stripe from 'stripe';
 
 import { getConfig, type Config } from '../config/index.js';
+import { logger } from '../lib/logger.js';
 import { getSubscriptionRepository } from '../repositories/subscription.repository.js';
 
 import type { SubscriptionRepository } from '../repositories/subscription.repository.js';
@@ -109,8 +110,8 @@ export class DunningService {
    * Initialize dunning job queue
    */
   initialize(): void {
-    console.warn('[Dunning Service] Full dunning support requires schema migration.');
-    console.warn('[Dunning Service] Using stub implementation.');
+    logger.warn({ service: 'dunning' }, 'Full dunning support requires schema migration');
+    logger.warn({ service: 'dunning' }, 'Using stub implementation');
     this.initialized = true;
   }
 
@@ -124,8 +125,10 @@ export class DunningService {
       throw new Error(`Subscription not found: ${subscriptionId}`);
     }
 
-    console.log(`[Dunning Service] Would start dunning for subscription ${subscriptionId}`);
-    console.log(`[Dunning Service] Schedule: ${this.schedule.steps.length} steps`);
+    logger.info(
+      { subscriptionId, steps: this.schedule.steps.length },
+      'Would start dunning for subscription'
+    );
 
     // In the full implementation, this would:
     // 1. Create dunning attempt records in database
@@ -137,7 +140,7 @@ export class DunningService {
    * Stop dunning process for a subscription
    */
   stopDunning(subscriptionId: string): void {
-    console.log(`[Dunning Service] Would stop dunning for subscription ${subscriptionId}`);
+    logger.info({ subscriptionId }, 'Would stop dunning for subscription');
     // In the full implementation, this would:
     // 1. Cancel all scheduled dunning jobs
     // 2. Update dunning attempt records as skipped
@@ -149,8 +152,10 @@ export class DunningService {
   processDunningStep(data: DunningJobData): void {
     const { subscriptionId, step, attemptNumber } = data;
 
-    console.log(`[Dunning Service] Processing step ${attemptNumber} for ${subscriptionId}`);
-    console.log(`[Dunning Service] Action: ${step.action}, Template: ${step.template}`);
+    logger.info(
+      { subscriptionId, attemptNumber, action: step.action, template: step.template },
+      'Processing dunning step'
+    );
 
     // In the full implementation, this would:
     // 1. Execute the dunning action (email, SMS, cancel)
@@ -234,7 +239,7 @@ export class DunningService {
    * Shutdown service gracefully
    */
   shutdown(): void {
-    console.log('[Dunning Service] Shutting down');
+    logger.info({ service: 'dunning' }, 'Shutting down dunning service');
     this.initialized = false;
   }
 }

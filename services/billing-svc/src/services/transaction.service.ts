@@ -6,6 +6,7 @@
 
 import { prisma } from '@skillancer/database';
 
+import { logger } from '../lib/logger.js';
 import { getStripeService } from './stripe.service.js';
 import {
   TransactionNotFoundError,
@@ -389,8 +390,9 @@ export class TransactionService {
     });
 
     if (!transaction) {
-      console.log(
-        `[Transaction] No transaction found for payment intent ${paymentIntent.id}, may be external`
+      logger.info(
+        { paymentIntentId: paymentIntent.id },
+        'No transaction found for payment intent, may be external'
       );
       return;
     }
@@ -407,7 +409,10 @@ export class TransactionService {
       },
     });
 
-    console.log(`[Transaction] Payment intent ${paymentIntent.id} succeeded`);
+    logger.info(
+      { paymentIntentId: paymentIntent.id, transactionId: transaction.id },
+      'Payment intent succeeded'
+    );
   }
 
   /**
@@ -431,7 +436,10 @@ export class TransactionService {
       },
     });
 
-    console.log(`[Transaction] Payment intent ${paymentIntent.id} failed`);
+    logger.info(
+      { paymentIntentId: paymentIntent.id, transactionId: transaction.id },
+      'Payment intent failed'
+    );
   }
 
   /**
@@ -466,7 +474,10 @@ export class TransactionService {
       },
     });
 
-    console.log(`[Transaction] Charge ${charge.id} refunded (full: ${isFullRefund})`);
+    logger.info(
+      { chargeId: charge.id, transactionId: transaction.id, isFullRefund },
+      'Charge refunded'
+    );
   }
 
   // ===========================================================================

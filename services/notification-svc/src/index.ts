@@ -116,22 +116,24 @@ async function start() {
 
     await app.listen({ port: config.port, host: config.host });
 
-    console.log(`Notification Service running on http://${config.host}:${config.port}`);
-    console.log(`Health check: http://${config.host}:${config.port}/health`);
+    app.log.info({ host: config.host, port: config.port }, 'Notification Service running');
+    app.log.info({ url: `http://${config.host}:${config.port}/health` }, 'Health check endpoint');
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
 }
 
+const { logger } = await import('@skillancer/logger');
+
 prisma
   .$connect()
   .then(() => {
-    console.log('Connected to database');
+    logger.info('Connected to database');
     return start();
   })
   .catch((error) => {
-    console.error('Failed to connect to database:', error);
+    logger.error({ error }, 'Failed to connect to database');
     process.exit(1);
   });
 
