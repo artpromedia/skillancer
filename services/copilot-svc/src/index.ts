@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
 
+import { authPlugin } from './plugins/auth.js';
 import { healthRoutes } from './routes/health.routes';
 import { copilotRoutes } from './routes/copilot.routes';
 
@@ -33,6 +34,9 @@ async function buildApp() {
   await fastify.register(helmet as any, {
     contentSecurityPolicy: false,
   });
+
+  // Register JWT authentication plugin
+  await fastify.register(authPlugin);
 
   fastify.decorateRequest('prisma', null);
   fastify.addHook('onRequest', async (request) => {

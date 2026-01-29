@@ -1,6 +1,6 @@
 /**
  * @module @skillancer/copilot-svc/routes/copilot
- * AI Copilot routes with proper input validation
+ * AI Copilot routes with proper input validation and authentication
  */
 
 import { z } from 'zod';
@@ -8,6 +8,8 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { CopilotService } from '../services/copilot.service';
 import { PrismaClient } from '@prisma/client';
+import { requireAuth, optionalAuth } from '../plugins/auth.js';
+import type { AuthenticatedUser } from '../plugins/auth.js';
 import {
   GenerateProposalDraftSchema,
   UpdateProposalDraftSchema,
@@ -26,16 +28,12 @@ const copilotService = new CopilotService(prisma);
 // TYPES
 // =============================================================================
 
-interface UserPayload {
-  id: string;
-  email?: string;
-}
-
-// Helper to get user from request (throws if not authenticated)
-function requireUser(request: FastifyRequest): UserPayload {
-  const user = (request as any).user as UserPayload | undefined;
-  if (!user?.id) {
-    throw new Error('Unauthorized');
+// Helper to get authenticated user from request (guaranteed after requireAuth)
+function getAuthenticatedUser(request: FastifyRequest): AuthenticatedUser {
+  const user = request.user;
+  if (!user?.userId) {
+    // This should never happen if requireAuth preHandler ran
+    throw new Error('User not authenticated');
   }
   return user;
 }
@@ -64,6 +62,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/proposals/draft',
     {
+      preHandler: [requireAuth],
       schema: {
         description: 'Generate a new proposal draft using AI',
         tags: ['Proposals'],
@@ -93,19 +92,16 @@ export async function copilotRoutes(fastify: FastifyInstance) {
       reply: FastifyReply
     ) => {
       try {
-        const user = requireUser(request);
+        const user = getAuthenticatedUser(request);
         const input = GenerateProposalDraftSchema.parse(request.body);
 
         const result = await copilotService.generateProposalDraft({
-          userId: user.id,
+          userId: user.userId,
           ...input,
         } as any);
 
         return reply.status(201).send(result);
       } catch (error: any) {
-        if (error.message === 'Unauthorized') {
-          return reply.status(401).send({ error: 'Unauthorized' });
-        }
         if (error instanceof z.ZodError) {
           return reply.status(400).send({ error: 'Validation failed', details: error.errors });
         }
@@ -126,9 +122,11 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/proposals/draft/:draftId',
     {
+      preHandler: [requireAuth],
       schema: {
         description: 'Get a specific proposal draft',
         tags: ['Proposals'],
+        security: [{ bearerAuth: [] }],
         params: zodToJsonSchema(DraftIdParamsSchema),
         response: {
           200: {
@@ -180,9 +178,11 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/proposals/draft/:draftId',
     {
+      preHandler: [requireAuth],
       schema: {
         description: 'Update a proposal draft',
         tags: ['Proposals'],
+        security: [{ bearerAuth: [] }],
         params: zodToJsonSchema(DraftIdParamsSchema),
         body: zodToJsonSchema(UpdateProposalDraftSchema),
         response: {
@@ -230,6 +230,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/proposals/drafts',
     {
+      preHandler: [requireAuth],
       schema: {
         description: "Get user's proposal drafts",
         tags: ['Proposals'],
@@ -249,16 +250,13 @@ export async function copilotRoutes(fastify: FastifyInstance) {
       reply: FastifyReply
     ) => {
       try {
-        const user = requireUser(request);
+        const user = getAuthenticatedUser(request);
         const query = GetProposalDraftsQuerySchema.parse(request.query);
 
-        const drafts = await copilotService.getUserProposalDrafts(user.id, query.status);
+        const drafts = await copilotService.getUserProposalDrafts(user.userId, query.status);
 
         return reply.send(drafts);
       } catch (error: any) {
-        if (error.message === 'Unauthorized') {
-          return reply.status(401).send({ error: 'Unauthorized' });
-        }
         if (error instanceof z.ZodError) {
           return reply.status(400).send({ error: 'Invalid query parameters' });
         }
@@ -279,6 +277,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/rates/suggest',
     {
+      preHandler: [requireAuth],
       schema: {
         description: 'Get rate suggestions based on skills and experience',
         tags: ['Rates'],
@@ -307,19 +306,16 @@ export async function copilotRoutes(fastify: FastifyInstance) {
       reply: FastifyReply
     ) => {
       try {
-        const user = requireUser(request);
+        const user = getAuthenticatedUser(request);
         const input = SuggestRateSchema.parse(request.body);
 
         const result = await copilotService.suggestRate({
-          userId: user.id,
+          userId: user.userId,
           ...input,
         } as any);
 
         return reply.send(result);
       } catch (error: any) {
-        if (error.message === 'Unauthorized') {
-          return reply.status(401).send({ error: 'Unauthorized' });
-        }
         if (error instanceof z.ZodError) {
           return reply.status(400).send({ error: 'Validation failed', details: error.errors });
         }
@@ -340,6 +336,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/messages/assist',
     {
+      preHandler: [requireAuth],
       schema: {
         description: 'Get AI assistance for composing messages',
         tags: ['Messages'],
@@ -367,19 +364,16 @@ export async function copilotRoutes(fastify: FastifyInstance) {
       reply: FastifyReply
     ) => {
       try {
-        const user = requireUser(request);
+        const user = getAuthenticatedUser(request);
         const input = AssistMessageSchema.parse(request.body);
 
         const result = await copilotService.assistMessage({
-          userId: user.id,
+          userId: user.userId,
           ...input,
         } as any);
 
         return reply.send(result);
       } catch (error: any) {
-        if (error.message === 'Unauthorized') {
-          return reply.status(401).send({ error: 'Unauthorized' });
-        }
         if (error instanceof z.ZodError) {
           return reply.status(400).send({ error: 'Validation failed', details: error.errors });
         }
@@ -400,6 +394,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/profile/optimize',
     {
+      preHandler: [requireAuth],
       schema: {
         description: 'Get AI suggestions for profile optimization',
         tags: ['Profile'],
@@ -429,19 +424,16 @@ export async function copilotRoutes(fastify: FastifyInstance) {
       reply: FastifyReply
     ) => {
       try {
-        const user = requireUser(request);
+        const user = getAuthenticatedUser(request);
         const input = OptimizeProfileSchema.parse(request.body);
 
         const result = await copilotService.optimizeProfile({
-          userId: user.id,
+          userId: user.userId,
           ...input,
         } as any);
 
         return reply.send(result);
       } catch (error: any) {
-        if (error.message === 'Unauthorized') {
-          return reply.status(401).send({ error: 'Unauthorized' });
-        }
         if (error instanceof z.ZodError) {
           return reply.status(400).send({ error: 'Validation failed', details: error.errors });
         }
@@ -458,10 +450,12 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   /**
    * POST /market/insights
    * Get market insights for skills and industries
+   * This endpoint works with or without authentication
    */
   fastify.post(
     '/market/insights',
     {
+      preHandler: [optionalAuth],
       schema: {
         description: 'Get market insights for skills and industries',
         tags: ['Market'],
@@ -516,6 +510,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/history',
     {
+      preHandler: [requireAuth],
       schema: {
         description: "Get user's copilot interaction history",
         tags: ['History'],
@@ -535,20 +530,17 @@ export async function copilotRoutes(fastify: FastifyInstance) {
       reply: FastifyReply
     ) => {
       try {
-        const user = requireUser(request);
+        const user = getAuthenticatedUser(request);
         const query = GetHistoryQuerySchema.parse(request.query);
 
         const history = await copilotService.getInteractionHistory(
-          user.id,
+          user.userId,
           query.type as any,
           query.limit
         );
 
         return reply.send(history);
       } catch (error: any) {
-        if (error.message === 'Unauthorized') {
-          return reply.status(401).send({ error: 'Unauthorized' });
-        }
         if (error instanceof z.ZodError) {
           return reply.status(400).send({ error: 'Invalid query parameters' });
         }
