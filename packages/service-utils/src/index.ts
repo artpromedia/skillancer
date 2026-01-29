@@ -98,3 +98,13 @@ export {
   type ETagOptions,
   type CachingPluginConfig,
 } from './caching/index.js';
+
+// Health Dashboard
+export {
+  healthDashboardPlugin,
+  type HealthDashboardConfig,
+  type ServiceHealth,
+  type SystemMetrics,
+  type DependencyHealth,
+  type HealthDashboard,
+} from './health-dashboard/index.js';

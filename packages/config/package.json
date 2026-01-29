@@ -18,11 +18,17 @@
     "./eslint/node": "./eslint/node.js",
     "./prettier": "./prettier/index.js",
     "./tailwind/preset": "./tailwind/preset.js",
-    "./tailwind/*": "./tailwind/*.js"
+    "./tailwind/*": "./tailwind/*.js",
+    "./env-validator": {
+      "types": "./dist/env-validator.d.ts",
+      "import": "./dist/env-validator.js",
+      "require": "./dist/env-validator.js"
+    }
   },
   "scripts": {
     "lint": "eslint . --ext .js,.ts",
-    "clean": "rm -rf node_modules"
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf node_modules dist"
   },
   "dependencies": {
     "@next/eslint-plugin-next": "^14.1.0",
@@ -36,7 +42,8 @@
     "eslint-plugin-n": "^16.6.0",
     "eslint-plugin-react": "^7.33.0",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "prettier-plugin-tailwindcss": "^0.5.11"
+    "prettier-plugin-tailwindcss": "^0.5.11",
+    "zod": "^3.22.0"
   },
   "devDependencies": {
     "eslint": "^8.56.0",

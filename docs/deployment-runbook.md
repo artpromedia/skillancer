@@ -297,6 +297,36 @@ After each production deployment:
 - [ ] Redis connections healthy
 - [ ] External APIs responding
 
+### Pre-Deployment Checks
+
+Before deploying to production, run the launch readiness check:
+
+```bash
+# Full launch readiness check
+pnpm launch:check --full
+
+# Quick check (skip long-running tests)
+pnpm launch:check
+
+# Environment validation only
+pnpm launch:check --env-only
+```
+
+The launch readiness script validates:
+
+- Required configuration files
+- Environment variables
+- Package dependencies
+- Service configurations
+- TypeScript compilation
+- Test suites
+- Linting
+- Build process
+- Database connectivity
+- Docker configuration
+- Security settings
+- Documentation
+
 ### Verification Script
 
 ```bash
@@ -328,6 +358,27 @@ curl -s "$BASE_URL/api/v1/auth/status" | jq .
 
 echo "All checks complete!"
 ```
+
+### Health Dashboard Endpoints
+
+The platform provides comprehensive health monitoring at multiple levels:
+
+| Endpoint            | Purpose                         | Kubernetes Probe |
+| ------------------- | ------------------------------- | ---------------- |
+| `/health`           | Basic health check              | -                |
+| `/health/live`      | Liveness probe                  | livenessProbe    |
+| `/health/ready`     | Readiness probe (includes deps) | readinessProbe   |
+| `/health/dashboard` | Full system dashboard           | -                |
+
+Dashboard response includes:
+
+- Overall system status (healthy/degraded/unhealthy)
+- Individual service health
+- Database connectivity
+- Redis connectivity
+- External service status
+- System metrics (memory, CPU)
+- Uptime and version information
 
 ---
 
