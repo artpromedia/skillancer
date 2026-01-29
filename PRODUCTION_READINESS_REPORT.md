@@ -306,13 +306,13 @@ The following launch readiness improvements have been implemented:
 
 The following final improvements have been implemented:
 
-| #   | Issue                               | Fix Applied                                                     | Status   |
-| --- | ----------------------------------- | --------------------------------------------------------------- | -------- |
-| 1   | E2E tests missing                   | Verified comprehensive Playwright test suite already exists     | VERIFIED |
-| 2   | Mobile API not connected            | Verified repositories already use ApiClient                     | VERIFIED |
+| #   | Issue                               | Fix Applied                                                                           | Status   |
+| --- | ----------------------------------- | ------------------------------------------------------------------------------------- | -------- |
+| 1   | E2E tests missing                   | Verified comprehensive Playwright test suite already exists                           | VERIFIED |
+| 2   | Mobile API not connected            | Verified repositories already use ApiClient                                           | VERIFIED |
 | 3   | Console.log in billing services     | Replaced with structured logger in dunning, transaction, subscription, payment-method | FIXED    |
-| 4   | Console.log in notification service | Replaced with structured logger in providers and main service   | FIXED    |
-| 5   | No rate limiting middleware         | Created reusable rate-limiting plugin with presets              | FIXED    |
+| 4   | Console.log in notification service | Replaced with structured logger in providers and main service                         | FIXED    |
+| 5   | No rate limiting middleware         | Created reusable rate-limiting plugin with presets                                    | FIXED    |
 
 **Files Created/Changed:**
 
@@ -335,27 +335,27 @@ The following final improvements have been implemented:
 
 **Rate Limiting Presets Available:**
 
-| Preset        | Max Requests | Window  | Use Case                |
-| ------------- | ------------ | ------- | ----------------------- |
-| standard      | 100          | 1 min   | General API endpoints   |
-| strict        | 10           | 1 min   | Sensitive endpoints     |
-| auth          | 5            | 15 min  | Login/authentication    |
-| passwordReset | 3            | 1 hour  | Password reset          |
-| upload        | 20           | 1 hour  | File uploads            |
-| search        | 30           | 1 min   | Search/expensive queries|
-| webhook       | 1000         | 1 min   | Webhook endpoints       |
-| public        | 60           | 1 min   | Public endpoints        |
+| Preset        | Max Requests | Window | Use Case                 |
+| ------------- | ------------ | ------ | ------------------------ |
+| standard      | 100          | 1 min  | General API endpoints    |
+| strict        | 10           | 1 min  | Sensitive endpoints      |
+| auth          | 5            | 15 min | Login/authentication     |
+| passwordReset | 3            | 1 hour | Password reset           |
+| upload        | 20           | 1 hour | File uploads             |
+| search        | 30           | 1 min  | Search/expensive queries |
+| webhook       | 1000         | 1 min  | Webhook endpoints        |
+| public        | 60           | 1 min  | Public endpoints         |
 
 ---
 
 ## Remaining Issues (Post-Launch Improvements)
 
-| #   | Issue                               | Location                        | Impact              | Priority |
-| --- | ----------------------------------- | ------------------------------- | ------------------- | -------- |
-| 1   | ~1,200 `any` type usages            | Throughout codebase             | Type safety         | Low      |
-| 2   | ~50 hardcoded localhost URLs        | Services config                 | Config risk         | Low      |
-| 3   | CPO suite page placeholder          | web-cockpit                     | Incomplete feature  | Medium   |
-| 4   | Mobile providers use mock data      | For dev mode only               | Non-blocking        | Low      |
+| #   | Issue                          | Location            | Impact             | Priority |
+| --- | ------------------------------ | ------------------- | ------------------ | -------- |
+| 1   | ~1,200 `any` type usages       | Throughout codebase | Type safety        | Low      |
+| 2   | ~50 hardcoded localhost URLs   | Services config     | Config risk        | Low      |
+| 3   | CPO suite page placeholder     | web-cockpit         | Incomplete feature | Medium   |
+| 4   | Mobile providers use mock data | For dev mode only   | Non-blocking       | Low      |
 
 _Note: These are all non-blocking improvements that can be addressed post-launch._
 
@@ -364,12 +364,12 @@ _Note: These are all non-blocking improvements that can be addressed post-launch
 ## ~~Remaining Critical Blockers~~
 
 ~~All critical blockers have been resolved.~~
-| 5   | Contract routes commented out in market-svc   | `services/market-svc/src/routes/index.ts:174`       | Missing feature    | 2d        |
-| 6   | Contract management incomplete in cockpit-svc | `services/cockpit-svc/src/routes/index.ts:174`      | Missing feature    | 2d        |
-| 7   | Chart placeholders in admin dashboard         | `apps/admin`                                        | Incomplete UI      | 1d        |
-| 8   | ~~Hardcoded admin password in seed~~          | ~~`packages/database/scripts/production-seed.ts`~~  | ~~Security~~       | **FIXED** |
-| 9   | Migration 20251219124848\_ has empty name     | `packages/database/prisma/migrations/`              | DB stability       | 4h        |
-| 10  | Push notification token not sent to backend   | `apps/mobile/.../push_notification_service.dart:44` | Notifications      | 4h        |
+| 5 | Contract routes commented out in market-svc | `services/market-svc/src/routes/index.ts:174` | Missing feature | 2d |
+| 6 | Contract management incomplete in cockpit-svc | `services/cockpit-svc/src/routes/index.ts:174` | Missing feature | 2d |
+| 7 | Chart placeholders in admin dashboard | `apps/admin` | Incomplete UI | 1d |
+| 8 | ~~Hardcoded admin password in seed~~ | ~~`packages/database/scripts/production-seed.ts`~~ | ~~Security~~ | **FIXED** |
+| 9 | Migration 20251219124848\_ has empty name | `packages/database/prisma/migrations/` | DB stability | 4h |
+| 10 | Push notification token not sent to backend | `apps/mobile/.../push_notification_service.dart:44` | Notifications | 4h |
 
 ---
 
