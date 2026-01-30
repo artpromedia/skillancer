@@ -10,6 +10,7 @@
  * @module app/layout
  */
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Home,
   Clock,
@@ -37,6 +38,20 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import '../styles/globals.css';
+
+// ============================================================================
+// TanStack Query Client
+// ============================================================================
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 3,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // ============================================================================
 // Types
@@ -409,23 +424,25 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body className="bg-gray-50 dark:bg-gray-900">
-        <div className="flex min-h-screen">
-          {/* Sidebar */}
-          <Sidebar
-            currentPath={pathname}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-          />
+        <QueryClientProvider client={queryClient}>
+          <div className="flex min-h-screen">
+            {/* Sidebar */}
+            <Sidebar
+              currentPath={pathname}
+              isOpen={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+            />
 
-          {/* Main Content */}
-          <div className="flex flex-1 flex-col">
-            <Header notifications={notifications} onMenuClick={() => setSidebarOpen(true)} />
-            <main className="flex-1">{children}</main>
+            {/* Main Content */}
+            <div className="flex flex-1 flex-col">
+              <Header notifications={notifications} onMenuClick={() => setSidebarOpen(true)} />
+              <main className="flex-1">{children}</main>
+            </div>
           </div>
-        </div>
 
-        {/* Floating Action Button */}
-        <FloatingActionButton />
+          {/* Floating Action Button */}
+          <FloatingActionButton />
+        </QueryClientProvider>
       </body>
     </html>
   );
