@@ -9,6 +9,8 @@
  * @module app/projects/page
  */
 
+/* eslint-disable @next/next/no-img-element */
+
 import {
   FolderKanban,
   Search,
@@ -62,6 +64,7 @@ interface Project {
 
 // ============================================================================
 // Mock Data
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/projects
 // ============================================================================
 
 const mockProjects: Project[] = [

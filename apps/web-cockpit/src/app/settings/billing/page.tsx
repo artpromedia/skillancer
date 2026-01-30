@@ -6,38 +6,34 @@
  * Shows current subscription plan, usage metrics, add-ons, and invoices.
  */
 
-import { useState } from 'react';
-import Link from 'next/link';
-import {
-  CreditCard,
-  Check,
-  AlertCircle,
-  TrendingUp,
-  Download,
-  Calendar,
-  Shield,
-  Users,
-  Briefcase,
-  Zap,
-  ChevronRight,
-  Settings,
-  Plus,
-  Clock,
-  BarChart3,
-} from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@skillancer/ui/card';
-import { Button } from '@skillancer/ui/button';
-import { Badge } from '@skillancer/ui/badge';
-import { Progress } from '@skillancer/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@skillancer/ui';
+import { Badge } from '@skillancer/ui/badge';
+import { Button } from '@skillancer/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@skillancer/ui/card';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@skillancer/ui/dialog';
+import { Progress } from '@skillancer/ui/progress';
+import {
+  BarChart3,
+  Briefcase,
+  Calendar,
+  Check,
+  ChevronRight,
+  CreditCard,
+  Download,
+  Plus,
+  Shield,
+  Users,
+  Zap,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
 
 // =============================================================================
 // TYPES
@@ -83,6 +79,7 @@ interface Invoice {
 
 // =============================================================================
 // MOCK DATA
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/billing
 // =============================================================================
 
 const mockSubscription: SubscriptionInfo = {
@@ -103,14 +100,39 @@ const mockUsage: UsageInfo = {
 };
 
 const mockAddons: Addon[] = [
-  { id: '1', type: 'EXTRA_CLIENT_SLOT', name: 'Extra Client Slot', quantity: 2, unitPrice: 49, active: true },
+  {
+    id: '1',
+    type: 'EXTRA_CLIENT_SLOT',
+    name: 'Extra Client Slot',
+    quantity: 2,
+    unitPrice: 49,
+    active: true,
+  },
   { id: '2', type: 'TEAM_SEAT', name: 'Team Seat', quantity: 3, unitPrice: 29, active: true },
 ];
 
 const mockInvoices: Invoice[] = [
-  { id: 'inv-001', date: '2024-10-01', amount: 695, status: 'paid', description: 'Pro Plan + 2 Add-ons' },
-  { id: 'inv-002', date: '2024-09-01', amount: 695, status: 'paid', description: 'Pro Plan + 2 Add-ons' },
-  { id: 'inv-003', date: '2024-08-01', amount: 597, status: 'paid', description: 'Pro Plan + 1 Add-on' },
+  {
+    id: 'inv-001',
+    date: '2024-10-01',
+    amount: 695,
+    status: 'paid',
+    description: 'Pro Plan + 2 Add-ons',
+  },
+  {
+    id: 'inv-002',
+    date: '2024-09-01',
+    amount: 695,
+    status: 'paid',
+    description: 'Pro Plan + 2 Add-ons',
+  },
+  {
+    id: 'inv-003',
+    date: '2024-08-01',
+    amount: 597,
+    status: 'paid',
+    description: 'Pro Plan + 1 Add-on',
+  },
   { id: 'inv-004', date: '2024-07-01', amount: 499, status: 'paid', description: 'Pro Plan' },
 ];
 
@@ -142,7 +164,7 @@ function UsageBar({ current, limit, label }: { current: number; limit: number; l
     <div className="space-y-2">
       <div className="flex justify-between text-sm">
         <span className="text-gray-600">{label}</span>
-        <span className={isAtLimit ? 'text-red-600 font-medium' : 'text-gray-900'}>
+        <span className={isAtLimit ? 'font-medium text-red-600' : 'text-gray-900'}>
           {current} / {isUnlimited ? '∞' : limit}
         </span>
       </div>
@@ -153,15 +175,15 @@ function UsageBar({ current, limit, label }: { current: number; limit: number; l
         />
       )}
       {isUnlimited && (
-        <div className="h-2 bg-green-100 rounded-full overflow-hidden">
-          <div className="h-full w-full bg-green-400 animate-pulse" style={{ opacity: 0.5 }} />
+        <div className="h-2 overflow-hidden rounded-full bg-green-100">
+          <div className="h-full w-full animate-pulse bg-green-400" style={{ opacity: 0.5 }} />
         </div>
       )}
     </div>
   );
 }
 
-function PlanCard({
+function _PlanCard({
   tier,
   price,
   features,
@@ -189,7 +211,7 @@ function PlanCard({
       )}
       <CardHeader className="text-center">
         <CardTitle className="text-xl">{tierNames[tier]}</CardTitle>
-        <div className="text-3xl font-bold mt-2">
+        <div className="mt-2 text-3xl font-bold">
           {price !== null ? `$${price}` : 'Custom'}
           {price !== null && <span className="text-sm font-normal text-gray-500">/month</span>}
         </div>
@@ -197,7 +219,7 @@ function PlanCard({
       <CardContent className="space-y-3">
         {features.map((feature, i) => (
           <div key={i} className="flex items-start gap-2 text-sm">
-            <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+            <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
             <span>{feature}</span>
           </div>
         ))}
@@ -232,7 +254,7 @@ export default function BillingPage() {
   const monthlyAddonTotal = addons.reduce((sum, a) => sum + a.quantity * a.unitPrice, 0);
   const totalMonthly = subscription.price + monthlyAddonTotal;
 
-  const handleUpgrade = (tier: PlanTier) => {
+  const _handleUpgrade = (tier: PlanTier) => {
     setSelectedTier(tier);
     setShowUpgradeDialog(true);
   };
@@ -240,14 +262,14 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">Billing & Subscription</h1>
-          <p className="text-gray-500 mt-1">Manage your plan, add-ons, and payment settings</p>
+          <p className="mt-1 text-gray-500">Manage your plan, add-ons, and payment settings</p>
         </div>
         <Button variant="outline" asChild>
           <Link href="/settings/billing/payment-methods">
-            <CreditCard className="h-4 w-4 mr-2" />
+            <CreditCard className="mr-2 h-4 w-4" />
             Payment Methods
           </Link>
         </Button>
@@ -256,9 +278,9 @@ export default function BillingPage() {
       {/* Current Plan Summary */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-wrap gap-6 items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
                 <Shield className="h-6 w-6 text-purple-600" />
               </div>
               <div>
@@ -266,13 +288,14 @@ export default function BillingPage() {
                   <h2 className="text-lg font-semibold">
                     {subscription.tier === 'BASIC' && 'Basic'}
                     {subscription.tier === 'PRO' && 'Professional'}
-                    {subscription.tier === 'ENTERPRISE' && 'Enterprise'}
-                    {' '}Plan
+                    {subscription.tier === 'ENTERPRISE' && 'Enterprise'} Plan
                   </h2>
                   <Badge className={tierBadgeColors[subscription.tier]}>{subscription.tier}</Badge>
-                  <Badge className={statusBadgeColors[subscription.status]}>{subscription.status}</Badge>
+                  <Badge className={statusBadgeColors[subscription.status]}>
+                    {subscription.status}
+                  </Badge>
                 </div>
-                <p className="text-gray-500 text-sm">
+                <p className="text-sm text-gray-500">
                   Billed {subscription.billingCycle.toLowerCase()} • Renews{' '}
                   {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
                 </p>
@@ -289,7 +312,7 @@ export default function BillingPage() {
             <div className="flex gap-2">
               <Button variant="outline" asChild>
                 <Link href="/settings/billing/plans">
-                  <ChevronRight className="h-4 w-4 mr-1" />
+                  <ChevronRight className="mr-1 h-4 w-4" />
                   Change Plan
                 </Link>
               </Button>
@@ -314,10 +337,10 @@ export default function BillingPage() {
 
         {/* Usage Tab */}
         <TabsContent value="usage" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Users className="h-4 w-4" />
                   Client Engagements
                 </CardTitle>
@@ -342,7 +365,7 @@ export default function BillingPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Zap className="h-4 w-4" />
                   SkillPod Deployments
                 </CardTitle>
@@ -367,7 +390,7 @@ export default function BillingPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Briefcase className="h-4 w-4" />
                   Team Members
                 </CardTitle>
@@ -388,7 +411,7 @@ export default function BillingPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <BarChart3 className="h-4 w-4" />
                   Storage
                 </CardTitle>
@@ -402,7 +425,9 @@ export default function BillingPage() {
               </CardContent>
               <CardFooter className="text-sm text-gray-500">
                 {usage.storage.limitGB - usage.storage.usedGB > 20 ? (
-                  <span>{Math.round(usage.storage.limitGB - usage.storage.usedGB)} GB available</span>
+                  <span>
+                    {Math.round(usage.storage.limitGB - usage.storage.usedGB)} GB available
+                  </span>
                 ) : (
                   <Link href="/settings/billing/addons" className="text-purple-600 hover:underline">
                     Upgrade storage →
@@ -415,13 +440,11 @@ export default function BillingPage() {
 
         {/* Add-ons Tab */}
         <TabsContent value="addons" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <p className="text-gray-500">
-              Add extra capacity and features to your subscription
-            </p>
+          <div className="flex items-center justify-between">
+            <p className="text-gray-500">Add extra capacity and features to your subscription</p>
             <Button asChild>
               <Link href="/settings/billing/addons">
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 h-4 w-4" />
                 Browse Add-ons
               </Link>
             </Button>
@@ -431,11 +454,15 @@ export default function BillingPage() {
             <div className="space-y-3">
               {addons.map((addon) => (
                 <Card key={addon.id}>
-                  <CardContent className="p-4 flex items-center justify-between">
+                  <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        {addon.type === 'EXTRA_CLIENT_SLOT' && <Users className="h-5 w-5 text-gray-600" />}
-                        {addon.type === 'TEAM_SEAT' && <Briefcase className="h-5 w-5 text-gray-600" />}
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
+                        {addon.type === 'EXTRA_CLIENT_SLOT' && (
+                          <Users className="h-5 w-5 text-gray-600" />
+                        )}
+                        {addon.type === 'TEAM_SEAT' && (
+                          <Briefcase className="h-5 w-5 text-gray-600" />
+                        )}
                       </div>
                       <div>
                         <div className="font-medium">{addon.name}</div>
@@ -459,9 +486,9 @@ export default function BillingPage() {
           ) : (
             <Card>
               <CardContent className="p-8 text-center">
-                <Plus className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="font-medium text-lg">No add-ons yet</h3>
-                <p className="text-gray-500 mt-1">
+                <Plus className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                <h3 className="text-lg font-medium">No add-ons yet</h3>
+                <p className="mt-1 text-gray-500">
                   Extend your subscription with additional features and capacity
                 </p>
                 <Button className="mt-4" asChild>
@@ -482,11 +509,11 @@ export default function BillingPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 text-sm text-gray-500">
                   <tr>
-                    <th className="text-left p-4 font-medium">Date</th>
-                    <th className="text-left p-4 font-medium">Description</th>
-                    <th className="text-left p-4 font-medium">Amount</th>
-                    <th className="text-left p-4 font-medium">Status</th>
-                    <th className="text-right p-4 font-medium">Actions</th>
+                    <th className="p-4 text-left font-medium">Date</th>
+                    <th className="p-4 text-left font-medium">Description</th>
+                    <th className="p-4 text-left font-medium">Amount</th>
+                    <th className="p-4 text-left font-medium">Status</th>
+                    <th className="p-4 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -506,8 +533,8 @@ export default function BillingPage() {
                             invoice.status === 'paid'
                               ? 'bg-green-100 text-green-800'
                               : invoice.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
                           }
                         >
                           {invoice.status}
@@ -533,19 +560,24 @@ export default function BillingPage() {
           <DialogHeader>
             <DialogTitle>Upgrade to {selectedTier}</DialogTitle>
             <DialogDescription>
-              You're about to upgrade your subscription. Your new plan will take effect immediately.
+              You&apos;re about to upgrade your subscription. Your new plan will take effect
+              immediately.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="rounded-lg border p-4 space-y-2">
+            <div className="space-y-2 rounded-lg border p-4">
               <div className="flex justify-between">
                 <span>Current plan</span>
-                <span className="font-medium">{subscription.tier} (${subscription.price}/mo)</span>
+                <span className="font-medium">
+                  {subscription.tier} (${subscription.price}/mo)
+                </span>
               </div>
               <div className="flex justify-between text-purple-600">
                 <span>New plan</span>
                 <span className="font-medium">
-                  {selectedTier} (${selectedTier === 'PRO' ? 499 : selectedTier === 'ENTERPRISE' ? 'Custom' : 199}/mo)
+                  {selectedTier} ($
+                  {selectedTier === 'PRO' ? 499 : selectedTier === 'ENTERPRISE' ? 'Custom' : 199}
+                  /mo)
                 </span>
               </div>
             </div>
@@ -554,9 +586,7 @@ export default function BillingPage() {
             <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={() => setShowUpgradeDialog(false)}>
-              Confirm Upgrade
-            </Button>
+            <Button onClick={() => setShowUpgradeDialog(false)}>Confirm Upgrade</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -49,7 +49,7 @@ interface InvoiceActivity {
   metadata?: Record<string, string>;
 }
 
-// Mock Data
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/invoices/:id
 const mockInvoice = {
   id: '1',
   invoiceNumber: 'INV-2024-001',

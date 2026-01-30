@@ -6,21 +6,9 @@
  * Sprint M5: Freelancer Financial Services
  */
 
-import { useState, useEffect } from 'react';
+import { Zap, Clock, CreditCard, Building, Check, Info, Shield, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import {
-  Zap,
-  Clock,
-  CreditCard,
-  Building,
-  ChevronRight,
-  Check,
-  AlertCircle,
-  Info,
-  ArrowRight,
-  Shield,
-  Wallet,
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 // ============================================================================
 // TYPES
@@ -54,6 +42,7 @@ interface Balance {
 
 // ============================================================================
 // MOCK DATA
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/finances/balance
 // ============================================================================
 
 const mockBalance: Balance = {
@@ -139,25 +128,28 @@ function AmountInput({
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6">
-      <label className="mb-2 block text-sm font-medium text-gray-700">Amount to withdraw</label>
+      <label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="withdraw-amount">
+        Amount to withdraw
+      </label>
       <div className="relative">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-gray-400">$</span>
         <input
+          className="w-full border-0 py-4 pl-10 pr-4 text-4xl font-bold placeholder-gray-300 focus:ring-0"
+          id="withdraw-amount"
+          max={maxAmount}
+          min="5"
+          placeholder="0.00"
+          step="0.01"
           type="number"
           value={amount}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="0.00"
-          min="5"
-          max={maxAmount}
-          step="0.01"
-          className="w-full border-0 py-4 pl-10 pr-4 text-4xl font-bold placeholder-gray-300 focus:ring-0"
         />
       </div>
 
       <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
         <button
-          onClick={() => onChange(maxAmount.toString())}
           className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+          onClick={() => onChange(maxAmount.toString())}
         >
           Withdraw Max (${maxAmount.toLocaleString()})
         </button>
@@ -171,7 +163,7 @@ function AmountInput({
             <span className="text-gray-900">-${fee.toFixed(2)}</span>
           </div>
           <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 text-sm font-medium">
-            <span className="text-gray-900">You'll receive</span>
+            <span className="text-gray-900">You&apos;ll receive</span>
             <span className="text-green-600">${netAmount.toFixed(2)}</span>
           </div>
         </div>
@@ -191,17 +183,17 @@ function PayoutMethodSelector({
 }) {
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700">Payout Speed</label>
+      <span className="block text-sm font-medium text-gray-700">Payout Speed</span>
       {options.map((option) => (
         <button
           key={option.id}
-          onClick={() => onSelect(option.id)}
-          disabled={!option.available}
           className={`flex w-full items-center justify-between rounded-xl border-2 p-4 transition-all ${
             selected === option.id
               ? 'border-indigo-600 bg-indigo-50'
               : 'border-gray-200 bg-white hover:border-gray-300'
           } ${!option.available ? 'cursor-not-allowed opacity-50' : ''}`}
+          disabled={!option.available}
+          onClick={() => onSelect(option.id)}
         >
           <div className="flex items-center gap-4">
             <div
@@ -251,16 +243,16 @@ function DestinationSelector({
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700">Send to</label>
+      <span className="block text-sm font-medium text-gray-700">Send to</span>
       {filteredDestinations.map((dest) => (
         <button
           key={dest.id}
-          onClick={() => onSelect(dest.id)}
           className={`flex w-full items-center justify-between rounded-xl border-2 p-4 transition-all ${
             selected === dest.id
               ? 'border-indigo-600 bg-indigo-50'
               : 'border-gray-200 bg-white hover:border-gray-300'
           }`}
+          onClick={() => onSelect(dest.id)}
         >
           <div className="flex items-center gap-3">
             <div
@@ -302,7 +294,7 @@ function PayoutSummary({
   fee: number;
   destination: PayoutDestination | null;
   payoutOption: PayoutOption | null;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
   loading: boolean;
 }) {
   const netAmount = amount - fee;
@@ -342,9 +334,9 @@ function PayoutSummary({
       )}
 
       <button
-        onClick={onSubmit}
-        disabled={!destination || !payoutOption || amount < 5 || loading}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+        disabled={!destination || !payoutOption || amount < 5 || loading}
+        onClick={() => void onSubmit()}
       >
         {loading ? (
           <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white" />
@@ -400,8 +392,8 @@ function SuccessModal({
         </div>
 
         <button
-          onClick={onClose}
           className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-medium text-white hover:bg-indigo-700"
+          onClick={onClose}
         >
           Done
         </button>
@@ -461,8 +453,8 @@ export default function PayoutPage() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => router.back()}
             className="mb-4 flex items-center gap-1 text-gray-500 hover:text-gray-700"
+            onClick={() => router.back()}
           >
             ← Back
           </button>
@@ -477,9 +469,9 @@ export default function PayoutPage() {
 
             <AmountInput
               amount={amount}
-              onChange={setAmount}
-              maxAmount={mockBalance.available}
               fee={fee}
+              maxAmount={mockBalance.available}
+              onChange={setAmount}
             />
 
             <PayoutMethodSelector
@@ -490,9 +482,9 @@ export default function PayoutPage() {
 
             <DestinationSelector
               destinations={mockDestinations}
+              payoutType={selectedMethod}
               selected={selectedDestination}
               onSelect={setSelectedDestination}
-              payoutType={selectedMethod}
             />
           </div>
 
@@ -501,11 +493,11 @@ export default function PayoutPage() {
             <div className="sticky top-8">
               <PayoutSummary
                 amount={numericAmount}
-                fee={fee}
                 destination={destination}
-                payoutOption={payoutOption}
-                onSubmit={handleSubmit}
+                fee={fee}
                 loading={loading}
+                payoutOption={payoutOption}
+                onSubmit={() => void handleSubmit()}
               />
 
               {/* Info Box */}

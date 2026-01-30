@@ -16,7 +16,6 @@ import {
   Calendar,
   TrendingUp,
   Plus,
-  MoreVertical,
   Star,
   CheckCircle,
   MessageSquare,
@@ -33,7 +32,7 @@ const STATUS_COLORS: Record<string, string> = {
   COMPLETED: 'bg-gray-100 text-gray-800',
 };
 
-// Mock data - replace with API call
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/executives/engagements
 const mockEngagements = [
   {
     id: '1',
@@ -98,37 +97,38 @@ const mockSummary = {
 };
 
 // Executive Card Component
-function ExecutiveCard({ engagement }: { engagement: typeof mockEngagements[0] }) {
+function ExecutiveCard({ engagement }: { engagement: (typeof mockEngagements)[0] }) {
   const isActive = engagement.status === 'ACTIVE';
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="transition-shadow hover:shadow-lg">
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
-              {engagement.executiveName.split(' ').map((n) => n[0]).join('')}
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-lg font-bold text-white">
+              {engagement.executiveName
+                .split(' ')
+                .map((n) => n[0])
+                .join('')}
             </div>
             <div>
-              <h3 className="font-semibold text-lg">{engagement.executiveName}</h3>
-              <p className="text-sm text-muted-foreground">{engagement.executiveTitle}</p>
+              <h3 className="text-lg font-semibold">{engagement.executiveName}</h3>
+              <p className="text-muted-foreground text-sm">{engagement.executiveTitle}</p>
               {engagement.rating && (
-                <div className="flex items-center gap-1 mt-1">
+                <div className="mt-1 flex items-center gap-1">
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                   <span className="text-sm font-medium">{engagement.rating}</span>
                 </div>
               )}
             </div>
           </div>
-          <Badge className={STATUS_COLORS[engagement.status]}>
-            {engagement.status}
-          </Badge>
+          <Badge className={STATUS_COLORS[engagement.status]}>{engagement.status}</Badge>
         </div>
 
-        <div className="mt-4 p-3 bg-muted rounded-lg">
+        <div className="bg-muted mt-4 rounded-lg p-3">
           <p className="text-sm font-medium">{engagement.role}</p>
           {engagement.startDate && (
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               Since {new Date(engagement.startDate).toLocaleDateString()}
             </p>
           )}
@@ -152,7 +152,7 @@ function ExecutiveCard({ engagement }: { engagement: typeof mockEngagements[0] }
             </div>
 
             {engagement.nextMeeting && (
-              <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="text-muted-foreground mt-4 flex items-center gap-2 text-sm">
                 <Calendar className="h-4 w-4" />
                 <span>
                   Next meeting:{' '}
@@ -186,7 +186,9 @@ function ExecutiveCard({ engagement }: { engagement: typeof mockEngagements[0] }
         {engagement.status === 'PROPOSAL' && (
           <div className="mt-4 flex gap-2">
             <Button className="flex-1">Review Proposal</Button>
-            <Button variant="outline" className="flex-1">Decline</Button>
+            <Button variant="outline" className="flex-1">
+              Decline
+            </Button>
           </div>
         )}
       </CardContent>
@@ -202,28 +204,28 @@ function SummaryStats() {
         <CardTitle className="text-lg">This Month</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-muted rounded-lg">
-            <Users className="h-6 w-6 mx-auto mb-2 text-blue-600" />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="bg-muted rounded-lg p-4 text-center">
+            <Users className="mx-auto mb-2 h-6 w-6 text-blue-600" />
             <p className="text-2xl font-bold">{mockSummary.activeExecutives}</p>
-            <p className="text-xs text-muted-foreground">Active Executives</p>
+            <p className="text-muted-foreground text-xs">Active Executives</p>
           </div>
-          <div className="text-center p-4 bg-muted rounded-lg">
-            <Clock className="h-6 w-6 mx-auto mb-2 text-green-600" />
+          <div className="bg-muted rounded-lg p-4 text-center">
+            <Clock className="mx-auto mb-2 h-6 w-6 text-green-600" />
             <p className="text-2xl font-bold">{mockSummary.totalHoursThisMonth}h</p>
-            <p className="text-xs text-muted-foreground">Total Hours</p>
+            <p className="text-muted-foreground text-xs">Total Hours</p>
           </div>
-          <div className="text-center p-4 bg-muted rounded-lg">
-            <CheckCircle className="h-6 w-6 mx-auto mb-2 text-purple-600" />
+          <div className="bg-muted rounded-lg p-4 text-center">
+            <CheckCircle className="mx-auto mb-2 h-6 w-6 text-purple-600" />
             <p className="text-2xl font-bold">{mockSummary.totalHoursApproved}h</p>
-            <p className="text-xs text-muted-foreground">Approved</p>
+            <p className="text-muted-foreground text-xs">Approved</p>
           </div>
-          <div className="text-center p-4 bg-muted rounded-lg">
-            <TrendingUp className="h-6 w-6 mx-auto mb-2 text-orange-600" />
+          <div className="bg-muted rounded-lg p-4 text-center">
+            <TrendingUp className="mx-auto mb-2 h-6 w-6 text-orange-600" />
             <p className="text-2xl font-bold">
               ${(mockSummary.totalSpendThisMonth / 1000).toFixed(1)}k
             </p>
-            <p className="text-xs text-muted-foreground">Total Spend</p>
+            <p className="text-muted-foreground text-xs">Total Spend</p>
           </div>
         </div>
       </CardContent>
@@ -235,17 +237,15 @@ export default function ClientExecutivesPage() {
   const activeEngagements = mockEngagements.filter(
     (e) => e.status === 'ACTIVE' || e.status === 'PAUSED'
   );
-  const pipelineEngagements = mockEngagements.filter(
-    (e) => ['PROPOSAL', 'NEGOTIATING', 'CONTRACT_SENT'].includes(e.status)
+  const pipelineEngagements = mockEngagements.filter((e) =>
+    ['PROPOSAL', 'NEGOTIATING', 'CONTRACT_SENT'].includes(e.status)
   );
-  const completedEngagements = mockEngagements.filter(
-    (e) => e.status === 'COMPLETED'
-  );
+  const completedEngagements = mockEngagements.filter((e) => e.status === 'COMPLETED');
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">My Executives</h1>
           <p className="text-muted-foreground mt-1">
@@ -254,7 +254,7 @@ export default function ClientExecutivesPage() {
         </div>
         <Button asChild>
           <Link href="/executives/find">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Find Executive
           </Link>
         </Button>
@@ -268,12 +268,12 @@ export default function ClientExecutivesPage() {
       {/* Pending Approvals Alert */}
       {mockSummary.totalHoursPending > 0 && (
         <Card className="mb-8 border-orange-200 bg-orange-50">
-          <CardContent className="py-4 flex items-center justify-between">
+          <CardContent className="flex items-center justify-between py-4">
             <div className="flex items-center gap-3">
               <Clock className="h-5 w-5 text-orange-600" />
               <div>
                 <p className="font-medium">Time Approval Needed</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   {mockSummary.totalHoursPending} hours pending your approval
                 </p>
               </div>
@@ -287,23 +287,17 @@ export default function ClientExecutivesPage() {
 
       {/* Engagements Tabs */}
       <Tabs defaultValue="active" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
-          <TabsTrigger value="active">
-            Active ({activeEngagements.length})
-          </TabsTrigger>
-          <TabsTrigger value="pipeline">
-            Pipeline ({pipelineEngagements.length})
-          </TabsTrigger>
-          <TabsTrigger value="past">
-            Past ({completedEngagements.length})
-          </TabsTrigger>
+        <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsTrigger value="active">Active ({activeEngagements.length})</TabsTrigger>
+          <TabsTrigger value="pipeline">Pipeline ({pipelineEngagements.length})</TabsTrigger>
+          <TabsTrigger value="past">Past ({completedEngagements.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="mt-6">
           {activeEngagements.length === 0 ? (
             <Card className="p-8 text-center">
-              <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No Active Executives</h3>
+              <Users className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+              <h3 className="mb-2 text-lg font-semibold">No Active Executives</h3>
               <p className="text-muted-foreground mb-4">
                 You don&apos;t have any active executive engagements yet.
               </p>
@@ -312,7 +306,7 @@ export default function ClientExecutivesPage() {
               </Button>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {activeEngagements.map((engagement) => (
                 <ExecutiveCard key={engagement.id} engagement={engagement} />
               ))}
@@ -323,14 +317,14 @@ export default function ClientExecutivesPage() {
         <TabsContent value="pipeline" className="mt-6">
           {pipelineEngagements.length === 0 ? (
             <Card className="p-8 text-center">
-              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No Pending Engagements</h3>
+              <FileText className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+              <h3 className="mb-2 text-lg font-semibold">No Pending Engagements</h3>
               <p className="text-muted-foreground">
                 No executive engagements currently in the pipeline.
               </p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {pipelineEngagements.map((engagement) => (
                 <ExecutiveCard key={engagement.id} engagement={engagement} />
               ))}
@@ -341,14 +335,12 @@ export default function ClientExecutivesPage() {
         <TabsContent value="past" className="mt-6">
           {completedEngagements.length === 0 ? (
             <Card className="p-8 text-center">
-              <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No Past Engagements</h3>
-              <p className="text-muted-foreground">
-                Completed engagements will appear here.
-              </p>
+              <Calendar className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+              <h3 className="mb-2 text-lg font-semibold">No Past Engagements</h3>
+              <p className="text-muted-foreground">Completed engagements will appear here.</p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {completedEngagements.map((engagement) => (
                 <ExecutiveCard key={engagement.id} engagement={engagement} />
               ))}

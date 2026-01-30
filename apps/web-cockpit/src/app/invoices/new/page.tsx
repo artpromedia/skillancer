@@ -42,7 +42,7 @@ interface Client {
   company?: string;
 }
 
-// Mock Clients
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/clients
 const mockClients: Client[] = [
   {
     id: '1',

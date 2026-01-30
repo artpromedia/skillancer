@@ -17,25 +17,18 @@ import { Button } from '@skillancer/ui';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@skillancer/ui';
 import {
   ArrowLeft,
-  Clock,
   Calendar,
   CheckCircle,
   XCircle,
   Star,
   MessageSquare,
-  FileText,
   Settings,
-  TrendingUp,
-  DollarSign,
-  Milestone,
-  User,
-  Building2,
   Phone,
   Mail,
   ExternalLink,
 } from 'lucide-react';
 
-// Mock data
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/executives/engagements/:id
 const mockEngagement = {
   id: '1',
   executiveId: 'exec-1',
@@ -158,11 +151,7 @@ function TimeApprovalSection() {
             <CardDescription>{totalPendingHours} hours awaiting review</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSelectAll}
-            >
+            <Button variant="outline" size="sm" onClick={handleSelectAll}>
               {selectedEntries.length === mockPendingTimeEntries.length
                 ? 'Deselect All'
                 : 'Select All'}
@@ -172,8 +161,8 @@ function TimeApprovalSection() {
       </CardHeader>
       <CardContent>
         {mockPendingTimeEntries.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+          <div className="text-muted-foreground py-8 text-center">
+            <CheckCircle className="mx-auto mb-4 h-12 w-12 text-green-500" />
             <p>All time entries have been reviewed!</p>
           </div>
         ) : (
@@ -182,12 +171,20 @@ function TimeApprovalSection() {
               {mockPendingTimeEntries.map((entry) => (
                 <div
                   key={entry.id}
-                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                  role="button"
+                  tabIndex={0}
+                  className={`cursor-pointer rounded-lg border p-4 transition-colors ${
                     selectedEntries.includes(entry.id)
                       ? 'border-blue-500 bg-blue-50'
                       : 'hover:bg-muted/50'
                   }`}
                   onClick={() => handleSelect(entry.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSelect(entry.id);
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -205,10 +202,8 @@ function TimeApprovalSection() {
                             {entry.category}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {entry.description}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-muted-foreground mt-1 text-sm">{entry.description}</p>
+                        <p className="text-muted-foreground mt-1 text-xs">
                           {new Date(entry.date).toLocaleDateString()}
                         </p>
                       </div>
@@ -219,7 +214,7 @@ function TimeApprovalSection() {
             </div>
 
             {selectedEntries.length > 0 && (
-              <div className="mt-4 flex items-center justify-between p-3 bg-muted rounded-lg">
+              <div className="bg-muted mt-4 flex items-center justify-between rounded-lg p-3">
                 <span className="text-sm font-medium">
                   {selectedEntries.length} entries selected (
                   {mockPendingTimeEntries
@@ -229,11 +224,11 @@ function TimeApprovalSection() {
                 </span>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm">
-                    <XCircle className="h-4 w-4 mr-1" />
+                    <XCircle className="mr-1 h-4 w-4" />
                     Reject
                   </Button>
                   <Button size="sm">
-                    <CheckCircle className="h-4 w-4 mr-1" />
+                    <CheckCircle className="mr-1 h-4 w-4" />
                     Approve
                   </Button>
                 </div>
@@ -251,14 +246,17 @@ function ExecutiveInfoCard() {
   return (
     <Card>
       <CardContent className="p-6">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl">
-            {mockEngagement.executiveName.split(' ').map((n) => n[0]).join('')}
+        <div className="mb-4 flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-xl font-bold text-white">
+            {mockEngagement.executiveName
+              .split(' ')
+              .map((n) => n[0])
+              .join('')}
           </div>
           <div>
-            <h3 className="font-semibold text-lg">{mockEngagement.executiveName}</h3>
+            <h3 className="text-lg font-semibold">{mockEngagement.executiveName}</h3>
             <p className="text-muted-foreground">{mockEngagement.executiveTitle}</p>
-            <div className="flex items-center gap-1 mt-1">
+            <div className="mt-1 flex items-center gap-1">
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
               <span className="text-sm font-medium">{mockEngagement.rating}</span>
             </div>
@@ -267,18 +265,26 @@ function ExecutiveInfoCard() {
 
         <div className="space-y-3 text-sm">
           <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <a href={`mailto:${mockEngagement.executiveEmail}`} className="text-blue-600 hover:underline">
+            <Mail className="text-muted-foreground h-4 w-4" />
+            <a
+              href={`mailto:${mockEngagement.executiveEmail}`}
+              className="text-blue-600 hover:underline"
+            >
               {mockEngagement.executiveEmail}
             </a>
           </div>
           <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-muted-foreground" />
+            <Phone className="text-muted-foreground h-4 w-4" />
             <span>{mockEngagement.executivePhone}</span>
           </div>
           <div className="flex items-center gap-2">
-            <ExternalLink className="h-4 w-4 text-muted-foreground" />
-            <a href={mockEngagement.executiveLinkedIn} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+            <ExternalLink className="text-muted-foreground h-4 w-4" />
+            <a
+              href={mockEngagement.executiveLinkedIn}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
               LinkedIn Profile
             </a>
           </div>
@@ -286,11 +292,11 @@ function ExecutiveInfoCard() {
 
         <div className="mt-4 flex gap-2">
           <Button className="flex-1">
-            <MessageSquare className="h-4 w-4 mr-2" />
+            <MessageSquare className="mr-2 h-4 w-4" />
             Message
           </Button>
           <Button variant="outline" className="flex-1">
-            <Calendar className="h-4 w-4 mr-2" />
+            <Calendar className="mr-2 h-4 w-4" />
             Schedule
           </Button>
         </div>
@@ -312,38 +318,38 @@ function EngagementStatsCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <div className="text-center p-3 bg-muted rounded-lg">
+          <div className="bg-muted rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-blue-600">
               {mockEngagement.timeThisMonth.total}h
             </p>
-            <p className="text-xs text-muted-foreground">This Month</p>
+            <p className="text-muted-foreground text-xs">This Month</p>
           </div>
-          <div className="text-center p-3 bg-muted rounded-lg">
+          <div className="bg-muted rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-green-600">
               {mockEngagement.timeThisMonth.approved}h
             </p>
-            <p className="text-xs text-muted-foreground">Approved</p>
+            <p className="text-muted-foreground text-xs">Approved</p>
           </div>
         </div>
 
         <div>
-          <div className="flex justify-between text-sm mb-1">
+          <div className="mb-1 flex justify-between text-sm">
             <span>Budget Utilization</span>
             <span className="font-medium">{budgetUtilization}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="h-2 w-full rounded-full bg-gray-200">
             <div
-              className="bg-blue-600 h-2 rounded-full"
+              className="h-2 rounded-full bg-blue-600"
               style={{ width: `${budgetUtilization}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-xs">
             ${(mockEngagement.financials.yearToDate / 1000).toFixed(0)}k of $
             {(mockEngagement.financials.budget / 1000).toFixed(0)}k YTD
           </p>
         </div>
 
-        <div className="pt-2 space-y-2 text-sm">
+        <div className="space-y-2 pt-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Hours/Week</span>
             <span className="font-medium">{mockEngagement.hoursPerWeek}h</span>
@@ -380,11 +386,11 @@ function MilestonesCard() {
           {mockEngagement.milestones.map((milestone) => (
             <div
               key={milestone.id}
-              className="flex items-center justify-between p-3 border rounded-lg"
+              className="flex items-center justify-between rounded-lg border p-3"
             >
               <div>
-                <p className="font-medium text-sm">{milestone.title}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm font-medium">{milestone.title}</p>
+                <p className="text-muted-foreground text-xs">
                   Due: {new Date(milestone.dueDate).toLocaleDateString()}
                 </p>
               </div>
@@ -418,16 +424,14 @@ function ObjectivesCard() {
           {mockEngagement.objectives.map((objective) => (
             <div key={objective.id} className="flex items-start gap-2">
               <div
-                className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                  objective.completed
-                    ? 'bg-green-100 text-green-600'
-                    : 'bg-gray-100 text-gray-400'
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+                  objective.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
                 }`}
               >
                 {objective.completed ? (
                   <CheckCircle className="h-3 w-3" />
                 ) : (
-                  <span className="w-2 h-2 rounded-full bg-current" />
+                  <span className="h-2 w-2 rounded-full bg-current" />
                 )}
               </div>
               <span
@@ -447,29 +451,27 @@ function ObjectivesCard() {
 
 export default function ClientEngagementDetailPage() {
   const params = useParams();
-  const engagementId = params.engagementId as string;
+  const _engagementId = params.engagementId as string;
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/executives">
-              <ArrowLeft className="h-4 w-4 mr-1" />
+              <ArrowLeft className="mr-1 h-4 w-4" />
               Back
             </Link>
           </Button>
           <div className="h-6 w-px bg-gray-200" />
           <div>
             <h1 className="text-2xl font-bold">{mockEngagement.role}</h1>
-            <p className="text-muted-foreground">
-              with {mockEngagement.executiveName}
-            </p>
+            <p className="text-muted-foreground">with {mockEngagement.executiveName}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className="bg-green-100 text-green-800 text-sm px-3 py-1">
+          <Badge className="bg-green-100 px-3 py-1 text-sm text-green-800">
             {mockEngagement.status}
           </Badge>
           <Button variant="outline" size="icon">
@@ -479,9 +481,9 @@ export default function ClientEngagementDetailPage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           <Tabs defaultValue="time">
             <TabsList>
               <TabsTrigger value="time">Time Approval</TabsTrigger>
@@ -496,7 +498,7 @@ export default function ClientEngagementDetailPage() {
 
             <TabsContent value="activity" className="mt-6">
               <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
+                <CardContent className="text-muted-foreground p-8 text-center">
                   Activity feed coming soon
                 </CardContent>
               </Card>
@@ -504,7 +506,7 @@ export default function ClientEngagementDetailPage() {
 
             <TabsContent value="documents" className="mt-6">
               <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
+                <CardContent className="text-muted-foreground p-8 text-center">
                   Shared documents coming soon
                 </CardContent>
               </Card>
@@ -512,7 +514,7 @@ export default function ClientEngagementDetailPage() {
 
             <TabsContent value="billing" className="mt-6">
               <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
+                <CardContent className="text-muted-foreground p-8 text-center">
                   Billing history coming soon
                 </CardContent>
               </Card>

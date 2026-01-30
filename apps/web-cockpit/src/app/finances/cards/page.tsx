@@ -6,10 +6,7 @@
  * Sprint M5: Freelancer Financial Services
  */
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import {
-  CreditCard,
   Plus,
   Snowflake,
   Trash2,
@@ -19,15 +16,14 @@ import {
   Settings,
   ChevronRight,
   ShoppingBag,
-  AlertCircle,
   Check,
   Smartphone,
-  Shield,
   RefreshCw,
   Lock,
   Unlock,
-  Package,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 // ============================================================================
 // TYPES
@@ -63,6 +59,7 @@ interface CardTransaction {
 
 // ============================================================================
 // MOCK DATA
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/finances/cards
 // ============================================================================
 
 const mockCards: Card[] = [
@@ -140,7 +137,7 @@ function CardDisplay({ card, onManage }: { card: Card; onManage: () => void }) {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText('4242424242424242');
+    void navigator.clipboard.writeText('4242424242424242');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -185,13 +182,13 @@ function CardDisplay({ card, onManage }: { card: Card; onManage: () => void }) {
                 {showDetails ? '4242 4242 4242' : '•••• •••• ••••'} {card.last4}
               </div>
               <button
-                onClick={() => setShowDetails(!showDetails)}
                 className="rounded p-1 hover:bg-white/10"
+                onClick={() => setShowDetails(!showDetails)}
               >
                 {showDetails ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
               {showDetails && (
-                <button onClick={copyToClipboard} className="rounded p-1 hover:bg-white/10">
+                <button className="rounded p-1 hover:bg-white/10" onClick={copyToClipboard}>
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </button>
               )}
@@ -238,8 +235,8 @@ function CardDisplay({ card, onManage }: { card: Card; onManage: () => void }) {
       {/* Actions */}
       <div className="mt-4 flex gap-2">
         <button
-          onClick={onManage}
           className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50"
+          onClick={onManage}
         >
           <Settings className="h-4 w-4" />
           Manage
@@ -268,8 +265,8 @@ function CardList({ cards, onSelect }: { cards: Card[]; onSelect: (card: Card) =
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Your Cards</h2>
         <button
-          onClick={() => router.push('/finances/cards/new')}
           className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700"
+          onClick={() => router.push('/finances/cards/new')}
         >
           <Plus className="h-4 w-4" />
           New Card
@@ -283,9 +280,9 @@ function CardList({ cards, onSelect }: { cards: Card[]; onSelect: (card: Card) =
 
         {/* Add Card Placeholder */}
         <button
-          onClick={() => router.push('/finances/cards/new')}
           className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 p-8 transition-colors hover:border-indigo-300 hover:bg-indigo-50/50"
           style={{ aspectRatio: '1.586' }}
+          onClick={() => router.push('/finances/cards/new')}
         >
           <Plus className="mb-2 h-8 w-8 text-gray-400" />
           <span className="font-medium text-gray-600">Add New Card</span>
@@ -360,8 +357,8 @@ function RecentTransactions({ transactions }: { transactions: CardTransaction[] 
       <div className="flex items-center justify-between border-b border-gray-100 p-4">
         <h3 className="font-semibold text-gray-900">Recent Card Transactions</h3>
         <button
-          onClick={() => router.push('/finances/transactions?type=card')}
           className="text-sm text-indigo-600 hover:text-indigo-700"
+          onClick={() => router.push('/finances/transactions?type=card')}
         >
           View All
         </button>
@@ -399,7 +396,7 @@ function CardSettings({ card, onClose }: { card: Card; onClose: () => void }) {
         <div className="border-b border-gray-100 p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">Card Settings</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button className="text-gray-400 hover:text-gray-600" onClick={onClose}>
               ×
             </button>
           </div>
@@ -519,8 +516,8 @@ export default function CardsPage() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => router.push('/finances')}
             className="mb-4 flex items-center gap-1 text-gray-500 hover:text-gray-700"
+            onClick={() => router.push('/finances')}
           >
             ← Back to Finances
           </button>

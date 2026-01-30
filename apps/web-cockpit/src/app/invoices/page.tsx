@@ -46,7 +46,7 @@ interface Invoice {
   isRecurring?: boolean;
 }
 
-// Mock Data
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/invoices
 const mockInvoices: Invoice[] = [
   {
     id: '1',

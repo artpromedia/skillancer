@@ -48,7 +48,7 @@ const statusConfig: Record<
   overdue: { label: 'Overdue', color: 'bg-red-100 text-red-700', icon: AlertCircle },
 };
 
-// Mock data
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/taxes/:year
 const taxYear = 2024;
 const _estimatedAnnualIncome = 125000;
 const selfEmploymentTaxRate = 0.153;

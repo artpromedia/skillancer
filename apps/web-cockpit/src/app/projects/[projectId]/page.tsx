@@ -91,6 +91,7 @@ interface Project {
 
 // ============================================================================
 // Mock Data
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/projects/:id
 // ============================================================================
 
 const mockProject: Project = {

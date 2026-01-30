@@ -60,7 +60,7 @@ interface Expense {
   notes?: string;
 }
 
-// Mock Data
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/expenses
 const mockExpenses: Expense[] = [
   {
     id: '1',

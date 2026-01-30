@@ -13,13 +13,9 @@ import {
   Calculator,
   Calendar,
   TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
   AlertCircle,
   Check,
-  ChevronRight,
   Info,
-  Download,
   FileText,
   ExternalLink,
   Settings,
@@ -71,6 +67,7 @@ interface TaxVaultTransaction {
 
 // ============================================================================
 // MOCK DATA
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/finances/tax-vault
 // ============================================================================
 
 const mockVault: TaxVault = {
@@ -230,7 +227,7 @@ function TaxVaultCard({ vault }: { vault: TaxVault }) {
 
 function QuarterlyPayments({
   payments,
-  vaultBalance,
+  vaultBalance: _vaultBalance,
 }: {
   payments: QuarterlyPayment[];
   vaultBalance: number;
@@ -515,7 +512,7 @@ function TaxSavingsRecommendation() {
           <h4 className="mb-1 font-medium text-amber-900">Savings Rate Recommendation</h4>
           <p className="mb-3 text-sm text-amber-800">
             Based on your income of $85,000 and effective tax rate of 30.7%, we recommend saving
-            <strong> 31%</strong> of your earnings. You're currently saving 25%.
+            <strong> 31%</strong> of your earnings. You&apos;re currently saving 25%.
           </p>
           <button className="text-sm font-medium text-amber-700 hover:text-amber-800">
             Update Savings Rate →

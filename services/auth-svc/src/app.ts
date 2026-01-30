@@ -237,6 +237,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   // HIPAA compliance routes (/hipaa prefix)
   await app.register(hipaaRoutes, { prefix: '/hipaa' });
 
+  // GDPR compliance routes (/gdpr prefix)
+  await app.register(gdprRoutes, { prefix: '/gdpr' });
+
   return app;
 }
 

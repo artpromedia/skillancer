@@ -46,7 +46,7 @@ interface Alert {
   action?: { label: string; href: string };
 }
 
-// Mock data
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/finances/overview
 const metrics: FinancialMetric[] = [
   { label: 'Revenue (MTD)', value: 12450, previousValue: 10200, format: 'currency', trend: 'up' },
   { label: 'Revenue (YTD)', value: 148500, previousValue: 132000, format: 'currency', trend: 'up' },

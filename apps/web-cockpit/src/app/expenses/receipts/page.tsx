@@ -47,7 +47,7 @@ const statusConfig: Record<
   error: { label: 'Error', color: 'bg-red-100 text-red-700', icon: AlertCircle },
 };
 
-// Mock data
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/expenses/receipts
 const mockReceipts: ReceiptItem[] = [
   {
     id: '1',

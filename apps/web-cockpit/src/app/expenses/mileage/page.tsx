@@ -37,7 +37,7 @@ interface MileageTrip {
 
 const IRS_RATE_2024 = 0.67; // IRS standard mileage rate for 2024
 
-// Mock data
+// TODO(Sprint-10): Replace with API call to GET /api/cockpit/expenses/mileage
 const mockTrips: MileageTrip[] = [
   {
     id: '1',
