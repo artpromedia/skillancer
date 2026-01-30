@@ -20,6 +20,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isTyping = false;
+  bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
@@ -28,13 +35,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.dispose();
   }
 
-  void _sendMessage() {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+  void _onScroll() {
+    // Load more when near the bottom (oldest messages)
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      ref
+          .read(messagesStateProvider(widget.conversationId).notifier)
+          .loadMoreMessages();
+    }
+  }
 
-    // TODO: Send message via API
-    _messageController.clear();
-    setState(() => _isTyping = false);
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty || _isSending) return;
+
+    setState(() => _isSending = true);
+
+    final success = await ref
+        .read(messagesStateProvider(widget.conversationId).notifier)
+        .sendMessage(text);
+
+    if (success) {
+      _messageController.clear();
+      setState(() => _isTyping = false);
+      // Scroll to top to show new message
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to send message. Please try again.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() => _isSending = false);
+    }
   }
 
   @override
@@ -75,7 +120,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             children: [
               // Messages list
               Expanded(
-                child: _MessagesList(conversationId: widget.conversationId),
+                child: _MessagesList(
+                  conversationId: widget.conversationId,
+                  scrollController: _scrollController,
+                ),
               ),
 
               // Input bar
@@ -127,20 +175,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       const SizedBox(width: AppTheme.spacingSm),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 200),
-                        child: _isTyping
-                            ? IconButton(
-                                key: const ValueKey('send'),
-                                icon: const Icon(Icons.send),
-                                color: AppTheme.primaryColor,
-                                onPressed: _sendMessage,
+                        child: _isSending
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : IconButton(
-                                key: const ValueKey('mic'),
-                                icon: const Icon(Icons.mic),
-                                onPressed: () {
-                                  // Voice message
-                                },
-                              ),
+                            : _isTyping
+                                ? IconButton(
+                                    key: const ValueKey('send'),
+                                    icon: const Icon(Icons.send),
+                                    color: AppTheme.primaryColor,
+                                    onPressed: _sendMessage,
+                                  )
+                                : IconButton(
+                                    key: const ValueKey('mic'),
+                                    icon: const Icon(Icons.mic),
+                                    onPressed: () {
+                                      // Voice message
+                                    },
+                                  ),
                       ),
                     ],
                   ),
@@ -164,33 +219,137 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 class _MessagesList extends ConsumerWidget {
   final String conversationId;
+  final ScrollController scrollController;
 
-  const _MessagesList({required this.conversationId});
+  const _MessagesList({
+    required this.conversationId,
+    required this.scrollController,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final messagesAsync = ref.watch(messagesProvider(conversationId));
+    final messagesState = ref.watch(messagesStateProvider(conversationId));
+    final currentUser = ref.watch(currentUserProvider);
+    final currentUserId = currentUser?.id ?? '';
 
-    return messagesAsync.when(
-      data: (messages) {
-        if (messages.isEmpty) {
-          return const Center(child: Text('No messages yet'));
-        }
+    if (messagesState.error != null && messagesState.messages.isEmpty) {
+      return _ErrorState(
+        error: messagesState.error!,
+        onRetry: () =>
+            ref.read(messagesStateProvider(conversationId).notifier).refresh(),
+      );
+    }
 
-        return ListView.builder(
-          reverse: true,
-          padding: const EdgeInsets.all(AppTheme.spacingMd),
-          itemCount: messages.length,
-          itemBuilder: (context, index) {
-            final message = messages[messages.length - 1 - index];
-            final isMe =
-                message.senderId == 'current_user'; // TODO: Use actual user ID
-            return _MessageBubble(message: message, isMe: isMe);
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+    if (messagesState.isLoading && messagesState.messages.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (messagesState.messages.isEmpty) {
+      return const _EmptyMessagesState();
+    }
+
+    return RefreshIndicator(
+      onRefresh: () =>
+          ref.read(messagesStateProvider(conversationId).notifier).refresh(),
+      child: ListView.builder(
+        controller: scrollController,
+        reverse: true,
+        padding: const EdgeInsets.all(AppTheme.spacingMd),
+        itemCount:
+            messagesState.messages.length + (messagesState.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          // Show loading indicator at the bottom when loading more
+          if (index == messagesState.messages.length) {
+            return const Padding(
+              padding: EdgeInsets.all(AppTheme.spacingMd),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+          }
+
+          final message = messagesState.messages[index];
+          final isMe = message.senderId == currentUserId;
+          return _MessageBubble(message: message, isMe: isMe);
+        },
+      ),
+    );
+  }
+}
+
+class _EmptyMessagesState extends StatelessWidget {
+  const _EmptyMessagesState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 48,
+            color: AppTheme.neutral400,
+          ),
+          const SizedBox(height: AppTheme.spacingMd),
+          Text(
+            'No messages yet',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: AppTheme.spacingSm),
+          Text(
+            'Start the conversation!',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String error;
+  final VoidCallback onRetry;
+
+  const _ErrorState({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacingLg),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: AppTheme.errorColor,
+            ),
+            const SizedBox(height: AppTheme.spacingMd),
+            Text(
+              'Failed to load messages',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: AppTheme.spacingSm),
+            Text(
+              error,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppTheme.spacingMd),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

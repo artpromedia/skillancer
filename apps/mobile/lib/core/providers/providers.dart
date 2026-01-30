@@ -563,20 +563,182 @@ final unreadMessagesCountProvider = FutureProvider<int>((ref) async {
 /// Conversation detail provider
 final conversationDetailProvider =
     FutureProvider.family<Conversation?, String>((ref, conversationId) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(milliseconds: 500));
-  final conversations = await ref.watch(conversationsProvider.future);
-  return conversations.where((c) => c.id == conversationId).firstOrNull;
+  final messagesRepo = ref.watch(messagesRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    // Try to find in cached conversations
+    final conversations = ref.watch(conversationsProvider);
+    return conversations.whenOrNull(
+      data: (list) => list.where((c) => c.id == conversationId).firstOrNull,
+    );
+  }
+
+  try {
+    return await messagesRepo.getConversation(conversationId);
+  } catch (_) {
+    // Fallback to local list
+    final conversations = await ref.watch(conversationsProvider.future);
+    return conversations.where((c) => c.id == conversationId).firstOrNull;
+  }
 });
 
-/// Messages provider for a conversation
+/// Messages provider for a conversation with pagination support
 final messagesProvider =
     FutureProvider.family<List<Message>, String>((ref, conversationId) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(milliseconds: 500));
-  return _mockMessages
-      .where((m) => m.conversationId == conversationId)
-      .toList();
+  final messagesRepo = ref.watch(messagesRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    return []; // No offline cache for messages
+  }
+
+  try {
+    final result =
+        await messagesRepo.getMessages(conversationId: conversationId);
+    return result.messages;
+  } catch (_) {
+    return [];
+  }
+});
+
+/// Messages pagination state for a conversation
+class MessagesState {
+  final List<Message> messages;
+  final bool isLoading;
+  final bool hasMore;
+  final String? error;
+
+  const MessagesState({
+    this.messages = const [],
+    this.isLoading = false,
+    this.hasMore = true,
+    this.error,
+  });
+
+  MessagesState copyWith({
+    List<Message>? messages,
+    bool? isLoading,
+    bool? hasMore,
+    String? error,
+  }) {
+    return MessagesState(
+      messages: messages ?? this.messages,
+      isLoading: isLoading ?? this.isLoading,
+      hasMore: hasMore ?? this.hasMore,
+      error: error,
+    );
+  }
+}
+
+/// Messages state notifier for handling pagination and sending
+class MessagesNotifier extends StateNotifier<MessagesState> {
+  final Ref _ref;
+  final String conversationId;
+
+  MessagesNotifier(this._ref, this.conversationId)
+      : super(const MessagesState()) {
+    loadMessages();
+  }
+
+  Future<void> loadMessages() async {
+    if (state.isLoading) return;
+
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final messagesRepo = _ref.read(messagesRepositoryProvider);
+      final result =
+          await messagesRepo.getMessages(conversationId: conversationId);
+
+      state = state.copyWith(
+        messages: result.messages,
+        isLoading: false,
+        hasMore: result.hasMore,
+      );
+
+      // Mark as read when loading messages
+      await messagesRepo.markAsRead(conversationId);
+      // Invalidate unread count
+      _ref.invalidate(unreadMessagesCountProvider);
+      _ref.invalidate(conversationsProvider);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<void> loadMoreMessages() async {
+    if (state.isLoading || !state.hasMore || state.messages.isEmpty) return;
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final messagesRepo = _ref.read(messagesRepositoryProvider);
+      final oldestMessage = state.messages.last;
+
+      final result = await messagesRepo.getMessages(
+        conversationId: conversationId,
+        before: oldestMessage.id,
+      );
+
+      state = state.copyWith(
+        messages: [...state.messages, ...result.messages],
+        isLoading: false,
+        hasMore: result.hasMore,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<bool> sendMessage(String content) async {
+    try {
+      final messagesRepo = _ref.read(messagesRepositoryProvider);
+      final newMessage = await messagesRepo.sendMessage(
+        conversationId: conversationId,
+        content: content,
+      );
+
+      // Add message to the beginning of the list (newest first)
+      state = state.copyWith(
+        messages: [newMessage, ...state.messages],
+      );
+
+      // Invalidate conversations to update last message
+      _ref.invalidate(conversationsProvider);
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to send message');
+      return false;
+    }
+  }
+
+  void addMessage(Message message) {
+    // Add incoming message (e.g., from WebSocket)
+    if (!state.messages.any((m) => m.id == message.id)) {
+      state = state.copyWith(
+        messages: [message, ...state.messages],
+      );
+    }
+  }
+
+  Future<void> refresh() async {
+    state = const MessagesState();
+    await loadMessages();
+  }
+}
+
+/// Messages state provider (with pagination and send support)
+final messagesStateProvider = StateNotifierProvider.autoDispose
+    .family<MessagesNotifier, MessagesState, String>((ref, conversationId) {
+  return MessagesNotifier(ref, conversationId);
 });
 
 // ============================================================================
@@ -721,24 +883,7 @@ final _mockConversations = <Conversation>[
   ),
 ];
 
-final _mockMessages = <Message>[
-  Message(
-    id: '1',
-    conversationId: '1',
-    senderId: 'client1',
-    content: 'Hi! I saw your proposal and I am interested.',
-    sentAt: DateTime.now().subtract(const Duration(hours: 1)),
-    isRead: true,
-  ),
-  Message(
-    id: '2',
-    conversationId: '1',
-    senderId: 'me',
-    content: 'Thank you for reaching out! I would love to discuss the project.',
-    sentAt: DateTime.now().subtract(const Duration(minutes: 30)),
-    isRead: true,
-  ),
-];
+// Mock messages removed - using real API now
 
 final _mockNotifications = <app.AppNotification>[
   app.AppNotification(

@@ -14,6 +14,7 @@ class MessagesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final conversationsAsync = ref.watch(conversationsProvider);
+    final isOnline = ref.watch(isOnlineProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -27,24 +28,103 @@ class MessagesScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: conversationsAsync.when(
-        data: (conversations) {
-          if (conversations.isEmpty) {
-            return const _EmptyState();
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(conversationsProvider),
-            child: ListView.builder(
-              itemCount: conversations.length,
-              itemBuilder: (context, index) {
-                return _ConversationTile(conversation: conversations[index]);
-              },
+      body: Column(
+        children: [
+          // Offline banner
+          if (!isOnline)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppTheme.spacingSm),
+              color: AppTheme.warningColor.withOpacity(0.1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.cloud_off,
+                    size: 16,
+                    color: AppTheme.warningColor,
+                  ),
+                  const SizedBox(width: AppTheme.spacingSm),
+                  Text(
+                    'You\'re offline',
+                    style: TextStyle(
+                      color: AppTheme.warningColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+          // Conversations list
+          Expanded(
+            child: conversationsAsync.when(
+              data: (conversations) {
+                if (conversations.isEmpty) {
+                  return const _EmptyState();
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(conversationsProvider),
+                  child: ListView.builder(
+                    itemCount: conversations.length,
+                    itemBuilder: (context, index) {
+                      return _ConversationTile(
+                          conversation: conversations[index]);
+                    },
+                  ),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => _ErrorState(
+                error: error.toString(),
+                onRetry: () => ref.invalidate(conversationsProvider),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String error;
+  final VoidCallback onRetry;
+
+  const _ErrorState({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacingLg),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: AppTheme.errorColor,
+            ),
+            const SizedBox(height: AppTheme.spacingMd),
+            Text(
+              'Failed to load messages',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: AppTheme.spacingSm),
+            Text(
+              error,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppTheme.spacingMd),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }
