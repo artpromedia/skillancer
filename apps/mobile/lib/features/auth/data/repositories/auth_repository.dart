@@ -48,7 +48,8 @@ class AuthRepository {
   }
 
   /// Sign up with email and password
-  Future<AuthResult> signup({
+  /// Returns a pending signup result (user needs to verify email)
+  Future<SignupResult> signup({
     required String email,
     required String password,
     required String firstName,
@@ -57,34 +58,52 @@ class AuthRepository {
   }) async {
     try {
       final response = await _apiClient.post(
-        '/auth/signup',
+        '/auth/register',
         data: {
           'email': email,
           'password': password,
           'firstName': firstName,
           'lastName': lastName,
-          'role': role.name,
         },
       );
 
       final data = response.data as Map<String, dynamic>;
-      final user = User.fromJson(data['user'] as Map<String, dynamic>);
-      final token = data['accessToken'] as String;
-      final refreshToken = data['refreshToken'] as String?;
+      final success = data['success'] as bool? ?? false;
+      final message = data['message'] as String? ?? 'Registration successful';
+      final userData = data['user'] as Map<String, dynamic>?;
 
-      // Save tokens
-      await _secureStorage.saveToken(token);
-      if (refreshToken != null) {
-        await _secureStorage.saveRefreshToken(refreshToken);
+      if (success && userData != null) {
+        return SignupResult.success(
+          userId: userData['id'] as String,
+          email: userData['email'] as String,
+          message: message,
+          requiresEmailVerification: true,
+        );
       }
-      await _secureStorage.saveUserId(user.id);
 
-      return AuthResult.success(user: user, token: token);
+      return SignupResult.failure(message);
     } on ApiError catch (e) {
-      return AuthResult.failure(e.message);
+      return SignupResult.failure(_mapSignupError(e));
     } catch (e) {
-      return AuthResult.failure('An unexpected error occurred');
+      return SignupResult.failure('An unexpected error occurred');
     }
+  }
+
+  /// Map API errors to user-friendly messages for signup
+  String _mapSignupError(ApiError error) {
+    final message = error.message.toLowerCase();
+
+    if (message.contains('email') && message.contains('exist')) {
+      return 'An account with this email already exists';
+    }
+    if (message.contains('password') && message.contains('weak')) {
+      return 'Password is too weak. Please use a stronger password';
+    }
+    if (message.contains('email') && message.contains('invalid')) {
+      return 'Please enter a valid email address';
+    }
+
+    return error.message;
   }
 
   /// Logout
@@ -234,4 +253,38 @@ class AuthResultFailure extends AuthResult {
   final String message;
 
   const AuthResultFailure(this.message);
+}
+
+/// Signup result wrapper (separate from AuthResult since signup doesn't return tokens)
+sealed class SignupResult {
+  const SignupResult();
+
+  factory SignupResult.success({
+    required String userId,
+    required String email,
+    required String message,
+    required bool requiresEmailVerification,
+  }) = SignupResultSuccess;
+
+  factory SignupResult.failure(String message) = SignupResultFailure;
+}
+
+class SignupResultSuccess extends SignupResult {
+  final String userId;
+  final String email;
+  final String message;
+  final bool requiresEmailVerification;
+
+  const SignupResultSuccess({
+    required this.userId,
+    required this.email,
+    required this.message,
+    required this.requiresEmailVerification,
+  });
+}
+
+class SignupResultFailure extends SignupResult {
+  final String message;
+
+  const SignupResultFailure(this.message);
 }

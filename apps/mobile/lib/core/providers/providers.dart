@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/data/repositories/auth_repository.dart';
 import '../../features/auth/domain/models/auth_state.dart';
 import '../../features/auth/domain/models/user.dart';
+import '../../features/auth/presentation/state/signup_state.dart';
 import '../../features/contracts/data/repositories/contracts_repository.dart';
 import '../../features/contracts/domain/models/contract.dart';
 import '../../features/jobs/data/repositories/jobs_repository.dart';
@@ -165,6 +166,64 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     } catch (_) {
       state = const AuthState.initial();
     }
+  }
+}
+
+// ============================================================================
+// Signup Provider
+// ============================================================================
+
+/// Signup state provider
+final signupStateProvider =
+    StateNotifierProvider<SignupStateNotifier, SignupState>((ref) {
+  return SignupStateNotifier(ref);
+});
+
+/// Signup state notifier
+class SignupStateNotifier extends StateNotifier<SignupState> {
+  final Ref _ref;
+
+  SignupStateNotifier(this._ref) : super(const SignupState.initial());
+
+  Future<void> signup({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required UserRole role,
+  }) async {
+    state = const SignupState.loading();
+    try {
+      final authRepo = _ref.read(authRepositoryProvider);
+      final result = await authRepo.signup(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        role: role,
+      );
+
+      switch (result) {
+        case SignupResultSuccess(
+            :final email,
+            :final message,
+            :final requiresEmailVerification
+          ):
+          state = SignupState.success(
+            email: email,
+            message: message,
+            requiresEmailVerification: requiresEmailVerification,
+          );
+        case SignupResultFailure(:final message):
+          state = SignupState.error(message);
+      }
+    } catch (e) {
+      state = SignupState.error(e.toString());
+    }
+  }
+
+  void reset() {
+    state = const SignupState.initial();
   }
 }
 

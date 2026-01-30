@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/providers/providers.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/user.dart';
+import '../state/signup_state.dart';
 
 /// Signup screen with form validation and account type selection
 class SignupScreen extends ConsumerStatefulWidget {
@@ -33,6 +35,29 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// Validates password strength requirements
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter a password';
+    }
+    if (value.length < 12) {
+      return 'Password must be at least 12 characters';
+    }
+    if (!value.contains(RegExp(r'[a-z]'))) {
+      return 'Password must contain a lowercase letter';
+    }
+    if (!value.contains(RegExp(r'[A-Z]'))) {
+      return 'Password must contain an uppercase letter';
+    }
+    if (!value.contains(RegExp(r'[0-9]'))) {
+      return 'Password must contain a number';
+    }
+    if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+      return 'Password must contain a special character';
+    }
+    return null;
   }
 
   double _getPasswordStrength(String password) {
@@ -87,13 +112,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     });
 
     try {
-      // TODO: Implement signup
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        context.pop();
-      }
-    } catch (e) {
-      setState(() => _errorMessage = e.toString());
+      await ref.read(signupStateProvider.notifier).signup(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
+            role: _selectedRole,
+          );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -101,9 +126,74 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
   }
 
+  void _showSuccessDialog(String email, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        icon: const Icon(
+          Icons.mark_email_read_outlined,
+          color: AppTheme.successColor,
+          size: 48,
+        ),
+        title: const Text('Check Your Email'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppTheme.spacingMd),
+            Text(
+              'We sent a verification email to:',
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppTheme.spacingXs),
+            Text(
+              email,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Reset signup state and go back to login
+              ref.read(signupStateProvider.notifier).reset();
+              context.pop();
+            },
+            child: const Text('Go to Login'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final passwordStrength = _getPasswordStrength(_passwordController.text);
+
+    // Listen to signup state changes
+    ref.listen<SignupState>(signupStateProvider, (previous, next) {
+      switch (next) {
+        case SignupStateSuccess(:final email, :final message):
+          _showSuccessDialog(email, message);
+        case SignupStateError(:final message):
+          setState(() => _errorMessage = message);
+        case SignupStateLoading():
+          // Loading is handled by local state
+          break;
+        case SignupStateInitial():
+          // Initial state, nothing to do
+          break;
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -242,7 +332,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    hintText: 'At least 8 characters',
+                    hintText: 'At least 12 characters',
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -255,15 +345,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       },
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 8) {
-                      return 'Password must be at least 8 characters';
-                    }
-                    return null;
-                  },
+                  validator: _validatePassword,
                 ),
 
                 const SizedBox(height: AppTheme.spacingSm),
