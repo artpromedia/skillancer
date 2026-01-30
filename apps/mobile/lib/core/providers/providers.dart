@@ -12,6 +12,7 @@ import '../../features/jobs/domain/models/job.dart';
 import '../../features/jobs/domain/models/job_filter.dart';
 import '../../features/messages/data/repositories/messages_repository.dart';
 import '../../features/messages/domain/models/message.dart';
+import '../../features/notifications/data/repositories/notifications_repository.dart';
 import '../../features/notifications/domain/models/notification.dart' as app;
 import '../../features/proposals/data/repositories/proposals_repository.dart';
 import '../../features/proposals/domain/models/proposal.dart';
@@ -101,6 +102,12 @@ final messagesRepositoryProvider = Provider<MessagesRepository>((ref) {
 /// Time tracking repository provider
 final timeTrackingRepositoryProvider = Provider<TimeTrackingRepository>((ref) {
   return TimeTrackingRepository(apiClient: ref.watch(apiClientProvider));
+});
+
+/// Notifications repository provider
+final notificationsRepositoryProvider =
+    Provider<NotificationsRepository>((ref) {
+  return NotificationsRepository(apiClient: ref.watch(apiClientProvider));
 });
 
 // ============================================================================
@@ -745,21 +752,203 @@ final messagesStateProvider = StateNotifierProvider.autoDispose
 // Notifications Providers
 // ============================================================================
 
-/// Notifications provider
-final notificationsProvider =
-    FutureProvider.autoDispose<List<app.AppNotification>>((ref) async {
-  // TODO: Fetch from API
-  await Future.delayed(const Duration(seconds: 1));
-  return _mockNotifications;
+/// Notifications state for pagination and loading
+class NotificationsState {
+  final List<app.AppNotification> notifications;
+  final bool isLoading;
+  final bool hasMore;
+  final String? error;
+  final int unreadCount;
+
+  const NotificationsState({
+    this.notifications = const [],
+    this.isLoading = false,
+    this.hasMore = true,
+    this.error,
+    this.unreadCount = 0,
+  });
+
+  NotificationsState copyWith({
+    List<app.AppNotification>? notifications,
+    bool? isLoading,
+    bool? hasMore,
+    String? error,
+    int? unreadCount,
+  }) {
+    return NotificationsState(
+      notifications: notifications ?? this.notifications,
+      isLoading: isLoading ?? this.isLoading,
+      hasMore: hasMore ?? this.hasMore,
+      error: error,
+      unreadCount: unreadCount ?? this.unreadCount,
+    );
+  }
+}
+
+/// Notifications state notifier for handling pagination
+class NotificationsNotifier extends StateNotifier<NotificationsState> {
+  final Ref _ref;
+
+  NotificationsNotifier(this._ref) : super(const NotificationsState()) {
+    loadNotifications();
+  }
+
+  Future<void> loadNotifications() async {
+    if (state.isLoading) return;
+
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final notificationsRepo = _ref.read(notificationsRepositoryProvider);
+      final result = await notificationsRepo.getNotifications();
+      final unreadCount = await notificationsRepo.getUnreadCount();
+
+      state = state.copyWith(
+        notifications: result.notifications,
+        isLoading: false,
+        hasMore: result.hasMore,
+        unreadCount: unreadCount,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<void> loadMoreNotifications() async {
+    if (state.isLoading || !state.hasMore) return;
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final notificationsRepo = _ref.read(notificationsRepositoryProvider);
+      final result = await notificationsRepo.getNotifications(
+        offset: state.notifications.length,
+      );
+
+      state = state.copyWith(
+        notifications: [...state.notifications, ...result.notifications],
+        isLoading: false,
+        hasMore: result.hasMore,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<void> markAsRead(String notificationId) async {
+    try {
+      final notificationsRepo = _ref.read(notificationsRepositoryProvider);
+      await notificationsRepo.markAsRead(notificationId);
+
+      // Update local state
+      final updated = state.notifications.map((n) {
+        if (n.id == notificationId && !n.isRead) {
+          return app.AppNotification(
+            id: n.id,
+            type: n.type,
+            title: n.title,
+            body: n.body,
+            createdAt: n.createdAt,
+            isRead: true,
+            actionUrl: n.actionUrl,
+            data: n.data,
+          );
+        }
+        return n;
+      }).toList();
+
+      state = state.copyWith(
+        notifications: updated,
+        unreadCount: state.unreadCount > 0 ? state.unreadCount - 1 : 0,
+      );
+    } catch (e) {
+      // Silently fail - notification will be marked on next refresh
+    }
+  }
+
+  Future<void> markAllAsRead() async {
+    try {
+      final notificationsRepo = _ref.read(notificationsRepositoryProvider);
+      await notificationsRepo.markAllAsRead();
+
+      // Update local state - mark all as read
+      final updated = state.notifications.map((n) {
+        if (!n.isRead) {
+          return app.AppNotification(
+            id: n.id,
+            type: n.type,
+            title: n.title,
+            body: n.body,
+            createdAt: n.createdAt,
+            isRead: true,
+            actionUrl: n.actionUrl,
+            data: n.data,
+          );
+        }
+        return n;
+      }).toList();
+
+      state = state.copyWith(
+        notifications: updated,
+        unreadCount: 0,
+      );
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to mark all as read');
+    }
+  }
+
+  Future<void> refresh() async {
+    state = const NotificationsState();
+    await loadNotifications();
+  }
+}
+
+/// Notifications state provider
+final notificationsStateProvider = StateNotifierProvider.autoDispose<
+    NotificationsNotifier, NotificationsState>((ref) {
+  return NotificationsNotifier(ref);
 });
 
-/// Unread notifications count
-final unreadNotificationsCountProvider = Provider<int>((ref) {
-  final notifications = ref.watch(notificationsProvider);
-  return notifications.whenOrNull(
-        data: (list) => list.where((n) => !n.isRead).length,
-      ) ??
-      0;
+/// Simple notifications provider (for backwards compatibility)
+final notificationsProvider =
+    FutureProvider.autoDispose<List<app.AppNotification>>((ref) async {
+  final notificationsRepo = ref.watch(notificationsRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    return []; // No offline cache for notifications
+  }
+
+  try {
+    final result = await notificationsRepo.getNotifications();
+    return result.notifications;
+  } catch (_) {
+    return [];
+  }
+});
+
+/// Unread notifications count (from API)
+final unreadNotificationsCountProvider = FutureProvider<int>((ref) async {
+  final notificationsRepo = ref.watch(notificationsRepositoryProvider);
+  final isOnline = ref.watch(isOnlineProvider);
+
+  if (!isOnline) {
+    return 0;
+  }
+
+  try {
+    return await notificationsRepo.getUnreadCount();
+  } catch (_) {
+    // Fallback to calculating from local state
+    final state = ref.watch(notificationsStateProvider);
+    return state.unreadCount;
+  }
 });
 
 // ============================================================================
@@ -884,15 +1073,4 @@ final _mockConversations = <Conversation>[
 ];
 
 // Mock messages removed - using real API now
-
-final _mockNotifications = <app.AppNotification>[
-  app.AppNotification(
-    id: '1',
-    type: app.NotificationType.job,
-    title: 'New Job Match',
-    body: 'A new job matching your skills has been posted',
-    createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-    isRead: false,
-    data: {'jobId': '1'},
-  ),
-];
+// Mock notifications removed - using real API now

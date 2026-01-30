@@ -7,53 +7,228 @@ import '../../../../core/providers/providers.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/notification.dart';
 
-/// Notifications screen
-class NotificationsScreen extends ConsumerWidget {
+/// Notifications screen with pagination, mark as read, and error handling
+class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notificationsAsync = ref.watch(notificationsProvider);
+  ConsumerState<NotificationsScreen> createState() =>
+      _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      ref.read(notificationsStateProvider.notifier).loadMoreNotifications();
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mark All as Read'),
+        content: const Text(
+            'Are you sure you want to mark all notifications as read?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Mark All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(notificationsStateProvider.notifier).markAllAsRead();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notificationsState = ref.watch(notificationsStateProvider);
+    final isOnline = ref.watch(isOnlineProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
-          TextButton(
-            onPressed: () {
-              // Mark all as read
-            },
-            child: const Text('Mark all read'),
+          if (notificationsState.unreadCount > 0)
+            TextButton(
+              onPressed: _markAllAsRead,
+              child: const Text('Mark all read'),
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Offline banner
+          if (!isOnline)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppTheme.spacingSm),
+              color: AppTheme.warningColor.withOpacity(0.1),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.cloud_off,
+                    size: 16,
+                    color: AppTheme.warningColor,
+                  ),
+                  const SizedBox(width: AppTheme.spacingSm),
+                  Text(
+                    'You\'re offline',
+                    style: TextStyle(
+                      color: AppTheme.warningColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // Main content
+          Expanded(
+            child: _buildContent(notificationsState),
           ),
         ],
       ),
-      body: notificationsAsync.when(
-        data: (notifications) {
-          if (notifications.isEmpty) {
-            return const _EmptyState();
+    );
+  }
+
+  Widget _buildContent(NotificationsState state) {
+    if (state.error != null && state.notifications.isEmpty) {
+      return _ErrorState(
+        error: state.error!,
+        onRetry: () => ref.read(notificationsStateProvider.notifier).refresh(),
+      );
+    }
+
+    if (state.isLoading && state.notifications.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state.notifications.isEmpty) {
+      return const _EmptyState();
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => ref.read(notificationsStateProvider.notifier).refresh(),
+      child: ListView.builder(
+        controller: _scrollController,
+        itemCount: state.notifications.length + (state.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == state.notifications.length) {
+            return const Padding(
+              padding: EdgeInsets.all(AppTheme.spacingMd),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
           }
 
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(notificationsProvider),
-            child: ListView.builder(
-              itemCount: notifications.length,
-              itemBuilder: (context, index) {
-                return _NotificationTile(notification: notifications[index]);
-              },
-            ),
+          return _NotificationTile(
+            notification: state.notifications[index],
+            onTap: () => _handleNotificationTap(state.notifications[index]),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
     );
+  }
+
+  void _handleNotificationTap(AppNotification notification) {
+    // Mark as read if unread
+    if (!notification.isRead) {
+      ref.read(notificationsStateProvider.notifier).markAsRead(notification.id);
+    }
+
+    // Navigate based on action URL or notification type
+    if (notification.actionUrl != null) {
+      context.push(notification.actionUrl!);
+    } else {
+      // Navigate based on type and data
+      _navigateByType(notification);
+    }
+  }
+
+  void _navigateByType(AppNotification notification) {
+    final data = notification.data;
+
+    switch (notification.type) {
+      case NotificationType.job:
+        final jobId = data?['jobId'] as String?;
+        if (jobId != null) {
+          context.push('/jobs/$jobId');
+        }
+        break;
+      case NotificationType.proposal:
+        final proposalId = data?['proposalId'] as String?;
+        if (proposalId != null) {
+          context.push('/proposals/$proposalId');
+        }
+        break;
+      case NotificationType.message:
+        final conversationId = data?['conversationId'] as String?;
+        if (conversationId != null) {
+          context.push('/messages/$conversationId');
+        }
+        break;
+      case NotificationType.contract:
+        final contractId = data?['contractId'] as String?;
+        if (contractId != null) {
+          context.push('/contracts/$contractId');
+        }
+        break;
+      case NotificationType.payment:
+        context.push('/earnings');
+        break;
+      case NotificationType.milestone:
+        final contractId = data?['contractId'] as String?;
+        if (contractId != null) {
+          context.push('/contracts/$contractId');
+        }
+        break;
+      case NotificationType.review:
+        context.push('/profile');
+        break;
+      case NotificationType.general:
+        // No specific navigation
+        break;
+    }
   }
 }
 
 class _NotificationTile extends StatelessWidget {
   final AppNotification notification;
+  final VoidCallback onTap;
 
-  const _NotificationTile({required this.notification});
+  const _NotificationTile({
+    required this.notification,
+    required this.onTap,
+  });
 
   IconData _getIcon() {
     switch (notification.type) {
@@ -103,11 +278,7 @@ class _NotificationTile extends StatelessWidget {
       color:
           notification.isRead ? null : AppTheme.primaryColor.withOpacity(0.05),
       child: ListTile(
-        onTap: () {
-          if (notification.actionUrl != null) {
-            context.push(notification.actionUrl!);
-          }
-        },
+        onTap: onTap,
         leading: Container(
           width: 40,
           height: 40,
@@ -137,9 +308,24 @@ class _NotificationTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
-            Text(
-              timeago.format(notification.createdAt),
-              style: Theme.of(context).textTheme.bodySmall,
+            Row(
+              children: [
+                Text(
+                  timeago.format(notification.createdAt),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (!notification.isRead) ...[
+                  const SizedBox(width: AppTheme.spacingSm),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppTheme.primaryColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),
@@ -177,6 +363,49 @@ class _EmptyState extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String error;
+  final VoidCallback onRetry;
+
+  const _ErrorState({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacingLg),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: AppTheme.errorColor,
+            ),
+            const SizedBox(height: AppTheme.spacingMd),
+            Text(
+              'Failed to load notifications',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: AppTheme.spacingSm),
+            Text(
+              error,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppTheme.spacingMd),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }
