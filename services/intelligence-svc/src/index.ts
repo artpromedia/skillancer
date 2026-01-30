@@ -2,10 +2,12 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
+import Redis from 'ioredis';
 
 import { healthRoutes } from './routes/health.routes';
 import { intelligenceRoutes } from './routes/intelligence.routes';
 import { registerAuthPlugin } from './middleware/auth';
+import { rateLimitPlugin } from './plugins/rate-limit';
 
 const prisma = new PrismaClient();
 
@@ -37,6 +39,16 @@ async function buildApp() {
 
   // Register authentication plugin
   registerAuthPlugin(fastify);
+
+  // Register rate limiting plugin with Redis
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    const redis = new Redis(redisUrl);
+    await fastify.register(rateLimitPlugin, { redis });
+  } else {
+    // Use in-memory rate limiting for development
+    await fastify.register(rateLimitPlugin, {});
+  }
 
   fastify.decorateRequest('prisma', null);
   fastify.addHook('onRequest', async (request) => {

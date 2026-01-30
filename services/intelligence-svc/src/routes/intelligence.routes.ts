@@ -12,9 +12,9 @@ const riskAlertService = new RiskAlertService(prisma);
 export async function intelligenceRoutes(fastify: FastifyInstance) {
   // === Outcome Routes ===
 
-  // Record outcome (PROTECTED - requires authentication)
+  // Record outcome (PROTECTED - requires authentication + rate limited)
   fastify.post('/outcomes', {
-    preHandler: [fastify.authenticate],
+    preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.outcomeRecording],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const input = request.body as any;
@@ -134,9 +134,9 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
 
   // === Prediction Routes ===
 
-  // Generate prediction (PROTECTED - requires authentication)
+  // Generate prediction (PROTECTED - requires authentication + rate limited)
   fastify.post('/predictions', {
-    preHandler: [fastify.authenticate],
+    preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.mlPredictions],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const input = request.body as any;
@@ -164,11 +164,11 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // Update prediction (PROTECTED - requires authentication)
+  // Update prediction (PROTECTED - requires authentication + rate limited)
   fastify.post(
     '/contracts/:contractId/prediction/refresh',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.mlPredictions],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -221,9 +221,9 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
 
   // === Risk Alert Routes ===
 
-  // Create alert (PROTECTED - requires authentication)
+  // Create alert (PROTECTED - requires authentication + rate limited)
   fastify.post('/alerts', {
-    preHandler: [fastify.authenticate],
+    preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.riskAnalysis],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const input = request.body as any;
@@ -268,9 +268,9 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // Acknowledge alert (PROTECTED - requires authentication)
+  // Acknowledge alert (PROTECTED - requires authentication + rate limited)
   fastify.post('/alerts/:id/acknowledge', {
-    preHandler: [fastify.authenticate],
+    preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.riskAnalysis],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any).user?.id;
@@ -286,9 +286,9 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Resolve alert (PROTECTED - requires authentication)
+  // Resolve alert (PROTECTED - requires authentication + rate limited)
   fastify.post('/alerts/:id/resolve', {
-    preHandler: [fastify.authenticate],
+    preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.riskAnalysis],
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const userId = (request as any).user?.id;
@@ -305,11 +305,11 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Analyze and generate alerts (PROTECTED - requires authentication)
+  // Analyze and generate alerts (PROTECTED - requires authentication + rate limited)
   fastify.post(
     '/contracts/:contractId/analyze',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.riskAnalysis],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
