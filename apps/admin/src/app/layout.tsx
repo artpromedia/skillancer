@@ -9,6 +9,7 @@
  * @module app/layout
  */
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   Users,
@@ -37,6 +38,20 @@ import { useState, useEffect, useCallback } from 'react';
 
 import type { LucideIcon } from 'lucide-react';
 import '../styles/globals.css';
+
+// ============================================================================
+// Query Client
+// ============================================================================
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // ============================================================================
 // Types
@@ -443,26 +458,31 @@ export default function RootLayout({
         <meta content="noindex, nofollow" name="robots" />
       </head>
       <body className="bg-gray-100 dark:bg-gray-900">
-        <div className="flex h-screen overflow-hidden">
-          {/* Sidebar */}
-          <Sidebar
-            currentPath={pathname}
-            isOpen={isSidebarOpen}
-            userRole={adminUser.role}
-            onClose={closeSidebar}
-          />
+        <QueryClientProvider client={queryClient}>
+          <div className="flex h-screen overflow-hidden">
+            {/* Sidebar */}
+            <Sidebar
+              currentPath={pathname}
+              isOpen={isSidebarOpen}
+              userRole={adminUser.role}
+              onClose={closeSidebar}
+            />
 
-          {/* Main content */}
-          <div className="flex flex-1 flex-col overflow-hidden">
-            {/* Header */}
-            <Header notifications={5} user={adminUser} onMenuClick={() => setIsSidebarOpen(true)} />
+            {/* Main content */}
+            <div className="flex flex-1 flex-col overflow-hidden">
+              {/* Header */}
+              <Header
+                notifications={5}
+                user={adminUser}
+                onMenuClick={() => setIsSidebarOpen(true)}
+              />
 
-            {/* Page content */}
-            <main className="flex-1 overflow-y-auto p-6">{children}</main>
+              {/* Page content */}
+              <main className="flex-1 overflow-y-auto p-6">{children}</main>
+            </div>
           </div>
-        </div>
+        </QueryClientProvider>
       </body>
     </html>
   );
 }
-
