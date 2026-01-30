@@ -122,14 +122,18 @@ export function sessionRoutes(
   screenshotService: ScreenshotDetectionService,
   prisma: PrismaClient
 ): void {
+  // Get rate limit hooks from the registered plugin
+  const { vdiOperations, fileOperations } = app.skillpodRateLimit;
+
   // ===========================================================================
   // GET SESSION DETAILS
+  // Rate limit: 30 requests/minute (vdiOperations)
   // ===========================================================================
 
   app.get<{ Params: SessionParams }>(
     '/sessions/:sessionId',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, vdiOperations],
       schema: {
         params: SessionIdParam,
       },

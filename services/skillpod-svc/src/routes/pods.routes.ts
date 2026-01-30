@@ -73,8 +73,12 @@ export function podRoutes(
   containmentService: DataContainmentService,
   prisma: PrismaClient
 ): void {
+  // Get rate limit hooks from the registered plugin
+  const { vdiCreation, vdiOperations } = app.skillpodRateLimit;
+
   // ===========================================================================
   // CREATE POD
+  // Rate limit: 5 requests/hour per user (expensive container spawning)
   // ===========================================================================
 
   app.post<{
@@ -82,7 +86,7 @@ export function podRoutes(
   }>(
     '/pods',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, vdiCreation],
       schema: {
         body: CreatePodSchema,
         response: {
@@ -94,6 +98,14 @@ export function podRoutes(
               connectionUrl: z.string().optional(),
               createdAt: z.string(),
             }),
+          }),
+          429: z.object({
+            statusCode: z.literal(429),
+            error: z.string(),
+            message: z.string(),
+            code: z.string(),
+            endpoint: z.string(),
+            retryAfter: z.number().optional(),
           }),
         },
       },
@@ -437,6 +449,7 @@ export function podRoutes(
 
   // ===========================================================================
   // POD ACTIONS (PAUSE, RESUME, TERMINATE)
+  // Rate limit: 30 requests/minute per user (VDI operations)
   // ===========================================================================
 
   app.post<{
@@ -445,7 +458,7 @@ export function podRoutes(
   }>(
     '/pods/:podId/action',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, vdiOperations],
       schema: {
         params: z.object({
           podId: z.string().uuid(),

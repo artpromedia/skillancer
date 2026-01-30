@@ -136,12 +136,17 @@ export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async 
 ) => {
   const { podService, resourcePoolService, autoScalingService } = options;
 
+  // Get rate limit hooks from the registered plugin
+  const { vdiCreation, vdiOperations } = fastify.skillpodRateLimit;
+
   // ===========================================================================
   // LIST PODS
+  // Rate limit: 30 requests/minute (vdiOperations)
   // ===========================================================================
   fastify.get(
     '/',
     {
+      preHandler: [requireAuth, vdiOperations],
       schema: {
         querystring: ListPodsQuerySchema,
         response: {
@@ -184,12 +189,14 @@ export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async 
 
   // ===========================================================================
   // GET POD BY ID
+  // Rate limit: 30 requests/minute (vdiOperations)
   // ===========================================================================
   fastify.get<{
     Params: { podId: string };
   }>(
     '/:podId',
     {
+      preHandler: [requireAuth, vdiOperations],
       schema: {
         params: {
           type: 'object',
@@ -221,10 +228,12 @@ export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async 
 
   // ===========================================================================
   // CREATE POD
+  // Rate limit: 5 requests/hour per user (expensive container spawning)
   // ===========================================================================
   fastify.post(
     '/',
     {
+      preHandler: [requireAuth, vdiCreation],
       schema: {
         body: CreatePodSchema,
       },
@@ -264,12 +273,14 @@ export const environmentPodRoutes: FastifyPluginAsync<PodRoutesOptions> = async 
 
   // ===========================================================================
   // START POD
+  // Rate limit: 30 requests/minute (vdiOperations)
   // ===========================================================================
   fastify.post<{
     Params: { podId: string };
   }>(
     '/:podId/start',
     {
+      preHandler: [requireAuth, vdiOperations],
       schema: {
         params: {
           type: 'object',

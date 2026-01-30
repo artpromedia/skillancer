@@ -90,8 +90,12 @@ export function containmentRoutes(
   app: FastifyInstance,
   containmentService: DataContainmentService
 ): void {
+  // Get rate limit hooks from the registered plugin
+  const { fileOperations } = app.skillpodRateLimit;
+
   // ===========================================================================
   // CLIPBOARD ACCESS CHECK
+  // Rate limit: 100 requests/minute per user (file operations)
   // ===========================================================================
 
   app.post<{
@@ -99,7 +103,7 @@ export function containmentRoutes(
   }>(
     '/containment/clipboard/check',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, fileOperations],
       schema: {
         body: ClipboardCheckSchema,
       },
@@ -112,6 +116,7 @@ export function containmentRoutes(
 
   // ===========================================================================
   // FILE TRANSFER CHECK
+  // Rate limit: 100 requests/minute per user (file operations)
   // ===========================================================================
 
   app.post<{
@@ -119,7 +124,7 @@ export function containmentRoutes(
   }>(
     '/containment/file-transfer/check',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, fileOperations],
       schema: {
         body: FileTransferCheckSchema,
       },
@@ -135,6 +140,7 @@ export function containmentRoutes(
 
   // ===========================================================================
   // NETWORK ACCESS CHECK
+  // Rate limit: 100 requests/minute per user (file operations)
   // ===========================================================================
 
   app.post<{
@@ -142,7 +148,7 @@ export function containmentRoutes(
   }>(
     '/containment/network/check',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, fileOperations],
       schema: {
         body: NetworkAccessCheckSchema,
       },

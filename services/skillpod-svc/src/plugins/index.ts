@@ -12,3 +12,6 @@ export {
   validateTenantAccess,
 } from './auth.js';
 export type { JwtPayload, AuthenticatedUser } from './auth.js';
+
+export { rateLimitPlugin } from './rate-limit.js';
+export type { RateLimitPluginOptions } from './rate-limit.js';

@@ -8,3 +8,18 @@ export {
   createRouteContainmentMiddleware,
   createWatermarkMiddleware,
 } from './containment.middleware.js';
+
+export {
+  createSkillpodRateLimitHook,
+  createSkillpodRateLimitHooks,
+  createCombinedRateLimitHook,
+  SkillpodRateLimitExceededError,
+  SkillpodRateLimitConfigs,
+  TenantTierMultipliers,
+  getRateLimitKey,
+  getClientIp,
+  getTenantTier,
+  getAdjustedConfig,
+  logRateLimitViolation,
+} from './rate-limit.js';
+export type { SkillpodRateLimitType, SkillpodRateLimitHooks } from './rate-limit.js';

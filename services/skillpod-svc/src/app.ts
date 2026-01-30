@@ -24,6 +24,7 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastif
 import { getConfig } from './config/index.js';
 import { createContainmentMiddleware, createWatermarkMiddleware } from './middleware/index.js';
 import { authPlugin } from './plugins/auth.js';
+import { rateLimitPlugin } from './plugins/rate-limit.js';
 import {
   createLearningProfileRepository,
   createSkillGapRepository,
@@ -119,6 +120,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Register JWT authentication plugin (early in chain)
   await app.register(authPlugin);
+
+  // Register rate limiting plugin for VDI endpoints
+  await app.register(rateLimitPlugin, { redis });
 
   // ===========================================================================
   // SERVICES

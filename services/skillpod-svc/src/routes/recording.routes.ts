@@ -171,6 +171,9 @@ const ApplyRetentionPolicySchema = z.object({
 
 export function recordingRoutes(recordingService: RecordingService) {
   return async function routes(fastify: FastifyInstance): Promise<void> {
+    // Get rate limit hooks from the registered plugin
+    const { sessionRecording, vdiOperations } = fastify.skillpodRateLimit;
+
     // =========================================================================
     // RECORDING LIFECYCLE
     // =========================================================================
@@ -178,8 +181,9 @@ export function recordingRoutes(recordingService: RecordingService) {
     /**
      * Start a new recording for a session
      * POST /recordings
+     * Rate limit: 30 requests/minute (vdiOperations - starting recordings)
      */
-    fastify.post('/recordings', { preHandler: [requireAuth] }, async (request, reply) => {
+    fastify.post('/recordings', { preHandler: [requireAuth, vdiOperations] }, async (request, reply) => {
       const body = StartRecordingSchema.parse(request.body);
 
       const result = await recordingService.startRecording({
@@ -203,10 +207,11 @@ export function recordingRoutes(recordingService: RecordingService) {
     /**
      * Stop a recording
      * POST /recordings/:recordingId/stop
+     * Rate limit: 30 requests/minute (vdiOperations)
      */
     fastify.post(
       '/recordings/:recordingId/stop',
-      { preHandler: [requireAuth] },
+      { preHandler: [requireAuth, vdiOperations] },
       async (request, reply) => {
         const { recordingId } = RecordingIdParam.parse(request.params);
         const body = StopRecordingSchema.parse(request.body);
@@ -227,10 +232,11 @@ export function recordingRoutes(recordingService: RecordingService) {
     /**
      * Get a recording by ID
      * GET /recordings/:recordingId
+     * Rate limit: 20 requests/minute (sessionRecording - accessing recordings)
      */
     fastify.get(
       '/recordings/:recordingId',
-      { preHandler: [requireAuth] },
+      { preHandler: [requireAuth, sessionRecording] },
       async (request, reply) => {
         const { recordingId } = RecordingIdParam.parse(request.params);
 
@@ -253,10 +259,11 @@ export function recordingRoutes(recordingService: RecordingService) {
     /**
      * List recordings for a tenant
      * GET /tenants/:tenantId/recordings
+     * Rate limit: 20 requests/minute (sessionRecording)
      */
     fastify.get(
       '/tenants/:tenantId/recordings',
-      { preHandler: [requireAuth] },
+      { preHandler: [requireAuth, sessionRecording] },
       async (request, reply) => {
         const { tenantId } = TenantIdParam.parse(request.params);
         const query = ListRecordingsQuery.parse(request.query);

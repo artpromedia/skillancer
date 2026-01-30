@@ -129,14 +129,18 @@ export function securityPolicyRoutes(
   app: FastifyInstance,
   policyService: SecurityPolicyService
 ): void {
+  // Get rate limit hooks from the registered plugin
+  const { policyManagement } = app.skillpodRateLimit;
+
   // ===========================================================================
   // LIST POLICIES
+  // Rate limit: 50 requests/minute (policyManagement)
   // ===========================================================================
 
   app.get<{ Querystring: TenantQuery }>(
     '/policies',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, policyManagement],
       schema: {
         querystring: z.object({
           tenantId: z.string().uuid(),
@@ -157,12 +161,13 @@ export function securityPolicyRoutes(
 
   // ===========================================================================
   // GET POLICY
+  // Rate limit: 50 requests/minute (policyManagement)
   // ===========================================================================
 
   app.get<{ Params: PolicyParams }>(
     '/policies/:policyId',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, policyManagement],
       schema: {
         params: z.object({
           policyId: z.string().uuid(),
@@ -183,12 +188,13 @@ export function securityPolicyRoutes(
 
   // ===========================================================================
   // GET DEFAULT POLICY
+  // Rate limit: 50 requests/minute (policyManagement)
   // ===========================================================================
 
   app.get<{ Querystring: TenantQuery }>(
     '/policies/default',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, policyManagement],
       schema: {
         querystring: z.object({
           tenantId: z.string().uuid(),
