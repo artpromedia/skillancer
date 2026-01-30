@@ -4,6 +4,7 @@ import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
 
 import { authPlugin } from './plugins/auth.js';
+import { rateLimitPlugin } from './plugins/rate-limit.js';
 import { healthRoutes } from './routes/health.routes';
 import { copilotRoutes } from './routes/copilot.routes';
 
@@ -37,6 +38,9 @@ async function buildApp() {
 
   // Register JWT authentication plugin
   await fastify.register(authPlugin);
+
+  // Register rate limiting plugin for AI endpoints
+  await fastify.register(rateLimitPlugin);
 
   fastify.decorateRequest('prisma', null);
   fastify.addHook('onRequest', async (request) => {

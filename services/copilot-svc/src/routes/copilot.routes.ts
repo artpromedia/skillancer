@@ -51,6 +51,10 @@ const DraftIdParamsSchema = z.object({
 // =============================================================================
 
 export async function copilotRoutes(fastify: FastifyInstance) {
+  // Get rate limit hooks from the registered plugin
+  const { aiGeneration, chatAssist, analysis, profileOptimize, rateSuggest } =
+    fastify.copilotRateLimit;
+
   // ===========================================================================
   // PROPOSAL DRAFT - CREATE
   // ===========================================================================
@@ -58,11 +62,12 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   /**
    * POST /proposals/draft
    * Generate a new proposal draft using AI
+   * Rate limit: 10 req/min per user (aiGeneration)
    */
   fastify.post(
     '/proposals/draft',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, aiGeneration],
       schema: {
         description: 'Generate a new proposal draft using AI',
         tags: ['Proposals'],
@@ -84,6 +89,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           },
           400: { description: 'Invalid request' },
           401: { description: 'Unauthorized' },
+          429: { description: 'Rate limit exceeded' },
         },
       } as any,
     },
@@ -273,11 +279,12 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   /**
    * POST /rates/suggest
    * Get rate suggestions based on skills and experience
+   * Rate limit: 15 req/min per user (rateSuggest)
    */
   fastify.post(
     '/rates/suggest',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, rateSuggest],
       schema: {
         description: 'Get rate suggestions based on skills and experience',
         tags: ['Rates'],
@@ -298,6 +305,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           },
           400: { description: 'Invalid request' },
           401: { description: 'Unauthorized' },
+          429: { description: 'Rate limit exceeded' },
         },
       } as any,
     },
@@ -332,11 +340,12 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   /**
    * POST /messages/assist
    * Get AI assistance for composing messages
+   * Rate limit: 20 req/min per user (chatAssist)
    */
   fastify.post(
     '/messages/assist',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, chatAssist],
       schema: {
         description: 'Get AI assistance for composing messages',
         tags: ['Messages'],
@@ -356,6 +365,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           },
           400: { description: 'Invalid request' },
           401: { description: 'Unauthorized' },
+          429: { description: 'Rate limit exceeded' },
         },
       } as any,
     },
@@ -390,11 +400,12 @@ export async function copilotRoutes(fastify: FastifyInstance) {
   /**
    * POST /profile/optimize
    * Get AI suggestions for profile optimization
+   * Rate limit: 10 req/min per user (profileOptimize)
    */
   fastify.post(
     '/profile/optimize',
     {
-      preHandler: [requireAuth],
+      preHandler: [requireAuth, profileOptimize],
       schema: {
         description: 'Get AI suggestions for profile optimization',
         tags: ['Profile'],
@@ -416,6 +427,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
           },
           400: { description: 'Invalid request' },
           401: { description: 'Unauthorized' },
+          429: { description: 'Rate limit exceeded' },
         },
       } as any,
     },
@@ -451,11 +463,12 @@ export async function copilotRoutes(fastify: FastifyInstance) {
    * POST /market/insights
    * Get market insights for skills and industries
    * This endpoint works with or without authentication
+   * Rate limit: 5 req/min per user/IP (analysis - most expensive)
    */
   fastify.post(
     '/market/insights',
     {
-      preHandler: [optionalAuth],
+      preHandler: [optionalAuth, analysis],
       schema: {
         description: 'Get market insights for skills and industries',
         tags: ['Market'],
@@ -476,6 +489,7 @@ export async function copilotRoutes(fastify: FastifyInstance) {
             },
           },
           400: { description: 'Invalid request' },
+          429: { description: 'Rate limit exceeded' },
         },
       } as any,
     },
