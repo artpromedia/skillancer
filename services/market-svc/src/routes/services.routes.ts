@@ -13,6 +13,7 @@
 import { z } from 'zod';
 
 import { ServiceCatalogError } from '../errors/service-catalog.errors.js';
+import { createMarketRateLimitHook } from '../middleware/rate-limit.js';
 import { ServiceCatalogService } from '../services/service-catalog.service.js';
 
 import type { ServiceCategory } from '../types/service-catalog.types.js';
@@ -167,6 +168,10 @@ export function registerServiceRoutes(fastify: FastifyInstance, deps: ServiceRou
   // Initialize service
   const serviceCatalogService = new ServiceCatalogService(prisma, redis, logger);
 
+  // Rate limit hooks
+  const serviceCreationRateLimitHook = fastify.marketRateLimit?.serviceCreation;
+  const searchRateLimitHook = fastify.marketRateLimit?.searchQueries;
+
   // Helper to get authenticated user
   const getUser = (request: any) => {
     if (!request.user) {
@@ -198,57 +203,69 @@ export function registerServiceRoutes(fastify: FastifyInstance, deps: ServiceRou
   // SERVICE CRUD
   // ==========================================================================
 
-  // POST /services - Create a new service
-  fastify.post('/', async (request, reply) => {
-    try {
-      const user = getUser(request);
-      const body = CreateServiceSchema.parse(request.body);
+  // POST /services - Create a new service (rate limited to prevent spam)
+  fastify.post(
+    '/',
+    {
+      preHandler: serviceCreationRateLimitHook ? [serviceCreationRateLimitHook] : [],
+    },
+    async (request, reply) => {
+      try {
+        const user = getUser(request);
+        const body = CreateServiceSchema.parse(request.body);
 
-      const service = await serviceCatalogService.createService(user.id, body);
+        const service = await serviceCatalogService.createService(user.id, body);
 
-      logger.info({
-        msg: 'Service created',
-        serviceId: service.id,
-        freelancerId: user.id,
-      });
+        logger.info({
+          msg: 'Service created',
+          serviceId: service.id,
+          freelancerId: user.id,
+        });
 
-      return await reply.status(201).send({
-        success: true,
-        service,
-      });
-    } catch (error) {
-      return handleError(error, reply);
+        return await reply.status(201).send({
+          success: true,
+          service,
+        });
+      } catch (error) {
+        return handleError(error, reply);
+      }
     }
-  });
+  );
 
-  // GET /services/search - Search services
-  fastify.get('/search', async (request, reply) => {
-    try {
-      const query = SearchServicesSchema.parse(request.query);
+  // GET /services/search - Search services (rate limited - can be expensive)
+  fastify.get(
+    '/search',
+    {
+      preHandler: searchRateLimitHook ? [searchRateLimitHook] : [],
+    },
+    async (request, reply) => {
+      try {
+        const query = SearchServicesSchema.parse(request.query);
 
-      const result = await serviceCatalogService.searchServices({
-        query: query.query,
-        category: query.category,
-        subcategory: query.subcategory,
-        priceMin: query.priceMin,
-        priceMax: query.priceMax,
-        deliveryDays: query.deliveryDays,
-        minRating: query.minRating,
-        skills: query.skills,
-        sellerId: query.sellerId,
-        sortBy: query.sortBy,
-        page: query.page,
-        limit: Math.min(query.limit, 50),
-      });
+        const result = await serviceCatalogService.searchServices({
+          query: query.query,
+          category: query.category,
+          subcategory: query.subcategory,
+          priceMin: query.priceMin,
+          priceMax: query.priceMax,
+          deliveryDays: query.deliveryDays,
+          minRating: query.minRating,
+          skills: query.skills,
+          sellerId: query.sellerId,
+          sortBy: query.sortBy,
+          page: query.page,
+          limit: Math.min(query.limit, 50),
+        });
 
-      return await reply.send({
-        success: true,
-        ...result,
-      });
-    } catch (error) {
-      return handleError(error, reply);
+        return await reply.send({
+          success: true,
+          ...result,
+        });
+      } catch (error) {
+        return handleError(error, reply);
+      }
     }
-  });
+  );
 
   // GET /services/featured - Get featured services
   fastify.get('/featured', async (request, reply) => {
@@ -671,4 +688,3 @@ export function registerServiceRoutes(fastify: FastifyInstance, deps: ServiceRou
     }
   });
 }
-

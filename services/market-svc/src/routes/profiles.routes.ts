@@ -12,6 +12,8 @@
  * - Compliance certifications
  */
 
+import { createMarketRateLimitHook } from '../middleware/rate-limit.js';
+
 import type { PrismaClient } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -59,6 +61,9 @@ interface RecommendationBody {
 
 export function registerProfileRoutes(fastify: FastifyInstance, deps: ProfileDependencies): void {
   const { logger } = deps;
+
+  // Rate limit hook for profile updates (30/min)
+  const profileRateLimitHook = fastify.marketRateLimit?.profileUpdates;
 
   // --------------------------------------------------------------------------
   // Trust Score
@@ -111,10 +116,13 @@ export function registerProfileRoutes(fastify: FastifyInstance, deps: ProfileDep
 
   /**
    * POST /profiles/:userId/endorsements
-   * Give an endorsement
+   * Give an endorsement (rate limited)
    */
   fastify.post<{ Params: ProfileParams; Body: EndorsementBody }>(
     '/:userId/endorsements',
+    {
+      preHandler: profileRateLimitHook ? [profileRateLimitHook] : [],
+    },
     async (
       request: FastifyRequest<{ Params: ProfileParams; Body: EndorsementBody }>,
       reply: FastifyReply
@@ -646,4 +654,3 @@ function getComplianceData(_deps: ProfileDependencies, _userId: string) {
     clearances: [],
   };
 }
-

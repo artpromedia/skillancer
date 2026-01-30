@@ -14,6 +14,7 @@ import { z } from 'zod';
 
 import { BiddingError, getStatusCode } from '../errors/bidding.errors.js';
 import { signalBidSubmitted, signalBidOutcome } from '../hooks/learning-signals.hook.js';
+import { createMarketRateLimitHook } from '../middleware/rate-limit.js';
 import { BidService } from '../services/bid.service.js';
 
 import type { PrismaClient } from '../types/prisma-shim.js';
@@ -116,6 +117,9 @@ export function registerBidRoutes(fastify: FastifyInstance, deps: BidRouteDeps):
   // Initialize service
   const bidService = new BidService(prisma, redis, logger);
 
+  // Rate limit hook for proposal submission (20/hour to prevent bid spam)
+  const proposalRateLimitHook = fastify.marketRateLimit?.proposalSubmission;
+
   // Helper to get authenticated user
   const getUser = (request: any) => {
     if (!request.user) {
@@ -138,8 +142,10 @@ export function registerBidRoutes(fastify: FastifyInstance, deps: BidRouteDeps):
     throw error;
   };
 
-  // POST /bids - Submit a new bid
-  fastify.post('/', async (request, reply) => {
+  // POST /bids - Submit a new bid (rate limited to prevent bid spam)
+  fastify.post('/', {
+    preHandler: proposalRateLimitHook ? [proposalRateLimitHook] : [],
+  }, async (request, reply) => {
     try {
       const user = getUser(request);
       const body = SubmitBidSchema.parse(request.body);

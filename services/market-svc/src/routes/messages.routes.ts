@@ -10,6 +10,7 @@
 
 import { createConversationRepository } from '../repositories/conversation.repository.js';
 import { createMessageRepository } from '../repositories/message.repository.js';
+import { createMarketRateLimitHook } from '../middleware/rate-limit.js';
 import { createMessageService } from '../services/message.service.js';
 import { createPresenceService } from '../services/presence.service.js';
 
@@ -122,10 +123,14 @@ export function registerMessageRoutes(fastify: FastifyInstance, deps: MessageRou
     presenceService,
   });
 
-  // Send message to conversation
+  // Rate limit hook for messaging (100/min to allow fluid conversation)
+  const messagingRateLimitHook = fastify.marketRateLimit?.messaging;
+
+  // Send message to conversation (rate limited)
   fastify.post<{ Params: ConversationParams; Body: SendMessageBody }>(
     '/:conversationId/messages',
     {
+      preHandler: messagingRateLimitHook ? [messagingRateLimitHook] : [],
       schema: {
         description: 'Send a message to a conversation',
         tags: ['Messages'],
@@ -810,4 +815,3 @@ export function registerMessageRoutes(fastify: FastifyInstance, deps: MessageRou
     }
   );
 }
-

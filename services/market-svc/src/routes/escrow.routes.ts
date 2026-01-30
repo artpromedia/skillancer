@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 
+import { createMarketRateLimitHook } from '../middleware/rate-limit.js';
 import { EscrowService, EscrowError } from '../services/escrow.service.js';
 
 import type { PrismaClient } from '../types/prisma-shim.js';
@@ -96,6 +97,9 @@ export function registerEscrowRoutes(fastify: FastifyInstance, deps: EscrowRoute
 
   // Initialize service
   const escrowService = new EscrowService(prisma);
+
+  // Rate limit hook for payment operations (20/min)
+  const paymentsRateLimitHook = fastify.marketRateLimit?.payments;
 
   // Helper to get authenticated user
   const getUser = (request: any) => {
@@ -213,46 +217,55 @@ export function registerEscrowRoutes(fastify: FastifyInstance, deps: EscrowRoute
   // FUND ESCROW
   // ==========================================================================
 
-  // POST /escrow/:contractId/fund - Fund escrow
-  fastify.post<{ Params: { contractId: string } }>('/:contractId/fund', async (request, reply) => {
-    try {
-      const { contractId } = ContractIdParam.parse(request.params);
-      const user = getUser(request);
-      const body = FundEscrowSchema.parse(request.body);
+  // POST /escrow/:contractId/fund - Fund escrow (rate limited - payment operation)
+  fastify.post<{ Params: { contractId: string } }>(
+    '/:contractId/fund',
+    {
+      preHandler: paymentsRateLimitHook ? [paymentsRateLimitHook] : [],
+    },
+    async (request, reply) => {
+      try {
+        const { contractId } = ContractIdParam.parse(request.params);
+        const user = getUser(request);
+        const body = FundEscrowSchema.parse(request.body);
 
-      const result = await escrowService.fundEscrow({
-        contractId,
-        clientUserId: user.id,
-        amount: body.amount,
-        milestoneId: body.milestoneId,
-        paymentMethodId: body.paymentMethodId,
-        idempotencyKey: body.idempotencyKey,
-      });
+        const result = await escrowService.fundEscrow({
+          contractId,
+          clientUserId: user.id,
+          amount: body.amount,
+          milestoneId: body.milestoneId,
+          paymentMethodId: body.paymentMethodId,
+          idempotencyKey: body.idempotencyKey,
+        });
 
-      logger.info({
-        msg: 'Escrow funded',
-        contractId,
-        transactionId: result.transaction.id,
-        amount: body.amount,
-        userId: user.id,
-      });
+        logger.info({
+          msg: 'Escrow funded',
+          contractId,
+          transactionId: result.transaction.id,
+          amount: body.amount,
+          userId: user.id,
+        });
 
-      return await reply.status(201).send({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      return handleError(error, reply);
+        return await reply.status(201).send({
+          success: true,
+          data: result,
+        });
+      } catch (error) {
+        return handleError(error, reply);
+      }
     }
-  });
+  );
 
   // ==========================================================================
   // RELEASE ESCROW
   // ==========================================================================
 
-  // POST /escrow/:contractId/release - Release escrow to freelancer
+  // POST /escrow/:contractId/release - Release escrow to freelancer (rate limited)
   fastify.post<{ Params: { contractId: string } }>(
     '/:contractId/release',
+    {
+      preHandler: paymentsRateLimitHook ? [paymentsRateLimitHook] : [],
+    },
     async (request, reply) => {
       try {
         const { contractId } = ContractIdParam.parse(request.params);

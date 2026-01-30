@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 
+import { createMarketRateLimitHook } from '../middleware/rate-limit.js';
 import { ReviewAggregationService } from '../services/review-aggregation.service.js';
 import { ReviewInvitationService } from '../services/review-invitation.service.js';
 import { ReviewService } from '../services/review.service.js';
@@ -83,6 +84,9 @@ interface ReviewRouteDeps {
 export function registerReviewRoutes(fastify: FastifyInstance, deps: ReviewRouteDeps): void {
   const { prisma, redis, logger } = deps;
 
+  // Rate limit hook for reviews (strict - 5/hour to prevent manipulation)
+  const reviewsRateLimitHook = fastify.marketRateLimit?.reviews;
+
   // Initialize services
   const reviewService = new ReviewService(prisma, redis, logger);
   const aggregationService = new ReviewAggregationService(prisma, redis, logger);
@@ -96,36 +100,42 @@ export function registerReviewRoutes(fastify: FastifyInstance, deps: ReviewRoute
     return request.user as { id: string; email: string; role: string };
   };
 
-  // POST /reviews - Submit a review
-  fastify.post('/', async (request, reply) => {
-    const user = getUser(request);
-    const body = SubmitReviewSchema.parse(request.body);
+  // POST /reviews - Submit a review (rate limited to prevent manipulation)
+  fastify.post(
+    '/',
+    {
+      preHandler: reviewsRateLimitHook ? [reviewsRateLimitHook] : [],
+    },
+    async (request, reply) => {
+      const user = getUser(request);
+      const body = SubmitReviewSchema.parse(request.body);
 
-    const review = await reviewService.submitReview({
-      contractId: body.contractId,
-      reviewerId: user.id,
-      rating: body.rating,
-      categoryRatings: body.categoryRatings as FreelancerCategoryRatings | ClientCategoryRatings,
-      isPrivate: body.isPrivate,
-      ...(body.content !== undefined ? { content: body.content } : {}),
-    });
+      const review = await reviewService.submitReview({
+        contractId: body.contractId,
+        reviewerId: user.id,
+        rating: body.rating,
+        categoryRatings: body.categoryRatings as FreelancerCategoryRatings | ClientCategoryRatings,
+        isPrivate: body.isPrivate,
+        ...(body.content !== undefined ? { content: body.content } : {}),
+      });
 
-    logger.info({
-      msg: 'Review submitted',
-      reviewId: review.id,
-      contractId: body.contractId,
-      reviewerId: user.id,
-    });
+      logger.info({
+        msg: 'Review submitted',
+        reviewId: review.id,
+        contractId: body.contractId,
+        reviewerId: user.id,
+      });
 
-    return reply.status(201).send({
-      success: true,
-      review,
-      message:
-        review.status === 'REVEALED'
-          ? 'Review submitted and revealed'
-          : 'Review submitted - will be revealed when counterparty submits theirs',
-    });
-  });
+      return reply.status(201).send({
+        success: true,
+        review,
+        message:
+          review.status === 'REVEALED'
+            ? 'Review submitted and revealed'
+            : 'Review submitted - will be revealed when counterparty submits theirs',
+      });
+    }
+  );
 
   // GET /reviews/:reviewId - Get a specific review
   fastify.get<{ Params: { reviewId: string } }>('/:reviewId', async (request, reply) => {

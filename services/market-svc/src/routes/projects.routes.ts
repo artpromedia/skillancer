@@ -14,6 +14,7 @@ import { z } from 'zod';
 
 import { BiddingError, getStatusCode } from '../errors/bidding.errors.js';
 import { signalJobViewed } from '../hooks/learning-signals.hook.js';
+import { createMarketRateLimitHook } from '../middleware/rate-limit.js';
 import { ProjectService } from '../services/project.service.js';
 
 import type { PrismaClient } from '../types/prisma-shim.js';
@@ -86,6 +87,10 @@ export function registerProjectRoutes(fastify: FastifyInstance, deps: ProjectRou
   // Initialize service
   const projectService = new ProjectService(prisma, redis, logger);
 
+  // Rate limit hooks
+  const jobPostingRateLimitHook = fastify.marketRateLimit?.jobPosting;
+  const searchRateLimitHook = fastify.marketRateLimit?.searchQueries;
+
   // Helper to get authenticated user
   const getUser = (request: any) => {
     if (!request.user) {
@@ -108,61 +113,73 @@ export function registerProjectRoutes(fastify: FastifyInstance, deps: ProjectRou
     throw error;
   };
 
-  // POST /projects - Create a new project
-  fastify.post('/', async (request, reply) => {
-    try {
-      const user = getUser(request);
-      const body = CreateProjectSchema.parse(request.body);
+  // POST /projects - Create a new project (rate limited to prevent spam)
+  fastify.post(
+    '/',
+    {
+      preHandler: jobPostingRateLimitHook ? [jobPostingRateLimitHook] : [],
+    },
+    async (request, reply) => {
+      try {
+        const user = getUser(request);
+        const body = CreateProjectSchema.parse(request.body);
 
-      // Extract skill IDs
-      const { skillIds, ...projectData } = body;
+        // Extract skill IDs
+        const { skillIds, ...projectData } = body;
 
-      const project = await projectService.createProject(user.id, {
-        ...projectData,
-        skills: skillIds,
-      });
+        const project = await projectService.createProject(user.id, {
+          ...projectData,
+          skills: skillIds,
+        });
 
-      logger.info({
-        msg: 'Project created',
-        projectId: project.id,
-        clientId: user.id,
-      });
+        logger.info({
+          msg: 'Project created',
+          projectId: project.id,
+          clientId: user.id,
+        });
 
-      return await reply.status(201).send({
-        success: true,
-        project,
-      });
-    } catch (error) {
-      return handleError(error, reply);
+        return await reply.status(201).send({
+          success: true,
+          project,
+        });
+      } catch (error) {
+        return handleError(error, reply);
+      }
     }
-  });
+  );
 
-  // GET /projects/search - Search projects
-  fastify.get('/search', async (request, reply) => {
-    try {
-      const query = SearchProjectsSchema.parse(request.query);
+  // GET /projects/search - Search projects (rate limited - can be expensive)
+  fastify.get(
+    '/search',
+    {
+      preHandler: searchRateLimitHook ? [searchRateLimitHook] : [],
+    },
+    async (request, reply) => {
+      try {
+        const query = SearchProjectsSchema.parse(request.query);
 
-      const result = await projectService.searchProjects({
-        query: query.query,
-        skills: query.skills,
-        budgetMin: query.budgetMin,
-        budgetMax: query.budgetMax,
-        budgetType: query.budgetType,
-        experienceLevel: query.experienceLevel,
-        status: query.status || 'PUBLISHED',
-        sortBy: query.sortBy,
-        page: query.page,
-        limit: query.limit,
-      });
+        const result = await projectService.searchProjects({
+          query: query.query,
+          skills: query.skills,
+          budgetMin: query.budgetMin,
+          budgetMax: query.budgetMax,
+          budgetType: query.budgetType,
+          experienceLevel: query.experienceLevel,
+          status: query.status || 'PUBLISHED',
+          sortBy: query.sortBy,
+          page: query.page,
+          limit: query.limit,
+        });
 
-      return await reply.send({
-        success: true,
-        ...result,
-      });
-    } catch (error) {
-      return handleError(error, reply);
+        return await reply.send({
+          success: true,
+          ...result,
+        });
+      } catch (error) {
+        return handleError(error, reply);
+      }
     }
-  });
+  );
 
   // GET /projects/my - Get current user's projects
   fastify.get('/my', async (request, reply) => {
@@ -352,4 +369,3 @@ export function registerProjectRoutes(fastify: FastifyInstance, deps: ProjectRou
     }
   });
 }
-

@@ -9,6 +9,7 @@ import Fastify from 'fastify';
 import { Redis } from 'ioredis';
 
 import { ReviewJobs } from './jobs/index.js';
+import { rateLimitPlugin } from './plugins/rate-limit.js';
 import { registerRoutes } from './routes/index.js';
 import { createLearningSignalService } from './services/learning-signals.service.js';
 
@@ -57,6 +58,9 @@ const start = async () => {
     // Connect to database
     await prisma.$connect();
     server.log.info('Connected to database');
+
+    // Register rate limiting plugin (must be before routes)
+    await server.register(rateLimitPlugin, { redis });
 
     // Create logger instance
     const logger = createLogger(server.log);

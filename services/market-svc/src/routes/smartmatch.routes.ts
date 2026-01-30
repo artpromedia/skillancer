@@ -6,6 +6,7 @@
  */
 
 import { SmartMatchError } from '../errors/smartmatch.errors.js';
+import { createMarketRateLimitHook } from '../middleware/rate-limit.js';
 import { SmartMatchService, normalizeWeights } from '../services/smartmatch/index.js';
 
 import type {
@@ -87,12 +88,15 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
   const typedFastify = fastify as FastifyWithPrisma;
   const service = new SmartMatchService(typedFastify.prisma);
 
+  // Rate limit hook for AI matching (30/min - can be expensive)
+  const smartMatchRateLimitHook = fastify.marketRateLimit?.smartMatch;
+
   // ===========================================================================
   // MATCHING ENDPOINTS
   // ===========================================================================
 
   /**
-   * Calculate match score for a specific freelancer
+   * Calculate match score for a specific freelancer (rate limited)
    */
   fastify.post<{
     Body: {
@@ -103,6 +107,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
   }>(
     '/score',
     {
+      preHandler: smartMatchRateLimitHook ? [smartMatchRateLimitHook] : [],
       schema: {
         tags: ['smartmatch'],
         summary: 'Calculate match score for a freelancer',
@@ -143,7 +148,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
   );
 
   /**
-   * Find matching freelancers for criteria
+   * Find matching freelancers for criteria (rate limited - expensive AI operation)
    */
   fastify.post<{
     Body: {
@@ -158,6 +163,7 @@ export function smartMatchRoutes(fastify: FastifyInstance): void {
   }>(
     '/find',
     {
+      preHandler: smartMatchRateLimitHook ? [smartMatchRateLimitHook] : [],
       schema: {
         tags: ['smartmatch'],
         summary: 'Find matching freelancers',
