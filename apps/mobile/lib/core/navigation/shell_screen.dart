@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../providers/providers.dart';
+import '../services/offline_sync_manager.dart' show SyncStatus;
 import '../theme/app_theme.dart';
 import 'app_router.dart';
 
@@ -80,13 +82,31 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isOnline = ref.watch(isOnlineProvider);
+    final syncStatus = ref.watch(offlineSyncStatusProvider);
+    final pendingCount = ref.watch(pendingOperationsCountProvider);
+
     return Scaffold(
-      body: widget.child,
+      body: Column(
+        children: [
+          // Offline indicator banner
+          _OfflineBanner(
+            isOnline: isOnline,
+            syncStatus: syncStatus.valueOrNull,
+            pendingCount: pendingCount.valueOrNull ?? 0,
+            onSync: () {
+              ref.read(offlineSyncManagerProvider).syncPendingOperations();
+            },
+          ),
+          // Main content
+          Expanded(child: widget.child),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -105,6 +125,124 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Offline status banner
+class _OfflineBanner extends StatelessWidget {
+  final bool isOnline;
+  final SyncStatus? syncStatus;
+  final int pendingCount;
+  final VoidCallback onSync;
+
+  const _OfflineBanner({
+    required this.isOnline,
+    this.syncStatus,
+    required this.pendingCount,
+    required this.onSync,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Don't show anything if online and no pending operations
+    if (isOnline && pendingCount == 0 && syncStatus != SyncStatus.syncing) {
+      return const SizedBox.shrink();
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      color: _getBannerColor(),
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              _buildIcon(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _getMessage(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              if (isOnline &&
+                  pendingCount > 0 &&
+                  syncStatus != SyncStatus.syncing)
+                TextButton(
+                  onPressed: onSync,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  child: const Text('Sync Now'),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getBannerColor() {
+    if (!isOnline) {
+      return Colors.grey.shade700;
+    }
+    if (syncStatus == SyncStatus.syncing) {
+      return Colors.blue.shade600;
+    }
+    if (syncStatus == SyncStatus.error) {
+      return Colors.orange.shade700;
+    }
+    if (pendingCount > 0) {
+      return Colors.amber.shade700;
+    }
+    return Colors.green.shade600;
+  }
+
+  Widget _buildIcon() {
+    if (syncStatus == SyncStatus.syncing) {
+      return const SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ),
+      );
+    }
+    if (!isOnline) {
+      return const Icon(Icons.cloud_off, color: Colors.white, size: 18);
+    }
+    if (syncStatus == SyncStatus.error) {
+      return const Icon(Icons.error_outline, color: Colors.white, size: 18);
+    }
+    if (pendingCount > 0) {
+      return const Icon(Icons.cloud_queue, color: Colors.white, size: 18);
+    }
+    return const Icon(Icons.cloud_done, color: Colors.white, size: 18);
+  }
+
+  String _getMessage() {
+    if (!isOnline) {
+      return pendingCount > 0
+          ? 'You\'re offline • $pendingCount changes pending'
+          : 'You\'re offline • Changes will sync when online';
+    }
+    if (syncStatus == SyncStatus.syncing) {
+      return 'Syncing $pendingCount changes...';
+    }
+    if (syncStatus == SyncStatus.error) {
+      return 'Sync failed • $pendingCount changes pending';
+    }
+    if (pendingCount > 0) {
+      return '$pendingCount changes ready to sync';
+    }
+    return 'All changes synced';
   }
 }
 

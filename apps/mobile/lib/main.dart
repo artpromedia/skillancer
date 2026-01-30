@@ -7,9 +7,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app.dart';
+import 'core/connectivity/connectivity_service.dart';
+import 'core/network/api_client.dart';
 import 'core/services/crash_reporting_service.dart';
+import 'core/services/offline_sync_manager.dart';
 import 'core/storage/local_cache.dart';
 import 'features/notifications/data/services/push_notification_service.dart';
+
+/// Global container reference for accessing providers before runApp
+late ProviderContainer _container;
 
 /// Main entry point for the Skillancer mobile app
 void main() async {
@@ -48,6 +54,9 @@ void main() async {
         // Initialize local cache
         await LocalCache.initialize();
 
+        // Initialize offline sync manager
+        await _initializeOfflineSyncManager();
+
         // Initialize push notifications
         await PushNotificationService().initialize();
       } catch (e, stackTrace) {
@@ -55,10 +64,14 @@ void main() async {
         await CrashReportingService.recordError(e, stackTrace, fatal: true);
       }
 
+      // Create provider container with offline sync manager override
+      _container = ProviderContainer();
+
       // Run the app with Riverpod
       runApp(
-        const ProviderScope(
-          child: SkillancerApp(),
+        UncontrolledProviderScope(
+          container: _container,
+          child: const SkillancerApp(),
         ),
       );
     },
@@ -73,4 +86,36 @@ void main() async {
       );
     },
   );
+}
+
+/// Initialize the offline sync manager
+Future<void> _initializeOfflineSyncManager() async {
+  try {
+    final connectivity = ConnectivityService();
+    final apiClient = ApiClient();
+
+    final syncManager = OfflineSyncManager(
+      connectivity: connectivity,
+      apiClient: apiClient,
+    );
+
+    await syncManager.initialize();
+
+    debugPrint('[App] OfflineSyncManager initialized successfully');
+    debugPrint(
+        '[App] Pending operations: ${syncManager.pendingOperationsCount}');
+
+    if (syncManager.lastSyncTime != null) {
+      debugPrint('[App] Last sync: ${syncManager.lastSyncTime}');
+    }
+  } catch (e, stackTrace) {
+    debugPrint('[App] Failed to initialize OfflineSyncManager: $e');
+    await CrashReportingService.recordError(
+      e,
+      stackTrace,
+      reason: 'OfflineSyncManager initialization failed',
+      fatal: false,
+    );
+    // Don't rethrow - app can still work without offline sync
+  }
 }

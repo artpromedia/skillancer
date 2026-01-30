@@ -26,6 +26,7 @@ import '../connectivity/connectivity_service.dart';
 import '../network/api_client.dart';
 import '../network/websocket_client.dart';
 import '../services/message_queue.dart';
+import '../services/offline_sync_manager.dart';
 import '../storage/local_cache.dart';
 import '../storage/secure_storage.dart';
 
@@ -67,6 +68,54 @@ final connectivityProvider = StreamProvider<ConnectivityStatus>((ref) {
 final isOnlineProvider = Provider<bool>((ref) {
   final connectivity = ref.watch(connectivityProvider);
   return connectivity.whenOrNull(data: (status) => status.isOnline) ?? true;
+});
+
+/// Connectivity service provider (singleton instance)
+final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
+  return ConnectivityService();
+});
+
+// ============================================================================
+// Offline Sync Manager
+// ============================================================================
+
+/// Offline sync manager provider
+/// This manages queuing and syncing operations when offline
+final offlineSyncManagerProvider = Provider<OfflineSyncManager>((ref) {
+  final connectivity = ref.watch(connectivityServiceProvider);
+  final apiClient = ref.watch(apiClientProvider);
+
+  final manager = OfflineSyncManager(
+    connectivity: connectivity,
+    apiClient: apiClient,
+  );
+
+  // Initialize is called from main.dart before app runs
+  // This just provides the instance
+
+  ref.onDispose(() {
+    manager.dispose();
+  });
+
+  return manager;
+});
+
+/// Offline sync status stream provider
+final offlineSyncStatusProvider = StreamProvider<SyncStatus>((ref) {
+  final manager = ref.watch(offlineSyncManagerProvider);
+  return manager.statusStream;
+});
+
+/// Pending operations count provider
+final pendingOperationsCountProvider = StreamProvider<int>((ref) {
+  final manager = ref.watch(offlineSyncManagerProvider);
+  return manager.pendingCountStream;
+});
+
+/// Last sync time provider
+final lastSyncTimeProvider = Provider<DateTime?>((ref) {
+  final manager = ref.watch(offlineSyncManagerProvider);
+  return manager.lastSyncTime;
 });
 
 // ============================================================================

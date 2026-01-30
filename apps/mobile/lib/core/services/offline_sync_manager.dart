@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -96,7 +96,6 @@ class OfflineSyncManager {
   static const String _syncMetadataBox = 'sync_metadata';
   static const int _maxRetries = 3;
   static const Duration _syncInterval = Duration(minutes: 5);
-  static const Duration _retryDelay = Duration(seconds: 30);
 
   static OfflineSyncManager? _instance;
 
@@ -200,8 +199,7 @@ class OfflineSyncManager {
   /// Get all pending operations
   List<PendingOperation> get pendingOperations {
     return _pendingOpsBoxInstance.values
-        .map((map) =>
-            PendingOperation.fromJson(Map<String, dynamic>.from(map)))
+        .map((map) => PendingOperation.fromJson(Map<String, dynamic>.from(map)))
         .toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
@@ -303,8 +301,7 @@ class OfflineSyncManager {
     }
 
     _emitPendingCount();
-    _setStatus(
-        failureCount > 0 ? SyncStatus.error : SyncStatus.completed);
+    _setStatus(failureCount > 0 ? SyncStatus.error : SyncStatus.completed);
 
     final result = SyncResult(
       successCount: successCount,
@@ -340,13 +337,13 @@ class OfflineSyncManager {
   Future<void> _executeOperation(PendingOperation operation) async {
     switch (operation.method.toUpperCase()) {
       case 'POST':
-        await _apiClient.post(operation.endpoint, body: operation.body);
+        await _apiClient.post(operation.endpoint, data: operation.body);
         break;
       case 'PUT':
-        await _apiClient.put(operation.endpoint, body: operation.body);
+        await _apiClient.put(operation.endpoint, data: operation.body);
         break;
       case 'PATCH':
-        await _apiClient.patch(operation.endpoint, body: operation.body);
+        await _apiClient.patch(operation.endpoint, data: operation.body);
         break;
       case 'DELETE':
         await _apiClient.delete(operation.endpoint);
@@ -358,8 +355,7 @@ class OfflineSyncManager {
 
   Future<void> _moveToDeadLetter(
       PendingOperation operation, String error) async {
-    final deadLetterBox =
-        await Hive.openBox<Map>('dead_letter_operations');
+    final deadLetterBox = await Hive.openBox<Map>('dead_letter_operations');
     await deadLetterBox.put(operation.id, {
       ...operation.toJson(),
       'error': error,
@@ -560,6 +556,3 @@ class SyncStatusIndicator extends StatelessWidget {
     }
   }
 }
-
-// Needed for SyncStatusIndicator widget
-import 'package:flutter/material.dart';
