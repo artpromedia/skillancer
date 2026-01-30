@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,6 +24,8 @@ import '../../features/time_tracking/domain/models/time_entry.dart';
 import '../../features/time_tracking/domain/services/timer_service.dart';
 import '../connectivity/connectivity_service.dart';
 import '../network/api_client.dart';
+import '../network/websocket_client.dart';
+import '../services/message_queue.dart';
 import '../storage/local_cache.dart';
 import '../storage/secure_storage.dart';
 
@@ -609,18 +614,161 @@ final messagesProvider =
   }
 });
 
+// ============================================================================
+// WebSocket Provider
+// ============================================================================
+
+/// WebSocket client provider
+final webSocketClientProvider = Provider<WebSocketClient>((ref) {
+  final client = WebSocketClient();
+
+  // Connect when authenticated
+  ref.listen(authStateProvider, (previous, next) {
+    if (next.isAuthenticated) {
+      client.connect();
+    } else {
+      client.disconnect();
+    }
+  });
+
+  ref.onDispose(() {
+    client.dispose();
+  });
+
+  return client;
+});
+
+/// WebSocket events stream provider
+final webSocketEventsProvider = StreamProvider<WebSocketEvent>((ref) {
+  final client = ref.watch(webSocketClientProvider);
+  return client.events;
+});
+
+// ============================================================================
+// Message Queue Provider
+// ============================================================================
+
+/// Offline message queue provider
+final messageQueueProvider = Provider<MessageQueue>((ref) {
+  final queue = MessageQueue();
+  queue.initialize();
+
+  // Listen to connectivity changes
+  ref.listen(isOnlineProvider, (previous, next) {
+    queue.setOnlineStatus(next);
+  });
+
+  ref.onDispose(() {
+    queue.dispose();
+  });
+
+  return queue;
+});
+
+// ============================================================================
+// Typing Indicators
+// ============================================================================
+
+/// Typing indicator state for a conversation
+class TypingState {
+  final Map<String, TypingIndicator> typingUsers;
+
+  const TypingState({this.typingUsers = const {}});
+
+  TypingState copyWith({Map<String, TypingIndicator>? typingUsers}) {
+    return TypingState(typingUsers: typingUsers ?? this.typingUsers);
+  }
+
+  List<String> get typingUserNames =>
+      typingUsers.values.map((t) => t.userName).toList();
+
+  bool get hasTypingUsers => typingUsers.isNotEmpty;
+}
+
+/// Typing state provider for a conversation
+final typingStateProvider = StateNotifierProvider.autoDispose
+    .family<TypingStateNotifier, TypingState, String>((ref, conversationId) {
+  return TypingStateNotifier(ref, conversationId);
+});
+
+/// Typing state notifier
+class TypingStateNotifier extends StateNotifier<TypingState> {
+  final Ref _ref;
+  final String conversationId;
+  StreamSubscription? _subscription;
+  final Map<String, Timer> _timeoutTimers = {};
+
+  TypingStateNotifier(this._ref, this.conversationId)
+      : super(const TypingState()) {
+    _listenToWebSocket();
+  }
+
+  void _listenToWebSocket() {
+    final client = _ref.read(webSocketClientProvider);
+    _subscription = client.events.listen((event) {
+      if (event.type == WebSocketEventType.typing ||
+          event.type == WebSocketEventType.typingStop) {
+        final indicator = event.data as TypingIndicator;
+        if (indicator.conversationId == conversationId) {
+          _handleTypingEvent(indicator);
+        }
+      }
+    });
+  }
+
+  void _handleTypingEvent(TypingIndicator indicator) {
+    // Cancel existing timeout
+    _timeoutTimers[indicator.userId]?.cancel();
+
+    if (indicator.isTyping) {
+      // Add typing user
+      final newUsers = Map<String, TypingIndicator>.from(state.typingUsers);
+      newUsers[indicator.userId] = indicator;
+      state = state.copyWith(typingUsers: newUsers);
+
+      // Set timeout to auto-remove after 5 seconds
+      _timeoutTimers[indicator.userId] = Timer(
+        const Duration(seconds: 5),
+        () => _removeTypingUser(indicator.userId),
+      );
+    } else {
+      _removeTypingUser(indicator.userId);
+    }
+  }
+
+  void _removeTypingUser(String userId) {
+    _timeoutTimers[userId]?.cancel();
+    _timeoutTimers.remove(userId);
+
+    final newUsers = Map<String, TypingIndicator>.from(state.typingUsers);
+    newUsers.remove(userId);
+    state = state.copyWith(typingUsers: newUsers);
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    for (final timer in _timeoutTimers.values) {
+      timer.cancel();
+    }
+    super.dispose();
+  }
+}
+
 /// Messages pagination state for a conversation
 class MessagesState {
   final List<Message> messages;
   final bool isLoading;
   final bool hasMore;
   final String? error;
+  final Map<String, Message> pendingMessages; // Keyed by localId
 
   const MessagesState({
     this.messages = const [],
     this.isLoading = false,
     this.hasMore = true,
     this.error,
+    this.pendingMessages = const {},
   });
 
   MessagesState copyWith({
@@ -628,24 +776,146 @@ class MessagesState {
     bool? isLoading,
     bool? hasMore,
     String? error,
+    Map<String, Message>? pendingMessages,
   }) {
     return MessagesState(
       messages: messages ?? this.messages,
       isLoading: isLoading ?? this.isLoading,
       hasMore: hasMore ?? this.hasMore,
       error: error,
+      pendingMessages: pendingMessages ?? this.pendingMessages,
     );
+  }
+
+  /// Get all messages including pending ones, sorted by date
+  List<Message> get allMessages {
+    final all = [...messages, ...pendingMessages.values];
+    all.sort((a, b) => b.sentAt.compareTo(a.sentAt));
+    return all;
+  }
+
+  /// Get failed messages that can be retried
+  List<Message> get failedMessages {
+    return pendingMessages.values
+        .where((m) => m.status == MessageStatus.failed)
+        .toList();
   }
 }
 
-/// Messages state notifier for handling pagination and sending
+/// Messages state notifier for handling pagination, sending, and real-time updates
 class MessagesNotifier extends StateNotifier<MessagesState> {
   final Ref _ref;
   final String conversationId;
+  StreamSubscription? _wsSubscription;
+  StreamSubscription? _queueSubscription;
+  Timer? _typingDebounce;
+  bool _isCurrentlyTyping = false;
 
   MessagesNotifier(this._ref, this.conversationId)
       : super(const MessagesState()) {
     loadMessages();
+    _listenToWebSocket();
+    _listenToMessageQueue();
+  }
+
+  void _listenToWebSocket() {
+    final client = _ref.read(webSocketClientProvider);
+    _wsSubscription = client.events.listen((event) {
+      switch (event.type) {
+        case WebSocketEventType.newMessage:
+          _handleNewMessage(event.data as Message);
+          break;
+        case WebSocketEventType.messageDelivered:
+          _handleMessageDelivered(event.data as Map<String, dynamic>);
+          break;
+        case WebSocketEventType.messageRead:
+          _handleMessageRead(event.data as Map<String, dynamic>);
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  void _listenToMessageQueue() {
+    final queue = _ref.read(messageQueueProvider);
+    _queueSubscription = queue.queueUpdates.listen((queuedMessage) {
+      if (queuedMessage.message.conversationId == conversationId) {
+        _updatePendingMessage(queuedMessage.message);
+      }
+    });
+  }
+
+  void _handleNewMessage(Message message) {
+    if (message.conversationId != conversationId) return;
+
+    // Check if this is a confirmation of our pending message
+    final localId = message.localId;
+    if (localId != null && state.pendingMessages.containsKey(localId)) {
+      // Remove from pending and add to messages
+      final newPending = Map<String, Message>.from(state.pendingMessages);
+      newPending.remove(localId);
+
+      state = state.copyWith(
+        messages: [
+          message.copyWith(status: MessageStatus.sent),
+          ...state.messages
+        ],
+        pendingMessages: newPending,
+      );
+
+      // Remove from offline queue
+      _ref.read(messageQueueProvider).markAsSent(localId);
+    } else if (!state.messages.any((m) => m.id == message.id)) {
+      // New message from another user
+      state = state.copyWith(
+        messages: [message, ...state.messages],
+      );
+
+      // Send read receipt
+      final client = _ref.read(webSocketClientProvider);
+      client.sendMessageRead(
+        conversationId: conversationId,
+        messageId: message.id,
+      );
+    }
+  }
+
+  void _handleMessageDelivered(Map<String, dynamic> data) {
+    final messageId = data['messageId'] as String;
+
+    final updatedMessages = state.messages.map((m) {
+      if (m.id == messageId && m.status == MessageStatus.sent) {
+        return m.copyWith(status: MessageStatus.delivered);
+      }
+      return m;
+    }).toList();
+
+    state = state.copyWith(messages: updatedMessages);
+  }
+
+  void _handleMessageRead(Map<String, dynamic> data) {
+    final convId = data['conversationId'] as String;
+    if (convId != conversationId) return;
+
+    // Mark all sent messages as read
+    final updatedMessages = state.messages.map((m) {
+      if (m.status == MessageStatus.sent ||
+          m.status == MessageStatus.delivered) {
+        return m.copyWith(status: MessageStatus.read, isRead: true);
+      }
+      return m;
+    }).toList();
+
+    state = state.copyWith(messages: updatedMessages);
+  }
+
+  void _updatePendingMessage(Message message) {
+    if (message.localId == null) return;
+
+    final newPending = Map<String, Message>.from(state.pendingMessages);
+    newPending[message.localId!] = message;
+    state = state.copyWith(pendingMessages: newPending);
   }
 
   Future<void> loadMessages() async {
@@ -704,27 +974,221 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
     }
   }
 
-  Future<bool> sendMessage(String content) async {
+  /// Send a message with optimistic updates
+  Future<bool> sendMessage(
+    String content, {
+    MessageType type = MessageType.text,
+    List<Attachment>? attachments,
+  }) async {
+    final currentUser = _ref.read(currentUserProvider);
+    if (currentUser == null) return false;
+
+    // Create pending message for optimistic UI
+    final pendingMessage = Message.pending(
+      conversationId: conversationId,
+      senderId: currentUser.id,
+      content: content,
+      type: type,
+      attachments: attachments,
+    );
+
+    // Add to pending messages
+    final newPending = Map<String, Message>.from(state.pendingMessages);
+    newPending[pendingMessage.localId!] = pendingMessage.copyWith(
+      status: MessageStatus.sending,
+    );
+    state = state.copyWith(pendingMessages: newPending);
+
+    // Also add to offline queue
+    final queue = _ref.read(messageQueueProvider);
+    await queue.enqueue(pendingMessage);
+
     try {
       final messagesRepo = _ref.read(messagesRepositoryProvider);
-      final newMessage = await messagesRepo.sendMessage(
+      final sentMessage = await messagesRepo.sendMessage(
         conversationId: conversationId,
         content: content,
+        attachments: attachments?.map((a) => a.toJson()).toList(),
+        localId: pendingMessage.localId,
       );
 
-      // Add message to the beginning of the list (newest first)
+      // Remove from pending, add to messages
+      final updatedPending = Map<String, Message>.from(state.pendingMessages);
+      updatedPending.remove(pendingMessage.localId);
+
       state = state.copyWith(
-        messages: [newMessage, ...state.messages],
+        messages: [sentMessage, ...state.messages],
+        pendingMessages: updatedPending,
       );
+
+      // Remove from offline queue
+      await queue.markAsSent(pendingMessage.localId!);
 
       // Invalidate conversations to update last message
       _ref.invalidate(conversationsProvider);
 
       return true;
     } catch (e) {
-      state = state.copyWith(error: 'Failed to send message');
+      // Mark as failed
+      final failedPending = Map<String, Message>.from(state.pendingMessages);
+      failedPending[pendingMessage.localId!] = pendingMessage.copyWith(
+        status: MessageStatus.failed,
+        errorMessage: e.toString(),
+      );
+      state = state.copyWith(
+        pendingMessages: failedPending,
+        error: 'Failed to send message',
+      );
       return false;
     }
+  }
+
+  /// Send a message with attachments
+  Future<bool> sendMessageWithAttachments(
+    String content,
+    List<File> files, {
+    void Function(int uploaded, int total)? onProgress,
+  }) async {
+    final currentUser = _ref.read(currentUserProvider);
+    if (currentUser == null) return false;
+
+    try {
+      final messagesRepo = _ref.read(messagesRepositoryProvider);
+      final attachments = <Map<String, dynamic>>[];
+
+      // Upload each file
+      for (var i = 0; i < files.length; i++) {
+        final result = await messagesRepo.uploadAttachment(
+          conversationId: conversationId,
+          file: files[i],
+          onProgress: (sent, total) {
+            onProgress?.call(i, files.length);
+          },
+        );
+        attachments.add(result.toJson());
+      }
+
+      // Send message with attachments
+      return sendMessage(
+        content,
+        type: _getMessageTypeForFiles(files),
+        attachments: attachments
+            .map((a) => Attachment(
+                  id: a['id'] as String,
+                  name: a['name'] as String,
+                  url: a['url'] as String,
+                  mimeType: a['mimeType'] as String,
+                  size: a['size'] as int,
+                ))
+            .toList(),
+      );
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to upload attachments');
+      return false;
+    }
+  }
+
+  MessageType _getMessageTypeForFiles(List<File> files) {
+    if (files.isEmpty) return MessageType.text;
+
+    final firstFile = files.first;
+    final ext = firstFile.path.split('.').last.toLowerCase();
+
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext)) {
+      return MessageType.image;
+    }
+    return MessageType.file;
+  }
+
+  /// Retry sending a failed message
+  Future<bool> retryMessage(String localId) async {
+    final pendingMessage = state.pendingMessages[localId];
+    if (pendingMessage == null ||
+        pendingMessage.status != MessageStatus.failed) {
+      return false;
+    }
+
+    // Update status to sending
+    final retryingPending = Map<String, Message>.from(state.pendingMessages);
+    retryingPending[localId] = pendingMessage.copyWith(
+      status: MessageStatus.sending,
+      retryCount: pendingMessage.retryCount + 1,
+    );
+    state = state.copyWith(pendingMessages: retryingPending);
+
+    try {
+      final messagesRepo = _ref.read(messagesRepositoryProvider);
+      final sentMessage = await messagesRepo.sendMessage(
+        conversationId: conversationId,
+        content: pendingMessage.content,
+        attachments:
+            pendingMessage.attachments?.map((a) => a.toJson()).toList(),
+        localId: localId,
+      );
+
+      // Remove from pending, add to messages
+      final updatedPending = Map<String, Message>.from(state.pendingMessages);
+      updatedPending.remove(localId);
+
+      state = state.copyWith(
+        messages: [sentMessage, ...state.messages],
+        pendingMessages: updatedPending,
+      );
+
+      // Remove from offline queue
+      final queue = _ref.read(messageQueueProvider);
+      await queue.markAsSent(localId);
+
+      return true;
+    } catch (e) {
+      // Mark as failed again
+      final failedPending = Map<String, Message>.from(state.pendingMessages);
+      failedPending[localId] = pendingMessage.copyWith(
+        status: MessageStatus.failed,
+        errorMessage: e.toString(),
+        retryCount: pendingMessage.retryCount + 1,
+      );
+      state = state.copyWith(pendingMessages: failedPending);
+      return false;
+    }
+  }
+
+  /// Delete a failed message
+  void deleteFailedMessage(String localId) {
+    final newPending = Map<String, Message>.from(state.pendingMessages);
+    newPending.remove(localId);
+    state = state.copyWith(pendingMessages: newPending);
+
+    // Remove from offline queue
+    _ref.read(messageQueueProvider).removeFromQueue(localId);
+  }
+
+  /// Send typing indicator with debounce
+  void setTyping(bool isTyping) {
+    if (isTyping == _isCurrentlyTyping) return;
+
+    _typingDebounce?.cancel();
+
+    if (isTyping) {
+      _isCurrentlyTyping = true;
+      _sendTypingIndicator(true);
+
+      // Auto-stop after 3 seconds
+      _typingDebounce = Timer(const Duration(seconds: 3), () {
+        setTyping(false);
+      });
+    } else {
+      _isCurrentlyTyping = false;
+      _sendTypingIndicator(false);
+    }
+  }
+
+  void _sendTypingIndicator(bool isTyping) {
+    final client = _ref.read(webSocketClientProvider);
+    client.sendTypingIndicator(
+      conversationId: conversationId,
+      isTyping: isTyping,
+    );
   }
 
   void addMessage(Message message) {
@@ -739,6 +1203,18 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
   Future<void> refresh() async {
     state = const MessagesState();
     await loadMessages();
+  }
+
+  @override
+  void dispose() {
+    _wsSubscription?.cancel();
+    _queueSubscription?.cancel();
+    _typingDebounce?.cancel();
+    // Stop typing when leaving
+    if (_isCurrentlyTyping) {
+      _sendTypingIndicator(false);
+    }
+    super.dispose();
   }
 }
 

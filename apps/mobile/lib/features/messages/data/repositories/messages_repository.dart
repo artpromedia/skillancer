@@ -1,9 +1,43 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+import 'package:path/path.dart' as path;
+
 import '../../../../core/network/api_client.dart';
 import '../../domain/models/message.dart';
+
+/// Attachment upload result
+class AttachmentUploadResult {
+  final String id;
+  final String url;
+  final String name;
+  final String mimeType;
+  final int size;
+
+  const AttachmentUploadResult({
+    required this.id,
+    required this.url,
+    required this.name,
+    required this.mimeType,
+    required this.size,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'url': url,
+      'name': name,
+      'mimeType': mimeType,
+      'size': size,
+    };
+  }
+}
 
 /// Messages repository for fetching and managing conversations
 class MessagesRepository {
   final ApiClient _apiClient;
+  static const int _maxRetries = 3;
+  static const Duration _retryDelay = Duration(seconds: 1);
 
   MessagesRepository({ApiClient? apiClient})
       : _apiClient = apiClient ?? ApiClient();
@@ -113,29 +147,149 @@ class MessagesRepository {
     }
   }
 
-  /// Send a message
+  /// Send a message with retry logic
   Future<Message> sendMessage({
     required String conversationId,
     required String content,
     List<Map<String, dynamic>>? attachments,
+    String? localId,
+    int retryCount = 0,
+  }) async {
+    Exception? lastError;
+
+    for (var attempt = 0;
+        attempt <= retryCount && attempt < _maxRetries;
+        attempt++) {
+      try {
+        final body = <String, dynamic>{
+          'content': content,
+        };
+        if (attachments != null && attachments.isNotEmpty) {
+          body['attachments'] = attachments;
+        }
+        if (localId != null) {
+          body['localId'] = localId;
+        }
+
+        final response = await _apiClient.post(
+          '/messages/$conversationId',
+          data: body,
+        );
+
+        final data = response.data as Map<String, dynamic>;
+        final message = _mapToMessage(data['data'] as Map<String, dynamic>);
+
+        // Return with sent status
+        return message.copyWith(
+          status: MessageStatus.sent,
+          localId: localId,
+        );
+      } on ApiError catch (e) {
+        lastError = e;
+        if (!_isRetryableError(e)) {
+          rethrow;
+        }
+        if (attempt < _maxRetries - 1) {
+          await Future.delayed(_retryDelay * (attempt + 1));
+        }
+      } catch (e) {
+        lastError = e is Exception ? e : Exception(e.toString());
+        if (attempt < _maxRetries - 1) {
+          await Future.delayed(_retryDelay * (attempt + 1));
+        }
+      }
+    }
+
+    throw lastError ??
+        ApiError(code: 'SEND_ERROR', message: 'Failed to send message');
+  }
+
+  /// Check if an error is retryable
+  bool _isRetryableError(ApiError error) {
+    // Retry on network errors or server errors (5xx)
+    return error.code == 'NETWORK_ERROR' ||
+        error.code == 'TIMEOUT' ||
+        (error.statusCode != null && error.statusCode! >= 500);
+  }
+
+  /// Upload an attachment file
+  Future<AttachmentUploadResult> uploadAttachment({
+    required String conversationId,
+    required File file,
+    void Function(int sent, int total)? onProgress,
   }) async {
     try {
-      final body = <String, dynamic>{
-        'content': content,
-      };
-      if (attachments != null) body['attachments'] = attachments;
+      final fileName = path.basename(file.path);
+      final fileSize = await file.length();
+      final mimeType = _getMimeType(fileName);
+
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          file.path,
+          filename: fileName,
+          contentType: DioMediaType.parse(mimeType),
+        ),
+      });
 
       final response = await _apiClient.post(
-        '/messages/$conversationId',
-        data: body,
+        '/messages/$conversationId/attachments',
+        data: formData,
+        onSendProgress: onProgress,
       );
 
       final data = response.data as Map<String, dynamic>;
-      return _mapToMessage(data['data'] as Map<String, dynamic>);
+      final attachment = data['data'] as Map<String, dynamic>;
+
+      return AttachmentUploadResult(
+        id: attachment['id'] as String,
+        url: attachment['url'] as String,
+        name: fileName,
+        mimeType: mimeType,
+        size: fileSize,
+      );
     } on ApiError {
       rethrow;
     } catch (e) {
-      throw ApiError(code: 'SEND_ERROR', message: 'Failed to send message');
+      throw ApiError(
+          code: 'UPLOAD_ERROR', message: 'Failed to upload attachment');
+    }
+  }
+
+  /// Get MIME type from file extension
+  String _getMimeType(String fileName) {
+    final ext = path.extension(fileName).toLowerCase();
+    switch (ext) {
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.png':
+        return 'image/png';
+      case '.gif':
+        return 'image/gif';
+      case '.webp':
+        return 'image/webp';
+      case '.pdf':
+        return 'application/pdf';
+      case '.doc':
+        return 'application/msword';
+      case '.docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case '.xls':
+        return 'application/vnd.ms-excel';
+      case '.xlsx':
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      case '.txt':
+        return 'text/plain';
+      case '.mp4':
+        return 'video/mp4';
+      case '.mp3':
+        return 'audio/mpeg';
+      case '.wav':
+        return 'audio/wav';
+      case '.zip':
+        return 'application/zip';
+      default:
+        return 'application/octet-stream';
     }
   }
 

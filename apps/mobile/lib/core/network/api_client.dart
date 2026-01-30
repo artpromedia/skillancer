@@ -231,12 +231,16 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     Options? options,
+    void Function(int, int)? onSendProgress,
+    void Function(int, int)? onReceiveProgress,
   }) {
     return _dio.post<T>(
       path,
       data: data,
       queryParameters: queryParameters,
       options: options,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
     );
   }
 
