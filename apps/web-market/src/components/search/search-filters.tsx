@@ -530,7 +530,7 @@ function FilterSection({ title, children, defaultOpen = true }: Readonly<FilterS
 export function SearchFilters({
   filters,
   onFilterChange,
-  _onFiltersChange,
+  onFiltersChange: _onFiltersChange,
   onClearFilters,
   activeFilterCount,
   isCollapsed = false,

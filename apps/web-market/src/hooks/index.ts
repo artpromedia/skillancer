@@ -23,6 +23,8 @@ export * from './use-messaging';
 
 // Search hooks
 export * from './use-search-analytics';
+export * from './use-saved-searches';
+export * from './use-freelancer-search';
 
 // Utility hooks
 export * from './use-debounce';

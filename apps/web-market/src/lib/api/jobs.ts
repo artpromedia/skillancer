@@ -639,3 +639,179 @@ export async function getTrendingSearches(): Promise<
   }>(url);
   return response.searches;
 }
+
+// ============================================================================
+// Saved Searches
+// ============================================================================
+
+export interface SavedSearch {
+  id: string;
+  name: string;
+  filters: JobSearchFilters;
+  emailAlerts: boolean;
+  alertFrequency: 'instant' | 'daily' | 'weekly';
+  newJobsCount: number;
+  lastViewedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSavedSearchData {
+  name: string;
+  filters: JobSearchFilters;
+  emailAlerts?: boolean;
+  alertFrequency?: 'instant' | 'daily' | 'weekly';
+}
+
+export interface UpdateSavedSearchData {
+  name?: string;
+  filters?: JobSearchFilters;
+  emailAlerts?: boolean;
+  alertFrequency?: 'instant' | 'daily' | 'weekly';
+}
+
+/**
+ * Get all saved searches for the current user
+ */
+export async function getSavedSearches(): Promise<SavedSearch[]> {
+  const url = buildUrl('/saved-searches');
+  const response = await apiFetch<{ success: boolean; savedSearches: SavedSearch[] }>(url);
+  return response.savedSearches;
+}
+
+/**
+ * Create a new saved search
+ */
+export async function createSavedSearch(data: CreateSavedSearchData): Promise<SavedSearch> {
+  const url = buildUrl('/saved-searches');
+  const response = await apiFetch<{ success: boolean; savedSearch: SavedSearch }>(url, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response.savedSearch;
+}
+
+/**
+ * Update an existing saved search
+ */
+export async function updateSavedSearch(
+  id: string,
+  data: UpdateSavedSearchData
+): Promise<SavedSearch> {
+  const url = buildUrl(`/saved-searches/${id}`);
+  const response = await apiFetch<{ success: boolean; savedSearch: SavedSearch }>(url, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  return response.savedSearch;
+}
+
+/**
+ * Delete a saved search
+ */
+export async function deleteSavedSearch(id: string): Promise<void> {
+  const url = buildUrl(`/saved-searches/${id}`);
+  await apiFetch<{ success: boolean }>(url, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Mark a saved search as viewed (resets new jobs count)
+ */
+export async function markSavedSearchViewed(id: string): Promise<void> {
+  const url = buildUrl(`/saved-searches/${id}/viewed`);
+  await apiFetch<{ success: boolean }>(url, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Run a saved search and get results
+ */
+export async function runSavedSearch(
+  id: string,
+  pagination: PaginationParams = {}
+): Promise<JobSearchResult> {
+  const { page = 1, limit = 20 } = pagination;
+  const url = buildUrl(`/saved-searches/${id}/run`, { page, limit });
+  const response = await apiFetch<{
+    success: boolean;
+    jobs: Job[];
+    total: number;
+    page: number;
+    limit: number;
+  }>(url);
+
+  const totalPages = Math.ceil(response.total / response.limit);
+
+  return {
+    jobs: response.jobs,
+    total: response.total,
+    page: response.page,
+    limit: response.limit,
+    totalPages,
+    hasMore: response.page < totalPages,
+  };
+}
+
+// ============================================================================
+// Similar Jobs & Recommendations
+// ============================================================================
+
+/**
+ * Get similar jobs based on a job ID
+ */
+export async function getSimilarJobs(jobId: string, limit: number = 6): Promise<Job[]> {
+  const url = buildUrl(`/projects/${jobId}/similar`, { limit });
+  const response = await apiFetch<{ success: boolean; jobs: Job[] }>(url);
+  return response.jobs;
+}
+
+/**
+ * Get freelancers who applied to similar jobs (for clients)
+ */
+export async function getFreelancersForSimilarJobs(
+  jobId: string,
+  limit: number = 10
+): Promise<{
+  freelancers: {
+    id: string;
+    username: string;
+    displayName: string;
+    avatarUrl?: string;
+    title: string;
+    hourlyRate?: number;
+    avgRating: number;
+    totalJobs: number;
+    matchScore: number;
+    appliedToSimilar: number;
+  }[];
+}> {
+  const url = buildUrl(`/projects/${jobId}/similar-applicants`, { limit });
+  const response = await apiFetch<{
+    success: boolean;
+    freelancers: {
+      id: string;
+      username: string;
+      displayName: string;
+      avatarUrl?: string;
+      title: string;
+      hourlyRate?: number;
+      avgRating: number;
+      totalJobs: number;
+      matchScore: number;
+      appliedToSimilar: number;
+    }[];
+  }>(url);
+  return { freelancers: response.freelancers };
+}
+
+/**
+ * Get recommended jobs for the current freelancer
+ */
+export async function getRecommendedJobs(limit: number = 10): Promise<Job[]> {
+  const url = buildUrl('/projects/recommended', { limit });
+  const response = await apiFetch<{ success: boolean; jobs: Job[] }>(url);
+  return response.jobs;
+}
