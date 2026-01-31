@@ -10,3 +10,7 @@ export { ProposalList } from './proposal-list';
 export { ProposalDetailModal } from './proposal-detail-modal';
 export { ProposalComparison } from './proposal-comparison';
 export { HireModal } from './hire-modal';
+export { ProposalReview } from './proposal-review';
+export { FreelancerPreview, FreelancerInline } from './freelancer-preview';
+export { AcceptProposalModal } from './accept-proposal-modal';
+export { RejectProposalModal } from './reject-proposal-modal';
