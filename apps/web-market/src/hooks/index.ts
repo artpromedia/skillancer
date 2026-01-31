@@ -12,6 +12,7 @@ export * from './use-client-jobs';
 
 // Proposal hooks
 export * from './use-proposal-form';
+export * from './use-proposals';
 
 // Messaging hooks
 export * from './use-messaging';

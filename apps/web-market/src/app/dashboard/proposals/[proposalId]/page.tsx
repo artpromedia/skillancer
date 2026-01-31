@@ -15,13 +15,17 @@ import {
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { getProposalStatusInfo } from '@/lib/api/bids';
-
 import { ProposalDetailClient } from './proposal-detail-client';
 
 import type { Proposal } from '@/lib/api/bids';
 import type { Metadata } from 'next';
 
+import {
+  getProposalDetails,
+  getProposalStatusInfo,
+  canEditProposal,
+  canWithdrawProposal,
+} from '@/lib/api/bids';
 
 // ============================================================================
 // Helper Functions
@@ -34,173 +38,26 @@ function getScoreColor(value: number): string {
 }
 
 // ============================================================================
-// Data Fetching
-// ============================================================================
-
-async function getProposalDetails(proposalId: string): Promise<Proposal | null> {
-  // Mock data - replace with actual API call
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  return {
-    id: proposalId,
-    jobId: 'job-1',
-    freelancer: {
-      id: 'freelancer-1',
-      username: 'jdeveloper',
-      displayName: 'Jane Developer',
-      name: 'Jane Developer',
-      avatarUrl: undefined,
-      title: 'Senior Full-Stack Developer',
-      bio: 'Experienced developer with 8+ years in e-commerce',
-      location: 'San Francisco, CA',
-      rating: 4.9,
-      reviewCount: 47,
-      jobsCompleted: 52,
-      verificationLevel: 'VERIFIED',
-      skills: ['React', 'Node.js', 'TypeScript', 'PostgreSQL'],
-      hourlyRate: 85,
-      successRate: 98,
-      responseTime: '< 1 hour',
-    },
-    status: 'SHORTLISTED',
-    statusHistory: [
-      { status: 'SUBMITTED', timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
-      { status: 'VIEWED', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-      { status: 'SHORTLISTED', timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
-    ],
-    isBoosted: false,
-    coverLetter: `Dear Hiring Manager,
-
-I am excited to apply for the Senior Full-Stack Developer position. With over 8 years of experience building scalable e-commerce platforms, I am confident I can deliver exceptional results for your project.
-
-My relevant experience includes:
-• Led development of a marketplace platform handling $10M+ in monthly transactions
-• Built real-time inventory management systems using React and Node.js
-• Implemented payment processing with Stripe and PayPal integrations
-• Designed microservices architecture handling 1M+ daily requests
-
-I am particularly impressed by your vision for the platform and would love to discuss how I can contribute to its success. I'm available to start immediately and can dedicate full-time hours to this project.
-
-Looking forward to the opportunity to work together.
-
-Best regards`,
-    bidAmount: 7500,
-    contractType: 'FIXED',
-    deliveryDays: 45,
-    milestones: [
-      {
-        id: 'm1',
-        title: 'Project Setup & Architecture',
-        description:
-          'Set up development environment, CI/CD pipeline, and define system architecture',
-        amount: 1500,
-        durationDays: 7,
-        status: 'PENDING',
-      },
-      {
-        id: 'm2',
-        title: 'Core Features Development',
-        description: 'Build product catalog, cart, and checkout functionality',
-        amount: 3000,
-        durationDays: 21,
-        status: 'PENDING',
-      },
-      {
-        id: 'm3',
-        title: 'Payment & Admin Dashboard',
-        description: 'Integrate payment processing and build admin management interface',
-        amount: 2000,
-        durationDays: 10,
-        status: 'PENDING',
-      },
-      {
-        id: 'm4',
-        title: 'Testing & Deployment',
-        description: 'End-to-end testing, bug fixes, and production deployment',
-        amount: 1000,
-        durationDays: 7,
-        status: 'PENDING',
-      },
-    ],
-    attachments: [
-      {
-        id: 'att-1',
-        filename: 'portfolio-ecommerce.pdf',
-        url: '/attachments/portfolio.pdf',
-        size: 2500000,
-        mimeType: 'application/pdf',
-      },
-      {
-        id: 'att-2',
-        filename: 'architecture-proposal.pdf',
-        url: '/attachments/architecture.pdf',
-        size: 1200000,
-        mimeType: 'application/pdf',
-      },
-    ],
-    portfolioItems: [],
-    clientViewed: true,
-    viewedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    submittedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    job: {
-      id: 'job-1',
-      slug: 'senior-full-stack-developer-ecommerce',
-      title: 'Senior Full-Stack Developer for E-commerce Platform',
-      budget: {
-        type: 'FIXED',
-        minAmount: 5000,
-        maxAmount: 10000,
-      },
-      skills: ['React', 'Node.js', 'TypeScript', 'PostgreSQL'],
-      client: {
-        id: 'client-1',
-        displayName: 'John Smith',
-        name: 'John Smith',
-        companyName: 'TechCorp Inc.',
-        avatarUrl: undefined,
-        verificationLevel: 'VERIFIED',
-      },
-    },
-    qualityScore: {
-      overall: 85,
-      breakdown: {
-        coverLetterQuality: 90,
-        skillsMatch: 85,
-        portfolioRelevance: 88,
-        rateCompetitiveness: 82,
-        completeness: 80,
-        clarity: 90,
-      },
-      suggestions: [
-        { type: 'SUCCESS', message: 'Great opening that shows understanding of the project' },
-        { type: 'SUCCESS', message: 'Strong relevant experience highlighted' },
-        { type: 'IMPROVEMENT', message: 'Consider adding specific technologies you plan to use' },
-      ],
-    },
-  };
-}
-
-// ============================================================================
 // Metadata
 // ============================================================================
 
 export async function generateMetadata({
   params,
 }: {
-  params: { proposalId: string };
+  params: Promise<{ proposalId: string }>;
 }): Promise<Metadata> {
-  const proposal = await getProposalDetails(params.proposalId);
+  const { proposalId } = await params;
 
-  if (!proposal) {
+  try {
+    const proposal = await getProposalDetails(proposalId);
+
+    return {
+      title: `Proposal: ${proposal.job?.title} | Skillancer`,
+      description: `View your proposal for ${proposal.job?.title}`,
+    };
+  } catch {
     return { title: 'Proposal Not Found' };
   }
-
-  return {
-    title: `Proposal: ${proposal.job?.title} | Skillancer`,
-    description: `View your proposal for ${proposal.job?.title}`,
-  };
 }
 
 // ============================================================================
@@ -242,10 +99,13 @@ function StatusBadge({ status }: Readonly<{ status: string }>) {
 
 export default async function ProposalDetailPage({
   params,
-}: Readonly<{ params: { proposalId: string } }>) {
-  const proposal = await getProposalDetails(params.proposalId);
+}: Readonly<{ params: Promise<{ proposalId: string }> }>) {
+  const { proposalId } = await params;
 
-  if (!proposal) {
+  let proposal: Proposal;
+  try {
+    proposal = await getProposalDetails(proposalId);
+  } catch {
     notFound();
   }
 
@@ -263,8 +123,8 @@ export default async function ProposalDetailPage({
       year: 'numeric',
     });
 
-  const canEdit = ['SUBMITTED', 'SHORTLISTED'].includes(proposal.status);
-  const canWithdraw = ['SUBMITTED', 'SHORTLISTED', 'INTERVIEWING'].includes(proposal.status);
+  const canEdit = canEditProposal(proposal.status);
+  const canWithdraw = canWithdrawProposal(proposal.status);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -305,7 +165,7 @@ export default async function ProposalDetailPage({
             <div className="flex gap-2">
               {canEdit && (
                 <Button asChild variant="outline">
-                  <Link href={`/dashboard/proposals/${params.proposalId}/edit`}>
+                  <Link href={`/dashboard/proposals/${proposalId}/edit`}>
                     <Edit2 className="mr-2 h-4 w-4" />
                     Edit
                   </Link>
@@ -515,7 +375,7 @@ export default async function ProposalDetailPage({
             {canWithdraw && (
               <Card className="mb-6">
                 <CardContent className="pt-6">
-                  <ProposalDetailClient canWithdraw={canWithdraw} proposalId={params.proposalId} />
+                  <ProposalDetailClient canWithdraw={canWithdraw} proposalId={proposalId} />
                 </CardContent>
               </Card>
             )}

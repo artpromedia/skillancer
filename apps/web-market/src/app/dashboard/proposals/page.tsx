@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@skillancer/ui';
 import {
+  AlertCircle,
   ArrowUpRight,
   Briefcase,
   Calendar,
@@ -34,6 +35,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   PencilLine,
+  RefreshCw,
   Search,
   Trash2,
   TrendingUp,
@@ -41,13 +43,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useMemo, useState } from 'react';
 
+import type { Proposal, ProposalStatus, ProposalFilters } from '@/lib/api/bids';
 
 import { BidBoostModal } from '@/components/bids/bid-boost-modal';
-import { getMyProposals, getProposalStatusInfo, withdrawProposal } from '@/lib/api/bids';
-
-import type { Proposal, ProposalStatus } from '@/lib/api/bids';
+import { useMyProposals, useWithdrawProposal, useBoostProposal } from '@/hooks/use-proposals';
+import { getProposalStatusInfo } from '@/lib/api/bids';
 
 // ============================================================================
 // Types
@@ -63,10 +65,12 @@ function ProposalCard({
   proposal,
   onWithdraw,
   onBoost,
+  isWithdrawing,
 }: Readonly<{
   proposal: Proposal;
   onWithdraw: (id: string) => void;
   onBoost: (proposal: Proposal) => void;
+  isWithdrawing?: boolean;
 }>) {
   const router = useRouter();
   const statusInfo = getProposalStatusInfo(proposal.status);
@@ -227,9 +231,14 @@ function ProposalCard({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-red-600"
+                      disabled={isWithdrawing}
                       onClick={() => onWithdraw(proposal.id)}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      {isWithdrawing ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="mr-2 h-4 w-4" />
+                      )}
                       Withdraw
                     </DropdownMenuItem>
                   </>
@@ -401,66 +410,78 @@ function StatsCards({ proposals }: Readonly<{ proposals: Proposal[] }>) {
 function FreelancerProposalsPageContent() {
   const searchParams = useSearchParams();
   const showSubmitted = searchParams.get('submitted') === 'true';
+  const showWithdrawn = searchParams.get('withdrawn') === 'true';
 
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<FilterOption>('all');
-  const [boostProposal, setBoostProposal] = useState<Proposal | null>(null);
+  const [boostProposalTarget, setBoostProposalTarget] = useState<Proposal | null>(null);
 
-  // Load proposals
-  useEffect(() => {
-    setIsLoading(true);
-    void getMyProposals()
-      .then((data) => setProposals(data.proposals))
-      .catch(() => setProposals([]))
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  // Handle withdraw
-  const handleWithdraw = useCallback(async (id: string) => {
-    if (!confirm('Are you sure you want to withdraw this proposal?')) return;
-
-    try {
-      await withdrawProposal(id);
-      setProposals((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: 'WITHDRAWN' as const } : p))
-      );
-    } catch {
-      alert('Failed to withdraw proposal');
-    }
-  }, []);
-
-  // Handle boost success
-  const handleBoostSuccess = useCallback(
-    (boostType: string) => {
-      if (boostProposal) {
-        setProposals((prev) =>
-          prev.map((p) =>
-            p.id === boostProposal.id ? { ...p, boostType: boostType as Proposal['boostType'] } : p
-          )
-        );
-      }
-    },
-    [boostProposal]
-  );
-
-  // Filter proposals
-  const filteredProposals = useMemo(() => {
+  // Convert filter to API status filter
+  const apiFilters = useMemo((): ProposalFilters | undefined => {
     switch (filter) {
       case 'pending':
-        return proposals.filter((p) => ['SUBMITTED', 'VIEWED', 'SHORTLISTED'].includes(p.status));
+        return { status: ['SUBMITTED', 'VIEWED', 'SHORTLISTED'] };
       case 'shortlisted':
-        return proposals.filter((p) => p.status === 'SHORTLISTED');
+        return { status: 'SHORTLISTED' };
       case 'interviewing':
-        return proposals.filter((p) => p.status === 'INTERVIEWING');
+        return { status: 'INTERVIEWING' };
       case 'hired':
-        return proposals.filter((p) => p.status === 'HIRED');
+        return { status: 'HIRED' };
       case 'declined':
-        return proposals.filter((p) => ['DECLINED', 'WITHDRAWN'].includes(p.status));
+        return { status: ['DECLINED', 'WITHDRAWN'] };
       default:
-        return proposals;
+        return undefined;
     }
-  }, [proposals, filter]);
+  }, [filter]);
+
+  // Fetch proposals using hook
+  const { proposals, isLoading, isFetching, error, hasMore, loadMore, refetch } = useMyProposals({
+    filters: apiFilters,
+    sortBy: 'newest',
+    pageSize: 20,
+  });
+
+  // Withdraw mutation hook
+  const { withdrawProposal: doWithdraw, isWithdrawing } = useWithdrawProposal({
+    onSuccess: () => {
+      void refetch();
+    },
+    onError: () => {
+      alert('Failed to withdraw proposal');
+    },
+  });
+
+  // Boost mutation hook
+  const { boostProposal: doBoost } = useBoostProposal({
+    onSuccess: () => {
+      setBoostProposalTarget(null);
+      void refetch();
+    },
+    onError: () => {
+      alert('Failed to boost proposal');
+    },
+  });
+
+  // Handle withdraw
+  const handleWithdraw = useCallback(
+    (id: string) => {
+      if (!confirm('Are you sure you want to withdraw this proposal?')) return;
+      doWithdraw(id);
+    },
+    [doWithdraw]
+  );
+
+  // Handle boost success (from modal)
+  const handleBoostSuccess = useCallback(
+    (boostType: string) => {
+      if (boostProposalTarget) {
+        doBoost({
+          proposalId: boostProposalTarget.id,
+          options: boostType as 'BASIC' | 'FEATURED' | 'PREMIUM',
+        });
+      }
+    },
+    [boostProposalTarget, doBoost]
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -471,7 +492,7 @@ function FreelancerProposalsPageContent() {
           <p className="text-muted-foreground">Track and manage your job proposals</p>
         </div>
 
-        {/* Success message */}
+        {/* Success messages */}
         {showSubmitted && (
           <Card className="mb-6 border-green-300 bg-green-50 p-4">
             <div className="flex items-center gap-2">
@@ -481,11 +502,20 @@ function FreelancerProposalsPageContent() {
           </Card>
         )}
 
+        {showWithdrawn && (
+          <Card className="mb-6 border-amber-300 bg-amber-50 p-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-amber-600" />
+              <span className="font-medium text-amber-900">Proposal withdrawn successfully.</span>
+            </div>
+          </Card>
+        )}
+
         {/* Stats */}
         <StatsCards proposals={proposals} />
 
-        {/* Filters */}
-        <div className="mb-6 flex items-center gap-4">
+        {/* Filters & Actions */}
+        <div className="mb-6 flex flex-wrap items-center gap-4">
           <Select value={filter} onValueChange={(v) => setFilter(v as FilterOption)}>
             <SelectTrigger className="w-48">
               <Filter className="mr-2 h-4 w-4" />
@@ -501,7 +531,12 @@ function FreelancerProposalsPageContent() {
             </SelectContent>
           </Select>
 
-          <Button asChild>
+          <Button disabled={isFetching} size="sm" variant="outline" onClick={() => void refetch()}>
+            <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
+            Refresh
+          </Button>
+
+          <Button asChild className="ml-auto">
             <Link href="/jobs">
               <Search className="mr-2 h-4 w-4" />
               Find Jobs
@@ -509,14 +544,30 @@ function FreelancerProposalsPageContent() {
           </Button>
         </div>
 
-        {/* Proposals list */}
+        {/* Error state */}
+        {error && (
+          <Card className="mb-6 border-red-300 bg-red-50 p-4">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <span className="font-medium text-red-900">Failed to load proposals</span>
+            </div>
+            <p className="mt-1 text-sm text-red-700">{error.message}</p>
+            <Button className="mt-3" size="sm" variant="outline" onClick={() => void refetch()}>
+              Try Again
+            </Button>
+          </Card>
+        )}
+
+        {/* Loading state */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="mr-2 h-6 w-6 animate-spin" />
             Loading proposals...
           </div>
         )}
-        {!isLoading && filteredProposals.length === 0 && (
+
+        {/* Empty state */}
+        {!isLoading && !error && proposals.length === 0 && (
           <Card className="p-12 text-center">
             <Briefcase className="mx-auto mb-4 h-12 w-12 text-slate-300" />
             <h3 className="mb-2 text-lg font-semibold">No proposals found</h3>
@@ -530,16 +581,35 @@ function FreelancerProposalsPageContent() {
             </Button>
           </Card>
         )}
-        {!isLoading && filteredProposals.length > 0 && (
+
+        {/* Proposals list */}
+        {!isLoading && !error && proposals.length > 0 && (
           <div className="space-y-4">
-            {filteredProposals.map((proposal) => (
+            {proposals.map((proposal) => (
               <ProposalCard
                 key={proposal.id}
+                isWithdrawing={isWithdrawing}
                 proposal={proposal}
-                onBoost={setBoostProposal}
+                onBoost={setBoostProposalTarget}
                 onWithdraw={handleWithdraw}
               />
             ))}
+
+            {/* Load more */}
+            {hasMore && (
+              <div className="flex justify-center pt-4">
+                <Button disabled={isFetching} variant="outline" onClick={loadMore}>
+                  {isFetching ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -547,12 +617,12 @@ function FreelancerProposalsPageContent() {
       {/* Boost modal */}
       <BidBoostModal
         currentPosition={5}
-        jobTitle={boostProposal?.job?.title ?? ''}
-        open={!!boostProposal}
-        proposalId={boostProposal?.id ?? ''}
+        jobTitle={boostProposalTarget?.job?.title ?? ''}
+        open={!!boostProposalTarget}
+        proposalId={boostProposalTarget?.id ?? ''}
         totalProposals={12}
         onBoostSuccess={handleBoostSuccess}
-        onOpenChange={(open) => !open && setBoostProposal(null)}
+        onOpenChange={(open) => !open && setBoostProposalTarget(null)}
       />
     </div>
   );
