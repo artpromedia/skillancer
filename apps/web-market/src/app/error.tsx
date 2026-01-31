@@ -22,13 +22,17 @@ export default function Error({ error, reset }: ErrorProps) {
     if (typeof window !== 'undefined') {
       // @ts-expect-error - Package may not be available at build time
       import('@skillancer/error-tracking/react')
-        .then((tracking: { captureError: (error: Error, context: Record<string, unknown>) => void }) => {
-          tracking.captureError(error, {
-            component: 'ErrorPage',
-            action: 'render',
-            extra: { digest: error.digest },
-          });
-        })
+        .then(
+          (tracking: {
+            captureError: (error: Error, context: Record<string, unknown>) => void;
+          }) => {
+            tracking.captureError(error, {
+              component: 'ErrorPage',
+              action: 'render',
+              extra: { digest: error.digest },
+            });
+          }
+        )
         .catch(() => {
           // Error tracking not available
         });
@@ -37,13 +41,13 @@ export default function Error({ error, reset }: ErrorProps) {
 
   return (
     <ErrorPage
-      type="error"
-      title="Something went wrong"
-      message="We apologize for the inconvenience. An unexpected error has occurred."
-      error={error}
-      onRetry={reset}
       showBackButton
       showHomeButton
+      error={error}
+      message="We apologize for the inconvenience. An unexpected error has occurred."
+      title="Something went wrong"
+      type="error"
+      onRetry={reset}
     />
   );
 }

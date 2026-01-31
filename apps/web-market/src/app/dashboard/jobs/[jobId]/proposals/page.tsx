@@ -8,6 +8,9 @@ import { ProposalsClient } from './proposals-client';
 
 import type { Metadata } from 'next';
 
+import { getClientProposalStats } from '@/lib/api/bids';
+import { getJobById, getJobStats, type Job } from '@/lib/api/jobs';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -15,7 +18,7 @@ import type { Metadata } from 'next';
 interface JobSummary {
   id: string;
   title: string;
-  status: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  status: Job['status'];
   budget: {
     type: 'FIXED' | 'HOURLY';
     minAmount?: number;
@@ -28,40 +31,60 @@ interface JobSummary {
   interviewedCount: number;
 }
 
+interface PageProps {
+  params: Promise<{ jobId: string }>;
+}
+
 // ============================================================================
 // Data Fetching
 // ============================================================================
 
 async function getJobSummary(jobId: string): Promise<JobSummary | null> {
-  // Mock data - replace with actual API call
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  try {
+    const [job, stats, proposalStats] = await Promise.all([
+      getJobById(jobId),
+      getJobStats(jobId).catch(() => ({
+        proposalCount: 0,
+        viewCount: 0,
+        averageBid: 0,
+        invitesSent: 0,
+        interviewsActive: 0,
+      })),
+      getClientProposalStats(jobId).catch(
+        () =>
+          ({ shortlistedCount: 0, totalProposals: 0 }) as {
+            shortlistedCount: number;
+            totalProposals: number;
+          }
+      ),
+    ]);
 
-  return {
-    id: jobId,
-    title: 'Senior Full-Stack Developer for E-commerce Platform',
-    status: 'OPEN',
-    budget: {
-      type: 'FIXED',
-      minAmount: 5000,
-      maxAmount: 10000,
-    },
-    postedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    proposalCount: 18,
-    shortlistedCount: 4,
-    interviewedCount: 2,
-  };
+    return {
+      id: job.id,
+      title: job.title,
+      status: job.status,
+      budget: {
+        type: job.budgetType === 'HOURLY' ? 'HOURLY' : 'FIXED',
+        minAmount: job.budgetMin,
+        maxAmount: job.budgetMax,
+      },
+      postedAt: job.createdAt,
+      proposalCount: stats.proposalCount || job.proposalCount,
+      shortlistedCount: proposalStats.shortlistedCount,
+      interviewedCount: stats.interviewsActive,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ============================================================================
 // Metadata
 // ============================================================================
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { jobId: string };
-}): Promise<Metadata> {
-  const job = await getJobSummary(params.jobId);
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { jobId } = await params;
+  const job = await getJobSummary(jobId);
 
   if (!job) {
     return { title: 'Job Not Found' };
@@ -77,8 +100,9 @@ export async function generateMetadata({
 // Page
 // ============================================================================
 
-export default async function ClientProposalsPage({ params }: { params: { jobId: string } }) {
-  const job = await getJobSummary(params.jobId);
+export default async function ClientProposalsPage({ params }: Readonly<PageProps>) {
+  const { jobId } = await params;
+  const job = await getJobSummary(jobId);
 
   if (!job) {
     notFound();
@@ -123,7 +147,7 @@ export default async function ClientProposalsPage({ params }: { params: { jobId:
                 </p>
               </div>
               <Button asChild variant="outline">
-                <Link href={`/dashboard/jobs/${params.jobId}`}>Edit Job</Link>
+                <Link href={`/dashboard/jobs/${jobId}`}>Edit Job</Link>
               </Button>
             </div>
           </div>
@@ -162,7 +186,7 @@ export default async function ClientProposalsPage({ params }: { params: { jobId:
         </div>
 
         {/* Proposals content */}
-        <ProposalsClient jobId={params.jobId} />
+        <ProposalsClient jobId={jobId} />
       </div>
     </div>
   );

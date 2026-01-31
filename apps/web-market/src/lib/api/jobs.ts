@@ -350,3 +350,171 @@ export async function getTopCategories(limit: number = 8): Promise<Category[]> {
   const response = await apiFetch<{ success: boolean; categories: Category[] }>(url);
   return response.categories;
 }
+
+// ============================================================================
+// Job Creation & Management (Client-side)
+// ============================================================================
+
+/**
+ * Input for creating a new job
+ */
+export interface CreateJobInput {
+  title: string;
+  description: string;
+  budgetType: 'FIXED' | 'HOURLY' | 'MONTHLY';
+  budgetMin?: number;
+  budgetMax?: number;
+  estimatedDuration?: number;
+  durationUnit?: 'HOURS' | 'DAYS' | 'WEEKS' | 'MONTHS';
+  experienceLevel?: 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
+  visibility?: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY';
+  skills: string[]; // skill IDs
+  categoryId?: string;
+  questions?: Omit<JobQuestion, 'id'>[];
+  attachments?: string[]; // attachment IDs
+  isDraft?: boolean;
+}
+
+/**
+ * Input for updating an existing job
+ */
+export interface UpdateJobInput {
+  title?: string;
+  description?: string;
+  budgetType?: 'FIXED' | 'HOURLY' | 'MONTHLY';
+  budgetMin?: number;
+  budgetMax?: number;
+  estimatedDuration?: number;
+  durationUnit?: 'HOURS' | 'DAYS' | 'WEEKS' | 'MONTHS';
+  experienceLevel?: 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
+  visibility?: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY';
+  skills?: string[]; // skill IDs
+  categoryId?: string;
+  questions?: Omit<JobQuestion, 'id'>[];
+  attachments?: string[]; // attachment IDs
+}
+
+/**
+ * Create a new job posting
+ */
+export async function createJob(input: CreateJobInput): Promise<Job> {
+  const url = buildUrl('/projects');
+  const response = await apiFetch<{ success: boolean; project: Job }>(url, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return response.project;
+}
+
+/**
+ * Update an existing job posting
+ */
+export async function updateJob(jobId: string, input: UpdateJobInput): Promise<Job> {
+  const url = buildUrl(`/projects/${jobId}`);
+  const response = await apiFetch<{ success: boolean; project: Job }>(url, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+  return response.project;
+}
+
+/**
+ * Close a job posting (no longer accepting proposals)
+ */
+export async function closeJob(jobId: string, reason?: string): Promise<Job> {
+  const url = buildUrl(`/projects/${jobId}/close`);
+  const response = await apiFetch<{ success: boolean; project: Job }>(url, {
+    method: 'PATCH',
+    body: JSON.stringify({ reason }),
+  });
+  return response.project;
+}
+
+/**
+ * Reopen a closed job posting
+ */
+export async function reopenJob(jobId: string): Promise<Job> {
+  const url = buildUrl(`/projects/${jobId}/reopen`);
+  const response = await apiFetch<{ success: boolean; project: Job }>(url, {
+    method: 'PATCH',
+  });
+  return response.project;
+}
+
+/**
+ * Delete a job posting (draft only)
+ */
+export async function deleteJob(jobId: string): Promise<void> {
+  const url = buildUrl(`/projects/${jobId}`);
+  await apiFetch<{ success: boolean }>(url, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Pause a job posting (temporarily stop accepting proposals)
+ */
+export async function pauseJob(jobId: string): Promise<Job> {
+  const url = buildUrl(`/projects/${jobId}/pause`);
+  const response = await apiFetch<{ success: boolean; project: Job }>(url, {
+    method: 'PATCH',
+  });
+  return response.project;
+}
+
+/**
+ * Resume a paused job posting
+ */
+export async function resumeJob(jobId: string): Promise<Job> {
+  const url = buildUrl(`/projects/${jobId}/resume`);
+  const response = await apiFetch<{ success: boolean; project: Job }>(url, {
+    method: 'PATCH',
+  });
+  return response.project;
+}
+
+/**
+ * Publish a draft job posting
+ */
+export async function publishJob(jobId: string): Promise<Job> {
+  const url = buildUrl(`/projects/${jobId}/publish`);
+  const response = await apiFetch<{ success: boolean; project: Job }>(url, {
+    method: 'PATCH',
+  });
+  return response.project;
+}
+
+/**
+ * Get jobs posted by the current user (client)
+ */
+export async function getMyPostedJobs(
+  filters: { status?: Job['status']; sortBy?: 'newest' | 'oldest' | 'proposals' } = {},
+  pagination: PaginationParams = {}
+): Promise<JobSearchResult> {
+  const { page = 1, limit = 20 } = pagination;
+
+  const url = buildUrl('/projects/my-postings', {
+    ...filters,
+    page,
+    limit,
+  });
+
+  const response = await apiFetch<{
+    success: boolean;
+    jobs: Job[];
+    total: number;
+    page: number;
+    limit: number;
+  }>(url);
+
+  const totalPages = Math.ceil(response.total / response.limit);
+
+  return {
+    jobs: response.jobs,
+    total: response.total,
+    page: response.page,
+    limit: response.limit,
+    totalPages,
+    hasMore: response.page < totalPages,
+  };
+}
