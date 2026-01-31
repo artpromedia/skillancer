@@ -52,6 +52,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@skillancer/websocket-client':
+        specifier: workspace:*
+        version: link:../../packages/shared/websocket-client
       '@tanstack/react-query':
         specifier: ^5.17.0
         version: 5.90.16(react@18.3.1)
@@ -67,6 +70,9 @@ importers:
       immer:
         specifier: ^10.0.3
         version: 10.2.0
+      jose:
+        specifier: ^5.2.0
+        version: 5.10.0
       lucide-react:
         specifier: ^0.309.0
         version: 0.309.0(react@18.3.1)
@@ -122,6 +128,9 @@ importers:
 
   apps/web-cockpit:
     dependencies:
+      '@skillancer/websocket-client':
+        specifier: workspace:*
+        version: link:../../packages/shared/websocket-client
       '@tanstack/react-query':
         specifier: ^5.17.0
         version: 5.90.16(react@18.3.1)
@@ -140,6 +149,9 @@ importers:
       immer:
         specifier: ^10.0.3
         version: 10.2.0
+      jose:
+        specifier: ^5.2.0
+        version: 5.10.0
       lucide-react:
         specifier: ^0.309.0
         version: 0.309.0(react@18.3.1)
@@ -192,6 +204,9 @@ importers:
       '@heroicons/react':
         specifier: ^2.2.0
         version: 2.2.0(react@18.3.1)
+      '@skillancer/websocket-client':
+        specifier: workspace:*
+        version: link:../../packages/shared/websocket-client
       '@tanstack/react-query':
         specifier: ^5.50.0
         version: 5.90.16(react@18.3.1)
@@ -277,6 +292,9 @@ importers:
 
   apps/web-skillpod:
     dependencies:
+      jose:
+        specifier: ^5.2.0
+        version: 5.10.0
       lucide-react:
         specifier: ^0.330.0
         version: 0.330.0(react@18.3.1)
@@ -486,6 +504,9 @@ importers:
 
   packages/api-client:
     dependencies:
+      '@skillancer/error-handling':
+        specifier: workspace:*
+        version: link:../shared/error-handling
       '@skillancer/types':
         specifier: workspace:*
         version: link:../types
@@ -689,6 +710,9 @@ importers:
       prettier-plugin-tailwindcss:
         specifier: ^0.5.11
         version: 0.5.14(prettier@3.7.4)
+      zod:
+        specifier: ^3.22.0
+        version: 3.25.76
     devDependencies:
       eslint:
         specifier: ^8.56.0
@@ -961,6 +985,106 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.28)
 
+  packages/service-utils:
+    dependencies:
+      fastify:
+        specifier: ^4.25.0
+        version: 4.29.1
+      fastify-plugin:
+        specifier: ^4.5.0
+        version: 4.5.1
+      ioredis:
+        specifier: ^5.3.2
+        version: 5.9.1
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.28
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(postcss@8.5.6)(typescript@5.5.4)
+      typescript:
+        specifier: ~5.5.0
+        version: 5.5.4
+      vitest:
+        specifier: ^1.0.0
+        version: 1.6.1(@types/node@20.19.28)
+
+  packages/shared/auth:
+    dependencies:
+      jose:
+        specifier: ^5.2.0
+        version: 5.10.0
+      next:
+        specifier: '>=14.0.0'
+        version: 16.1.1(react-dom@18.3.1)(react@18.3.1)
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+    devDependencies:
+      '@skillancer/config':
+        specifier: workspace:*
+        version: link:../../config
+      '@types/node':
+        specifier: ^20.10.6
+        version: 20.19.28
+      '@types/react':
+        specifier: ^18.2.46
+        version: 18.3.27
+      tsup:
+        specifier: ^8.0.1
+        version: 8.5.1(postcss@8.5.6)(typescript@5.5.4)
+      typescript:
+        specifier: ~5.5.0
+        version: 5.5.4
+
+  packages/shared/error-handling:
+    dependencies:
+      axios:
+        specifier: ^1.6.0
+        version: 1.13.2
+    devDependencies:
+      '@skillancer/config':
+        specifier: workspace:*
+        version: link:../../config
+      '@types/node':
+        specifier: ^20.10.6
+        version: 20.19.28
+      tsup:
+        specifier: ^8.0.1
+        version: 8.5.1(postcss@8.5.6)(typescript@5.5.4)
+      typescript:
+        specifier: ~5.5.0
+        version: 5.5.4
+
+  packages/shared/websocket-client:
+    dependencies:
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      socket.io-client:
+        specifier: ^4.8.3
+        version: 4.8.3
+    devDependencies:
+      '@skillancer/config':
+        specifier: workspace:*
+        version: link:../../config
+      '@types/node':
+        specifier: ^20.10.6
+        version: 20.19.28
+      '@types/react':
+        specifier: ^18.2.46
+        version: 18.3.27
+      tsup:
+        specifier: ^8.0.1
+        version: 8.5.1(postcss@8.5.6)(typescript@5.5.4)
+      typescript:
+        specifier: ~5.5.0
+        version: 5.5.4
+
   packages/testing:
     dependencies:
       '@faker-js/faker':
@@ -1173,6 +1297,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@18.3.7)(@types/react@18.3.27)(react-dom@18.3.1)(react@18.3.1)
+      '@skillancer/error-handling':
+        specifier: workspace:*
+        version: link:../shared/error-handling
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
@@ -2236,6 +2363,64 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@20.19.28)
 
+  services/realtime-svc:
+    dependencies:
+      '@fastify/cors':
+        specifier: ^9.0.1
+        version: 9.0.1
+      '@fastify/jwt':
+        specifier: ^8.0.1
+        version: 8.0.1
+      '@socket.io/redis-adapter':
+        specifier: ^8.3.0
+        version: 8.3.0(socket.io-adapter@2.5.6)
+      '@socket.io/redis-streams-adapter':
+        specifier: ^0.2.2
+        version: 0.2.3(socket.io-adapter@2.5.6)
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+      fastify:
+        specifier: ^4.28.1
+        version: 4.29.1
+      ioredis:
+        specifier: ^5.4.1
+        version: 5.9.1
+      jose:
+        specifier: ^5.2.0
+        version: 5.10.0
+      pino:
+        specifier: ^9.1.0
+        version: 9.14.0
+      socket.io:
+        specifier: ^4.7.5
+        version: 4.8.3
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@skillancer/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@types/node':
+        specifier: ^20.14.2
+        version: 20.19.28
+      rimraf:
+        specifier: ^5.0.7
+        version: 5.0.10
+      socket.io-client:
+        specifier: ^4.7.5
+        version: 4.8.3
+      tsx:
+        specifier: ^4.15.4
+        version: 4.21.0
+      typescript:
+        specifier: ~5.5.0
+        version: 5.5.4
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@20.19.28)
+
   services/service-template:
     dependencies:
       '@fastify/cors':
@@ -2305,6 +2490,9 @@ importers:
       '@fastify/helmet':
         specifier: ^11.1.1
         version: 11.1.1
+      '@fastify/jwt':
+        specifier: ^8.0.1
+        version: 8.0.1
       '@fastify/sensible':
         specifier: ^5.5.0
         version: 5.6.0
@@ -2335,6 +2523,9 @@ importers:
       fastify:
         specifier: ^4.26.0
         version: 4.29.1
+      fastify-plugin:
+        specifier: ^4.5.1
+        version: 4.5.1
       ioredis:
         specifier: ^5.3.2
         version: 5.9.1
@@ -9799,6 +9990,14 @@ packages:
       sparse-bitfield: 3.0.3
     dev: false
 
+  /@msgpack/msgpack@2.8.0:
+    resolution:
+      {
+        integrity: sha512-h9u4u/jiIRKbq25PM+zymTyW6bhTzELvOoUd+AvYriWOAKpLGnIamaET3pnHYoI5iYphAHBI4ayx0MehR+VVPQ==,
+      }
+    engines: { node: '>= 10' }
+    dev: false
+
   /@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.3:
     resolution:
       {
@@ -17122,7 +17321,6 @@ packages:
       {
         integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==,
       }
-    dev: false
 
   /@socket.io/redis-adapter@8.3.0(socket.io-adapter@2.5.6):
     resolution:
@@ -17137,6 +17335,22 @@ packages:
       notepack.io: 3.0.1
       socket.io-adapter: 2.5.6
       uid2: 1.0.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@socket.io/redis-streams-adapter@0.2.3(socket.io-adapter@2.5.6):
+    resolution:
+      {
+        integrity: sha512-c8b+ZO6L10TQx7HbVwbupJQ3yj4aZOzxN1u8paIM8tFxJBJUiujdm0SryWC0xv7gIG8LbPsXIHiBHGi7TEVVqQ==,
+      }
+    engines: { node: '>=14.0.0' }
+    peerDependencies:
+      socket.io-adapter: ^2.5.4
+    dependencies:
+      '@msgpack/msgpack': 2.8.0
+      debug: 4.3.7
+      socket.io-adapter: 2.5.6
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -24672,7 +24886,6 @@ packages:
       - bufferutil
       - supports-color
       - utf-8-validate
-    dev: false
 
   /engine.io-parser@5.2.3:
     resolution:
@@ -24680,7 +24893,6 @@ packages:
         integrity: sha512-HqD3yTBfnBxIrbnM1DoD6Pcq8NECnh8d4As1Qgh0z5Gg3jRRIqijury0CL3ghu/edArpUYiYqQiDUQBIs4np3Q==,
       }
     engines: { node: '>=10.0.0' }
-    dev: false
 
   /engine.io@6.6.5:
     resolution:
@@ -29874,6 +30086,13 @@ packages:
     resolution:
       {
         integrity: sha512-1vUQX+IdDMVPj4k8kOxgUqlcK518yluMuGZwqlr44FS1ppZB/5GWh4rZG89erpOBOJjU/OBsnCVFfapsRz6nEA==,
+      }
+    dev: false
+
+  /jose@5.10.0:
+    resolution:
+      {
+        integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==,
       }
     dev: false
 
@@ -37679,7 +37898,6 @@ packages:
       - bufferutil
       - supports-color
       - utf-8-validate
-    dev: false
 
   /socket.io-parser@4.2.5:
     resolution:
@@ -37692,7 +37910,6 @@ packages:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
-    dev: false
 
   /socket.io@4.8.3:
     resolution:
@@ -41386,7 +41603,6 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
-    dev: false
 
   /ws@8.19.0:
     resolution:
@@ -41467,7 +41683,6 @@ packages:
         integrity: sha512-TEU+nJVUUnA4CYJFLvK5X9AOeH4KvDvhIfm0vV1GaQRtchnG0hgK5p8hw/xjv8cunWYCsiPCSDzObPyhEwq3KQ==,
       }
     engines: { node: '>=0.4.0' }
-    dev: false
 
   /xtend@4.0.2:
     resolution:
