@@ -15,6 +15,9 @@ export * from './use-proposal-form';
 export * from './use-proposals';
 export * from './use-client-proposals';
 
+// Contract hooks
+export * from './use-contracts';
+
 // Messaging hooks
 export * from './use-messaging';
 

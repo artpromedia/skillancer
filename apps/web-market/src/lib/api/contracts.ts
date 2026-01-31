@@ -562,6 +562,126 @@ export async function fundMilestone(milestoneId: string): Promise<Milestone> {
 }
 
 /**
+ * Release payment for approved milestone
+ */
+export async function releaseMilestonePayment(milestoneId: string): Promise<Milestone> {
+  await new Promise((r) => setTimeout(r, 500));
+
+  return {
+    id: milestoneId,
+    contractId: 'contract-1',
+    title: 'Milestone',
+    amount: 500,
+    status: 'RELEASED',
+    order: 0,
+    escrowFunded: true,
+    escrowReleasedAt: new Date().toISOString(),
+    releasedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Pause an active contract
+ */
+export async function pauseContract(contractId: string): Promise<Contract> {
+  await new Promise((r) => setTimeout(r, 400));
+  const contract = await getContractById(contractId);
+  return { ...contract, status: 'PAUSED', updatedAt: new Date().toISOString() };
+}
+
+/**
+ * Resume a paused contract
+ */
+export async function resumeContract(contractId: string): Promise<Contract> {
+  await new Promise((r) => setTimeout(r, 400));
+  const contract = await getContractById(contractId);
+  return { ...contract, status: 'ACTIVE', updatedAt: new Date().toISOString() };
+}
+
+/**
+ * Get payment information for a contract
+ */
+export async function getContractPayments(contractId: string): Promise<PaymentInfo> {
+  await new Promise((r) => setTimeout(r, 300));
+
+  return {
+    escrowBalance: 3000,
+    totalPaid: 9000,
+    pendingAmount: 3000,
+    releasedAmount: 9000,
+    nextPaymentDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+    nextPaymentAmount: 3000,
+    transactions: [
+      {
+        id: 'tx-1',
+        type: 'ESCROW_FUNDED',
+        amount: 5000,
+        status: 'COMPLETED',
+        date: new Date(Date.now() - 30 * 86400000).toISOString(),
+        description: 'Milestone 1 - Initial escrow deposit',
+      },
+      {
+        id: 'tx-2',
+        type: 'PAYMENT_RELEASED',
+        amount: 5000,
+        status: 'COMPLETED',
+        date: new Date(Date.now() - 14 * 86400000).toISOString(),
+        description: 'Milestone 1 - Payment released',
+      },
+      {
+        id: 'tx-3',
+        type: 'ESCROW_FUNDED',
+        amount: 4000,
+        status: 'COMPLETED',
+        date: new Date(Date.now() - 7 * 86400000).toISOString(),
+        description: 'Milestone 2 - Escrow deposit',
+      },
+      {
+        id: 'tx-4',
+        type: 'PAYMENT_RELEASED',
+        amount: 4000,
+        status: 'COMPLETED',
+        date: new Date(Date.now() - 3 * 86400000).toISOString(),
+        description: 'Milestone 2 - Payment released',
+      },
+      {
+        id: 'tx-5',
+        type: 'ESCROW_FUNDED',
+        amount: 3000,
+        status: 'PENDING',
+        date: new Date().toISOString(),
+        description: 'Milestone 3 - Pending',
+      },
+    ],
+  };
+}
+
+/**
+ * Get contract statistics summary
+ */
+export async function getContractStats(): Promise<{
+  totalActive: number;
+  totalEarnings: number;
+  totalHoursThisWeek: number;
+  pendingMilestones: number;
+  escrowBalance: number;
+  completedContracts: number;
+}> {
+  await new Promise((r) => setTimeout(r, 200));
+
+  return {
+    totalActive: 3,
+    totalEarnings: 45000,
+    totalHoursThisWeek: 24,
+    pendingMilestones: 4,
+    escrowBalance: 6000,
+    completedContracts: 12,
+  };
+}
+
+/**
  * Get time entries for hourly contract
  */
 export async function getTimeEntries(

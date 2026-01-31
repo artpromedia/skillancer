@@ -165,26 +165,29 @@ export function ProposalsClient({ jobId }: Readonly<{ jobId: string }>) {
 
   // Action handlers
   const handleShortlist = useCallback(
-    (id: string) => {
+    (id: string): Promise<void> => {
       shortlist(id);
+      return Promise.resolve();
     },
     [shortlist]
   );
 
   const handleArchive = useCallback(
-    (id: string) => {
+    (id: string): Promise<void> => {
       archive(id);
+      return Promise.resolve();
     },
     [archive]
   );
 
   const handleDecline = useCallback(
-    (id: string) => {
+    (id: string): Promise<void> => {
       // Open reject modal for reason
       const proposal = proposals.find((p) => p.id === id);
       if (proposal) {
         setRejectProposal(proposal);
       }
+      return Promise.resolve();
     },
     [proposals]
   );
