@@ -723,7 +723,7 @@ export async function deleteWorkHistoryItem(token: string, itemId: string): Prom
  * Get current user's portfolio items (simplified - uses stored token)
  */
 export async function getMyPortfolio(): Promise<{ items: PortfolioItem[] }> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? '' : '';
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') ?? '') : '';
   const items = await apiFetch<PortfolioItem[]>(`${API_BASE_URL}/profiles/me/portfolio`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -734,7 +734,7 @@ export async function getMyPortfolio(): Promise<{ items: PortfolioItem[] }> {
  * Set portfolio item as featured (simplified)
  */
 export async function setPortfolioItemFeatured(itemId: string, isFeatured: boolean): Promise<void> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? '' : '';
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') ?? '') : '';
   await apiFetch<void>(`${API_BASE_URL}/profiles/me/portfolio/${itemId}/featured`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
@@ -750,7 +750,7 @@ export async function setPortfolioItemFeatured(itemId: string, isFeatured: boole
  * Get current user's skills (simplified)
  */
 export async function getMySkills(): Promise<FreelancerSkill[]> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? '' : '';
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') ?? '') : '';
   return apiFetch<FreelancerSkill[]>(`${API_BASE_URL}/profiles/me/skills`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -762,20 +762,19 @@ export async function getMySkills(): Promise<FreelancerSkill[]> {
 
 /**
  * Get current verification status
+ * Uses cookie-based authentication
  */
-export async function getVerificationStatus(token: string): Promise<VerificationStatus> {
+export async function getVerificationStatus(): Promise<VerificationStatus> {
   return apiFetch<VerificationStatus>(`${AUTH_API_URL}/verification/status`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: 'include',
   });
 }
 
 /**
  * Start identity verification flow
+ * Uses cookie-based authentication
  */
-export async function startVerification(
-  token: string,
-  tier: 'BASIC' | 'ENHANCED' | 'PREMIUM'
-): Promise<{
+export async function startVerification(tier: 'BASIC' | 'ENHANCED' | 'PREMIUM'): Promise<{
   inquiryId: string;
   sessionToken: string;
   templateId: string;
@@ -784,7 +783,7 @@ export async function startVerification(
     `${AUTH_API_URL}/verification/start`,
     {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
       body: JSON.stringify({ tier }),
     }
   );
@@ -792,11 +791,9 @@ export async function startVerification(
 
 /**
  * Check verification inquiry status
+ * Uses cookie-based authentication
  */
-export async function checkVerificationInquiry(
-  token: string,
-  inquiryId: string
-): Promise<{
+export async function checkVerificationInquiry(inquiryId: string): Promise<{
   status: 'pending' | 'completed' | 'failed' | 'expired';
   level?: VerificationLevel;
   completedAt?: string;
@@ -806,7 +803,7 @@ export async function checkVerificationInquiry(
     level?: VerificationLevel;
     completedAt?: string;
   }>(`${AUTH_API_URL}/verification/status/${inquiryId}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: 'include',
   });
 }
 
@@ -818,6 +815,82 @@ export async function getUserVerificationLevel(
 ): Promise<{ level: VerificationLevel; verifiedAt?: string }> {
   return apiFetch<{ level: VerificationLevel; verifiedAt?: string }>(
     `${AUTH_API_URL}/users/${userId}/verification-level`
+  );
+}
+
+// ============================================================================
+// API Functions - Email Verification
+// ============================================================================
+
+/**
+ * Send email verification code
+ * Uses cookie-based authentication
+ */
+export async function sendEmailVerificationCode(
+  email?: string
+): Promise<{ success: boolean; expiresAt: string }> {
+  return apiFetch<{ success: boolean; expiresAt: string }>(
+    `${AUTH_API_URL}/verification/email/send`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ email }),
+    }
+  );
+}
+
+/**
+ * Verify email with code
+ * Uses cookie-based authentication
+ */
+export async function verifyEmailCode(
+  code: string
+): Promise<{ success: boolean; verifiedAt: string }> {
+  return apiFetch<{ success: boolean; verifiedAt: string }>(
+    `${AUTH_API_URL}/verification/email/verify`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ code }),
+    }
+  );
+}
+
+// ============================================================================
+// API Functions - Phone Verification
+// ============================================================================
+
+/**
+ * Send phone verification code via SMS
+ * Uses cookie-based authentication
+ */
+export async function sendPhoneVerificationCode(
+  phone: string
+): Promise<{ success: boolean; expiresAt: string }> {
+  return apiFetch<{ success: boolean; expiresAt: string }>(
+    `${AUTH_API_URL}/verification/phone/send`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ phone }),
+    }
+  );
+}
+
+/**
+ * Verify phone with code
+ * Uses cookie-based authentication
+ */
+export async function verifyPhoneCode(
+  code: string
+): Promise<{ success: boolean; verifiedAt: string }> {
+  return apiFetch<{ success: boolean; verifiedAt: string }>(
+    `${AUTH_API_URL}/verification/phone/verify`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ code }),
+    }
   );
 }
 

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import {
@@ -10,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
   cn,
+  Skeleton,
 } from '@skillancer/ui';
 import {
   AlertCircle,
@@ -17,8 +17,10 @@ import {
   Clock,
   CreditCard,
   FileCheck,
+  Loader2,
   Mail,
   Phone,
+  RefreshCw,
   Shield,
   ShieldCheck,
   ShieldPlus,
@@ -26,49 +28,25 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
+import { VerificationDialog } from './verification-dialog';
+
 import { PersonaEmbed } from '@/components/verification/persona-embed';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-type VerificationTier = 'BASIC' | 'ENHANCED' | 'PREMIUM';
-
-interface VerificationStatus {
-  level: string;
-  identityVerified: boolean;
-  identityVerifiedAt?: string;
-  paymentVerified: boolean;
-  paymentVerifiedAt?: string;
-  phoneVerified: boolean;
-  phoneVerifiedAt?: string;
-  emailVerified: boolean;
-  emailVerifiedAt?: string;
-  pendingVerification?: {
-    inquiryId: string;
-    tier: VerificationTier;
-    status: string;
-    startedAt: string;
-  };
-}
-
-// ============================================================================
-// Mock Data (replace with API call)
-// ============================================================================
-
-const mockStatus: VerificationStatus = {
-  level: 'EMAIL',
-  identityVerified: false,
-  paymentVerified: true,
-  paymentVerifiedAt: '2024-01-15T10:00:00Z',
-  phoneVerified: false,
-  emailVerified: true,
-  emailVerifiedAt: '2024-01-10T09:00:00Z',
-};
+import { useVerificationStatus, type VerificationTier } from '@/hooks/use-verification';
 
 // ============================================================================
 // Verification Tier Card
 // ============================================================================
+
+interface TierCardProps {
+  readonly tier: VerificationTier;
+  readonly title: string;
+  readonly description: string;
+  readonly features: readonly string[];
+  readonly icon: React.ElementType;
+  readonly isCurrentTier: boolean;
+  readonly isCompleted: boolean;
+  readonly onStart: () => void;
+}
 
 function TierCard({
   tier,
@@ -79,16 +57,7 @@ function TierCard({
   isCurrentTier,
   isCompleted,
   onStart,
-}: {
-  tier: VerificationTier;
-  title: string;
-  description: string;
-  features: string[];
-  icon: React.ElementType;
-  isCurrentTier: boolean;
-  isCompleted: boolean;
-  onStart: () => void;
-}) {
+}: TierCardProps) {
   return (
     <Card
       className={cn(
@@ -129,8 +98,8 @@ function TierCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <ul className="space-y-2">
-          {features.map((feature, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm">
+          {features.map((feature) => (
+            <li key={feature} className="flex items-start gap-2 text-sm">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               {feature}
             </li>
@@ -157,13 +126,83 @@ function TierCard({
 }
 
 // ============================================================================
+// Status Item Component
+// ============================================================================
+
+interface StatusItemProps {
+  readonly icon: React.ElementType;
+  readonly label: string;
+  readonly verified: boolean;
+  readonly verifiedAt?: string;
+  readonly onClick?: () => void;
+  readonly isLoading?: boolean;
+}
+
+function getStatusText(
+  isLoading: boolean | undefined,
+  verified: boolean,
+  verifiedAt?: string
+): React.ReactNode {
+  if (isLoading) {
+    return <Skeleton className="h-3 w-16" />;
+  }
+  if (verified) {
+    return verifiedAt ? `Verified ${new Date(verifiedAt).toLocaleDateString()}` : 'Verified';
+  }
+  return 'Click to verify';
+}
+
+function StatusItem({
+  icon: Icon,
+  label,
+  verified,
+  verifiedAt,
+  onClick,
+  isLoading,
+}: StatusItemProps) {
+  const canVerify = !verified && onClick;
+
+  return (
+    <button
+      className={cn(
+        'flex items-center gap-3 rounded-lg border p-4 text-left transition-colors',
+        canVerify && 'hover:bg-muted/50 cursor-pointer',
+        !canVerify && 'cursor-default'
+      )}
+      disabled={!canVerify}
+      type="button"
+      onClick={canVerify ? onClick : undefined}
+    >
+      <Icon className={cn('h-5 w-5', verified ? 'text-emerald-600' : 'text-muted-foreground')} />
+      <div className="flex-1">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-muted-foreground text-xs">
+          {getStatusText(isLoading, verified, verifiedAt)}
+        </p>
+      </div>
+      {canVerify && (
+        <div className="text-primary">
+          <CheckCircle2 className="h-4 w-4" />
+        </div>
+      )}
+    </button>
+  );
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
 export function VerificationCenter() {
-  const [status] = useState<VerificationStatus>(mockStatus);
   const [showPersona, setShowPersona] = useState(false);
   const [selectedTier, setSelectedTier] = useState<VerificationTier | null>(null);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
+
+  const { status, isLoading, isFetching, error, invalidate } = useVerificationStatus({
+    // Poll for updates when there's a pending verification
+    refetchInterval: status?.pendingVerification ? 5000 : false,
+  });
 
   const handleStartVerification = (tier: VerificationTier) => {
     setSelectedTier(tier);
@@ -173,91 +212,128 @@ export function VerificationCenter() {
   const handleVerificationComplete = () => {
     setShowPersona(false);
     setSelectedTier(null);
-    // Refresh status
+    void invalidate();
   };
 
-  const isBasicComplete =
-    status.level === 'BASIC' || status.level === 'ENHANCED' || status.level === 'PREMIUM';
-  const isEnhancedComplete = status.level === 'ENHANCED' || status.level === 'PREMIUM';
-  const isPremiumComplete = status.level === 'PREMIUM';
+  const handleEmailVerified = () => {
+    void invalidate();
+  };
+
+  const handlePhoneVerified = () => {
+    void invalidate();
+  };
+
+  // Compute tier completion status
+  const level = status?.level ?? 'NONE';
+  const isBasicComplete = level === 'BASIC' || level === 'ENHANCED' || level === 'PREMIUM';
+  const isEnhancedComplete = level === 'ENHANCED' || level === 'PREMIUM';
+  const isPremiumComplete = level === 'PREMIUM';
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="rounded-lg border p-4">
+                  <Skeleton className="mb-2 h-5 w-5" />
+                  <Skeleton className="mb-1 h-4 w-16" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-4 py-12">
+          <AlertCircle className="text-destructive h-12 w-12" />
+          <div className="text-center">
+            <p className="font-medium">Failed to load verification status</p>
+            <p className="text-muted-foreground text-sm">{error.message}</p>
+          </div>
+          <Button onClick={() => void invalidate()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Try Again
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-8">
       {/* Current Status */}
       <Card>
-        <CardHeader>
-          <CardTitle>Current Verification Status</CardTitle>
-          <CardDescription>Your account verification progress</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Current Verification Status</CardTitle>
+            <CardDescription>Your account verification progress</CardDescription>
+          </div>
+          {isFetching && <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />}
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Email */}
-            <div className="flex items-center gap-3 rounded-lg border p-4">
-              <Mail
-                className={cn(
-                  'h-5 w-5',
-                  status.emailVerified ? 'text-emerald-600' : 'text-muted-foreground'
-                )}
-              />
-              <div>
-                <p className="text-sm font-medium">Email</p>
-                <p className="text-muted-foreground text-xs">
-                  {status.emailVerified ? 'Verified' : 'Not verified'}
-                </p>
-              </div>
-            </div>
+            <StatusItem
+              icon={Mail}
+              isLoading={isLoading}
+              label="Email"
+              verified={status?.emailVerified ?? false}
+              verifiedAt={status?.emailVerifiedAt}
+              onClick={() => setShowEmailDialog(true)}
+            />
 
             {/* Phone */}
-            <div className="flex items-center gap-3 rounded-lg border p-4">
-              <Phone
-                className={cn(
-                  'h-5 w-5',
-                  status.phoneVerified ? 'text-emerald-600' : 'text-muted-foreground'
-                )}
-              />
-              <div>
-                <p className="text-sm font-medium">Phone</p>
-                <p className="text-muted-foreground text-xs">
-                  {status.phoneVerified ? 'Verified' : 'Not verified'}
-                </p>
-              </div>
-            </div>
+            <StatusItem
+              icon={Phone}
+              isLoading={isLoading}
+              label="Phone"
+              verified={status?.phoneVerified ?? false}
+              verifiedAt={status?.phoneVerifiedAt}
+              onClick={() => setShowPhoneDialog(true)}
+            />
 
             {/* Payment */}
-            <div className="flex items-center gap-3 rounded-lg border p-4">
-              <CreditCard
-                className={cn(
-                  'h-5 w-5',
-                  status.paymentVerified ? 'text-emerald-600' : 'text-muted-foreground'
-                )}
-              />
-              <div>
-                <p className="text-sm font-medium">Payment</p>
-                <p className="text-muted-foreground text-xs">
-                  {status.paymentVerified ? 'Verified' : 'Not verified'}
-                </p>
-              </div>
-            </div>
+            <StatusItem
+              icon={CreditCard}
+              isLoading={isLoading}
+              label="Payment"
+              verified={status?.paymentVerified ?? false}
+              verifiedAt={status?.paymentVerifiedAt}
+            />
 
             {/* Identity */}
             <div className="flex items-center gap-3 rounded-lg border p-4">
               <Shield
                 className={cn(
                   'h-5 w-5',
-                  status.identityVerified ? 'text-emerald-600' : 'text-muted-foreground'
+                  status?.identityVerified ? 'text-emerald-600' : 'text-muted-foreground'
                 )}
               />
               <div>
                 <p className="text-sm font-medium">Identity</p>
                 <p className="text-muted-foreground text-xs">
-                  {status.identityVerified ? status.level : 'Not verified'}
+                  {status?.identityVerified ? level : 'Not verified'}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Pending verification alert */}
-          {status.pendingVerification && (
+          {status?.pendingVerification && (
             <div className="mt-4 flex items-center gap-3 rounded-lg bg-yellow-50 p-4 text-yellow-800">
               <Clock className="h-5 w-5" />
               <div>
@@ -351,6 +427,22 @@ export function VerificationCenter() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Email Verification Dialog */}
+      <VerificationDialog
+        open={showEmailDialog}
+        type="email"
+        onOpenChange={setShowEmailDialog}
+        onSuccess={handleEmailVerified}
+      />
+
+      {/* Phone Verification Dialog */}
+      <VerificationDialog
+        open={showPhoneDialog}
+        type="phone"
+        onOpenChange={setShowPhoneDialog}
+        onSuccess={handlePhoneVerified}
+      />
 
       {/* Persona Embed Modal */}
       {showPersona && selectedTier && (

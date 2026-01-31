@@ -26,5 +26,8 @@ export * from './use-search-analytics';
 export * from './use-saved-searches';
 export * from './use-freelancer-search';
 
+// Verification hooks
+export * from './use-verification';
+
 // Utility hooks
 export * from './use-debounce';
