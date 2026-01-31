@@ -324,6 +324,32 @@ export interface SignContractData {
   acceptedTerms: boolean;
 }
 
+export interface CreateMilestoneData {
+  title: string;
+  description?: string;
+  amount: number;
+  dueDate?: string;
+  deliverables?: string[];
+}
+
+export interface CancelContractData {
+  reason: string;
+  agreedByBothParties: boolean;
+}
+
+export interface CompleteContractData {
+  feedback?: {
+    rating: number;
+    review: string;
+  };
+}
+
+export interface ContractTermsData {
+  terms: string;
+  acceptedAt: string;
+  acceptedBy: 'CLIENT' | 'FREELANCER';
+}
+
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -890,6 +916,124 @@ export async function endContract(
     ...contract,
     status: 'COMPLETED',
     endDate: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Cancel a contract (mutual agreement required)
+ */
+export async function cancelContract(
+  contractId: string,
+  data: CancelContractData
+): Promise<Contract> {
+  await new Promise((r) => setTimeout(r, 500));
+
+  const contract = await getContractById(contractId);
+  return {
+    ...contract,
+    status: 'CANCELLED',
+    endDate: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Mark a contract as completed
+ */
+export async function completeContract(
+  contractId: string,
+  data?: CompleteContractData
+): Promise<Contract> {
+  await new Promise((r) => setTimeout(r, 500));
+
+  const contract = await getContractById(contractId);
+  return {
+    ...contract,
+    status: 'COMPLETED',
+    endDate: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Create a new milestone on a contract
+ */
+export async function createMilestone(
+  contractId: string,
+  data: CreateMilestoneData
+): Promise<Milestone> {
+  await new Promise((r) => setTimeout(r, 500));
+
+  const contract = await getContractById(contractId);
+  const nextOrder = (contract.milestones?.length ?? 0) + 1;
+
+  return {
+    id: `milestone-${Date.now()}`,
+    contractId,
+    title: data.title,
+    description: data.description,
+    amount: data.amount,
+    dueDate: data.dueDate,
+    status: 'PENDING',
+    order: nextOrder,
+    escrowFunded: false,
+    deliverables: data.deliverables,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Update milestone details
+ */
+export async function updateMilestone(
+  milestoneId: string,
+  data: Partial<CreateMilestoneData>
+): Promise<Milestone> {
+  await new Promise((r) => setTimeout(r, 400));
+
+  return {
+    id: milestoneId,
+    contractId: 'contract-1',
+    title: data.title ?? 'Updated Milestone',
+    description: data.description,
+    amount: data.amount ?? 500,
+    dueDate: data.dueDate,
+    status: 'PENDING',
+    order: 1,
+    escrowFunded: false,
+    deliverables: data.deliverables,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Delete a pending milestone
+ */
+export async function deleteMilestone(milestoneId: string): Promise<void> {
+  await new Promise((r) => setTimeout(r, 300));
+  // In real implementation, would delete from database
+}
+
+/**
+ * Accept contract terms (both parties must accept)
+ */
+export async function acceptContractTerms(
+  contractId: string,
+  role: 'CLIENT' | 'FREELANCER'
+): Promise<Contract> {
+  await new Promise((r) => setTimeout(r, 400));
+
+  const contract = await getContractById(contractId);
+
+  // Check if both parties have now accepted
+  const bothAccepted = true; // In real impl, check database
+
+  return {
+    ...contract,
+    status: bothAccepted ? 'PENDING_SIGNATURE' : 'DRAFT',
     updatedAt: new Date().toISOString(),
   };
 }

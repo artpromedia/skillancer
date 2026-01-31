@@ -15,7 +15,7 @@ import {
   useQueryClient,
   type InfiniteData,
 } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import {
   getContracts,
@@ -24,6 +24,15 @@ import {
   pauseContract,
   resumeContract,
   endContract,
+  cancelContract,
+  completeContract,
+  createContract,
+  createMilestone,
+  updateMilestone,
+  deleteMilestone,
+  openDispute,
+  acceptContractTerms,
+  subscribeToContractUpdates,
   getContractPayments,
   getMilestones,
   submitMilestone,
@@ -44,6 +53,13 @@ import {
   type TimeEntry,
   type SubmitMilestoneData,
   type AddTimeEntryData,
+  type CreateContractData,
+  type CreateMilestoneData,
+  type CancelContractData,
+  type CompleteContractData,
+  type OpenDisputeData,
+  type Dispute,
+  type ContractEvent,
 } from '@/lib/api/contracts';
 
 // ============================================================================
@@ -648,6 +664,373 @@ export function useAddTimeEntry(
     error: mutation.error,
     reset: mutation.reset,
   };
+}
+
+// ============================================================================
+// Contract Creation and Lifecycle Hooks
+// ============================================================================
+
+/**
+ * Hook for creating a new contract from an accepted proposal
+ */
+export function useCreateContract(options: ContractMutationOptions<Contract> = {}) {
+  const queryClient = useQueryClient();
+  const { onSuccess, onError } = options;
+
+  const mutation = useMutation<Contract, Error, CreateContractData>({
+    mutationFn: (data) => createContract(data),
+    onSuccess: (contract) => {
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.stats() });
+      onSuccess?.(contract);
+    },
+    onError: (error) => {
+      onError?.(error);
+    },
+  });
+
+  return {
+    create: mutation.mutate,
+    createAsync: mutation.mutateAsync,
+    isCreating: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Hook for completing a contract
+ */
+export function useCompleteContract(
+  contractId: string,
+  options: ContractMutationOptions<Contract> = {}
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, onError } = options;
+
+  const mutation = useMutation<Contract, Error, CompleteContractData | undefined>({
+    mutationFn: (data) => completeContract(contractId, data),
+    onSuccess: (contract) => {
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.detail(contractId) });
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.stats() });
+      onSuccess?.(contract);
+    },
+    onError: (error) => {
+      onError?.(error);
+    },
+  });
+
+  return {
+    complete: mutation.mutate,
+    completeAsync: mutation.mutateAsync,
+    isCompleting: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Hook for canceling a contract (mutual agreement)
+ */
+export function useCancelContract(
+  contractId: string,
+  options: ContractMutationOptions<Contract> = {}
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, onError } = options;
+
+  const mutation = useMutation<Contract, Error, CancelContractData>({
+    mutationFn: (data) => cancelContract(contractId, data),
+    onSuccess: (contract) => {
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.detail(contractId) });
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.stats() });
+      onSuccess?.(contract);
+    },
+    onError: (error) => {
+      onError?.(error);
+    },
+  });
+
+  return {
+    cancel: mutation.mutate,
+    cancelAsync: mutation.mutateAsync,
+    isCanceling: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Hook for opening a dispute on a contract
+ */
+export function useOpenDispute(contractId: string, options: ContractMutationOptions<Dispute> = {}) {
+  const queryClient = useQueryClient();
+  const { onSuccess, onError } = options;
+
+  const mutation = useMutation<Dispute, Error, OpenDisputeData>({
+    mutationFn: (data) => openDispute(contractId, data),
+    onSuccess: (dispute) => {
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.detail(contractId) });
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.lists() });
+      onSuccess?.(dispute);
+    },
+    onError: (error) => {
+      onError?.(error);
+    },
+  });
+
+  return {
+    open: mutation.mutate,
+    openAsync: mutation.mutateAsync,
+    isOpening: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Hook for accepting contract terms
+ */
+export function useAcceptContractTerms(
+  contractId: string,
+  options: ContractMutationOptions<Contract> = {}
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, onError } = options;
+
+  const mutation = useMutation<Contract, Error, 'CLIENT' | 'FREELANCER'>({
+    mutationFn: (role) => acceptContractTerms(contractId, role),
+    onSuccess: (contract) => {
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.detail(contractId) });
+      onSuccess?.(contract);
+    },
+    onError: (error) => {
+      onError?.(error);
+    },
+  });
+
+  return {
+    acceptTerms: mutation.mutate,
+    acceptTermsAsync: mutation.mutateAsync,
+    isAccepting: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+// ============================================================================
+// Milestone CRUD Hooks
+// ============================================================================
+
+/**
+ * Hook for creating a new milestone on a contract
+ */
+export function useCreateMilestone(
+  contractId: string,
+  options: ContractMutationOptions<Milestone> = {}
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, onError } = options;
+
+  const mutation = useMutation<Milestone, Error, CreateMilestoneData>({
+    mutationFn: (data) => createMilestone(contractId, data),
+    onSuccess: (milestone) => {
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.detail(contractId) });
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.milestones(contractId) });
+      onSuccess?.(milestone);
+    },
+    onError: (error) => {
+      onError?.(error);
+    },
+  });
+
+  return {
+    create: mutation.mutate,
+    createAsync: mutation.mutateAsync,
+    isCreating: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Hook for updating a milestone
+ */
+export function useUpdateMilestone(
+  contractId: string,
+  options: ContractMutationOptions<Milestone> = {}
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, onError } = options;
+
+  const mutation = useMutation<
+    Milestone,
+    Error,
+    { milestoneId: string; data: Partial<CreateMilestoneData> }
+  >({
+    mutationFn: ({ milestoneId, data }) => updateMilestone(milestoneId, data),
+    onSuccess: (milestone) => {
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.detail(contractId) });
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.milestones(contractId) });
+      onSuccess?.(milestone);
+    },
+    onError: (error) => {
+      onError?.(error);
+    },
+  });
+
+  return {
+    update: mutation.mutate,
+    updateAsync: mutation.mutateAsync,
+    isUpdating: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+/**
+ * Hook for deleting a milestone
+ */
+export function useDeleteMilestone(
+  contractId: string,
+  options: ContractMutationOptions<void> = {}
+) {
+  const queryClient = useQueryClient();
+  const { onSuccess, onError } = options;
+
+  const mutation = useMutation<void, Error, string>({
+    mutationFn: (milestoneId) => deleteMilestone(milestoneId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.detail(contractId) });
+      void queryClient.invalidateQueries({ queryKey: contractQueryKeys.milestones(contractId) });
+      onSuccess?.();
+    },
+    onError: (error) => {
+      onError?.(error);
+    },
+  });
+
+  return {
+    remove: mutation.mutate,
+    removeAsync: mutation.mutateAsync,
+    isRemoving: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
+}
+
+// ============================================================================
+// Real-time Subscription Hook
+// ============================================================================
+
+export interface UseContractSubscriptionOptions {
+  contractId: string;
+  enabled?: boolean;
+  onMilestoneUpdated?: (milestoneId: string) => void;
+  onMilestoneSubmitted?: (milestoneId: string) => void;
+  onPaymentReleased?: (amount: number) => void;
+  onMessageReceived?: (messageId: string) => void;
+  onStatusChanged?: (status: ContractStatus) => void;
+  onAmendmentRequested?: (amendmentId: string) => void;
+}
+
+/**
+ * Hook to subscribe to real-time contract updates
+ */
+export function useContractSubscription(options: UseContractSubscriptionOptions) {
+  const {
+    contractId,
+    enabled = true,
+    onMilestoneUpdated,
+    onMilestoneSubmitted,
+    onPaymentReleased,
+    onMessageReceived,
+    onStatusChanged,
+    onAmendmentRequested,
+  } = options;
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled || !contractId) return;
+
+    const handleEvent = (event: ContractEvent) => {
+      // Invalidate relevant queries based on event type
+      switch (event.type) {
+        case 'MILESTONE_UPDATED':
+          void queryClient.invalidateQueries({
+            queryKey: contractQueryKeys.milestones(contractId),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: contractQueryKeys.detail(contractId),
+          });
+          onMilestoneUpdated?.(event.data.milestoneId);
+          break;
+
+        case 'MILESTONE_SUBMITTED':
+          void queryClient.invalidateQueries({
+            queryKey: contractQueryKeys.milestones(contractId),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: contractQueryKeys.detail(contractId),
+          });
+          onMilestoneSubmitted?.(event.data.milestoneId);
+          break;
+
+        case 'PAYMENT_RELEASED':
+          void queryClient.invalidateQueries({
+            queryKey: contractQueryKeys.payments(contractId),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: contractQueryKeys.detail(contractId),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: contractQueryKeys.stats(),
+          });
+          onPaymentReleased?.(event.data.amount);
+          break;
+
+        case 'MESSAGE_RECEIVED':
+          onMessageReceived?.(event.data.messageId);
+          break;
+
+        case 'STATUS_CHANGED':
+          void queryClient.invalidateQueries({
+            queryKey: contractQueryKeys.detail(contractId),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: contractQueryKeys.lists(),
+          });
+          onStatusChanged?.(event.data.status);
+          break;
+
+        case 'AMENDMENT_REQUESTED':
+          void queryClient.invalidateQueries({
+            queryKey: contractQueryKeys.detail(contractId),
+          });
+          onAmendmentRequested?.(event.data.amendmentId);
+          break;
+      }
+    };
+
+    const unsubscribe = subscribeToContractUpdates(contractId, handleEvent);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [
+    contractId,
+    enabled,
+    queryClient,
+    onMilestoneUpdated,
+    onMilestoneSubmitted,
+    onPaymentReleased,
+    onMessageReceived,
+    onStatusChanged,
+    onAmendmentRequested,
+  ]);
 }
 
 // ============================================================================
