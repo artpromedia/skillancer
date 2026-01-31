@@ -88,6 +88,8 @@ export interface JobSearchFilters {
   budgetType?: 'FIXED' | 'HOURLY' | 'MONTHLY';
   experienceLevel?: 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
   category?: string;
+  location?: string;
+  remoteOnly?: boolean;
   subcategory?: string;
   duration?: string;
   postedWithin?: '24h' | '3d' | 'week' | 'month';
@@ -517,4 +519,123 @@ export async function getMyPostedJobs(
     totalPages,
     hasMore: response.page < totalPages,
   };
+}
+
+// ============================================================================
+// Search Analytics & Suggestions
+// ============================================================================
+
+export interface SearchAnalyticsEvent {
+  query: string;
+  filters: JobSearchFilters;
+  resultsCount: number;
+  timestamp: string;
+  sessionId?: string;
+}
+
+export interface SearchSuggestion {
+  type: 'skill' | 'category' | 'query' | 'related';
+  text: string;
+  count?: number;
+}
+
+export interface LocationSuggestion {
+  id: string;
+  name: string;
+  type: 'city' | 'state' | 'country' | 'region';
+  country?: string;
+  countryCode?: string;
+}
+
+/**
+ * Track search analytics for insights
+ */
+export async function trackSearchAnalytics(event: SearchAnalyticsEvent): Promise<void> {
+  try {
+    const url = buildUrl('/analytics/search');
+    await apiFetch<{ success: boolean }>(url, {
+      method: 'POST',
+      body: JSON.stringify(event),
+    });
+  } catch {
+    // Silent fail for analytics - don't block user experience
+  }
+}
+
+/**
+ * Get search suggestions based on query prefix (autocomplete)
+ */
+export async function getSearchSuggestions(query: string): Promise<SearchSuggestion[]> {
+  if (query.length < 2) return [];
+
+  const url = buildUrl('/search/suggestions', { q: query, limit: 8 });
+  const response = await apiFetch<{ success: boolean; suggestions: SearchSuggestion[] }>(url);
+  return response.suggestions;
+}
+
+/**
+ * Get location suggestions for autocomplete
+ */
+export async function getLocationSuggestions(query: string): Promise<LocationSuggestion[]> {
+  if (query.length < 2) return [];
+
+  const url = buildUrl('/locations/search', { q: query, limit: 8 });
+  const response = await apiFetch<{ success: boolean; locations: LocationSuggestion[] }>(url);
+  return response.locations;
+}
+
+/**
+ * Get "no results" suggestions based on search context
+ */
+export async function getNoResultsSuggestions(filters: JobSearchFilters): Promise<{
+  alternativeQueries: string[];
+  relatedCategories: { id: string; name: string; jobCount: number }[];
+  popularSkills: { id: string; name: string; jobCount: number }[];
+  broaderSearchTips: string[];
+}> {
+  const url = buildUrl('/search/no-results-help', {
+    query: filters.query,
+    category: filters.category,
+    skills: filters.skills,
+  });
+
+  try {
+    const response = await apiFetch<{
+      success: boolean;
+      data: {
+        alternativeQueries: string[];
+        relatedCategories: { id: string; name: string; jobCount: number }[];
+        popularSkills: { id: string; name: string; jobCount: number }[];
+        broaderSearchTips: string[];
+      };
+    }>(url);
+    return response.data;
+  } catch {
+    // Return default suggestions on error
+    return {
+      alternativeQueries: [],
+      relatedCategories: [],
+      popularSkills: [],
+      broaderSearchTips: [
+        'Try using fewer filters',
+        'Use more general search terms',
+        'Check your spelling',
+        'Browse job categories instead',
+      ],
+    };
+  }
+}
+
+/**
+ * Get popular/trending searches
+ */
+export async function getTrendingSearches(): Promise<
+  { query: string; searchCount: number; trend: 'up' | 'stable' | 'down' }[]
+> {
+  const url = buildUrl('/search/trending');
+  const response = await apiFetch<{
+    success: boolean;
+    searches: { query: string; searchCount: number; trend: 'up' | 'stable' | 'down' }[];
+  }>(url);
+  return response.searches;
 }

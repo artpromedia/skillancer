@@ -21,5 +21,8 @@ export * from './use-contracts';
 // Messaging hooks
 export * from './use-messaging';
 
+// Search hooks
+export * from './use-search-analytics';
+
 // Utility hooks
 export * from './use-debounce';
