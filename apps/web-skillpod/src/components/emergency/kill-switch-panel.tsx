@@ -445,8 +445,8 @@ function ConfirmationModal({
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
-    if (!confirmed) return;
-    if (countdown <= 0) return;
+    if (!confirmed) return undefined;
+    if (countdown <= 0) return undefined;
 
     const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     return () => clearTimeout(timer);

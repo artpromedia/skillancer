@@ -89,7 +89,7 @@ export const podsApi = {
    */
   async listPods(params: PodListParams = {}): Promise<PodListResponse> {
     const response = await apiClient.get<PodListResponse>(`${API_BASE}/pods`, { params });
-    return response.data;
+    return response;
   },
 
   /**
@@ -97,7 +97,7 @@ export const podsApi = {
    */
   async getPodDetails(podId: string): Promise<PodDetails> {
     const response = await apiClient.get<PodDetails>(`${API_BASE}/pods/${podId}`);
-    return response.data;
+    return response;
   },
 
   /**
@@ -105,7 +105,7 @@ export const podsApi = {
    */
   async startPod(podId: string): Promise<PodDetails> {
     const response = await apiClient.post<PodDetails>(`${API_BASE}/pods/${podId}/start`);
-    return response.data;
+    return response;
   },
 
   /**
@@ -113,7 +113,7 @@ export const podsApi = {
    */
   async stopPod(podId: string): Promise<PodDetails> {
     const response = await apiClient.post<PodDetails>(`${API_BASE}/pods/${podId}/stop`);
-    return response.data;
+    return response;
   },
 
   /**
@@ -121,7 +121,7 @@ export const podsApi = {
    */
   async restartPod(podId: string): Promise<PodDetails> {
     const response = await apiClient.post<PodDetails>(`${API_BASE}/pods/${podId}/restart`);
-    return response.data;
+    return response;
   },
 
   /**
@@ -132,7 +132,7 @@ export const podsApi = {
       `${API_BASE}/pods/${request.podId}/sessions`,
       request
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -143,7 +143,7 @@ export const podsApi = {
       const response = await apiClient.get<RecentSession>(
         `${API_BASE}/pods/${podId}/sessions/active`
       );
-      return response.data;
+      return response;
     } catch {
       return null;
     }

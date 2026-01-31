@@ -64,6 +64,7 @@ export function AssessmentTimer({
       return () => clearInterval(pulseInterval);
     }
     setShowPulse(false);
+    return undefined;
   }, [isCritical, isPaused]);
 
   // Color based on status

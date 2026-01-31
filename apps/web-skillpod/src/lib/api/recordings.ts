@@ -110,7 +110,7 @@ export const recordingsApi = {
     const response = await apiClient.get<RecordingListResponse>(`${API_BASE}/recordings`, {
       params,
     });
-    return response.data;
+    return response;
   },
 
   /**
@@ -118,7 +118,7 @@ export const recordingsApi = {
    */
   async getRecordingDetails(recordingId: string): Promise<RecordingDetails> {
     const response = await apiClient.get<RecordingDetails>(`${API_BASE}/recordings/${recordingId}`);
-    return response.data;
+    return response;
   },
 
   /**
@@ -128,7 +128,7 @@ export const recordingsApi = {
     const response = await apiClient.get<{ streamUrl: string }>(
       `${API_BASE}/recordings/${recordingId}/stream`
     );
-    return response.data.streamUrl;
+    return response.streamUrl;
   },
 
   /**
@@ -142,7 +142,7 @@ export const recordingsApi = {
       `${API_BASE}/recordings/${recordingId}/download`,
       options
     );
-    return response.data.downloadUrl;
+    return response.downloadUrl;
   },
 
   /**
@@ -165,7 +165,7 @@ export const recordingsApi = {
       `${API_BASE}/recordings/${recordingId}`,
       { name }
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -183,7 +183,7 @@ export const recordingsApi = {
       `${API_BASE}/recordings/${recordingId}/extend`,
       { days }
     );
-    return response.data;
+    return response;
   },
 
   // ==========================================================================
@@ -197,7 +197,7 @@ export const recordingsApi = {
     const response = await apiClient.get<{ chapters: RecordingChapter[] }>(
       `${API_BASE}/recordings/${recordingId}/chapters`
     );
-    return response.data.chapters;
+    return response.chapters;
   },
 
   /**
@@ -211,7 +211,7 @@ export const recordingsApi = {
       `${API_BASE}/recordings/${recordingId}/chapters`,
       chapter
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -226,7 +226,7 @@ export const recordingsApi = {
       `${API_BASE}/recordings/${recordingId}/chapters/${chapterId}`,
       updates
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -251,7 +251,7 @@ export const recordingsApi = {
       `${API_BASE}/recordings/${recordingId}/share`,
       options
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -272,7 +272,7 @@ export const recordingsApi = {
     const response = await apiClient.get<{ auditLog: AuditLogEntry[] }>(
       `${API_BASE}/recordings/${recordingId}/audit`
     );
-    return response.data.auditLog;
+    return response.auditLog;
   },
 
   // ==========================================================================
@@ -287,7 +287,7 @@ export const recordingsApi = {
       `${API_BASE}/recordings/${recordingId}/thumbnail`,
       { params: { timestamp } }
     );
-    return response.data.thumbnailUrl;
+    return response.thumbnailUrl;
   },
 
   /**
@@ -301,7 +301,7 @@ export const recordingsApi = {
       `${API_BASE}/recordings/${recordingId}/thumbnails`,
       { count }
     );
-    return response.data.thumbnails;
+    return response.thumbnails;
   },
 
   // ==========================================================================
@@ -325,7 +325,7 @@ export const recordingsApi = {
       `${API_BASE}/recordings/${recordingId}/export`,
       options
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -340,9 +340,12 @@ export const recordingsApi = {
     downloadUrl?: string;
     error?: string;
   }> {
-    const response = await apiClient.get(
-      `${API_BASE}/recordings/${recordingId}/export/${exportId}`
-    );
-    return response.data;
+    const response = await apiClient.get<{
+      status: 'pending' | 'processing' | 'ready' | 'failed';
+      progress: number;
+      downloadUrl?: string;
+      error?: string;
+    }>(`${API_BASE}/recordings/${recordingId}/export/${exportId}`);
+    return response;
   },
 };

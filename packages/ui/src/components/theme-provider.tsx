@@ -134,7 +134,7 @@ export function ThemeProvider({
 
   // Listen for system theme changes
   React.useEffect(() => {
-    if (!enableSystem) return;
+    if (!enableSystem) return undefined;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 

@@ -128,7 +128,7 @@ export const viewerApi = {
    */
   async getConnectionDetails(sessionId: string): Promise<SessionDetails> {
     const response = await apiClient.get<SessionDetails>(`${API_BASE}/sessions/${sessionId}`);
-    return response.data;
+    return response;
   },
 
   /**
@@ -137,8 +137,8 @@ export const viewerApi = {
   async getSessionToken(sessionId: string): Promise<SessionToken> {
     const response = await apiClient.get<SessionToken>(`${API_BASE}/sessions/${sessionId}/token`);
     return {
-      ...response.data,
-      expiresAt: new Date(response.data.expiresAt),
+      ...response,
+      expiresAt: new Date(response.expiresAt),
     };
   },
 
@@ -150,7 +150,7 @@ export const viewerApi = {
       `${API_BASE}/sessions/${sessionId}/extend`,
       { durationMinutes }
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -187,7 +187,7 @@ export const viewerApi = {
     const response = await apiClient.get<ContainmentPolicy>(
       `${API_BASE}/sessions/${sessionId}/containment/policy`
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -212,7 +212,7 @@ export const viewerApi = {
       `${API_BASE}/sessions/${sessionId}/clipboard/check`,
       request
     );
-    return response.data.allowed;
+    return response.allowed;
   },
 
   /**
@@ -222,7 +222,7 @@ export const viewerApi = {
     const response = await apiClient.get<{ content: string }>(
       `${API_BASE}/sessions/${sessionId}/clipboard`
     );
-    return response.data.content;
+    return response.content;
   },
 
   /**
@@ -247,7 +247,7 @@ export const viewerApi = {
       `${API_BASE}/sessions/${sessionId}/files/upload`,
       request
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -261,7 +261,7 @@ export const viewerApi = {
       `${API_BASE}/sessions/${sessionId}/files/download`,
       request
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -271,7 +271,7 @@ export const viewerApi = {
     const response = await apiClient.get<FileTransferRequest>(
       `${API_BASE}/sessions/${sessionId}/files/${transferId}`
     );
-    return response.data;
+    return response;
   },
 
   /**
@@ -291,6 +291,6 @@ export const viewerApi = {
       uploads: FileTransferRequest[];
       downloads: FileTransferRequest[];
     }>(`${API_BASE}/sessions/${sessionId}/files`);
-    return response.data;
+    return response;
   },
 };

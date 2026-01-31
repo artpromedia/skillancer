@@ -166,6 +166,7 @@ function SingleToast({ event, onDismiss, index }: Readonly<SingleToastProps>) {
 
       return () => clearTimeout(timeout);
     }
+    return undefined;
   }, [event.autoDismiss, event.dismissAfter]);
 
   const handleDismiss = useCallback(() => {
@@ -239,8 +240,7 @@ function SingleToast({ event, onDismiss, index }: Readonly<SingleToastProps>) {
         </div>
       )}
 
-      {/* styled-jsx is a built-in Next.js CSS-in-JS solution - the jsx prop is valid */}
-      {/* @ts-expect-error styled-jsx types are provided by Next.js */}
+      {/* styled-jsx is a built-in Next.js CSS-in-JS solution */}
       <style jsx>{`
         @keyframes shrink {
           from {

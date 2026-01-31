@@ -291,7 +291,7 @@ export function WatermarkOverlay({ config: userConfig, className }: WatermarkOve
 
   // Update timestamp every minute
   useEffect(() => {
-    if (!config.content.showTimestamp) return;
+    if (!config.content.showTimestamp) return undefined;
 
     const updateTimestamp = () => setTimestamp(formatTimestamp());
     updateTimestamp();
@@ -302,7 +302,7 @@ export function WatermarkOverlay({ config: userConfig, className }: WatermarkOve
 
   // Anti-screenshot: randomize position periodically
   useEffect(() => {
-    if (!config.antiScreenshot) return;
+    if (!config.antiScreenshot) return undefined;
 
     const randomizePosition = () => {
       setOffset({

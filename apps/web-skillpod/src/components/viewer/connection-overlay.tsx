@@ -74,7 +74,7 @@ function ConnectingState() {
   const [stepProgress, setStepProgress] = useState(0);
 
   useEffect(() => {
-    if (currentStep >= CONNECTION_STEPS.length) return;
+    if (currentStep >= CONNECTION_STEPS.length) return undefined;
 
     const step = CONNECTION_STEPS[currentStep];
     const startTime = Date.now();
@@ -193,7 +193,7 @@ function ReconnectingState({
   useEffect(() => {
     if (countdown <= 0) {
       onRetry?.();
-      return;
+      return undefined;
     }
 
     const timer = setTimeout(() => {

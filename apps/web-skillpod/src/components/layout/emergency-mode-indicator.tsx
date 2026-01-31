@@ -307,7 +307,7 @@ export function EmergencyBanner() {
             reason?: string;
           };
           setState({
-            level: data.currentLevel || 'normal',
+            level: (data.currentLevel as LockdownLevel) || 'normal',
             activeKillSwitches: data.activeKillSwitches || 0,
             openIncidents: data.openIncidents || 0,
             reason: data.reason,
@@ -405,6 +405,7 @@ export function KillSwitchQuickAccess({ className = '' }: Readonly<{ className?:
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isConfirming, countdown]);
 
   const handleClick = () => {

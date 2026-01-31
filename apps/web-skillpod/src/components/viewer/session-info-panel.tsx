@@ -342,7 +342,7 @@ export function SessionInfoPanel({
   const [duration, setDuration] = useState('');
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
 
     const updateDuration = () => {
       setDuration(formatDuration(session.startTime));

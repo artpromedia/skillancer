@@ -300,7 +300,6 @@ class ScreenshotDetection {
     // Some screen capture software triggers media key events
     if ('mediaSession' in navigator) {
       try {
-        // @ts-expect-error - MediaSession API types
         navigator.mediaSession.setActionHandler('play', () => {
           // Ignore media events
         });
@@ -408,8 +407,20 @@ export function removeScreenshotProtectionCSS(): void {
 
 /**
  * Initialize screenshot detection
- * Alias for screenshotDetection.initialize()
+ * Wrapper for screenshotDetection.start()
  */
-export function initializeScreenshotDetection(): void {
-  screenshotDetection.initialize();
+export function initializeScreenshotDetection(options?: {
+  onDetected?: (method: string) => void;
+  sessionId?: string;
+}): () => void {
+  if (options?.onDetected) {
+    screenshotDetection.start((event) => {
+      options.onDetected?.(event.type);
+    });
+  } else {
+    screenshotDetection.start(() => {
+      // Default empty callback
+    });
+  }
+  return () => screenshotDetection.stop();
 }

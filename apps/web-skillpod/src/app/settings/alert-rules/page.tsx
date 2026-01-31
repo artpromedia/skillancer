@@ -78,7 +78,7 @@ interface AlertCondition {
   id: string;
   type: string;
   operator: string;
-  value: string | number;
+  value: string | number | boolean;
   timeWindow?: number;
 }
 

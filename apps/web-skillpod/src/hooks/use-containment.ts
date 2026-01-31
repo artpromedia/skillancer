@@ -542,6 +542,7 @@ export function useContainment(
         screenshotDetection.stop();
       };
     }
+    return undefined;
   }, [enableScreenshotDetection, state.policy?.screenshotProtection, handleScreenshotDetected]);
 
   // Setup SSE event stream

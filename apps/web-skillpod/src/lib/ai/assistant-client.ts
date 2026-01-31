@@ -446,7 +446,10 @@ export function useSkillPodAssistant(sessionId: string) {
     async (message: string): Promise<SendMessageResponse> => {
       setIsLoading(true);
       try {
-        const response = await client.askQuestion(message);
+        const response = await client.queryAssistant(message, {
+          sessionId,
+          applicationContext: 'skillpod-assistant',
+        });
         return {
           message: response.answer,
           suggestions: response.suggestions?.map((s) => s.title),
@@ -461,7 +464,7 @@ export function useSkillPodAssistant(sessionId: string) {
         setIsLoading(false);
       }
     },
-    [client]
+    [client, sessionId]
   );
 
   return { sendMessage, isConnected, isLoading };

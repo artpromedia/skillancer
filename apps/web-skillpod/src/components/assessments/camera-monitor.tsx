@@ -78,7 +78,7 @@ export function CameraMonitor({
 
   // Simulate face detection (in real app, use TensorFlow.js or similar)
   useEffect(() => {
-    if (!stream || isLoading) return;
+    if (!stream || isLoading) return undefined;
 
     const checkFace = () => {
       // Simulate face detection with random events for demo

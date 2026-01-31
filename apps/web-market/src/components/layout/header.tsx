@@ -36,6 +36,7 @@ import { useState, useCallback } from 'react';
 
 import { SearchBar } from '@/components/search/search-bar';
 import { Logo } from '@/components/brand';
+import { useMarketAuth } from '@/lib/providers/auth-provider';
 
 // Navigation configuration
 const mainNavItems = [
@@ -101,8 +102,7 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
   const { setTheme, resolvedTheme } = useTheme();
-
-  const user = mockUser; // Replace with useAuth hook when available
+  const { user, logout, isLoading } = useMarketAuth();
 
   const toggleTheme = useCallback(() => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
@@ -209,7 +209,7 @@ export function Header() {
                       <DropdownMenuItem asChild>
                         <Link
                           href={
-                            user.role === 'freelancer'
+                            user.role === 'FREELANCER' || user.role === 'BOTH'
                               ? '/freelancer/dashboard'
                               : '/client/dashboard'
                           }
@@ -226,7 +226,10 @@ export function Header() {
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive focus:text-destructive">
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive cursor-pointer"
+                      onClick={() => logout()}
+                    >
                       <LogOut className="mr-2 h-4 w-4" />
                       Log out
                     </DropdownMenuItem>
@@ -246,7 +249,7 @@ export function Header() {
             )}
 
             {/* Post a Job CTA (for clients) */}
-            {(!user || user.role === 'client') && (
+            {(!user || user.role === 'CLIENT' || user.role === 'BOTH') && (
               <Button
                 asChild
                 className="hidden gap-2 bg-green-600 hover:bg-green-700 lg:inline-flex"

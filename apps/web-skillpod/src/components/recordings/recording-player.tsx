@@ -212,7 +212,7 @@ export function RecordingPlayer({
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) return undefined;
 
     const handlePlay = () => setState((prev) => ({ ...prev, isPlaying: true, isPaused: false }));
     const handlePause = () => setState((prev) => ({ ...prev, isPlaying: false, isPaused: true }));
@@ -287,6 +287,7 @@ export function RecordingPlayer({
         video.removeEventListener('leavepictureinpicture', handlePiPChange);
       };
     }
+    return undefined;
   }, []);
 
   // Custom seek event listener

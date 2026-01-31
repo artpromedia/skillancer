@@ -89,7 +89,12 @@ class FaceDetectionService {
     if ('FaceDetector' in globalThis) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-        this.nativeDetector = new (globalThis as Record<string, unknown>).FaceDetector({
+        const FaceDetectorCtor = (
+          globalThis as unknown as {
+            FaceDetector: new (options: { maxDetectedFaces: number; fastMode: boolean }) => unknown;
+          }
+        ).FaceDetector;
+        this.nativeDetector = new FaceDetectorCtor({
           maxDetectedFaces: this.config.maxFaces + 1, // +1 to detect if there are extra faces
           fastMode: false,
         });

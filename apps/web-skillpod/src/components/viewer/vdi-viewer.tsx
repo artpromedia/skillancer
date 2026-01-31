@@ -104,7 +104,7 @@ export function VdiViewer({
 
   // Performance stats update (simulated - real implementation would come from Kasm)
   useEffect(() => {
-    if (connectionState !== 'connected') return;
+    if (connectionState !== 'connected') return undefined;
 
     const interval = setInterval(() => {
       setStats({
@@ -215,11 +215,20 @@ export function VdiViewer({
       {/* Kasm Embed Container */}
       {connectionState === 'connected' ? (
         <KasmEmbed
-          height={dimensions.height}
-          quality={quality}
-          sessionId={sessionId}
-          width={dimensions.width}
-          onEvent={handleKasmEvent}
+          config={{
+            sessionId,
+            token: '', // Token would come from session state in real implementation
+            apiUrl: '', // API URL would come from config
+            quality: quality === 'auto' ? 'auto' : quality,
+            frameRate: 60,
+          }}
+          events={{
+            onMetrics: (metrics) => handleKasmEvent('metrics', metrics),
+            onReady: () => handleKasmEvent('ready', {}),
+            onError: (error) => handleKasmEvent('error', error),
+            onDisconnect: (reason) => handleKasmEvent('disconnect', reason),
+          }}
+          className={`h-[${dimensions.height}px] w-[${dimensions.width}px]`}
         />
       ) : (
         // Placeholder while not connected

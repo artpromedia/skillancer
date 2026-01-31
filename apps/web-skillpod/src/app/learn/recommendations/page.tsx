@@ -129,14 +129,22 @@ export default function RecommendationsPage() {
   const [savedItems, setSavedItems] = useState<string[]>([]);
   const [dismissedItems, setDismissedItems] = useState<string[]>([]);
   const [selectedRec, setSelectedRec] = useState<string | null>(null);
-  const [filters, setFilters] = useState({
-    types: [] as string[],
-    levels: [] as string[],
-    duration: [] as string[],
+  const [filters, setFilters] = useState<{
+    types: string[];
+    levels: string[];
+    duration: string[];
+    minRelevance: number;
+    providers: string[];
+    skills: string[];
+    sortBy: 'relevance' | 'rating' | 'duration' | 'newest';
+  }>({
+    types: [],
+    levels: [],
+    duration: [],
     minRelevance: 0,
-    providers: [] as string[],
-    skills: [] as string[],
-    sortBy: 'relevance' as const,
+    providers: [],
+    skills: [],
+    sortBy: 'relevance',
   });
 
   const handleSave = (id: string) => {

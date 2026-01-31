@@ -24,18 +24,35 @@ import {
   AlertDialogTitle,
 } from '@skillancer/ui';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ConnectionOverlay } from '@/components/viewer/connection-overlay';
-import { ContainmentToast } from '@/components/viewer/containment-toast';
-import { FileTransferPanel } from '@/components/viewer/file-transfer-panel';
+import {
+  ContainmentToast,
+  type ContainmentEvent as ToastContainmentEvent,
+} from '@/components/viewer/containment-toast';
+import {
+  FileTransferPanel,
+  type FileTransfer,
+  type PolicyRestrictions,
+} from '@/components/viewer/file-transfer-panel';
 import { KeyboardShortcuts } from '@/components/viewer/keyboard-shortcuts';
-import { QualitySettings } from '@/components/viewer/quality-settings';
-import { SessionInfoPanel } from '@/components/viewer/session-info-panel';
+import {
+  QualitySettings,
+  type QualityConfig,
+  type NetworkStats,
+} from '@/components/viewer/quality-settings';
+import {
+  SessionInfoPanel,
+  type SessionDetails,
+  type SecurityPolicy,
+  type ResourceUsage,
+  type ActivityEvent,
+} from '@/components/viewer/session-info-panel';
 import { VdiViewer } from '@/components/viewer/vdi-viewer';
 import { ViewerToolbar } from '@/components/viewer/viewer-toolbar';
-import { WatermarkOverlay } from '@/components/viewer/watermark-overlay';
-import { useContainment } from '@/hooks/use-containment';
+import { WatermarkOverlay, type WatermarkConfig } from '@/components/viewer/watermark-overlay';
+import { useContainment, type ContainmentEvent } from '@/hooks/use-containment';
 import { useVdiSession } from '@/hooks/use-vdi-session';
 import { initializeScreenshotDetection } from '@/lib/screenshot-detection';
 
@@ -43,7 +60,7 @@ import { initializeScreenshotDetection } from '@/lib/screenshot-detection';
 // TYPES
 // ============================================================================
 
-interface ContainmentEvent {
+interface ToastEvent {
   id: string;
   type: 'clipboard_blocked' | 'file_blocked' | 'screenshot_detected' | 'usb_denied' | 'approved';
   message: string;
@@ -73,31 +90,67 @@ export default function ViewerPage() {
   const [showSessionInfo, setShowSessionInfo] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Session and containment hooks
-  const {
-    session,
-    connectionState,
-    quality,
-    latency,
-    fps,
-    error,
-    connect,
-    disconnect,
-    reconnect,
-    setQualityLevel,
-    toggleAudio,
-    toggleMicrophone,
-    isAudioEnabled,
-    isMicrophoneEnabled,
-    sessionDuration,
-    extendSession,
-  } = useVdiSession(sessionId);
+  // Session and containment hooks - properly destructure the [state, actions] tuple
+  const [sessionState, sessionActions] = useVdiSession({
+    onConnected: () => console.log('VDI session connected'),
+    onDisconnected: (reason) => console.log('VDI session disconnected:', reason),
+    onError: (error) => console.error('VDI session error:', error),
+    onSessionExpiring: (seconds) => console.warn('Session expiring in', seconds, 'seconds'),
+  });
 
-  const { policy, clipboardState, containmentEvents, requestFileTransfer, pendingTransfers } =
-    useContainment(sessionId);
+  const [containmentState, containmentActions] = useContainment({
+    sessionId,
+    onViolation: (event) => {
+      // Add toast for containment violations
+      addToast({
+        id: `violation-${Date.now()}`,
+        type: mapContainmentEventType(event.type),
+        message: event.details || `${event.type} event`,
+        severity: event.action === 'blocked' ? 'warning' : 'info',
+      });
+    },
+    enableScreenshotDetection: true,
+  });
 
   // Toast notifications for containment events
-  const [toasts, setToasts] = useState<ContainmentEvent[]>([]);
+  const [toasts, setToasts] = useState<ToastEvent[]>([]);
+
+  // Map containment event types to toast event types
+  const mapContainmentEventType = (type: string): ToastEvent['type'] => {
+    switch (type) {
+      case 'clipboard_blocked':
+        return 'clipboard_blocked';
+      case 'file_blocked':
+        return 'file_blocked';
+      case 'screenshot_blocked':
+        return 'screenshot_detected';
+      case 'usb_blocked':
+        return 'usb_denied';
+      default:
+        return 'approved';
+    }
+  };
+
+  // Derived state for UI
+  const connectionState = sessionState.connectionState;
+  const quality = sessionState.quality;
+  const error = sessionState.error;
+  const metrics = sessionState.metrics;
+  const sessionDetails = sessionState.sessionDetails;
+
+  // Audio/video state - derive from session state or use defaults
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isMicrophoneEnabled, setIsMicrophoneEnabled] = useState(false);
+
+  // Compute session duration from start time
+  const sessionDuration = useMemo(() => {
+    if (!sessionState.startTime) return 0;
+    return Math.floor((Date.now() - sessionState.startTime.getTime()) / 1000);
+  }, [sessionState.startTime]);
+
+  // Mock latency and fps from metrics or defaults
+  const latency = metrics?.latency ?? 0;
+  const fps = metrics?.frameRate ?? 0;
 
   // ============================================================================
   // EFFECTS
@@ -106,7 +159,7 @@ export default function ViewerPage() {
   // Initialize connection on mount
   useEffect(() => {
     if (sessionId) {
-      connect();
+      sessionActions.connect(sessionId);
     }
 
     return () => {
@@ -133,11 +186,16 @@ export default function ViewerPage() {
 
   // Handle containment events
   useEffect(() => {
-    if (containmentEvents.length > 0) {
-      const latestEvent = containmentEvents[containmentEvents.length - 1];
-      addToast(latestEvent);
+    if (containmentState.events.length > 0) {
+      const latestEvent = containmentState.events[0]; // Events are prepended
+      addToast({
+        id: `containment-${Date.now()}`,
+        type: mapContainmentEventType(latestEvent.type),
+        message: latestEvent.details || latestEvent.type,
+        severity: latestEvent.action === 'blocked' ? 'warning' : 'info',
+      });
     }
-  }, [containmentEvents]);
+  }, [containmentState.events.length]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -202,19 +260,21 @@ export default function ViewerPage() {
   // HANDLERS
   // ============================================================================
 
-  const filterToastById = (toasts: ContainmentEvent[], id: string) =>
-    toasts.filter((t) => t.id !== id);
+  const filterToastById = (toasts: ToastEvent[], id: string) => toasts.filter((t) => t.id !== id);
 
   const removeToast = (id: string) => {
     setToasts((prev) => filterToastById(prev, id));
   };
 
-  const addToast = (event: ContainmentEvent) => {
+  const addToast = useCallback((event: ToastEvent) => {
     setToasts((prev) => [...prev, event]);
 
     // Auto-dismiss after 5 seconds
     setTimeout(() => removeToast(event.id), 5000);
-  };
+  }, []);
+
+  const toggleAudio = () => setIsAudioEnabled((prev) => !prev);
+  const toggleMicrophone = () => setIsMicrophoneEnabled((prev) => !prev);
 
   const toggleFullscreen = async () => {
     try {
@@ -229,14 +289,163 @@ export default function ViewerPage() {
   };
 
   const handleDisconnect = async () => {
-    await disconnect();
+    sessionActions.disconnect();
     router.push('/pods');
   };
 
-  const handleReconnect = () => {
-    reconnect();
+  const handleReconnect = async () => {
+    await sessionActions.reconnect();
     setShowExitDialog(false);
   };
+
+  const handleQualityChange = (newQuality: QualityConfig['preset']) => {
+    sessionActions.setQuality(newQuality as 'auto' | 'high' | 'medium' | 'low');
+  };
+
+  // File transfer handlers
+  const handleFileUpload = async (files: File[]) => {
+    await containmentActions.requestFileUpload(files);
+  };
+
+  const handleFileDownload = async (transferId: string) => {
+    await containmentActions.requestFileDownload(transferId, 'file');
+  };
+
+  const handleCancelTransfer = (transferId: string) => {
+    containmentActions.cancelFileTransfer(transferId);
+  };
+
+  const handleRequestApproval = async (_transferId: string) => {
+    // No-op for now, transfers auto-request approval
+  };
+
+  // Build props for components
+  const qualityConfig: QualityConfig = {
+    preset: quality as QualityConfig['preset'],
+    frameRate: 30,
+    audioQuality: 'high',
+    adaptiveBitrate: true,
+  };
+
+  const networkStats: NetworkStats = {
+    latency,
+    jitter: 0,
+    packetLoss: 0,
+    bandwidth: { up: 0, down: 0 },
+    frameRate: fps,
+    resolution: '1920x1080',
+  };
+
+  const policyRestrictions: PolicyRestrictions = {
+    maxFileSize: containmentState.policy?.maxFileSize ?? 100 * 1024 * 1024,
+    allowedTypes: containmentState.policy?.allowedFileTypes ?? ['*'],
+    blockedTypes: [],
+    requireApproval: false,
+    dlpEnabled: false,
+  };
+
+  const sessionInfoDetails: SessionDetails = {
+    id: sessionId,
+    podId: sessionDetails?.podId ?? 'unknown',
+    podName: sessionDetails?.podName ?? 'SkillPod Session',
+    startTime: sessionState.startTime ?? new Date(),
+    contractId: contractId ?? undefined,
+    projectName: undefined,
+    userId: sessionDetails?.userId ?? 'unknown',
+    userEmail: 'user@example.com',
+  };
+
+  const securityPolicy: SecurityPolicy = {
+    clipboardEnabled: containmentState.policy?.clipboardEnabled ?? false,
+    fileTransferEnabled: containmentState.policy?.fileTransferEnabled ?? false,
+    watermarkEnabled: containmentState.policy?.watermarkEnabled ?? false,
+    screenshotBlocked: containmentState.policy?.screenshotProtection ?? true,
+    recordingEnabled: containmentState.policy?.recordingEnabled ?? false,
+  };
+
+  const resourceUsage: ResourceUsage = {
+    cpu: 0,
+    memory: 0,
+    storage: { used: 0, total: 100 },
+  };
+
+  const activities: ActivityEvent[] = containmentState.events.slice(0, 10).map((event, index) => ({
+    id: `activity-${index}`,
+    type: 'violation' as const,
+    message: event.details ?? event.type,
+    timestamp: event.timestamp,
+  }));
+
+  // Convert file transfer state to FileTransfer[]
+  const fileTransfers: FileTransfer[] = [
+    ...containmentState.fileTransfer.pendingUploads.map((t) => ({
+      id: t.id,
+      name: t.filename,
+      size: t.size,
+      type: t.type ?? 'application/octet-stream',
+      direction: 'upload' as const,
+      status: t.status as FileTransfer['status'],
+      progress: 0,
+      createdAt: new Date(t.createdAt),
+    })),
+    ...containmentState.fileTransfer.pendingDownloads.map((t) => ({
+      id: t.id,
+      name: t.filename,
+      size: t.size,
+      type: t.type ?? 'application/octet-stream',
+      direction: 'download' as const,
+      status: t.status as FileTransfer['status'],
+      progress: 0,
+      createdAt: new Date(t.createdAt),
+    })),
+  ];
+
+  // Toast events for ContainmentToast component
+  const toastContainmentEvents: ToastContainmentEvent[] = toasts.map((t) => ({
+    id: t.id,
+    type: mapToastTypeToContainmentType(t.type),
+    message: t.message,
+    timestamp: new Date(),
+    autoDismiss: true,
+    dismissAfter: 5000,
+  }));
+
+  const mapToastTypeToContainmentType = (
+    type: ToastEvent['type']
+  ): ToastContainmentEvent['type'] => {
+    switch (type) {
+      case 'clipboard_blocked':
+        return 'clipboard_blocked';
+      case 'file_blocked':
+        return 'file_blocked';
+      case 'screenshot_detected':
+        return 'screenshot_blocked';
+      case 'usb_denied':
+        return 'usb_blocked';
+      default:
+        return 'policy_updated';
+    }
+  };
+
+  // Watermark config
+  const watermarkConfig: WatermarkConfig | null = containmentState.policy?.watermarkEnabled
+    ? {
+        enabled: true,
+        pattern: 'tiled',
+        content: {
+          userEmail: sessionInfoDetails.userEmail,
+          sessionId: sessionId.slice(0, 8),
+          showTimestamp: true,
+        },
+        style: {
+          opacity: 0.15,
+          fontSize: 14,
+          color: '#000000',
+          rotation: -30,
+        },
+        antiScreenshot: true,
+      }
+    : null;
 
   // ============================================================================
   // RENDER
@@ -249,17 +458,11 @@ export default function ViewerPage() {
         connectionState={connectionState}
         quality={quality}
         sessionId={sessionId}
-        onQualityChange={setQualityLevel}
+        onQualityChange={handleQualityChange}
       />
 
       {/* Watermark Overlay */}
-      {policy?.watermark?.enabled && session && (
-        <WatermarkOverlay
-          config={policy.watermark}
-          sessionId={sessionId}
-          userEmail={session.user?.email || 'user@example.com'}
-        />
-      )}
+      {watermarkConfig && <WatermarkOverlay config={watermarkConfig} />}
 
       {/* Connection Overlay */}
       {connectionState !== 'connected' && (
@@ -273,7 +476,7 @@ export default function ViewerPage() {
 
       {/* Floating Toolbar */}
       <ViewerToolbar
-        clipboardState={clipboardState}
+        clipboardState={containmentState.clipboard.syncEnabled ? 'synced' : 'blocked'}
         isAudioEnabled={isAudioEnabled}
         isFullscreen={isFullscreen}
         isMicrophoneEnabled={isMicrophoneEnabled}
@@ -285,7 +488,7 @@ export default function ViewerPage() {
         onOpenSessionInfo={() => setShowSessionInfo(true)}
         onOpenSettings={() => setShowSettings(true)}
         onOpenShortcuts={() => setShowShortcuts(true)}
-        onQualityChange={setQualityLevel}
+        onQualityChange={handleQualityChange}
         onToggleAudio={toggleAudio}
         onToggleFullscreen={toggleFullscreen}
         onToggleMicrophone={toggleMicrophone}
@@ -293,46 +496,51 @@ export default function ViewerPage() {
 
       {/* Containment Toasts */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-        {toasts.map((toast) => (
-          <ContainmentToast key={toast.id} event={toast} onDismiss={() => removeToast(toast.id)} />
-        ))}
+        <ContainmentToast events={toastContainmentEvents} onDismiss={removeToast} />
       </div>
 
       {/* File Transfer Panel */}
       {showFileTransfer && (
         <FileTransferPanel
-          pendingTransfers={pendingTransfers}
-          policy={policy?.fileTransfer}
-          sessionId={sessionId}
+          isOpen={showFileTransfer}
           onClose={() => setShowFileTransfer(false)}
-          onRequestTransfer={requestFileTransfer}
+          transfers={fileTransfers}
+          restrictions={policyRestrictions}
+          onUpload={handleFileUpload}
+          onDownload={handleFileDownload}
+          onCancelTransfer={handleCancelTransfer}
+          onRequestApproval={handleRequestApproval}
         />
       )}
 
       {/* Quality Settings */}
       {showSettings && (
         <QualitySettings
-          fps={fps}
-          latency={latency}
-          quality={quality}
-          onClose={() => setShowSettings(false)}
-          onQualityChange={setQualityLevel}
+          config={qualityConfig}
+          stats={networkStats}
+          onConfigChange={(changes) => {
+            if (changes.preset) {
+              handleQualityChange(changes.preset);
+            }
+          }}
         />
       )}
 
       {/* Keyboard Shortcuts */}
-      {showShortcuts && <KeyboardShortcuts onClose={() => setShowShortcuts(false)} />}
+      {showShortcuts && (
+        <KeyboardShortcuts isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      )}
 
       {/* Session Info Panel */}
       {showSessionInfo && (
         <SessionInfoPanel
-          contractId={contractId}
-          policy={policy}
-          session={session}
-          sessionDuration={sessionDuration}
+          isOpen={showSessionInfo}
           onClose={() => setShowSessionInfo(false)}
+          session={sessionInfoDetails}
+          policy={securityPolicy}
+          resources={resourceUsage}
+          activities={activities}
           onEndSession={() => setShowExitDialog(true)}
-          onExtendSession={extendSession}
         />
       )}
 

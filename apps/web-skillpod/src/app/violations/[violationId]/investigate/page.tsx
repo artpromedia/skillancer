@@ -719,7 +719,7 @@ export default function ViolationInvestigatePage() {
     // Feature: Link violation to related violations - not yet implemented
   };
 
-  const handleResolution = (action: string, reason: string) => {
+  const handleResolution = async (action: string, reason: string): Promise<void> => {
     if (!violation) return;
     setViolation({
       ...violation,

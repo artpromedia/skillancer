@@ -576,7 +576,9 @@ export function RecordingCard({
             </p>
           </div>
           {recording.retentionPolicy.isOnHold && (
-            <Shield className="h-4 w-4 flex-shrink-0 text-orange-500" title="On compliance hold" />
+            <span title="On compliance hold">
+              <Shield className="h-4 w-4 flex-shrink-0 text-orange-500" />
+            </span>
           )}
         </div>
 

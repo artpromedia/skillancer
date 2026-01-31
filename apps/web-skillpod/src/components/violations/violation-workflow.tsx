@@ -419,12 +419,12 @@ function ApprovalChain({ action }: Readonly<{ action: ResolutionAction }>) {
   }
 
   const approvers = [
-    { name: 'Security Lead', status: 'pending' },
-    { name: 'Platform Admin', status: 'pending' },
+    { id: 'security-lead', name: 'Security Lead', status: 'pending' },
+    { id: 'platform-admin', name: 'Platform Admin', status: 'pending' },
   ];
 
   if (action.id === 'banned') {
-    approvers.push({ name: 'Legal Team', status: 'pending' });
+    approvers.push({ id: 'legal-team', name: 'Legal Team', status: 'pending' });
   }
 
   return (

@@ -137,7 +137,7 @@ export function LearningStreak({ compact = false }: Readonly<LearningStreakProps
           <span className="text-xs text-gray-500">Last 12 weeks</span>
         </div>
         <div className="flex gap-1">
-          {heatmapData.map((week) => (
+          {heatmapData.map((week, weekIndex) => (
             <div key={week.map((d) => d.date).join('-')} className="flex flex-col gap-1">
               {week.map((day, dayIndex) => (
                 <div

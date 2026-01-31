@@ -471,7 +471,7 @@ export function RecordingViewer({
   // Video event handlers
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) return undefined;
 
     const handleTimeUpdate = () => {
       setPlaybackState((prev) => ({

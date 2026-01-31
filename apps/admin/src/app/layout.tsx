@@ -38,6 +38,12 @@ import { useState, useEffect, useCallback } from 'react';
 
 import type { LucideIcon } from 'lucide-react';
 import '../styles/globals.css';
+import {
+  AdminAuthProvider,
+  useAdminAuth,
+  type AdminUser,
+  type AdminRole,
+} from '../lib/providers/auth';
 
 // ============================================================================
 // Query Client
@@ -67,14 +73,47 @@ interface NavItem {
   children?: NavItem[];
 }
 
-type AdminRole = 'super_admin' | 'operations' | 'moderator' | 'support' | 'finance' | 'analytics';
+// ============================================================================
+// Utility Functions
+// ============================================================================
 
-interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role: AdminRole;
+/**
+ * Get user initials from name or email
+ */
+function getUserInitials(user: AdminUser | null): string {
+  if (!user) return '?';
+
+  if (user.firstName && user.lastName) {
+    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+  }
+
+  if (user.name) {
+    const parts = user.name.split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return user.name.substring(0, 2).toUpperCase();
+  }
+
+  return user.email.substring(0, 2).toUpperCase();
+}
+
+/**
+ * Get display name for role
+ */
+function getRoleDisplayName(role: AdminRole): string {
+  const roleNames: Record<string, string> = {
+    SUPER_ADMIN: 'Super Admin',
+    super_admin: 'Super Admin',
+    ADMIN: 'Admin',
+    admin: 'Admin',
+    operations: 'Operations',
+    moderator: 'Moderator',
+    support: 'Support',
+    finance: 'Finance',
+    analytics: 'Analytics',
+  };
+  return roleNames[role] || role.replace('_', ' ');
 }
 
 // ============================================================================
@@ -303,10 +342,12 @@ function Header({
   onMenuClick,
   notifications,
   user,
+  onLogout,
 }: Readonly<{
   onMenuClick: () => void;
   notifications: number;
-  user: AdminUser;
+  user: AdminUser | null;
+  onLogout: () => void;
 }>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -365,16 +406,23 @@ function Header({
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white">
-              <span className="text-sm font-medium">
-                {user.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')}
-              </span>
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <span className="text-sm font-medium">{getUserInitials(user)}</span>
+              )}
             </div>
             <div className="hidden text-left md:block">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-              <p className="text-xs text-gray-500">{user.role.replace('_', ' ')}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {user?.name || 'Admin'}
+              </p>
+              <p className="text-xs text-gray-500">
+                {user ? getRoleDisplayName(user.role) : 'Not signed in'}
+              </p>
             </div>
             <ChevronDown className="h-4 w-4 text-gray-500" />
           </button>
@@ -389,8 +437,10 @@ function Header({
               />
               <div className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                 <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {user?.name || 'Admin'}
+                  </p>
+                  <p className="text-sm text-gray-500">{user?.email || 'Not signed in'}</p>
                 </div>
                 <Link
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -407,7 +457,13 @@ function Header({
                   My Activity Log
                 </Link>
                 <div className="border-t border-gray-200 dark:border-gray-700">
-                  <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
+                  <button
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      onLogout();
+                    }}
+                  >
                     <LogOut className="h-4 w-4" />
                     Sign out
                   </button>
@@ -422,24 +478,17 @@ function Header({
 }
 
 // ============================================================================
-// Root Layout
+// Admin Layout Inner
 // ============================================================================
 
-export default function RootLayout({
+function AdminLayoutInner({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  // Mock admin user - would come from auth context
-  const adminUser: AdminUser = {
-    id: 'admin-1',
-    name: 'Sarah Admin',
-    email: 'sarah@skillancer.com',
-    role: 'super_admin',
-  };
+  const { user, logout, isLoading } = useAdminAuth();
 
   const closeSidebar = useCallback(() => {
     setIsSidebarOpen(false);
@@ -450,6 +499,54 @@ export default function RootLayout({
     closeSidebar();
   }, [pathname, closeSidebar]);
 
+  // Show loading state while auth is being verified
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+          <p className="text-sm text-gray-500">Verifying admin access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar */}
+      <Sidebar
+        currentPath={pathname}
+        isOpen={isSidebarOpen}
+        userRole={user?.role || 'support'}
+        onClose={closeSidebar}
+      />
+
+      {/* Main content */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Header */}
+        <Header
+          notifications={5}
+          user={user}
+          onLogout={logout}
+          onMenuClick={() => setIsSidebarOpen(true)}
+        />
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Root Layout
+// ============================================================================
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
       <head>
@@ -459,28 +556,9 @@ export default function RootLayout({
       </head>
       <body className="bg-gray-100 dark:bg-gray-900">
         <QueryClientProvider client={queryClient}>
-          <div className="flex h-screen overflow-hidden">
-            {/* Sidebar */}
-            <Sidebar
-              currentPath={pathname}
-              isOpen={isSidebarOpen}
-              userRole={adminUser.role}
-              onClose={closeSidebar}
-            />
-
-            {/* Main content */}
-            <div className="flex flex-1 flex-col overflow-hidden">
-              {/* Header */}
-              <Header
-                notifications={5}
-                user={adminUser}
-                onMenuClick={() => setIsSidebarOpen(true)}
-              />
-
-              {/* Page content */}
-              <main className="flex-1 overflow-y-auto p-6">{children}</main>
-            </div>
-          </div>
+          <AdminAuthProvider apiBaseUrl={process.env.NEXT_PUBLIC_API_URL || ''}>
+            <AdminLayoutInner>{children}</AdminLayoutInner>
+          </AdminAuthProvider>
         </QueryClientProvider>
       </body>
     </html>

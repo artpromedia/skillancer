@@ -519,7 +519,7 @@ export function AuditLogViewer({
 
   // Simulate real-time updates
   useEffect(() => {
-    if (!isLive) return;
+    if (!isLive) return undefined;
 
     const interval = setInterval(() => {
       const newLog = generateMockLogs(1)[0];

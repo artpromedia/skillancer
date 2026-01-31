@@ -38,6 +38,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import '../styles/globals.css';
+import { CockpitAuthProvider, useCockpitAuth, type CockpitUser } from '../lib/providers/auth';
 
 // ============================================================================
 // TanStack Query Client
@@ -65,10 +66,42 @@ interface NavItem {
   badge?: number;
 }
 
-interface UserProfile {
-  name: string;
-  email: string;
-  avatar?: string;
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+/**
+ * Get user initials from name or email
+ */
+function getUserInitials(user: CockpitUser | null): string {
+  if (!user) return '?';
+
+  if (user.firstName && user.lastName) {
+    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+  }
+
+  if (user.name) {
+    const parts = user.name.split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return user.name.substring(0, 2).toUpperCase();
+  }
+
+  return user.email.substring(0, 2).toUpperCase();
+}
+
+/**
+ * Get display name for user
+ */
+function getUserDisplayName(user: CockpitUser | null): string {
+  if (!user) return 'Guest';
+
+  if (user.name) return user.name;
+  if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
+  if (user.firstName) return user.firstName;
+
+  return user.email.split('@')[0];
 }
 
 // ============================================================================
@@ -97,10 +130,12 @@ function Sidebar({
   isOpen,
   onClose,
   currentPath,
+  user,
 }: Readonly<{
   isOpen: boolean;
   onClose: () => void;
   currentPath: string;
+  user: CockpitUser | null;
 }>) {
   return (
     <>
@@ -163,13 +198,21 @@ function Sidebar({
         <div className="border-t border-gray-200 p-4 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
-              <User className="h-5 w-5 text-gray-500" />
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={getUserDisplayName(user)}
+                  className="h-10 w-10 rounded-full object-cover"
+                />
+              ) : (
+                <User className="h-5 w-5 text-gray-500" />
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                Alex Johnson
+                {getUserDisplayName(user)}
               </p>
-              <p className="truncate text-xs text-gray-500">alex@example.com</p>
+              <p className="truncate text-xs text-gray-500">{user?.email || 'Not signed in'}</p>
             </div>
           </div>
         </div>
@@ -250,9 +293,13 @@ function HeaderTimerWidget() {
 function Header({
   onMenuClick,
   notifications,
+  user,
+  onLogout,
 }: Readonly<{
   onMenuClick: () => void;
   notifications: number;
+  user: CockpitUser | null;
+  onLogout: () => void;
 }>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -303,7 +350,15 @@ function Header({
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white">
-              <span className="text-sm font-medium">AJ</span>
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={getUserDisplayName(user)}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <span className="text-sm font-medium">{getUserInitials(user)}</span>
+              )}
             </div>
             <ChevronDown className="h-4 w-4 text-gray-500" />
           </button>
@@ -318,8 +373,10 @@ function Header({
               />
               <div className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                 <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Alex Johnson</p>
-                  <p className="text-xs text-gray-500">alex@example.com</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {getUserDisplayName(user)}
+                  </p>
+                  <p className="text-xs text-gray-500">{user?.email || 'Not signed in'}</p>
                 </div>
                 <Link
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -346,7 +403,8 @@ function Header({
                   <button
                     className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                     onClick={() => {
-                      // Handle logout
+                      setIsUserMenuOpen(false);
+                      onLogout();
                     }}
                   >
                     <LogOut className="h-4 w-4" />
@@ -416,32 +474,59 @@ function FloatingActionButton() {
 // Main Layout
 // ============================================================================
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+function CockpitLayoutInner({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const notifications = 3;
+  const { user, logout, isLoading } = useCockpitAuth();
 
+  // Show loading state while auth is being verified
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+          <p className="text-sm text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen">
+      {/* Sidebar */}
+      <Sidebar
+        currentPath={pathname}
+        isOpen={sidebarOpen}
+        user={user}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col">
+        <Header
+          notifications={notifications}
+          user={user}
+          onLogout={logout}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+        <main className="flex-1">{children}</main>
+      </div>
+
+      {/* Floating Action Button */}
+      <FloatingActionButton />
+    </div>
+  );
+}
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className="bg-gray-50 dark:bg-gray-900">
         <QueryClientProvider client={queryClient}>
-          <div className="flex min-h-screen">
-            {/* Sidebar */}
-            <Sidebar
-              currentPath={pathname}
-              isOpen={sidebarOpen}
-              onClose={() => setSidebarOpen(false)}
-            />
-
-            {/* Main Content */}
-            <div className="flex flex-1 flex-col">
-              <Header notifications={notifications} onMenuClick={() => setSidebarOpen(true)} />
-              <main className="flex-1">{children}</main>
-            </div>
-          </div>
-
-          {/* Floating Action Button */}
-          <FloatingActionButton />
+          <CockpitAuthProvider apiBaseUrl={process.env.NEXT_PUBLIC_API_URL || ''}>
+            <CockpitLayoutInner>{children}</CockpitLayoutInner>
+          </CockpitAuthProvider>
         </QueryClientProvider>
       </body>
     </html>
