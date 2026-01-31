@@ -13,6 +13,8 @@ import {
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { getJobBySlug, type Job } from '@/lib/api/jobs';
+
 import { ProposalFormClient } from './proposal-form-client';
 
 import type { Metadata } from 'next';
@@ -55,73 +57,89 @@ interface JobDetails {
 }
 
 // ============================================================================
+// Data Transformation
+// ============================================================================
+
+/**
+ * Transform API Job type to JobDetails format for the apply page
+ */
+function transformJobToDetails(job: Job): JobDetails {
+  // Format duration from API format to display string
+  const formatDuration = (duration?: number, unit?: string): string => {
+    if (!duration || !unit) return 'Not specified';
+    const unitMap: Record<string, string> = {
+      HOURS: duration === 1 ? 'hour' : 'hours',
+      DAYS: duration === 1 ? 'day' : 'days',
+      WEEKS: duration === 1 ? 'week' : 'weeks',
+      MONTHS: duration === 1 ? 'month' : 'months',
+    };
+    return `${duration} ${unitMap[unit] || unit.toLowerCase()}`;
+  };
+
+  // Determine verification level from client info
+  const getVerificationLevel = (client: Job['client']): 'BASIC' | 'VERIFIED' | 'PREMIUM' => {
+    if (client.isPaymentVerified && client.isIdentityVerified) return 'PREMIUM';
+    if (client.isPaymentVerified || client.isIdentityVerified) return 'VERIFIED';
+    return 'BASIC';
+  };
+
+  return {
+    id: job.id,
+    slug: job.slug,
+    title: job.title,
+    description: job.description,
+    budget: {
+      type: job.budgetType === 'HOURLY' ? 'HOURLY' : 'FIXED',
+      minAmount: job.budgetMin,
+      maxAmount: job.budgetMax,
+      amount: job.budgetType === 'HOURLY' ? job.budgetMin : undefined,
+    },
+    duration: formatDuration(job.estimatedDuration, job.durationUnit),
+    experienceLevel: job.experienceLevel || 'INTERMEDIATE',
+    skills: job.skills.map((skill) => ({ id: skill.id, name: skill.name })),
+    category: { id: 'cat-general', name: job.skills[0]?.category || 'General' },
+    isRemote: true,
+    postedAt: job.createdAt,
+    proposalCount: job.proposalCount,
+    client: {
+      id: job.client.id,
+      name: job.client.name,
+      avatarUrl: job.client.avatarUrl,
+      companyName: undefined,
+      rating: job.client.reviewScore ?? 0,
+      reviewCount: job.client.reviewCount,
+      totalSpent: job.client.totalSpent,
+      verificationLevel: getVerificationLevel(job.client),
+      memberSince: job.client.memberSince,
+      hireRate: job.client.hireRate,
+    },
+  };
+}
+
+// ============================================================================
 // Data Fetching
 // ============================================================================
 
 async function getJobDetails(slug: string): Promise<JobDetails | null> {
-  // Mock data - replace with actual API call
-  // In production: const res = await fetch(`${API_URL}/jobs/${slug}`);
-
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // Mock job data
-  return {
-    id: 'job-1',
-    slug,
-    title: 'Senior Full-Stack Developer for E-commerce Platform',
-    description: `We're looking for an experienced full-stack developer to help build and scale our e-commerce platform. 
-
-The ideal candidate will have:
-- Strong experience with React, Next.js, and Node.js
-- Experience with PostgreSQL and Redis
-- Understanding of microservices architecture
-- Experience with cloud platforms (AWS/GCP)
-
-This is a 3-month project with potential for extension.`,
-    budget: {
-      type: 'FIXED',
-      minAmount: 5000,
-      maxAmount: 10000,
-    },
-    duration: '3-6 months',
-    experienceLevel: 'EXPERT',
-    skills: [
-      { id: 'skill-1', name: 'React' },
-      { id: 'skill-2', name: 'Next.js' },
-      { id: 'skill-3', name: 'Node.js' },
-      { id: 'skill-4', name: 'PostgreSQL' },
-      { id: 'skill-5', name: 'TypeScript' },
-      { id: 'skill-6', name: 'AWS' },
-    ],
-    category: { id: 'cat-1', name: 'Web Development' },
-    isRemote: true,
-    postedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    proposalCount: 12,
-    client: {
-      id: 'client-1',
-      name: 'John Smith',
-      companyName: 'TechCorp Inc.',
-      rating: 4.8,
-      reviewCount: 23,
-      totalSpent: 125000,
-      verificationLevel: 'VERIFIED',
-      memberSince: '2021-03-15',
-      hireRate: 72,
-    },
-  };
+  try {
+    const job = await getJobBySlug(slug);
+    return transformJobToDetails(job);
+  } catch {
+    return null;
+  }
 }
 
 // ============================================================================
 // Metadata
 // ============================================================================
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { slug: string };
-}): Promise<Metadata> {
-  const job = await getJobDetails(params.slug);
+interface ApplyPageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: ApplyPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const job = await getJobDetails(slug);
 
   if (!job) {
     return { title: 'Job Not Found' };
@@ -300,8 +318,9 @@ function JobSummaryCard({ job }: Readonly<{ job: JobDetails }>) {
 // Page
 // ============================================================================
 
-export default async function ApplyPage({ params }: Readonly<{ params: { slug: string } }>) {
-  const job = await getJobDetails(params.slug);
+export default async function ApplyPage({ params }: Readonly<ApplyPageProps>) {
+  const { slug } = await params;
+  const job = await getJobDetails(slug);
 
   if (!job) {
     notFound();
@@ -313,7 +332,7 @@ export default async function ApplyPage({ params }: Readonly<{ params: { slug: s
         {/* Back link */}
         <Link
           className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-2 text-sm"
-          href={`/jobs/${params.slug}`}
+          href={`/jobs/${slug}`}
         >
           <ArrowLeft className="h-4 w-4" />
           Back to job details

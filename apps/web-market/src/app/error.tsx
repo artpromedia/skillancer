@@ -20,8 +20,9 @@ export default function Error({ error, reset }: ErrorProps) {
 
     // Report to error tracking service
     if (typeof window !== 'undefined') {
+      // @ts-expect-error - Package may not be available at build time
       import('@skillancer/error-tracking/react')
-        .then((tracking) => {
+        .then((tracking: { captureError: (error: Error, context: Record<string, unknown>) => void }) => {
           tracking.captureError(error, {
             component: 'ErrorPage',
             action: 'render',

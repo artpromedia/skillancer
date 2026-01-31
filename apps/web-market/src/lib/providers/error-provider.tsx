@@ -34,23 +34,45 @@ interface ApiErrorEvent extends CustomEvent {
 // Dynamic Import for Error Tracking
 // ============================================================================
 
-// Import error tracking dynamically to avoid SSR issues
-let errorTracking: typeof import('@skillancer/error-tracking/react') | null = null;
+// Error tracking module type
+interface ErrorTrackingModule {
+  initErrorTracking: (config: {
+    dsn?: string;
+    environment?: string;
+    release?: string;
+    appName?: string;
+    sampleRate?: number;
+    tracesSampleRate?: number;
+  }) => void;
+  captureError: (error: Error, context?: Record<string, unknown>) => void;
+  ErrorBoundary?: React.ComponentType<{
+    fallback: React.ComponentType<{ error: Error; resetError: () => void }>;
+    children: React.ReactNode;
+  }>;
+}
 
-async function loadErrorTracking() {
+// Import error tracking dynamically to avoid SSR issues
+let errorTracking: ErrorTrackingModule | null = null;
+
+async function loadErrorTracking(): Promise<ErrorTrackingModule | null> {
   if (typeof window !== 'undefined' && !errorTracking) {
     try {
-      errorTracking = await import('@skillancer/error-tracking/react');
+      // Dynamic import with graceful fallback if package not available
+      // @ts-expect-error - Package may not be available at build time
+      const module = await import('@skillancer/error-tracking/react').catch(() => null);
+      if (module) {
+        errorTracking = module as ErrorTrackingModule;
 
-      // Initialize Sentry
-      errorTracking.initErrorTracking({
-        dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-        environment: process.env.NODE_ENV,
-        release: process.env.NEXT_PUBLIC_VERSION,
-        appName: 'web-market',
-        sampleRate: process.env.NODE_ENV === 'production' ? 1.0 : 0.1,
-        tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
-      });
+        // Initialize Sentry
+        errorTracking.initErrorTracking({
+          dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+          environment: process.env.NODE_ENV,
+          release: process.env.NEXT_PUBLIC_VERSION,
+          appName: 'web-market',
+          sampleRate: process.env.NODE_ENV === 'production' ? 1.0 : 0.1,
+          tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
+        });
+      }
     } catch (e) {
       console.warn('[ErrorProvider] Error tracking not available:', e);
     }
@@ -105,7 +127,7 @@ class FallbackErrorBoundary extends Component<
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
     this.props.onError?.(error, errorInfo);
   }
@@ -114,7 +136,7 @@ class FallbackErrorBoundary extends Component<
     this.setState({ hasError: false, error: null });
   };
 
-  render() {
+  override render() {
     if (this.state.hasError && this.state.error) {
       return <ErrorFallback error={this.state.error} resetError={this.resetError} />;
     }
