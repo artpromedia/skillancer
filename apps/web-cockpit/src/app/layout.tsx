@@ -520,14 +520,19 @@ function CockpitLayoutInner({ children }: Readonly<{ children: React.ReactNode }
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Dynamic import for ErrorProvider to avoid circular deps
+  const ErrorProvider = require('../lib/providers/error-provider').ErrorProvider;
+
   return (
     <html lang="en">
       <body className="bg-gray-50 dark:bg-gray-900">
-        <QueryClientProvider client={queryClient}>
-          <CockpitAuthProvider apiBaseUrl={process.env.NEXT_PUBLIC_API_URL || ''}>
-            <CockpitLayoutInner>{children}</CockpitLayoutInner>
-          </CockpitAuthProvider>
-        </QueryClientProvider>
+        <ErrorProvider>
+          <QueryClientProvider client={queryClient}>
+            <CockpitAuthProvider apiBaseUrl={process.env.NEXT_PUBLIC_API_URL || ''}>
+              <CockpitLayoutInner>{children}</CockpitLayoutInner>
+            </CockpitAuthProvider>
+          </QueryClientProvider>
+        </ErrorProvider>
       </body>
     </html>
   );

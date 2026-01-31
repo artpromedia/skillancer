@@ -547,6 +547,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Dynamic import for ErrorProvider
+  const ErrorProvider = require('../lib/providers/error-provider').ErrorProvider;
+
   return (
     <html lang="en">
       <head>
@@ -555,11 +558,13 @@ export default function RootLayout({
         <meta content="noindex, nofollow" name="robots" />
       </head>
       <body className="bg-gray-100 dark:bg-gray-900">
-        <QueryClientProvider client={queryClient}>
-          <AdminAuthProvider apiBaseUrl={process.env.NEXT_PUBLIC_API_URL || ''}>
-            <AdminLayoutInner>{children}</AdminLayoutInner>
-          </AdminAuthProvider>
-        </QueryClientProvider>
+        <ErrorProvider>
+          <QueryClientProvider client={queryClient}>
+            <AdminAuthProvider apiBaseUrl={process.env.NEXT_PUBLIC_API_URL || ''}>
+              <AdminLayoutInner>{children}</AdminLayoutInner>
+            </AdminAuthProvider>
+          </QueryClientProvider>
+        </ErrorProvider>
       </body>
     </html>
   );
