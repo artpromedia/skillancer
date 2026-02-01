@@ -8,29 +8,60 @@ import '../storage/secure_storage.dart';
 
 /// API Client using Dio with interceptors
 class ApiClient {
-  static const String baseUrl = 'https://api.skillancer.com/v1';
-  static const Duration timeout = Duration(seconds: 30);
+  /// Default base URL for API requests
+  static const String defaultBaseUrl = 'https://api.skillancer.com/v1';
+
+  /// Default timeout for requests
+  static const Duration defaultTimeout = Duration(seconds: 30);
 
   late final Dio _dio;
-  final SecureStorage _secureStorage = SecureStorage();
+  final SecureStorage _secureStorage;
   final List<Map<String, dynamic>> _offlineQueue = [];
+  final String _baseUrl;
+  final Duration _timeout;
+  final int _maxRetries;
+  final bool _enableTokenRefresh;
 
-  ApiClient() {
-    _dio = Dio(
-      BaseOptions(
-        baseUrl: baseUrl,
-        connectTimeout: timeout,
-        receiveTimeout: timeout,
-        sendTimeout: timeout,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      ),
-    );
+  /// Creates an ApiClient instance.
+  ///
+  /// All parameters are optional for backward compatibility:
+  /// - [baseUrl]: The base URL for API requests. Defaults to [defaultBaseUrl].
+  /// - [timeout]: Request timeout duration. Defaults to [defaultTimeout].
+  /// - [secureStorage]: Storage for auth tokens. Creates new instance if not provided.
+  /// - [dio]: Dio instance for HTTP requests. Creates new instance if not provided.
+  /// - [maxRetries]: Maximum retry attempts for failed requests. Defaults to 3.
+  /// - [enableTokenRefresh]: Whether to auto-refresh tokens on 401. Defaults to true.
+  ApiClient({
+    String? baseUrl,
+    Duration? timeout,
+    SecureStorage? secureStorage,
+    Dio? dio,
+    int maxRetries = 3,
+    bool enableTokenRefresh = true,
+  })  : _baseUrl = baseUrl ?? defaultBaseUrl,
+        _timeout = timeout ?? defaultTimeout,
+        _secureStorage = secureStorage ?? SecureStorage(),
+        _maxRetries = maxRetries,
+        _enableTokenRefresh = enableTokenRefresh {
+    _dio = dio ??
+        Dio(
+          BaseOptions(
+            baseUrl: _baseUrl,
+            connectTimeout: _timeout,
+            receiveTimeout: _timeout,
+            sendTimeout: _timeout,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          ),
+        );
 
     _setupInterceptors();
   }
+
+  /// Gets the base URL being used
+  String get baseUrl => _baseUrl;
 
   void _setupInterceptors() {
     // Auth interceptor
@@ -44,7 +75,7 @@ class ApiClient {
           return handler.next(options);
         },
         onError: (error, handler) async {
-          if (error.response?.statusCode == 401) {
+          if (_enableTokenRefresh && error.response?.statusCode == 401) {
             // Try to refresh token
             final refreshed = await _refreshToken();
             if (refreshed) {
@@ -64,7 +95,7 @@ class ApiClient {
         onError: (error, handler) async {
           if (_shouldRetry(error)) {
             final retryCount = error.requestOptions.extra['retryCount'] ?? 0;
-            if (retryCount < 3) {
+            if (retryCount < _maxRetries) {
               await Future.delayed(Duration(seconds: retryCount + 1));
               error.requestOptions.extra['retryCount'] = retryCount + 1;
               final response = await _retry(error.requestOptions);

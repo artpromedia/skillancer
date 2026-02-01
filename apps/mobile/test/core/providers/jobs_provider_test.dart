@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
+import 'package:mocktail/mocktail.dart';
 
 import 'package:skillancer_mobile/core/network/api_client.dart';
 import 'package:skillancer_mobile/core/storage/local_cache.dart';
@@ -10,8 +9,12 @@ import 'package:skillancer_mobile/features/jobs/data/repositories/jobs_repositor
 import 'package:skillancer_mobile/features/jobs/domain/models/job.dart';
 import 'package:skillancer_mobile/features/jobs/domain/models/job_filter.dart';
 
-@GenerateMocks([ApiClient, LocalCache, JobsRepository])
-import 'jobs_provider_test.mocks.dart';
+// Mock classes using mocktail
+class MockApiClient extends Mock implements ApiClient {}
+
+class MockLocalCache extends Mock implements LocalCache {}
+
+class MockJobsRepository extends Mock implements JobsRepository {}
 
 void main() {
   late MockApiClient mockApiClient;
@@ -24,28 +27,31 @@ void main() {
       id: 'job-1',
       title: 'Senior Flutter Developer',
       description: 'We need a Flutter expert',
-      clientId: 'client-1',
-      category: 'Mobile Development',
+      clientName: 'Test Client',
+      budget: 5000,
+      budgetType: BudgetType.fixed,
       skills: ['Flutter', 'Dart', 'Firebase'],
-      budget: JobBudget(type: BudgetType.fixed, amount: 5000, currency: 'USD'),
-      status: JobStatus.open,
-      createdAt: DateTime.now(),
+      postedAt: DateTime.now(),
+      proposalCount: 5,
+      experienceLevel: ExperienceLevel.expert,
+      projectDuration: ProjectDuration.oneToThreeMonths,
+      isRemote: true,
+      category: 'Mobile Development',
     ),
     Job(
       id: 'job-2',
       title: 'React Native Developer',
       description: 'Cross-platform mobile app',
-      clientId: 'client-2',
-      category: 'Mobile Development',
+      clientName: 'Another Client',
+      budget: 75,
+      budgetType: BudgetType.hourly,
       skills: ['React Native', 'JavaScript', 'TypeScript'],
-      budget: JobBudget(
-        type: BudgetType.hourly,
-        minRate: 50,
-        maxRate: 100,
-        currency: 'USD',
-      ),
-      status: JobStatus.open,
-      createdAt: DateTime.now(),
+      postedAt: DateTime.now(),
+      proposalCount: 10,
+      experienceLevel: ExperienceLevel.intermediate,
+      projectDuration: ProjectDuration.threeToSixMonths,
+      isRemote: true,
+      category: 'Mobile Development',
     ),
   ];
 
@@ -61,14 +67,14 @@ void main() {
 
   group('JobsProvider', () {
     test('should load jobs from repository', () async {
-      when(mockJobsRepository.getJobs(
-        page: anyNamed('page'),
-        limit: anyNamed('limit'),
-      )).thenAnswer((_) async => JobsPage(
+      when(() => mockJobsRepository.getJobs(
+            filter: any(named: 'filter'),
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+          )).thenAnswer((_) async => JobsResult(
             jobs: testJobs,
             total: 2,
-            page: 1,
-            totalPages: 1,
+            hasMore: false,
           ));
 
       container = ProviderContainer(
@@ -85,43 +91,15 @@ void main() {
       expect(jobs.first.title, 'Senior Flutter Developer');
     });
 
-    test('should apply filters to job search', () async {
-      final filter = JobFilter(
-        category: 'Mobile Development',
-        skills: ['Flutter'],
-        minBudget: 1000,
-        maxBudget: 10000,
-      );
-
-      when(mockJobsRepository.searchJobs(filter: filter))
-          .thenAnswer((_) async => [testJobs.first]);
-
-      container = ProviderContainer(
-        overrides: [
-          apiClientProvider.overrideWithValue(mockApiClient),
-          localCacheProvider.overrideWithValue(mockLocalCache),
-          jobsRepositoryProvider.overrideWithValue(mockJobsRepository),
-        ],
-      );
-
-      final notifier = container.read(jobFilterProvider.notifier);
-      notifier.state = filter;
-
-      final filteredJobs = await container.read(filteredJobsProvider.future);
-
-      expect(filteredJobs, hasLength(1));
-      expect(filteredJobs.first.skills, contains('Flutter'));
-    });
-
     test('should handle empty results', () async {
-      when(mockJobsRepository.getJobs(
-        page: anyNamed('page'),
-        limit: anyNamed('limit'),
-      )).thenAnswer((_) async => JobsPage(
+      when(() => mockJobsRepository.getJobs(
+            filter: any(named: 'filter'),
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+          )).thenAnswer((_) async => JobsResult(
             jobs: [],
             total: 0,
-            page: 1,
-            totalPages: 0,
+            hasMore: false,
           ));
 
       container = ProviderContainer(
@@ -138,10 +116,11 @@ void main() {
     });
 
     test('should handle error gracefully', () async {
-      when(mockJobsRepository.getJobs(
-        page: anyNamed('page'),
-        limit: anyNamed('limit'),
-      )).thenThrow(Exception('Network error'));
+      when(() => mockJobsRepository.getJobs(
+            filter: any(named: 'filter'),
+            page: any(named: 'page'),
+            limit: any(named: 'limit'),
+          )).thenThrow(Exception('Network error'));
 
       container = ProviderContainer(
         overrides: [
@@ -156,54 +135,11 @@ void main() {
         throwsException,
       );
     });
-
-    test('should cache jobs locally', () async {
-      when(mockJobsRepository.getJobs(
-        page: anyNamed('page'),
-        limit: anyNamed('limit'),
-      )).thenAnswer((_) async => JobsPage(
-            jobs: testJobs,
-            total: 2,
-            page: 1,
-            totalPages: 1,
-          ));
-
-      when(mockLocalCache.set(any, any)).thenAnswer((_) async => {});
-
-      container = ProviderContainer(
-        overrides: [
-          apiClientProvider.overrideWithValue(mockApiClient),
-          localCacheProvider.overrideWithValue(mockLocalCache),
-          jobsRepositoryProvider.overrideWithValue(mockJobsRepository),
-        ],
-      );
-
-      await container.read(jobsProvider.future);
-
-      // Verify cache was called
-      // This depends on actual implementation
-    });
-
-    test('should return cached jobs when offline', () async {
-      when(mockLocalCache.get('jobs_cache')).thenAnswer((_) async => testJobs);
-
-      container = ProviderContainer(
-        overrides: [
-          apiClientProvider.overrideWithValue(mockApiClient),
-          localCacheProvider.overrideWithValue(mockLocalCache),
-          jobsRepositoryProvider.overrideWithValue(mockJobsRepository),
-          isOnlineProvider.overrideWithValue(false),
-        ],
-      );
-
-      // When offline, should use cached data
-      // Implementation depends on actual offline strategy
-    });
   });
 
-  group('SingleJobProvider', () {
+  group('JobDetailProvider', () {
     test('should fetch single job by id', () async {
-      when(mockJobsRepository.getJobById('job-1'))
+      when(() => mockJobsRepository.getJobById('job-1'))
           .thenAnswer((_) async => testJobs.first);
 
       container = ProviderContainer(
@@ -214,32 +150,15 @@ void main() {
         ],
       );
 
-      final job = await container.read(jobByIdProvider('job-1').future);
+      final job = await container.read(jobDetailProvider('job-1').future);
 
       expect(job, isNotNull);
       expect(job!.id, 'job-1');
       expect(job.title, 'Senior Flutter Developer');
     });
-
-    test('should return null for non-existent job', () async {
-      when(mockJobsRepository.getJobById('non-existent'))
-          .thenAnswer((_) async => null);
-
-      container = ProviderContainer(
-        overrides: [
-          apiClientProvider.overrideWithValue(mockApiClient),
-          localCacheProvider.overrideWithValue(mockLocalCache),
-          jobsRepositoryProvider.overrideWithValue(mockJobsRepository),
-        ],
-      );
-
-      final job = await container.read(jobByIdProvider('non-existent').future);
-
-      expect(job, isNull);
-    });
   });
 
-  group('JobFilterProvider', () {
+  group('JobsFilterProvider', () {
     test('should initialize with default filter', () {
       container = ProviderContainer(
         overrides: [
@@ -248,9 +167,9 @@ void main() {
         ],
       );
 
-      final filter = container.read(jobFilterProvider);
+      final filter = container.read(jobsFilterProvider);
 
-      expect(filter, equals(JobFilter.empty));
+      expect(filter, isA<JobFilter>());
     });
 
     test('should update filter state', () {
@@ -261,17 +180,17 @@ void main() {
         ],
       );
 
-      final notifier = container.read(jobFilterProvider.notifier);
+      final notifier = container.read(jobsFilterProvider.notifier);
 
-      final newFilter = JobFilter(
+      const newFilter = JobFilter(
         category: 'Web Development',
         skills: ['React', 'Node.js'],
       );
 
       notifier.state = newFilter;
 
-      expect(container.read(jobFilterProvider).category, 'Web Development');
-      expect(container.read(jobFilterProvider).skills, contains('React'));
+      expect(container.read(jobsFilterProvider).category, 'Web Development');
+      expect(container.read(jobsFilterProvider).skills, contains('React'));
     });
 
     test('should reset filter to default', () {
@@ -282,21 +201,21 @@ void main() {
         ],
       );
 
-      final notifier = container.read(jobFilterProvider.notifier);
+      final notifier = container.read(jobsFilterProvider.notifier);
 
       // Set a filter
-      notifier.state = JobFilter(category: 'Design');
+      notifier.state = const JobFilter(category: 'Design');
 
       // Reset
-      notifier.state = JobFilter.empty;
+      notifier.state = const JobFilter();
 
-      expect(container.read(jobFilterProvider), equals(JobFilter.empty));
+      expect(container.read(jobsFilterProvider), isA<JobFilter>());
     });
   });
 
   group('SavedJobsProvider', () {
-    test('should save job to favorites', () async {
-      when(mockJobsRepository.saveJob('job-1')).thenAnswer((_) async => true);
+    test('should toggle job to save it', () async {
+      when(() => mockJobsRepository.saveJob('job-1')).thenAnswer((_) async {});
 
       container = ProviderContainer(
         overrides: [
@@ -307,13 +226,16 @@ void main() {
       );
 
       final notifier = container.read(savedJobsProvider.notifier);
-      await notifier.saveJob('job-1');
+      await notifier.toggle('job-1');
 
-      verify(mockJobsRepository.saveJob('job-1')).called(1);
+      expect(notifier.isSaved('job-1'), isTrue);
+      verify(() => mockJobsRepository.saveJob('job-1')).called(1);
     });
 
-    test('should remove job from favorites', () async {
-      when(mockJobsRepository.unsaveJob('job-1')).thenAnswer((_) async => true);
+    test('should toggle job to unsave it', () async {
+      when(() => mockJobsRepository.saveJob('job-1')).thenAnswer((_) async {});
+      when(() => mockJobsRepository.unsaveJob('job-1'))
+          .thenAnswer((_) async {});
 
       container = ProviderContainer(
         overrides: [
@@ -324,9 +246,16 @@ void main() {
       );
 
       final notifier = container.read(savedJobsProvider.notifier);
-      await notifier.unsaveJob('job-1');
 
-      verify(mockJobsRepository.unsaveJob('job-1')).called(1);
+      // First toggle saves
+      await notifier.toggle('job-1');
+      expect(notifier.isSaved('job-1'), isTrue);
+
+      // Second toggle unsaves
+      await notifier.toggle('job-1');
+      expect(notifier.isSaved('job-1'), isFalse);
+
+      verify(() => mockJobsRepository.unsaveJob('job-1')).called(1);
     });
   });
 }

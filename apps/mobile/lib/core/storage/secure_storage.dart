@@ -9,15 +9,20 @@ class SecureStorage {
 
   final FlutterSecureStorage _storage;
 
-  SecureStorage()
-      : _storage = const FlutterSecureStorage(
-          aOptions: AndroidOptions(
-            encryptedSharedPreferences: true,
-          ),
-          iOptions: IOSOptions(
-            accessibility: KeychainAccessibility.first_unlock_this_device,
-          ),
-        );
+  /// Creates a SecureStorage instance.
+  ///
+  /// If [storage] is provided, it will be used instead of the default.
+  /// This is useful for testing with mock storage.
+  SecureStorage({FlutterSecureStorage? storage})
+      : _storage = storage ??
+            const FlutterSecureStorage(
+              aOptions: AndroidOptions(
+                encryptedSharedPreferences: true,
+              ),
+              iOptions: IOSOptions(
+                accessibility: KeychainAccessibility.first_unlock_this_device,
+              ),
+            );
 
   // Token management
   Future<void> saveToken(String token) async {

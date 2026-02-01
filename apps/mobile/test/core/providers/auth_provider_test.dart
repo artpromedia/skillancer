@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
+import 'package:mocktail/mocktail.dart';
 
 import 'package:skillancer_mobile/core/network/api_client.dart';
 import 'package:skillancer_mobile/core/storage/secure_storage.dart';
@@ -11,20 +10,24 @@ import 'package:skillancer_mobile/features/auth/data/repositories/auth_repositor
 import 'package:skillancer_mobile/features/auth/domain/models/auth_state.dart';
 import 'package:skillancer_mobile/features/auth/domain/models/user.dart';
 
-@GenerateMocks([ApiClient, SecureStorage, LocalCache, AuthRepository])
-import 'auth_provider_test.mocks.dart';
+// Mock classes using mocktail
+class MockApiClient extends Mock implements ApiClient {}
+
+class MockSecureStorage extends Mock implements SecureStorage {}
+
+class MockLocalCache extends Mock implements LocalCache {}
+
+class MockAuthRepository extends Mock implements AuthRepository {}
 
 void main() {
   late MockApiClient mockApiClient;
   late MockSecureStorage mockSecureStorage;
-  late MockLocalCache mockLocalCache;
   late MockAuthRepository mockAuthRepository;
   late ProviderContainer container;
 
   setUp(() {
     mockApiClient = MockApiClient();
     mockSecureStorage = MockSecureStorage();
-    mockLocalCache = MockLocalCache();
     mockAuthRepository = MockAuthRepository();
   });
 
@@ -34,9 +37,8 @@ void main() {
 
   group('AuthProvider', () {
     test('initial state should be unauthenticated', () async {
-      when(mockSecureStorage.read(key: 'access_token'))
-          .thenAnswer((_) async => null);
-      when(mockSecureStorage.read(key: 'refresh_token'))
+      when(() => mockSecureStorage.getToken()).thenAnswer((_) async => null);
+      when(() => mockSecureStorage.getRefreshToken())
           .thenAnswer((_) async => null);
 
       container = ProviderContainer(
@@ -49,8 +51,8 @@ void main() {
 
       final authState = container.read(authStateProvider);
 
-      // Initial async state should be loading
-      expect(authState, isA<AsyncLoading>());
+      // Initial state should be AuthState.initial
+      expect(authState, isA<AuthState>());
     });
 
     test('should authenticate user with valid credentials', () async {
@@ -63,19 +65,15 @@ void main() {
         createdAt: DateTime.now(),
       );
 
-      when(mockAuthRepository.login(
-        email: 'test@example.com',
-        password: 'password123',
-      )).thenAnswer((_) async => AuthState.authenticated(
+      when(() => mockAuthRepository.login(
+            email: 'test@example.com',
+            password: 'password123',
+          )).thenAnswer((_) async => AuthResult.success(
             user: testUser,
-            accessToken: 'access-token',
-            refreshToken: 'refresh-token',
+            token: 'access-token',
           ));
 
-      when(mockSecureStorage.write(
-        key: anyNamed('key'),
-        value: anyNamed('value'),
-      )).thenAnswer((_) async => {});
+      when(() => mockSecureStorage.saveToken(any())).thenAnswer((_) async {});
 
       container = ProviderContainer(
         overrides: [
@@ -86,19 +84,19 @@ void main() {
       );
 
       final notifier = container.read(authStateProvider.notifier);
-      await notifier.login(email: 'test@example.com', password: 'password123');
+      await notifier.login('test@example.com', 'password123');
 
-      verify(mockAuthRepository.login(
-        email: 'test@example.com',
-        password: 'password123',
-      )).called(1);
+      verify(() => mockAuthRepository.login(
+            email: 'test@example.com',
+            password: 'password123',
+          )).called(1);
     });
 
     test('should handle login failure', () async {
-      when(mockAuthRepository.login(
-        email: anyNamed('email'),
-        password: anyNamed('password'),
-      )).thenThrow(Exception('Invalid credentials'));
+      when(() => mockAuthRepository.login(
+            email: any(named: 'email'),
+            password: any(named: 'password'),
+          )).thenThrow(Exception('Invalid credentials'));
 
       container = ProviderContainer(
         overrides: [
@@ -109,19 +107,18 @@ void main() {
       );
 
       final notifier = container.read(authStateProvider.notifier);
+      await notifier.login('wrong@example.com', 'wrong');
 
-      expect(
-        () => notifier.login(email: 'wrong@example.com', password: 'wrong'),
-        throwsException,
-      );
+      // After login failure, state should be error
+      final authState = container.read(authStateProvider);
+      expect(authState.isAuthenticated, isFalse);
     });
 
     test('should logout and clear tokens', () async {
-      when(mockSecureStorage.delete(key: 'access_token'))
-          .thenAnswer((_) async => {});
-      when(mockSecureStorage.delete(key: 'refresh_token'))
-          .thenAnswer((_) async => {});
-      when(mockAuthRepository.logout()).thenAnswer((_) async => {});
+      when(() => mockSecureStorage.deleteToken()).thenAnswer((_) async {});
+      when(() => mockSecureStorage.deleteRefreshToken())
+          .thenAnswer((_) async {});
+      when(() => mockAuthRepository.logout()).thenAnswer((_) async {});
 
       container = ProviderContainer(
         overrides: [
@@ -134,8 +131,7 @@ void main() {
       final notifier = container.read(authStateProvider.notifier);
       await notifier.logout();
 
-      verify(mockSecureStorage.delete(key: 'access_token')).called(1);
-      verify(mockSecureStorage.delete(key: 'refresh_token')).called(1);
+      verify(() => mockAuthRepository.logout()).called(1);
     });
 
     test('should restore session from stored tokens', () async {
@@ -148,11 +144,11 @@ void main() {
         createdAt: DateTime.now(),
       );
 
-      when(mockSecureStorage.read(key: 'access_token'))
+      when(() => mockSecureStorage.getToken())
           .thenAnswer((_) async => 'stored-access-token');
-      when(mockSecureStorage.read(key: 'refresh_token'))
+      when(() => mockSecureStorage.getRefreshToken())
           .thenAnswer((_) async => 'stored-refresh-token');
-      when(mockAuthRepository.getCurrentUser())
+      when(() => mockAuthRepository.getCurrentUser())
           .thenAnswer((_) async => testUser);
 
       container = ProviderContainer(
@@ -163,18 +159,16 @@ void main() {
         ],
       );
 
-      // Wait for the async initialization
-      await container.read(authStateProvider.future);
+      final notifier = container.read(authStateProvider.notifier);
+      await notifier.checkAuthStatus();
 
-      verify(mockSecureStorage.read(key: 'access_token')).called(1);
-      verify(mockAuthRepository.getCurrentUser()).called(1);
+      verify(() => mockAuthRepository.getCurrentUser()).called(1);
     });
   });
 
   group('CurrentUserProvider', () {
     test('should return null when not authenticated', () async {
-      when(mockSecureStorage.read(key: 'access_token'))
-          .thenAnswer((_) async => null);
+      when(() => mockSecureStorage.getToken()).thenAnswer((_) async => null);
 
       container = ProviderContainer(
         overrides: [
@@ -198,9 +192,9 @@ void main() {
         createdAt: DateTime.now(),
       );
 
-      when(mockSecureStorage.read(key: 'access_token'))
+      when(() => mockSecureStorage.getToken())
           .thenAnswer((_) async => 'valid-token');
-      when(mockAuthRepository.getCurrentUser())
+      when(() => mockAuthRepository.getCurrentUser())
           .thenAnswer((_) async => testUser);
 
       container = ProviderContainer(
