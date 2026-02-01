@@ -41,8 +41,8 @@ export interface WatermarkConfig {
 }
 
 interface WatermarkOverlayProps {
-  config: WatermarkConfig;
-  className?: string;
+  readonly config: WatermarkConfig;
+  readonly className?: string;
 }
 
 // ============================================================================
@@ -100,10 +100,10 @@ function formatTimestamp(): string {
 // ============================================================================
 
 interface TiledWatermarkProps {
-  text: string;
-  timestamp?: string;
-  style: WatermarkConfig['style'];
-  offset: { x: number; y: number };
+  readonly text: string;
+  readonly timestamp?: string;
+  readonly style: WatermarkConfig['style'];
+  readonly offset: { x: number; y: number };
 }
 
 function TiledWatermark({ text, timestamp, style, offset }: TiledWatermarkProps) {
@@ -176,10 +176,10 @@ function TiledWatermark({ text, timestamp, style, offset }: TiledWatermarkProps)
 // ============================================================================
 
 interface CornerWatermarkProps {
-  text: string;
-  timestamp?: string;
-  position: WatermarkPosition;
-  style: WatermarkConfig['style'];
+  readonly text: string;
+  readonly timestamp?: string;
+  readonly position: WatermarkPosition;
+  readonly style: WatermarkConfig['style'];
 }
 
 function CornerWatermark({ text, timestamp, position, style }: CornerWatermarkProps) {
@@ -212,9 +212,9 @@ function CornerWatermark({ text, timestamp, position, style }: CornerWatermarkPr
 // ============================================================================
 
 interface CenterWatermarkProps {
-  text: string;
-  timestamp?: string;
-  style: WatermarkConfig['style'];
+  readonly text: string;
+  readonly timestamp?: string;
+  readonly style: WatermarkConfig['style'];
 }
 
 function CenterWatermark({ text, timestamp, style }: CenterWatermarkProps) {
@@ -245,10 +245,10 @@ function CenterWatermark({ text, timestamp, style }: CenterWatermarkProps) {
 // ============================================================================
 
 interface DiagonalWatermarkProps {
-  text: string;
-  timestamp?: string;
-  style: WatermarkConfig['style'];
-  offset: number;
+  readonly text: string;
+  readonly timestamp?: string;
+  readonly style: WatermarkConfig['style'];
+  readonly offset: number;
 }
 
 function DiagonalWatermark({ text, timestamp, style, offset }: DiagonalWatermarkProps) {
@@ -269,7 +269,8 @@ function DiagonalWatermark({ text, timestamp, style, offset }: DiagonalWatermark
         }}
       >
         {Array.from({ length: 20 }).map((_, i) => (
-          <span key={i} className="inline-block px-16">
+          // eslint-disable-next-line sonarjs/no-array-index-key
+          <span key={`watermark-repeat-${i}`} className="inline-block px-16">
             {fullText}
           </span>
         ))}

@@ -86,6 +86,18 @@ const roleColors: Record<AdminRole, string> = {
   analyst: 'bg-yellow-100 text-yellow-700',
 };
 
+function getStatusTextColor(status: AdminUser['status']): string {
+  if (status === 'active') return 'text-green-600';
+  if (status === 'invited') return 'text-yellow-600';
+  return 'text-red-600';
+}
+
+function getStatusBgColor(status: AdminUser['status']): string {
+  if (status === 'active') return 'bg-green-600';
+  if (status === 'invited') return 'bg-yellow-600';
+  return 'bg-red-600';
+}
+
 const permissionGroups = [
   { name: 'Users', permissions: ['users', 'users:read', 'users:write', 'users:suspend'] },
   { name: 'Moderation', permissions: ['moderation', 'moderation:approve', 'moderation:reject'] },
@@ -221,22 +233,10 @@ export default function AdminsPage() {
                 </td>
                 <td className="px-4 py-3">
                   <span
-                    className={`inline-flex items-center gap-1 text-sm ${
-                      admin.status === 'active'
-                        ? 'text-green-600'
-                        : admin.status === 'invited'
-                          ? 'text-yellow-600'
-                          : 'text-red-600'
-                    }`}
+                    className={`inline-flex items-center gap-1 text-sm ${getStatusTextColor(admin.status)}`}
                   >
                     <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        admin.status === 'active'
-                          ? 'bg-green-600'
-                          : admin.status === 'invited'
-                            ? 'bg-yellow-600'
-                            : 'bg-red-600'
-                      }`}
+                      className={`h-1.5 w-1.5 rounded-full ${getStatusBgColor(admin.status)}`}
                     />
                     {admin.status}
                   </span>
@@ -295,18 +295,27 @@ export default function AdminsPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                  htmlFor="invite-email"
+                >
                   Email Address
                 </label>
                 <input
                   className="w-full rounded-lg border px-3 py-2 text-sm"
+                  id="invite-email"
                   placeholder="admin@example.com"
                   type="email"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Role</label>
-                <select className="w-full rounded-lg border px-3 py-2 text-sm">
+                <label
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                  htmlFor="invite-role"
+                >
+                  Role
+                </label>
+                <select className="w-full rounded-lg border px-3 py-2 text-sm" id="invite-role">
                   <option value="">Select role...</option>
                   <option value="admin">Admin</option>
                   <option value="moderator">Moderator</option>
@@ -315,7 +324,7 @@ export default function AdminsPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Permissions</label>
+                <span className="mb-1 block text-sm font-medium text-gray-700">Permissions</span>
                 <div className="max-h-48 space-y-3 overflow-y-auto rounded-lg border p-3">
                   {permissionGroups.map((group) => (
                     <div key={group.name}>
@@ -371,11 +380,14 @@ export default function AdminsPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Role</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="edit-role">
+                  Role
+                </label>
                 <select
                   className="w-full rounded-lg border px-3 py-2 text-sm"
                   defaultValue={selectedAdmin.role}
                   disabled={selectedAdmin.role === 'super_admin'}
+                  id="edit-role"
                 >
                   <option value="admin">Admin</option>
                   <option value="moderator">Moderator</option>
@@ -384,7 +396,7 @@ export default function AdminsPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Permissions</label>
+                <span className="mb-1 block text-sm font-medium text-gray-700">Permissions</span>
                 <div className="max-h-48 space-y-3 overflow-y-auto rounded-lg border p-3">
                   {permissionGroups.map((group) => (
                     <div key={group.name}>

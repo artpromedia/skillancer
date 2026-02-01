@@ -102,7 +102,7 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
   const { setTheme, resolvedTheme } = useTheme();
-  const { user, logout, isLoading } = useMarketAuth();
+  const { user, logout } = useMarketAuth();
 
   const toggleTheme = useCallback(() => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');

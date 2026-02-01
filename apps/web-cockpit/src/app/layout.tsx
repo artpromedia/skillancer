@@ -184,7 +184,7 @@ function Sidebar({
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}
-                {item.badge && item.badge > 0 && (
+                {Boolean(item.badge && item.badge > 0) && (
                   <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
                     {item.badge}
                   </span>

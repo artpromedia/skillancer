@@ -187,7 +187,7 @@ function OverviewTab({ user }: Readonly<{ user: UserProfile }>) {
       </div>
 
       {/* Rate */}
-      {user.hourlyRate && (
+      {typeof user.hourlyRate === 'number' && (
         <div>
           <h3 className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Hourly Rate</h3>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -211,9 +211,9 @@ function ActivityTab() {
 
   return (
     <div className="space-y-4">
-      {activities.map((activity, index) => (
+      {activities.map((activity) => (
         <div
-          key={index}
+          key={`${activity.time}-${activity.action}`}
           className="flex items-start gap-4 border-b border-gray-200 pb-4 last:border-0 dark:border-gray-700"
         >
           <div className="rounded-full bg-gray-100 p-2 dark:bg-gray-700">

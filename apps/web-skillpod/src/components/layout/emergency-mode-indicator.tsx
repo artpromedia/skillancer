@@ -26,9 +26,9 @@ interface EmergencyState {
 }
 
 interface EmergencyIndicatorProps {
-  className?: string;
-  compact?: boolean;
-  onClick?: () => void;
+  readonly className?: string;
+  readonly compact?: boolean;
+  readonly onClick?: () => void;
 }
 
 // ============================================================================
@@ -179,7 +179,8 @@ export function EmergencyModeIndicator({
         });
       }
     } catch (error) {
-      // Silently fail
+      // Non-critical: indicator still works without live data
+      console.debug('Failed to fetch emergency state', error);
     }
   }, []);
 
@@ -203,7 +204,8 @@ export function EmergencyModeIndicator({
           setState(data.state);
         }
       } catch (e) {
-        // Ignore parse errors
+        // Non-critical: message malformed but stream continues
+        console.debug('Failed to parse emergency stream message', e);
       }
     };
 
@@ -314,7 +316,8 @@ export function EmergencyBanner() {
           });
         }
       } catch (error) {
-        // Silently fail
+        // Non-critical: banner still works without live data
+        console.debug('Failed to fetch emergency banner state', error);
       }
     };
 
@@ -426,7 +429,8 @@ export function KillSwitchQuickAccess({ className = '' }: Readonly<{ className?:
         setIsActive(true);
         setIsConfirming(false);
       } catch (error) {
-        // Handle error
+        // Log error for debugging but don't crash the UI
+        console.error('Failed to trigger kill switch', error);
       }
     }
   };

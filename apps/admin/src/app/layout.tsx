@@ -204,8 +204,7 @@ function EnvironmentIndicator() {
   if (env === 'production') {
     return (
       <div className="flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700">
-        <span className="h-2 w-2 rounded-full bg-red-500" />
-        PRODUCTION
+        <span className="h-2 w-2 rounded-full bg-red-500" /> PRODUCTION
       </div>
     );
   }
@@ -213,16 +212,14 @@ function EnvironmentIndicator() {
   if (env === 'staging') {
     return (
       <div className="flex items-center gap-1.5 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-700">
-        <span className="h-2 w-2 rounded-full bg-yellow-500" />
-        STAGING
+        <span className="h-2 w-2 rounded-full bg-yellow-500" /> STAGING
       </div>
     );
   }
 
   return (
     <div className="flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
-      <span className="h-2 w-2 rounded-full bg-green-500" />
-      DEV
+      <span className="h-2 w-2 rounded-full bg-green-500" /> DEV
     </div>
   );
 }
@@ -300,7 +297,7 @@ function Sidebar({
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}
-                {item.badge && item.badge > 0 && (
+                {Boolean(item.badge && item.badge > 0) && (
                   <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
                     {item.badge}
                   </span>

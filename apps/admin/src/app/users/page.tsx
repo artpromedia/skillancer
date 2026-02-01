@@ -213,10 +213,13 @@ export default function UsersPage() {
         {filterOpen && (
           <div className="mt-4 grid gap-4 border-t border-gray-200 pt-4 sm:grid-cols-2 lg:grid-cols-4 dark:border-gray-700">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="filter-user-type"
+                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 User Type
               </label>
-              <select className="admin-input">
+              <select id="filter-user-type" className="admin-input">
                 <option value="">All Types</option>
                 <option value="freelancer">Freelancer</option>
                 <option value="client">Client</option>
@@ -224,10 +227,13 @@ export default function UsersPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="filter-status"
+                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 Status
               </label>
-              <select className="admin-input">
+              <select id="filter-status" className="admin-input">
                 <option value="">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="suspended">Suspended</option>
@@ -236,10 +242,13 @@ export default function UsersPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="filter-verification"
+                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 Verification
               </label>
-              <select className="admin-input">
+              <select id="filter-verification" className="admin-input">
                 <option value="">All Levels</option>
                 <option value="none">Unverified</option>
                 <option value="basic">Basic</option>
@@ -248,10 +257,13 @@ export default function UsersPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="filter-date-range"
+                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 Date Range
               </label>
-              <select className="admin-input">
+              <select id="filter-date-range" className="admin-input">
                 <option value="">All Time</option>
                 <option value="today">Today</option>
                 <option value="week">Last 7 Days</option>

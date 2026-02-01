@@ -70,7 +70,7 @@ export function initErrorTracking(config: ErrorTrackingConfig): void {
 
     // Session replay sample rates
     replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
+    replaysOnErrorSampleRate: 1,
 
     // Filter events
     beforeSend(event, hint) {
@@ -259,11 +259,11 @@ export function withScope<T>(callback: (scope: Sentry.Scope) => T): T {
  * Props for ErrorBoundary
  */
 export interface ErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ReactNode | ((error: Error, resetError: () => void) => React.ReactNode);
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-  beforeCapture?: (scope: Sentry.Scope, error: Error, componentStack: string) => void;
-  showDialog?: boolean;
+  readonly children: React.ReactNode;
+  readonly fallback?: React.ReactNode | ((error: Error, resetError: () => void) => React.ReactNode);
+  readonly onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  readonly beforeCapture?: (scope: Sentry.Scope, error: Error, componentStack: string) => void;
+  readonly showDialog?: boolean;
 }
 
 /**
@@ -326,7 +326,7 @@ function DefaultErrorFallback(): React.ReactElement {
           We&apos;ve been notified and are working on a fix.
         </p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => globalThis.location.reload()}
           className="bg-primary text-primary-foreground hover:bg-primary/90 mt-4 rounded-md px-4 py-2"
         >
           Refresh Page
@@ -397,5 +397,7 @@ export function withProfiling<T extends (...args: unknown[]) => unknown>(
 // RE-EXPORTS
 // =============================================================================
 
-export { Sentry };
-export type { ErrorTrackingConfig, UserContext, ErrorContext };
+// eslint-disable-next-line no-barrel-files -- Intentional re-export for module consumers
+export * as Sentry from '@sentry/react';
+// eslint-disable-next-line no-barrel-files -- Intentional re-export for module consumers
+export type { ErrorTrackingConfig, UserContext, ErrorContext } from './index.js';

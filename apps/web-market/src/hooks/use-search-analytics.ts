@@ -88,7 +88,7 @@ export const searchAnalyticsQueryKeys = {
 // ============================================================================
 
 function getSessionId(): string {
-  if (typeof window === 'undefined') return '';
+  if (!globalThis.window) return '';
 
   let sessionId = sessionStorage.getItem('skillancer-search-session');
   if (!sessionId) {
@@ -253,7 +253,7 @@ export interface UseRecentSearchesReturn {
 
 export function useRecentSearches(): UseRecentSearchesReturn {
   const getRecentSearches = useCallback((): string[] => {
-    if (typeof window === 'undefined') return [];
+    if (!globalThis.window) return [];
 
     try {
       const saved = localStorage.getItem(RECENT_SEARCHES_KEY);
@@ -264,7 +264,7 @@ export function useRecentSearches(): UseRecentSearchesReturn {
   }, []);
 
   const saveRecentSearches = useCallback((searches: string[]) => {
-    if (typeof window === 'undefined') return;
+    if (!globalThis.window) return;
 
     try {
       localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));

@@ -194,7 +194,8 @@ export const AvatarImage = React.forwardRef<HTMLDivElement, AvatarImageProps>(
       if (!name) return '?';
       const parts = name.trim().split(/\s+/);
       if (parts.length >= 2) {
-        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+        const lastPart = parts.at(-1);
+        return `${parts[0][0]}${lastPart?.[0] ?? ''}`.toUpperCase();
       }
       return name.substring(0, 2).toUpperCase();
     }, [name]);
@@ -240,21 +241,21 @@ AvatarImage.displayName = 'AvatarImage';
 
 export interface BackgroundImageProps {
   /** Image source */
-  src: string;
+  readonly src: string;
   /** Alternative text */
-  alt?: string;
+  readonly alt?: string;
   /** Children to render over the background */
-  children?: React.ReactNode;
+  readonly children?: React.ReactNode;
   /** Overlay color (with opacity) */
-  overlay?: string;
+  readonly overlay?: string;
   /** Image position */
-  position?: 'center' | 'top' | 'bottom' | 'left' | 'right';
+  readonly position?: 'center' | 'top' | 'bottom' | 'left' | 'right';
   /** Additional container classes */
-  className?: string;
+  readonly className?: string;
   /** Parallax effect */
-  parallax?: boolean;
+  readonly parallax?: boolean;
   /** Priority loading */
-  priority?: boolean;
+  readonly priority?: boolean;
 }
 
 /**
@@ -303,22 +304,22 @@ export function BackgroundImage({
 
 export interface ImageGalleryProps {
   /** Array of image sources */
-  images: Array<{
-    src: string;
-    alt: string;
-    width?: number;
-    height?: number;
+  readonly images: ReadonlyArray<{
+    readonly src: string;
+    readonly alt: string;
+    readonly width?: number;
+    readonly height?: number;
   }>;
   /** Number of columns */
-  columns?: 2 | 3 | 4;
+  readonly columns?: 2 | 3 | 4;
   /** Gap between images */
-  gap?: 'sm' | 'md' | 'lg';
+  readonly gap?: 'sm' | 'md' | 'lg';
   /** Aspect ratio for all images */
-  aspectRatio?: string;
+  readonly aspectRatio?: string;
   /** On image click */
-  onImageClick?: (index: number) => void;
+  readonly onImageClick?: (index: number) => void;
   /** Additional classes */
-  className?: string;
+  readonly className?: string;
 }
 
 /**

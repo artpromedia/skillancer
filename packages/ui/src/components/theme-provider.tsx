@@ -13,32 +13,32 @@ interface ThemeProviderState {
 const ThemeProviderContext = React.createContext<ThemeProviderState | undefined>(undefined);
 
 export interface ThemeProviderProps {
-  children: React.ReactNode;
+  readonly children: React.ReactNode;
   /**
    * Default theme to use
    * @default "system"
    */
-  defaultTheme?: Theme;
+  readonly defaultTheme?: Theme;
   /**
    * Key to use for storing theme preference in localStorage
    * @default "skillancer-theme"
    */
-  storageKey?: string;
+  readonly storageKey?: string;
   /**
    * Attribute to apply to the root element
    * @default "class"
    */
-  attribute?: 'class' | 'data-theme';
+  readonly attribute?: 'class' | 'data-theme';
   /**
    * Whether to enable system theme detection
    * @default true
    */
-  enableSystem?: boolean;
+  readonly enableSystem?: boolean;
   /**
    * Whether to disable transitions on theme change
    * @default false
    */
-  disableTransitionOnChange?: boolean;
+  readonly disableTransitionOnChange?: boolean;
 }
 
 /**

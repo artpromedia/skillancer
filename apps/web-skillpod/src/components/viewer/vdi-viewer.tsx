@@ -15,16 +15,7 @@
  */
 
 import { cn, Skeleton, Button } from '@skillancer/ui';
-import {
-  Activity,
-  SignalHigh,
-  SignalLow,
-  SignalMedium,
-  WifiOff,
-  Sparkles,
-  X,
-  MessageCircle,
-} from 'lucide-react';
+import { Activity, SignalHigh, SignalLow, SignalMedium, WifiOff, Sparkles, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { KasmEmbed } from '@/lib/kasm/kasm-embed';

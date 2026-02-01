@@ -99,7 +99,7 @@ export function Sidebar() {
                 {!collapsed && (
                   <>
                     <span className="font-medium">{item.label}</span>
-                    {item.badge && (
+                    {Boolean(item.badge) && (
                       <span className="ml-auto rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
                         {item.badge}
                       </span>
@@ -137,30 +137,30 @@ export function Sidebar() {
   );
 }
 
-export function Header() {
-  const { user, logout, isLoading } = useSkillPodAuth();
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+/**
+ * Get user initials from name or email
+ */
+function getUserInitials(u: SkillPodUser | null): string {
+  if (!u) return '?';
 
-  /**
-   * Get user initials from name or email
-   */
-  function getUserInitials(u: SkillPodUser | null): string {
-    if (!u) return '?';
-
-    if (u.firstName && u.lastName) {
-      return `${u.firstName[0]}${u.lastName[0]}`.toUpperCase();
-    }
-
-    if (u.name) {
-      const parts = u.name.split(' ');
-      if (parts.length >= 2) {
-        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-      }
-      return u.name.substring(0, 2).toUpperCase();
-    }
-
-    return u.email.substring(0, 2).toUpperCase();
+  if (u.firstName && u.lastName) {
+    return `${u.firstName[0]}${u.lastName[0]}`.toUpperCase();
   }
+
+  if (u.name) {
+    const parts = u.name.split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return u.name.substring(0, 2).toUpperCase();
+  }
+
+  return u.email.substring(0, 2).toUpperCase();
+}
+
+export function Header() {
+  const { user, logout } = useSkillPodAuth();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-30 h-16 border-b border-gray-200 bg-white/80 backdrop-blur-md">

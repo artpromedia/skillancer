@@ -5,6 +5,14 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
+// ============================================================================
+// Type Aliases
+// ============================================================================
+
+export type ReportFormat = 'pdf' | 'csv' | 'excel';
+export type ReportStatus = 'pending' | 'generating' | 'ready' | 'failed';
+export type ReportSchedule = 'daily' | 'weekly' | 'monthly';
+
 interface ApiResponse<T> {
   data: T;
   success: boolean;
@@ -344,8 +352,8 @@ export interface Report {
   id: string;
   name: string;
   type: string;
-  status: 'pending' | 'generating' | 'ready' | 'failed';
-  format: 'pdf' | 'csv' | 'excel';
+  status: ReportStatus;
+  format: ReportFormat;
   createdAt: string;
   downloadUrl?: string;
 }
@@ -358,7 +366,7 @@ export const reportsApi = {
     type: string;
     dateRange: { from: string; to: string };
     filters?: Record<string, unknown>;
-    format: 'pdf' | 'csv' | 'excel';
+    format: ReportFormat;
   }) =>
     fetchApi<{ reportId: string }>(`/admin/reports/generate`, {
       method: 'POST',
@@ -372,9 +380,9 @@ export const reportsApi = {
   schedule: (config: {
     name: string;
     type: string;
-    schedule: 'daily' | 'weekly' | 'monthly';
+    schedule: ReportSchedule;
     recipients: string[];
-    format: 'pdf' | 'csv' | 'excel';
+    format: ReportFormat;
   }) =>
     fetchApi<{ scheduleId: string }>(`/admin/reports/schedule`, {
       method: 'POST',

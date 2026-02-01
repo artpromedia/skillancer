@@ -3,8 +3,6 @@
  * Shared error tracking configuration and utilities
  */
 
-import type { ApiError } from '@skillancer/error-handling';
-
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -66,7 +64,7 @@ export interface ErrorContext {
  */
 export const defaultConfig: Partial<ErrorTrackingConfig> = {
   environment: process.env.NODE_ENV || 'development',
-  sampleRate: 1.0,
+  sampleRate: 1,
   tracesSampleRate: 0.1,
   debug: process.env.NODE_ENV === 'development',
 };
@@ -190,7 +188,15 @@ export function createErrorBreadcrumb(error: unknown, context?: ErrorContext) {
  * Filter sensitive data from error context
  */
 export function sanitizeContext(context: Record<string, unknown>): Record<string, unknown> {
-  const sensitiveKeys = ['password', 'token', 'secret', 'apiKey', 'authorization', 'cookie', 'session'];
+  const sensitiveKeys = [
+    'password',
+    'token',
+    'secret',
+    'apiKey',
+    'authorization',
+    'cookie',
+    'session',
+  ];
   const sanitized: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(context)) {
@@ -211,4 +217,4 @@ export function sanitizeContext(context: Record<string, unknown>): Record<string
 // EXPORTS
 // =============================================================================
 
-export type { ApiError };
+export type { ApiError } from '@skillancer/error-handling';

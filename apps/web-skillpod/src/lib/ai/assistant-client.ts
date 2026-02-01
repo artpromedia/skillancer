@@ -132,7 +132,7 @@ export interface AIFeedback {
 // =============================================================================
 
 class SkillPodAIClient {
-  private baseUrl: string;
+  private readonly baseUrl: string;
   private sessionId: string | null = null;
   private authToken: string | null = null;
 
@@ -292,13 +292,16 @@ class SkillPodAIClient {
   // ---------------------------------------------------------------------------
 
   private inferMode(context: WorkContext): string {
-    if (context.language || context.fileType?.match(/\.(js|ts|py|java|go|rb|php)$/)) {
+    if (
+      context.language ||
+      (context.fileType && /\.(js|ts|py|java|go|rb|php)$/.exec(context.fileType))
+    ) {
       return 'code_review';
     }
-    if (context.fileType?.match(/\.(md|txt|doc|docx)$/)) {
+    if (context.fileType && /\.(md|txt|doc|docx)$/.exec(context.fileType)) {
       return 'writing';
     }
-    if (context.fileType?.match(/\.(figma|sketch|psd|ai)$/)) {
+    if (context.fileType && /\.(figma|sketch|psd|ai)$/.exec(context.fileType)) {
       return 'design';
     }
     return 'general';

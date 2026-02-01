@@ -28,12 +28,9 @@ import {
   ChevronUp,
   Activity,
   Zap,
-  Phone,
-  Mail,
   History,
-  ArrowRight,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 // ============================================================================
 // Types
@@ -71,10 +68,10 @@ interface KillSwitchHistory {
 }
 
 interface KillSwitchPanelProps {
-  organizationId?: string;
-  onTrigger?: (switchId: string, reason: string) => Promise<void>;
-  onRevert?: (switchId: string) => Promise<void>;
-  compact?: boolean;
+  readonly organizationId?: string;
+  readonly onTrigger?: (switchId: string, reason: string) => Promise<void>;
+  readonly onRevert?: (switchId: string) => Promise<void>;
+  readonly compact?: boolean;
 }
 
 // ============================================================================
@@ -268,11 +265,11 @@ function KillSwitchCard({
   isExpanded,
   onToggleExpand,
 }: {
-  config: KillSwitchConfig;
-  onTrigger: () => void;
-  onRevert: () => void;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
+  readonly config: KillSwitchConfig;
+  readonly onTrigger: () => void;
+  readonly onRevert: () => void;
+  readonly isExpanded: boolean;
+  readonly onToggleExpand: () => void;
 }) {
   const typeConfig = SWITCH_TYPE_CONFIG[config.type];
   const statusConfig = STATUS_CONFIG[config.status];
@@ -282,16 +279,14 @@ function KillSwitchCard({
   const isCooldown = config.status === 'cooldown';
   const canTrigger = config.status === 'active';
 
+  const getBorderClass = (): string => {
+    if (isTriggered) return 'border-red-500 bg-red-50 dark:bg-red-900/10';
+    if (isCooldown) return 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/10';
+    return 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800';
+  };
+
   return (
-    <div
-      className={`overflow-hidden rounded-lg border-2 transition-all ${
-        isTriggered
-          ? 'border-red-500 bg-red-50 dark:bg-red-900/10'
-          : isCooldown
-            ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/10'
-            : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
-      }`}
-    >
+    <div className={`overflow-hidden rounded-lg border-2 transition-all ${getBorderClass()}`}>
       <button className="flex w-full items-start gap-4 p-4 text-left" onClick={onToggleExpand}>
         {/* Icon */}
         <div className={`rounded-lg p-3 ${typeConfig.bgColor}`}>
@@ -436,9 +431,9 @@ function ConfirmationModal({
   onConfirm,
   onCancel,
 }: {
-  config: KillSwitchConfig;
-  onConfirm: (reason: string) => void;
-  onCancel: () => void;
+  readonly config: KillSwitchConfig;
+  readonly onConfirm: (reason: string) => void;
+  readonly onCancel: () => void;
 }) {
   const [reason, setReason] = useState('');
   const [confirmed, setConfirmed] = useState(false);
@@ -477,7 +472,7 @@ function ConfirmationModal({
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-600" />
               <div className="text-sm text-yellow-800 dark:text-yellow-200">
                 <strong>Warning:</strong> This action will {config.description.toLowerCase()}.
-                {config.affectedCount && (
+                {Boolean(config.affectedCount) && (
                   <span className="mt-1 block">
                     Approximately <strong>{config.affectedCount}</strong> active sessions will be
                     affected.
@@ -545,7 +540,28 @@ function ConfirmationModal({
   );
 }
 
-function HistoryPanel({ history }: Readonly<{ history: KillSwitchHistory[] }>) {
+// Helper functions for history styling
+function getHistoryActionBgClass(action: KillSwitchHistory['action']): string {
+  if (action === 'triggered') return 'bg-red-100';
+  if (action === 'reverted') return 'bg-green-100';
+  if (action === 'approved') return 'bg-blue-100';
+  return 'bg-gray-100';
+}
+
+function getHistoryActionTextClass(action: KillSwitchHistory['action']): string {
+  if (action === 'triggered') return 'text-red-600';
+  if (action === 'reverted') return 'text-green-600';
+  return 'text-gray-600';
+}
+
+function HistoryActionIcon({ action }: Readonly<{ action: KillSwitchHistory['action'] }>) {
+  if (action === 'triggered') return <Power className="h-4 w-4 text-red-600" />;
+  if (action === 'reverted') return <Unlock className="h-4 w-4 text-green-600" />;
+  if (action === 'approved') return <CheckCircle className="h-4 w-4 text-blue-600" />;
+  return <XCircle className="h-4 w-4 text-gray-600" />;
+}
+
+function HistoryPanel({ history }: Readonly<{ history: readonly KillSwitchHistory[] }>) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div className="border-b border-gray-200 p-4 dark:border-gray-700">
@@ -557,48 +573,22 @@ function HistoryPanel({ history }: Readonly<{ history: KillSwitchHistory[] }>) {
       <div className="max-h-80 divide-y divide-gray-100 overflow-auto dark:divide-gray-700">
         {history.map((entry) => (
           <div key={entry.id} className="flex items-start gap-3 p-4">
-            <div
-              className={`rounded p-1.5 ${
-                entry.action === 'triggered'
-                  ? 'bg-red-100'
-                  : entry.action === 'reverted'
-                    ? 'bg-green-100'
-                    : entry.action === 'approved'
-                      ? 'bg-blue-100'
-                      : 'bg-gray-100'
-              }`}
-            >
-              {entry.action === 'triggered' ? (
-                <Power className="h-4 w-4 text-red-600" />
-              ) : entry.action === 'reverted' ? (
-                <Unlock className="h-4 w-4 text-green-600" />
-              ) : entry.action === 'approved' ? (
-                <CheckCircle className="h-4 w-4 text-blue-600" />
-              ) : (
-                <XCircle className="h-4 w-4 text-gray-600" />
-              )}
+            <div className={`rounded p-1.5 ${getHistoryActionBgClass(entry.action)}`}>
+              <HistoryActionIcon action={entry.action} />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
                   {entry.switchName}
                 </span>
-                <span
-                  className={`text-xs capitalize ${
-                    entry.action === 'triggered'
-                      ? 'text-red-600'
-                      : entry.action === 'reverted'
-                        ? 'text-green-600'
-                        : 'text-gray-600'
-                  }`}
-                >
+                <span className={`text-xs capitalize ${getHistoryActionTextClass(entry.action)}`}>
                   {entry.action}
                 </span>
               </div>
               <p className="text-xs text-gray-500">
                 {entry.user} • {formatTimeAgo(entry.timestamp)}
-                {entry.affectedCount && ` • ${entry.affectedCount} affected`}
-                {entry.duration && ` • Duration: ${entry.duration}m`}
+                {Boolean(entry.affectedCount) && ` • ${entry.affectedCount} affected`}
+                {Boolean(entry.duration) && ` • Duration: ${entry.duration}m`}
               </p>
               {entry.reason && (
                 <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">

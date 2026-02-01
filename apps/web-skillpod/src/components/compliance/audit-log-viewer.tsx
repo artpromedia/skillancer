@@ -17,9 +17,6 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  Clock,
-  User,
-  Globe,
   Terminal,
   AlertTriangle,
   Info,
@@ -31,7 +28,7 @@ import {
   Pause,
   X,
 } from 'lucide-react';
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 
 // ============================================================================
 // Types
@@ -80,10 +77,10 @@ interface AuditLogFilters {
 }
 
 interface AuditLogViewerProps {
-  logs?: AuditLogEntry[];
-  onExport?: (format: 'csv' | 'json' | 'siem') => void;
-  realtime?: boolean;
-  maxEntries?: number;
+  readonly logs?: AuditLogEntry[];
+  readonly onExport?: (format: 'csv' | 'json' | 'siem') => void;
+  readonly realtime?: boolean;
+  readonly maxEntries?: number;
 }
 
 // ============================================================================
@@ -167,7 +164,7 @@ function generateMockLogs(count: number): AuditLogEntry[] {
   ];
 
   const severities: AuditLogEntry['severity'][] = ['info', 'warning', 'error', 'critical'];
-  const outcomes: AuditLogEntry['outcome'][] = ['success', 'failure', 'partial'];
+  const outcomeValues: AuditLogEntry['outcome'][] = ['success', 'failure', 'partial'];
 
   return Array.from({ length: count }, (_, i) => ({
     id: `log-${Date.now()}-${i}`,
@@ -187,7 +184,7 @@ function generateMockLogs(count: number): AuditLogEntry[] {
       id: `resource-${Math.floor(Math.random() * 1000)}`,
     },
     details: { action: 'performed', timestamp: Date.now() },
-    outcome: Math.random() > 0.9 ? 'failure' : 'success',
+    outcome: outcomeValues[Math.floor(Math.random() * outcomeValues.length)],
     ip: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
     sessionId: `session-${Math.floor(Math.random() * 10000)}`,
   }));
@@ -197,17 +194,17 @@ function generateMockLogs(count: number): AuditLogEntry[] {
 // Sub-Components
 // ============================================================================
 
-function LogEntryRow({
+function getLogRowBgClass(severity: AuditLogEntry['severity']): string {\n  switch (severity) {\n    case 'critical':\n      return 'bg-red-50 dark:bg-red-900/10';\n    case 'error':\n      return 'bg-red-50/50 dark:bg-red-900/5';\n    case 'warning':\n      return 'bg-yellow-50/50 dark:bg-yellow-900/5';\n    default:\n      return '';\n  }\n}\n\nfunction LogEntryRow({
   entry,
   isExpanded,
   onToggle,
   onCopy,
-}: {
+}: Readonly<{
   entry: AuditLogEntry;
   isExpanded: boolean;
   onToggle: () => void;
   onCopy: () => void;
-}) {
+}>) {
   const categoryConfig = CATEGORY_CONFIG[entry.category];
   const severityConfig = SEVERITY_CONFIG[entry.severity];
   const outcomeConfig = OUTCOME_CONFIG[entry.outcome];
@@ -216,15 +213,7 @@ function LogEntryRow({
 
   return (
     <div
-      className={`border-b border-gray-100 dark:border-gray-700 ${
-        entry.severity === 'critical'
-          ? 'bg-red-50 dark:bg-red-900/10'
-          : entry.severity === 'error'
-            ? 'bg-red-50/50 dark:bg-red-900/5'
-            : entry.severity === 'warning'
-              ? 'bg-yellow-50/50 dark:bg-yellow-900/5'
-              : ''
-      }`}
+      className={`border-b border-gray-100 dark:border-gray-700 ${getLogRowBgClass(entry.severity)}`}
     >
       <button
         className="flex w-full items-center gap-4 px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50"
@@ -343,11 +332,11 @@ function FilterPanel({
   filters,
   onFilterChange,
   onClose,
-}: {
+}: Readonly<{
   filters: AuditLogFilters;
   onFilterChange: (filters: AuditLogFilters) => void;
   onClose: () => void;
-}) {
+}>) {
   const toggleCategory = (cat: string) => {
     const newCats = filters.categories.includes(cat)
       ? filters.categories.filter((c) => c !== cat)
@@ -610,7 +599,7 @@ export function AuditLogViewer({
           <span className="text-sm text-gray-500">{filteredLogs.length} entries</span>
           {isLive && (
             <span className="flex items-center gap-1 text-xs text-green-600">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+              <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />{' '}
               Live
             </span>
           )}
@@ -688,16 +677,19 @@ export function AuditLogViewer({
 
       {/* Log Entries */}
       <div ref={containerRef} className="max-h-[600px] overflow-auto">
-        {isLoading ? (
+        {isLoading && (
           <div className="flex items-center justify-center py-12">
             <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
           </div>
-        ) : filteredLogs.length === 0 ? (
+        )}
+        {!isLoading && filteredLogs.length === 0 && (
           <div className="py-12 text-center">
             <Terminal className="mx-auto mb-4 h-12 w-12 text-gray-400" />
             <p className="text-gray-500">No log entries match your criteria</p>
           </div>
-        ) : (
+        )}
+        {!isLoading &&
+          filteredLogs.length > 0 &&
           filteredLogs.map((log) => (
             <LogEntryRow
               key={log.id}
@@ -706,8 +698,7 @@ export function AuditLogViewer({
               onCopy={() => copyLogToClipboard(log)}
               onToggle={() => toggleLogExpansion(log.id)}
             />
-          ))
-        )}
+          ))}
       </div>
 
       {/* Footer */}

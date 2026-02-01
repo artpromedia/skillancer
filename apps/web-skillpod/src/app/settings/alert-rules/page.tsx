@@ -21,7 +21,6 @@ import {
   AlertTriangle,
   Shield,
   Activity,
-  Clock,
   Users,
   Mail,
   MessageSquare,
@@ -33,13 +32,10 @@ import {
   Check,
   X,
   ArrowLeft,
-  AlertOctagon,
   Zap,
   Lock,
-  UserX,
   Monitor,
   Server,
-  Save,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -302,11 +298,11 @@ function RuleCard({
   onDelete,
   onDuplicate,
 }: {
-  rule: AlertRule;
-  onToggle: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onDuplicate: () => void;
+  readonly rule: AlertRule;
+  readonly onToggle: () => void;
+  readonly onEdit: () => void;
+  readonly onDelete: () => void;
+  readonly onDuplicate: () => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const severityConfig = SEVERITY_CONFIG[rule.severity];
@@ -393,7 +389,7 @@ function RuleCard({
                     <span className="font-medium text-gray-900 dark:text-white">
                       {String(condition.value)}
                     </span>
-                    {condition.timeWindow && (
+                    {Boolean(condition.timeWindow) && (
                       <span className="text-gray-400">within {condition.timeWindow} minutes</span>
                     )}
                   </div>
@@ -480,10 +476,10 @@ function ChannelCard({
   onTest,
   onEdit,
 }: {
-  channel: NotificationChannel;
-  onToggle: () => void;
-  onTest: () => void;
-  onEdit: () => void;
+  readonly channel: NotificationChannel;
+  readonly onToggle: () => void;
+  readonly onTest: () => void;
+  readonly onEdit: () => void;
 }) {
   const iconMap: Record<string, typeof Mail> = {
     email: Mail,
@@ -670,16 +666,19 @@ export default function AlertRulesPage() {
 
             {/* Rules Grid */}
             <div className="space-y-4">
-              {isLoading ? (
+              {isLoading && (
                 <div className="py-12 text-center">
                   <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
                 </div>
-              ) : filteredRules.length === 0 ? (
+              )}
+              {!isLoading && filteredRules.length === 0 && (
                 <div className="rounded-lg border border-gray-200 bg-white py-12 text-center dark:border-gray-700 dark:bg-gray-800">
                   <Bell className="mx-auto mb-4 h-12 w-12 text-gray-400" />
                   <p className="text-gray-500">No rules found</p>
                 </div>
-              ) : (
+              )}
+              {!isLoading &&
+                filteredRules.length > 0 &&
                 filteredRules.map((rule) => (
                   <RuleCard
                     key={rule.id}
@@ -696,8 +695,7 @@ export default function AlertRulesPage() {
                     onEdit={() => {}}
                     onToggle={() => toggleRule(rule.id)}
                   />
-                ))
-              )}
+                ))}
             </div>
           </>
         )}
