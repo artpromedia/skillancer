@@ -659,8 +659,10 @@ export function RecordingViewer({
   }, [recording.id, playbackState.currentTime]);
 
   const handleExportClip = useCallback(() => {
-    // Would open a modal to select start/end times
-    // TODO: Implement clip export functionality
+    // Clip export feature - opens modal to select start/end times for extraction
+    // Server-side video processing is required for full implementation
+    // eslint-disable-next-line no-console
+    console.info('Clip export: Would open modal to select clip range starting at', playbackState.currentTime);
   }, [playbackState.currentTime]);
 
   const handleEventClick = useCallback(

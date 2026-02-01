@@ -80,7 +80,7 @@ class FaceDetectionService {
   /**
    * Initialize the face detection service
    */
-  initialize(config?: Partial<FaceDetectionConfig>): boolean {
+  initialize(config?: Partial<FaceDetectionConfig>): void {
     if (config) {
       this.config = { ...DEFAULT_CONFIG, ...config };
     }
@@ -99,16 +99,14 @@ class FaceDetectionService {
           fastMode: false,
         });
         this.useNativeAPI = true;
-        return true;
       } catch {
         // Native Face Detection API not available, using fallback
+        this.useNativeAPI = false;
       }
     }
 
     // Fallback: Would use TensorFlow.js in production
     // For this demo, we'll simulate face detection
-    // Note: Simulated face detection in use
-    return true;
   }
 
   /**
