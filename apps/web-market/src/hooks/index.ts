@@ -4,6 +4,9 @@
  * Re-exports all custom hooks for easy importing.
  */
 
+// API hooks (TanStack Query)
+export * from './api';
+
 // Job hooks
 export * from './use-job';
 export * from './use-job-search';
@@ -20,6 +23,13 @@ export * from './use-contracts';
 
 // Messaging hooks
 export * from './use-messaging';
+// Explicitly re-export from useRealtimeMessages to avoid conflict with TypingUser
+export {
+  useRealtimeMessages,
+  type UseRealtimeMessagesOptions,
+  type UseRealtimeMessagesReturn,
+} from './useRealtimeMessages';
+export * from './useNotifications';
 
 // Search hooks
 export * from './use-search-analytics';

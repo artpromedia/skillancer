@@ -8,8 +8,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { MessageBubble } from './message-bubble';
 import { MessageInput } from './message-input';
 import { SkillPodIndicator } from './skillpod-indicator';
+import { TypingIndicator } from './typing-indicator';
 
-import type { TypingUser } from '@/hooks/use-messaging';
+import type { TypingUser } from '@/hooks/useRealtimeMessages';
 import type { Message, Conversation } from '@/lib/api/messages';
 
 // ============================================================================
@@ -23,6 +24,7 @@ interface MessageThreadProps {
   readonly loading?: boolean;
   readonly hasMore?: boolean;
   readonly typingUsers?: TypingUser[];
+  readonly highlightedMessageId?: string | null;
   readonly onLoadMore?: () => Promise<void>;
   readonly onSendMessage: (content: string, attachments?: File[]) => Promise<void>;
   readonly onEditMessage?: (messageId: string, content: string) => Promise<void>;
@@ -88,52 +90,6 @@ function shouldGroupMessages(
 
   // Group messages within 2 minutes
   return timeDiff < 120000;
-}
-
-// ============================================================================
-// Typing Indicator
-// ============================================================================
-
-function getTypingText(users: TypingUser[]): string {
-  if (users.length === 0) return 'Unknown';
-  const firstUser = users[0];
-  if (!firstUser) return 'Unknown';
-  if (users.length === 1) return firstUser.userName;
-  const secondUser = users[1];
-  if (users.length === 2 && secondUser) {
-    return `${firstUser.userName} and ${secondUser.userName}`;
-  }
-  return `${firstUser.userName} and ${users.length - 1} others`;
-}
-
-interface TypingIndicatorProps {
-  readonly users: TypingUser[];
-}
-
-function TypingIndicator({ users }: TypingIndicatorProps) {
-  if (users.length === 0) return null;
-
-  const names = getTypingText(users);
-
-  return (
-    <div className="flex items-center gap-2 px-4 py-2">
-      <div className="flex space-x-1">
-        <span
-          className="bg-muted-foreground h-2 w-2 animate-bounce rounded-full"
-          style={{ animationDelay: '0ms' }}
-        />
-        <span
-          className="bg-muted-foreground h-2 w-2 animate-bounce rounded-full"
-          style={{ animationDelay: '150ms' }}
-        />
-        <span
-          className="bg-muted-foreground h-2 w-2 animate-bounce rounded-full"
-          style={{ animationDelay: '300ms' }}
-        />
-      </div>
-      <span className="text-muted-foreground text-sm">{names} is typing...</span>
-    </div>
-  );
 }
 
 // ============================================================================
@@ -219,6 +175,7 @@ interface MessageListProps {
   readonly currentUserId: string;
   readonly loading?: boolean | undefined;
   readonly hasMore?: boolean | undefined;
+  readonly highlightedMessageId?: string | null;
   readonly onLoadMore?: (() => Promise<void>) | undefined;
   readonly onEdit?: ((messageId: string, content: string) => Promise<void>) | undefined;
   readonly onDelete?: ((messageId: string) => Promise<void>) | undefined;
@@ -231,6 +188,7 @@ function MessageList({
   currentUserId,
   loading,
   hasMore,
+  highlightedMessageId,
   onLoadMore,
   onEdit,
   onDelete,
@@ -242,6 +200,16 @@ function MessageList({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
+
+  // Scroll to highlighted message
+  useEffect(() => {
+    if (highlightedMessageId) {
+      const element = document.getElementById(`message-${highlightedMessageId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [highlightedMessageId]);
 
   // Handle scroll position
   const handleScroll = useCallback(() => {
@@ -317,6 +285,7 @@ function MessageList({
           loading,
           messages,
           currentUserId,
+          highlightedMessageId,
           onEdit,
           onDelete,
           onReact,
@@ -345,6 +314,7 @@ function getMessagesContent({
   loading,
   messages,
   currentUserId,
+  highlightedMessageId,
   onEdit,
   onDelete,
   onReact,
@@ -353,6 +323,7 @@ function getMessagesContent({
   loading?: boolean | undefined;
   messages: Message[];
   currentUserId: string;
+  highlightedMessageId?: string | null;
   onEdit?: ((messageId: string, content: string) => Promise<void>) | undefined;
   onDelete?: ((messageId: string) => Promise<void>) | undefined;
   onReact?: ((messageId: string, emoji: string) => Promise<void>) | undefined;
@@ -407,9 +378,17 @@ function getMessagesContent({
         const showDivider = shouldShowDateDivider(message, previousMessage);
         const isGrouped = shouldGroupMessages(message, previousMessage);
         const isOwn = message.senderId === currentUserId;
+        const isHighlighted = message.id === highlightedMessageId;
 
         return (
-          <div key={message.id}>
+          <div
+            key={message.id}
+            id={`message-${message.id}`}
+            className={cn(
+              'transition-colors duration-500',
+              isHighlighted && 'bg-yellow-100 dark:bg-yellow-900/30'
+            )}
+          >
             {showDivider && (
               <div className="my-4 flex items-center gap-4">
                 <div className="bg-border h-px flex-1" />
@@ -446,6 +425,7 @@ export function MessageThread({
   loading,
   hasMore,
   typingUsers = [],
+  highlightedMessageId,
   onLoadMore,
   onSendMessage,
   onEditMessage,
@@ -481,6 +461,7 @@ export function MessageThread({
       <MessageList
         currentUserId={currentUserId}
         hasMore={hasMore}
+        highlightedMessageId={highlightedMessageId}
         loading={loading}
         messages={messages}
         onDelete={onDeleteMessage}

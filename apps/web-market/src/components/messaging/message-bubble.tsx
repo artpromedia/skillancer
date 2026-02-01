@@ -13,9 +13,6 @@ import {
   DropdownMenuTrigger,
 } from '@skillancer/ui';
 import {
-  Check,
-  CheckCheck,
-  Clock,
   Copy,
   Download,
   Edit,
@@ -27,17 +24,12 @@ import {
   Reply,
   Smile,
   Trash2,
-  X,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
-import type {
-  Message,
-  MessageAttachment,
-  MessageReaction,
-  MessageStatus,
-  LinkPreview,
-} from '@/lib/api/messages';
+import { StatusIcon } from './read-receipts';
+
+import type { Message, MessageAttachment, MessageReaction, LinkPreview } from '@/lib/api/messages';
 
 // ============================================================================
 // Types
@@ -85,31 +77,6 @@ function QuickReactions({ onReact, onClose }: Readonly<QuickReactionsProps>) {
       ))}
     </div>
   );
-}
-
-// ============================================================================
-// Message Status Icon
-// ============================================================================
-
-interface StatusIconProps {
-  status: MessageStatus;
-}
-
-function StatusIcon({ status }: Readonly<StatusIconProps>) {
-  switch (status) {
-    case 'SENDING':
-      return <Clock className="text-muted-foreground h-3 w-3" />;
-    case 'SENT':
-      return <Check className="text-muted-foreground h-3 w-3" />;
-    case 'DELIVERED':
-      return <CheckCheck className="text-muted-foreground h-3 w-3" />;
-    case 'READ':
-      return <CheckCheck className="h-3 w-3 text-blue-500" />;
-    case 'FAILED':
-      return <X className="h-3 w-3 text-red-500" />;
-    default:
-      return null;
-  }
 }
 
 // ============================================================================
