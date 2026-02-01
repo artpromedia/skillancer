@@ -25,7 +25,7 @@ import {
 // ============================================================================
 
 export interface ErrorProviderProps {
-  children: ReactNode;
+  readonly children: ReactNode;
 }
 
 interface ApiErrorEvent extends CustomEvent {
@@ -43,7 +43,7 @@ interface ApiErrorEvent extends CustomEvent {
 let errorTracking: typeof import('@skillancer/error-tracking/react') | null = null;
 
 async function loadErrorTracking() {
-  if (typeof window !== 'undefined' && !errorTracking) {
+  if (globalThis.window && !errorTracking) {
     try {
       errorTracking = await import('@skillancer/error-tracking/react');
 
@@ -52,8 +52,8 @@ async function loadErrorTracking() {
         environment: process.env.NODE_ENV,
         release: process.env.NEXT_PUBLIC_VERSION,
         appName: 'web-cockpit',
-        sampleRate: process.env.NODE_ENV === 'production' ? 1.0 : 0.1,
-        tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
+        sampleRate: process.env.NODE_ENV === 'production' ? 1 : 0.1,
+        tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1,
       });
     } catch (e) {
       console.warn('[ErrorProvider] Error tracking not available:', e);
@@ -67,8 +67,8 @@ async function loadErrorTracking() {
 // ============================================================================
 
 interface ErrorFallbackProps {
-  error: Error;
-  resetError: () => void;
+  readonly error: Error;
+  readonly resetError: () => void;
 }
 
 function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
@@ -131,7 +131,7 @@ class ErrorBoundaryClass extends Component<
 // Error Handler Component (inside Toast context)
 // ============================================================================
 
-function ErrorHandler({ children }: { children: ReactNode }) {
+function ErrorHandler({ children }: { readonly children: ReactNode }) {
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -148,12 +148,12 @@ function ErrorHandler({ children }: { children: ReactNode }) {
 
       // Handle authentication errors - redirect to login
       if (status === 401 || code === 'AUTH_SESSION_EXPIRED' || code === 'AUTH_UNAUTHORIZED') {
-        if (typeof window !== 'undefined') {
-          window.localStorage.removeItem('cockpit_auth_token');
-          window.sessionStorage.removeItem('cockpit_auth_token');
+        if (globalThis.window) {
+          globalThis.localStorage.removeItem('cockpit_auth_token');
+          globalThis.sessionStorage.removeItem('cockpit_auth_token');
         }
 
-        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        const returnUrl = encodeURIComponent(globalThis.location.pathname + globalThis.location.search);
         router.push(`/auth/login?returnUrl=${returnUrl}&reason=session_expired`);
         return;
       }
@@ -196,7 +196,7 @@ function ErrorHandler({ children }: { children: ReactNode }) {
     });
 
     // Listen for API errors
-    window.addEventListener('api-error', handleApiError);
+    globalThis.addEventListener('api-error', handleApiError);
 
     // Listen for unhandled promise rejections
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -210,11 +210,11 @@ function ErrorHandler({ children }: { children: ReactNode }) {
       });
     };
 
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    globalThis.addEventListener('unhandledrejection', handleUnhandledRejection);
 
     return () => {
-      window.removeEventListener('api-error', handleApiError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      globalThis.removeEventListener('api-error', handleApiError);
+      globalThis.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
   }, [handleApiError]);
 
@@ -255,8 +255,8 @@ export function dispatchApiError(detail: {
   status?: number;
   message?: string;
 }): void {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('api-error', { detail }));
+  if (globalThis.window) {
+    globalThis.dispatchEvent(new CustomEvent('api-error', { detail }));
   }
 }
 

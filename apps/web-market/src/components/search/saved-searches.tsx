@@ -382,13 +382,13 @@ export function SavedSearchesList({ className }: Readonly<SavedSearchesListProps
     isDeleting,
   } = useSavedSearches();
 
-  const [_editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
+  const [, setEditingSearch] = useState<SavedSearch | null>(null);
 
   if (isLoading) {
     return (
       <div className={cn('space-y-4', className)}>
         {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i}>
+          <Card key={`skeleton-card-${i}`}>
             <CardContent className="p-4">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-40" />
@@ -410,7 +410,7 @@ export function SavedSearchesList({ className }: Readonly<SavedSearchesListProps
           description={error.message}
           icon={<Bookmark className="h-12 w-12 text-red-500" />}
           title="Failed to load saved searches"
-          onAction={() => window.location.reload()}
+          onAction={() => globalThis.location.reload()}
         />
       </div>
     );
@@ -425,7 +425,7 @@ export function SavedSearchesList({ className }: Readonly<SavedSearchesListProps
           icon={<Bookmark className="h-12 w-12" />}
           title="No saved searches yet"
           onAction={() => {
-            window.location.href = '/jobs';
+            globalThis.location.href = '/jobs';
           }}
         />
       </div>
@@ -440,7 +440,7 @@ export function SavedSearchesList({ className }: Readonly<SavedSearchesListProps
           <div className="flex items-center gap-2">
             <Bell className="text-primary h-4 w-4" />
             <span className="text-sm font-medium">
-              {totalNewJobs} new job{totalNewJobs !== 1 ? 's' : ''} match your saved searches
+              {totalNewJobs} new job{totalNewJobs === 1 ? '' : 's'} match your saved searches
             </span>
           </div>
         </div>
@@ -516,7 +516,6 @@ export function SaveSearchButton({
         onOpenChange={setDialogOpen}
         onSave={async (data) => {
           await createSearch(data);
-          return;
         }}
       />
     </>
@@ -555,15 +554,17 @@ export function SavedSearchesDropdown({ className }: Readonly<SavedSearchesDropd
         </div>
         <DropdownMenuSeparator />
 
-        {isLoading ? (
+        {isLoading && (
           <div className="space-y-2 p-2">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
+              <Skeleton key={`dropdown-skeleton-${i}`} className="h-10 w-full" />
             ))}
           </div>
-        ) : savedSearches.length === 0 ? (
+        )}
+        {!isLoading && savedSearches.length === 0 && (
           <div className="text-muted-foreground p-4 text-center text-sm">No saved searches yet</div>
-        ) : (
+        )}
+        {!isLoading && savedSearches.length > 0 && (
           <>
             {savedSearches.slice(0, 5).map((search) => (
               <DropdownMenuItem key={search.id} asChild>

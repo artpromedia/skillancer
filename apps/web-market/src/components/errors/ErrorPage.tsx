@@ -18,21 +18,21 @@ import { useRouter } from 'next/navigation';
 
 export interface ErrorPageProps {
   /** Error type to display */
-  type?: 'error' | '404' | '403' | '500' | 'offline';
+  readonly type?: 'error' | '404' | '403' | '500' | 'offline';
   /** Error code (e.g., 404, 500) */
-  code?: number;
+  readonly code?: number;
   /** Main error title */
-  title?: string;
+  readonly title?: string;
   /** Detailed error message */
-  message?: string;
+  readonly message?: string;
   /** The actual error object (for development) */
-  error?: Error;
+  readonly error?: Error;
   /** Callback when retry is clicked */
-  onRetry?: () => void;
+  readonly onRetry?: () => void;
   /** Whether to show the back button */
-  showBackButton?: boolean;
+  readonly showBackButton?: boolean;
   /** Whether to show the home button */
-  showHomeButton?: boolean;
+  readonly showHomeButton?: boolean;
 }
 
 // ============================================================================
@@ -109,7 +109,7 @@ export function ErrorPage({
         </div>
 
         {/* Error Code */}
-        {code && <p className="text-muted-foreground mb-2 text-sm font-medium">Error {code}</p>}
+        {Boolean(code) && <p className="text-muted-foreground mb-2 text-sm font-medium">Error {code}</p>}
 
         {/* Title */}
         <h1 className="mb-3 text-2xl font-bold tracking-tight">{displayTitle}</h1>

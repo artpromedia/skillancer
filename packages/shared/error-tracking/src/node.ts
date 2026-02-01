@@ -383,5 +383,7 @@ export async function close(timeout = 2000): Promise<boolean> {
 // RE-EXPORTS
 // =============================================================================
 
-export { Sentry };
-export type { ErrorTrackingConfig, UserContext, ErrorContext };
+// eslint-disable-next-line no-barrel-files -- Intentional re-export for module consumers
+export * as Sentry from '@sentry/node';
+// eslint-disable-next-line no-barrel-files -- Intentional re-export for module consumers
+export type { ErrorTrackingConfig, UserContext, ErrorContext } from './index.js';

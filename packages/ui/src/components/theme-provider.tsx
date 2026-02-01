@@ -62,7 +62,7 @@ export function ThemeProvider({
   disableTransitionOnChange = false,
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<Theme>(() => {
-    if (typeof window === 'undefined') {
+    if (!globalThis.window) {
       return defaultTheme;
     }
     try {
@@ -77,8 +77,8 @@ export function ThemeProvider({
 
   // Get system theme
   const getSystemTheme = React.useCallback((): 'dark' | 'light' => {
-    if (typeof window === 'undefined') return 'light';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    if (!globalThis.window) return 'light';
+    return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }, []);
 
   // Apply theme to document
@@ -87,9 +87,9 @@ export function ThemeProvider({
       const resolved = newTheme === 'system' ? getSystemTheme() : newTheme;
       setResolvedTheme(resolved);
 
-      if (typeof window === 'undefined') return;
+      if (!globalThis.window) return;
 
-      const root = window.document.documentElement;
+      const root = globalThis.document.documentElement;
 
       // Disable transitions if requested
       if (disableTransitionOnChange) {
@@ -100,13 +100,13 @@ export function ThemeProvider({
         root.classList.remove('light', 'dark');
         root.classList.add(resolved);
       } else {
-        root.setAttribute('data-theme', resolved);
+        root.dataset.theme = resolved;
       }
 
       // Re-enable transitions
       if (disableTransitionOnChange) {
-        // Force reflow
-        root.offsetHeight;
+        // Force reflow by reading offsetHeight
+        void root.offsetHeight;
         root.style.removeProperty('transition');
       }
     },
@@ -136,7 +136,7 @@ export function ThemeProvider({
   React.useEffect(() => {
     if (!enableSystem) return undefined;
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
 
     const handleChange = () => {
       if (theme === 'system') {

@@ -6,7 +6,6 @@
 import type { AxiosError } from 'axios';
 import {
   ErrorCode,
-  ErrorMessage,
   HttpStatusToErrorCode,
   RetryableErrorCodes,
   DefaultRetryConfig,
@@ -175,12 +174,12 @@ export function parseAxiosError(error: AxiosError<ApiErrorResponse>): ApiError {
         requestId,
       });
 
-    case 429:
+    case 429: {
       const rateLimitInfo = {
-        limit: parseInt(response.headers['x-ratelimit-limit'] || '0', 10),
-        remaining: parseInt(response.headers['x-ratelimit-remaining'] || '0', 10),
-        reset: new Date(parseInt(response.headers['x-ratelimit-reset'] || '0', 10) * 1000),
-        retryAfter: parseInt(response.headers['retry-after'] || '60', 10),
+        limit: Number.parseInt(response.headers['x-ratelimit-limit'] || '0', 10),
+        remaining: Number.parseInt(response.headers['x-ratelimit-remaining'] || '0', 10),
+        reset: new Date(Number.parseInt(response.headers['x-ratelimit-reset'] || '0', 10) * 1000),
+        retryAfter: Number.parseInt(response.headers['retry-after'] || '60', 10),
       };
       return new RateLimitError(message, {
         code,
@@ -189,6 +188,7 @@ export function parseAxiosError(error: AxiosError<ApiErrorResponse>): ApiError {
         cause: error,
         requestId,
       });
+    }
 
     case 500:
     case 502:
@@ -254,10 +254,10 @@ export async function parseFetchResponse(response: Response): Promise<ApiError> 
       return new RateLimitError(message, {
         code,
         rateLimit: {
-          limit: parseInt(response.headers.get('x-ratelimit-limit') || '0', 10),
-          remaining: parseInt(response.headers.get('x-ratelimit-remaining') || '0', 10),
-          reset: new Date(parseInt(response.headers.get('x-ratelimit-reset') || '0', 10) * 1000),
-          retryAfter: parseInt(response.headers.get('retry-after') || '60', 10),
+          limit: Number.parseInt(response.headers.get('x-ratelimit-limit') || '0', 10),
+          remaining: Number.parseInt(response.headers.get('x-ratelimit-remaining') || '0', 10),
+          reset: new Date(Number.parseInt(response.headers.get('x-ratelimit-reset') || '0', 10) * 1000),
+          retryAfter: Number.parseInt(response.headers.get('retry-after') || '60', 10),
         },
         details: errorData?.details,
         requestId,

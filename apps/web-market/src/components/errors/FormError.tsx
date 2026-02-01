@@ -43,11 +43,11 @@ export interface FormFieldErrorProps extends Omit<FormErrorProps, 'messages'> {
 
 export interface FormSummaryErrorProps {
   /** Map of field names to error messages */
-  errors: Record<string, string | string[] | undefined>;
+  readonly errors: Record<string, string | string[] | undefined>;
   /** Title for the error summary */
-  title?: string;
+  readonly title?: string;
   /** Additional CSS classes */
-  className?: string;
+  readonly className?: string;
 }
 
 // ============================================================================
@@ -138,8 +138,8 @@ export const FormError = forwardRef<HTMLParagraphElement, FormErrorProps>(functi
         role="alert"
       >
         <ul className="space-y-1">
-          {messages.map((msg, index) => (
-            <li key={index} className="flex items-center gap-1.5 text-sm">
+          {messages.map((msg) => (
+            <li key={msg} className="flex items-center gap-1.5 text-sm">
               {showIcon && <Icon className={`h-4 w-4 flex-shrink-0 ${styles.iconColor}`} />}
               <span>{msg}</span>
             </li>
@@ -163,7 +163,7 @@ export const FormError = forwardRef<HTMLParagraphElement, FormErrorProps>(functi
  * />
  * ```
  */
-export function FormFieldError({ fieldName, id, ...props }: FormFieldErrorProps) {
+export function FormFieldError({ fieldName, id, ...props }: Readonly<FormFieldErrorProps>) {
   const errorId = id || (fieldName ? `${fieldName}-error` : undefined);
 
   return <FormError {...props} id={errorId} />;
@@ -209,7 +209,7 @@ export function FormSummaryError({
               return messages.map((msg, index) => (
                 <li key={`${field}-${index}`}>
                   <span className="font-medium capitalize">
-                    {field.replace(/([A-Z])/g, ' $1').trim()}
+                    {field.replaceAll(/([A-Z])/g, ' $1').trim()}
                   </span>
                   : {msg}
                 </li>
@@ -234,11 +234,11 @@ export function FormSummaryError({
  */
 export interface ApiFormErrorProps {
   /** Error object from API */
-  error?: Error | null;
+  readonly error?: Error | null;
   /** Fallback message if error has no message */
-  fallbackMessage?: string;
+  readonly fallbackMessage?: string;
   /** Additional CSS classes */
-  className?: string;
+  readonly className?: string;
 }
 
 export function ApiFormError({

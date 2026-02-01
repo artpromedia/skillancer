@@ -19,7 +19,7 @@ import { showApiErrorToast, showNetworkErrorToast } from '@/components/errors/Er
 // ============================================================================
 
 export interface ErrorProviderProps {
-  children: ReactNode;
+  readonly children: ReactNode;
 }
 
 interface ApiErrorEvent extends CustomEvent {
@@ -55,7 +55,7 @@ interface ErrorTrackingModule {
 let errorTracking: ErrorTrackingModule | null = null;
 
 async function loadErrorTracking(): Promise<ErrorTrackingModule | null> {
-  if (typeof window !== 'undefined' && !errorTracking) {
+  if (globalThis.window && !errorTracking) {
     try {
       // Dynamic import with graceful fallback if package not available
       // @ts-expect-error - Package may not be available at build time
@@ -69,8 +69,8 @@ async function loadErrorTracking(): Promise<ErrorTrackingModule | null> {
           environment: process.env.NODE_ENV,
           release: process.env.NEXT_PUBLIC_VERSION,
           appName: 'web-market',
-          sampleRate: process.env.NODE_ENV === 'production' ? 1.0 : 0.1,
-          tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
+          sampleRate: process.env.NODE_ENV === 'production' ? 1 : 0.1,
+          tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1,
         });
       }
     } catch (e) {
@@ -85,8 +85,8 @@ async function loadErrorTracking(): Promise<ErrorTrackingModule | null> {
 // ============================================================================
 
 interface ErrorFallbackProps {
-  error: Error;
-  resetError: () => void;
+  readonly error: Error;
+  readonly resetError: () => void;
 }
 
 function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
@@ -171,13 +171,13 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
       // Handle authentication errors
       if (status === 401 || code === 'AUTH_SESSION_EXPIRED' || code === 'AUTH_UNAUTHORIZED') {
         // Clear any stored auth state
-        if (typeof window !== 'undefined') {
-          window.localStorage.removeItem('auth_token');
-          window.sessionStorage.removeItem('auth_token');
+        if (globalThis.window) {
+          globalThis.localStorage.removeItem('auth_token');
+          globalThis.sessionStorage.removeItem('auth_token');
         }
 
         // Redirect to login with return URL
-        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        const returnUrl = encodeURIComponent(globalThis.location.pathname + globalThis.location.search);
         router.push(`/auth/login?returnUrl=${returnUrl}&reason=session_expired`);
         return;
       }
@@ -223,7 +223,7 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
     });
 
     // Listen for API errors dispatched via custom events
-    window.addEventListener('api-error', handleApiError);
+    globalThis.addEventListener('api-error', handleApiError);
 
     // Listen for unhandled promise rejections
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -237,11 +237,11 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
       });
     };
 
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    globalThis.addEventListener('unhandledrejection', handleUnhandledRejection);
 
     return () => {
-      window.removeEventListener('api-error', handleApiError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      globalThis.removeEventListener('api-error', handleApiError);
+      globalThis.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
   }, [handleApiError]);
 
