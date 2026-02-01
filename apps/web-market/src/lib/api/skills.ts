@@ -5,7 +5,7 @@
  * Functions for skill taxonomy, search, and verification
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4001/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/market';
 const SKILLPOD_API_URL = process.env.NEXT_PUBLIC_SKILLPOD_API_URL ?? 'http://localhost:4003/api/v1';
 
 // ============================================================================

@@ -34,6 +34,7 @@ import { profileCompletionRoutes } from './routes/profile-completion.js';
 import { profileRoutes } from './routes/profile.js';
 import { createTrustScoreRoutes } from './routes/trust-score.js';
 import { verificationRoutes } from './routes/verification.js';
+import { contactVerificationRoutes } from './routes/contact-verification.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { workHistoryRoutes } from './routes/work-history.js';
 import { gdprRoutes } from './routes/gdpr.js';
@@ -212,6 +213,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Verification routes (/verification prefix)
   await app.register(verificationRoutes, { prefix: '/verification' });
+
+  // Contact verification routes (email/phone - same prefix)
+  await app.register(contactVerificationRoutes, { prefix: '/verification' });
 
   // Webhook routes (/webhooks prefix)
   await app.register(webhookRoutes, { prefix: '/webhooks' });

@@ -19,8 +19,10 @@ interface PersonaEmbedProps {
 }
 
 // ============================================================================
-// Persona Configuration
+// Configuration
 // ============================================================================
+
+const AUTH_API_URL = process.env.NEXT_PUBLIC_AUTH_API_URL ?? 'http://localhost:4000/api/auth';
 
 const PERSONA_TEMPLATE_IDS: Record<VerificationTier, string> = {
   BASIC: process.env.NEXT_PUBLIC_PERSONA_TEMPLATE_BASIC ?? 'itmpl_basic',
@@ -34,7 +36,12 @@ const PERSONA_ENVIRONMENT = process.env.NEXT_PUBLIC_PERSONA_ENVIRONMENT ?? 'sand
 // Component
 // ============================================================================
 
-export function PersonaEmbed({ tier, onComplete, onCancel, className }: PersonaEmbedProps) {
+export function PersonaEmbed({
+  tier,
+  onComplete,
+  onCancel,
+  className,
+}: Readonly<PersonaEmbedProps>) {
   const [status, setStatus] = useState<InquiryStatus>('loading');
   const [inquiryId, setInquiryId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,10 +53,11 @@ export function PersonaEmbed({ tier, onComplete, onCancel, className }: PersonaE
       setError(null);
 
       // Call backend to create inquiry session
-      const response = await fetch('/api/verification/start', {
+      const response = await fetch(`${AUTH_API_URL}/verification/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier }),
+        credentials: 'include',
+        body: JSON.stringify({ verificationType: tier }),
       });
 
       if (!response.ok) {
@@ -76,7 +84,7 @@ export function PersonaEmbed({ tier, onComplete, onCancel, className }: PersonaE
   // Load Persona SDK script
   const loadPersonaSDK = async (): Promise<void> => {
     return new Promise((resolve, reject) => {
-      if ((window as unknown as { Persona?: unknown }).Persona) {
+      if ((globalThis as unknown as { Persona?: unknown }).Persona) {
         resolve();
         return;
       }
@@ -92,7 +100,7 @@ export function PersonaEmbed({ tier, onComplete, onCancel, className }: PersonaE
 
   // Start Persona client
   const startPersonaClient = (inquiryId: string, sessionToken: string) => {
-    const Persona = (window as unknown as { Persona: PersonaClient }).Persona;
+    const Persona = (globalThis as unknown as { Persona: PersonaClient }).Persona;
 
     const client = new Persona.Client({
       templateId: PERSONA_TEMPLATE_IDS[tier],

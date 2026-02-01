@@ -32,6 +32,15 @@ model User {
   timezone          String            @default("UTC") @db.VarChar(50)
   locale            String            @default("en") @db.VarChar(10)
 
+  // Contact verification
+  emailVerified     Boolean           @default(false) @map("email_verified")
+  emailVerifiedAt   DateTime?         @map("email_verified_at")
+  phone             String?           @db.VarChar(20)
+  phoneVerified     Boolean           @default(false) @map("phone_verified")
+  phoneVerifiedAt   DateTime?         @map("phone_verified_at")
+  paymentVerified   Boolean           @default(false) @map("payment_verified")
+  paymentVerifiedAt DateTime?         @map("payment_verified_at")
+
   // OAuth fields
   oauthProvider String? @map("oauth_provider") @db.VarChar(50)
   oauthId       String? @map("oauth_id") @db.VarChar(255)
@@ -238,6 +247,11 @@ model User {
 
   // Sprint M3: SkillPod B2B Enterprise
   skillPodMemberships      SkillPodTenantUser[]
+
+  // Identity Verification
+  verificationInquiries    VerificationInquiry[]
+  verificationBadges       UserVerificationBadge[] @relation("UserVerificationBadges")
+  verificationCodes        VerificationCode[]
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -13674,4 +13688,162 @@ enum UsageAlertType {
   LIMIT_REACHED      // 100% of quota
   UNUSUAL_USAGE      // Spike detection
   RATE_LIMIT_HIT     // Too many requests
+}
+
+// ============================================================================
+// IDENTITY VERIFICATION (Persona Integration)
+// ============================================================================
+
+enum IdentityVerificationType {
+  BASIC      // ID + Selfie
+  ENHANCED   // Basic + AML screening
+  PREMIUM    // Enhanced + Biometrics
+}
+
+enum IdentityVerificationStatus {
+  PENDING
+  IN_PROGRESS
+  NEEDS_REVIEW
+  APPROVED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+enum VerificationDocumentType {
+  PASSPORT
+  DRIVERS_LICENSE
+  NATIONAL_ID
+  RESIDENCE_PERMIT
+  UTILITY_BILL
+  BANK_STATEMENT
+  TAX_DOCUMENT
+  SELFIE
+  OTHER
+}
+
+enum VerificationDocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+model VerificationInquiry {
+  id                String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String                     @map("user_id") @db.Uuid
+  personaInquiryId  String                     @unique @map("persona_inquiry_id") @db.VarChar(100)
+  personaTemplateId String?                    @map("persona_template_id") @db.VarChar(100)
+  verificationType  IdentityVerificationType   @map("verification_type")
+  status            IdentityVerificationStatus @default(PENDING)
+  resultLevel       VerificationLevel?         @map("result_level")
+  
+  // Timestamps
+  initiatedAt       DateTime                   @default(now()) @map("initiated_at")
+  completedAt       DateTime?                  @map("completed_at")
+  expiresAt         DateTime?                  @map("expires_at")
+  
+  // Review details
+  reviewedBy        String?                    @map("reviewed_by") @db.Uuid
+  reviewedAt        DateTime?                  @map("reviewed_at")
+  reviewNotes       String?                    @map("review_notes") @db.Text
+  declineReasons    String[]                   @map("decline_reasons")
+  
+  // Raw response from Persona
+  rawResponse       Json?                      @map("raw_response")
+  
+  // Relations
+  user              User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents         VerificationDocument[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([personaInquiryId])
+  @@map("verification_inquiries")
+}
+
+model VerificationDocument {
+  id               String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  inquiryId        String                     @map("inquiry_id") @db.Uuid
+  documentType     VerificationDocumentType   @map("document_type")
+  status           VerificationDocumentStatus @default(PENDING)
+  
+  // Document details
+  country          String?                    @db.VarChar(3)
+  expirationDate   DateTime?                  @map("expiration_date")
+  
+  // Verification results
+  frontImageUrl    String?                    @map("front_image_url") @db.VarChar(500)
+  backImageUrl     String?                    @map("back_image_url") @db.VarChar(500)
+  
+  // Extracted data (encrypted)
+  extractedData    Json?                      @map("extracted_data")
+  
+  // Timestamps
+  createdAt        DateTime                   @default(now()) @map("created_at")
+  updatedAt        DateTime                   @updatedAt @map("updated_at")
+  
+  // Relations
+  inquiry          VerificationInquiry        @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  
+  @@index([inquiryId])
+  @@index([documentType])
+  @@map("verification_documents")
+}
+
+model UserVerificationBadge {
+  id            String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId        String            @map("user_id") @db.Uuid
+  level         VerificationLevel
+  
+  // Badge validity
+  grantedAt     DateTime          @default(now()) @map("granted_at")
+  expiresAt     DateTime          @map("expires_at")
+  isActive      Boolean           @default(true) @map("is_active")
+  
+  // Source inquiry
+  inquiryId     String?           @map("inquiry_id") @db.Uuid
+  
+  // Revocation
+  revokedAt     DateTime?         @map("revoked_at")
+  revokedBy     String?           @map("revoked_by") @db.Uuid
+  revokeReason  String?           @map("revoke_reason") @db.Text
+  
+  // Relations
+  user          User              @relation("UserVerificationBadges", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([level, isActive])
+  @@map("user_verification_badges")
+}
+
+// ============================================================================
+// VERIFICATION CODES (Email/Phone)
+// ============================================================================
+
+enum VerificationCodeType {
+  EMAIL
+  PHONE
+}
+
+model VerificationCode {
+  id          String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String               @map("user_id") @db.Uuid
+  type        VerificationCodeType
+  codeHash    String               @map("code_hash") @db.VarChar(100)
+  destination String               @db.VarChar(255) // Email or phone number
+  
+  // Attempt tracking
+  attempts    Int                  @default(0)
+  
+  // Timestamps
+  createdAt   DateTime             @default(now()) @map("created_at")
+  expiresAt   DateTime             @map("expires_at")
+  
+  // Relations
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, type])
+  @@index([expiresAt])
+  @@map("verification_codes")
 }
