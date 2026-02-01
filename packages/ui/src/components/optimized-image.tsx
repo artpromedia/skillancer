@@ -158,8 +158,7 @@ export const OptimizedImage = React.forwardRef<HTMLDivElement, OptimizedImagePro
             roundedClasses[rounded],
             isLoading ? 'opacity-0' : 'opacity-100'
           )}
-          loading={lazy && !priority ? 'lazy' : undefined}
-          priority={priority}
+          loading={priority ? 'eager' : lazy ? 'lazy' : undefined}
           onLoad={handleLoad}
           onError={handleError}
           {...props}

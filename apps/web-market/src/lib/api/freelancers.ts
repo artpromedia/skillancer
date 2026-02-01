@@ -17,6 +17,9 @@ export type ProficiencyLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPER
 export type AvailabilityStatus = 'AVAILABLE' | 'PARTIALLY_AVAILABLE' | 'NOT_AVAILABLE';
 export type CredentialSource = 'SKILLPOD' | 'EXTERNAL' | 'MANUAL';
 export type CredentialStatus = 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'PENDING_RENEWAL';
+export type PortfolioItemType = 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
+export type VerificationTier = 'BASIC' | 'ENHANCED' | 'PREMIUM';
+export type VerificationProgressStatus = 'pending' | 'completed' | 'failed' | 'expired';
 
 export interface FreelancerSkill {
   id: string;
@@ -62,8 +65,8 @@ export interface PortfolioItem {
   mediaUrl?: string;
   mediaUrls?: string[];
   images?: string[];
-  type: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
-  mediaType?: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
+  type: PortfolioItemType;
+  mediaType?: PortfolioItemType;
   projectUrl?: string;
   externalUrl?: string;
   category?: string;
@@ -348,8 +351,8 @@ export interface VerificationStatus {
   emailVerifiedAt?: string;
   pendingVerification?: {
     inquiryId: string;
-    tier: 'BASIC' | 'ENHANCED' | 'PREMIUM';
-    status: 'pending' | 'completed' | 'failed' | 'expired';
+    tier: VerificationTier;
+    status: VerificationProgressStatus;
     startedAt: string;
   };
 }
@@ -382,6 +385,8 @@ function buildQueryString(params: Record<string, unknown>): string {
     if (value !== undefined && value !== null && value !== '') {
       if (Array.isArray(value)) {
         value.forEach((v) => searchParams.append(key, String(v)));
+      } else if (typeof value === 'object') {
+        searchParams.append(key, JSON.stringify(value));
       } else {
         searchParams.append(key, String(value));
       }
@@ -723,7 +728,7 @@ export async function deleteWorkHistoryItem(token: string, itemId: string): Prom
  * Get current user's portfolio items (simplified - uses stored token)
  */
 export async function getMyPortfolio(): Promise<{ items: PortfolioItem[] }> {
-  const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') ?? '') : '';
+  const token = globalThis.window ? (localStorage.getItem('auth_token') ?? '') : '';
   const items = await apiFetch<PortfolioItem[]>(`${API_BASE_URL}/profiles/me/portfolio`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -734,7 +739,7 @@ export async function getMyPortfolio(): Promise<{ items: PortfolioItem[] }> {
  * Set portfolio item as featured (simplified)
  */
 export async function setPortfolioItemFeatured(itemId: string, isFeatured: boolean): Promise<void> {
-  const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') ?? '') : '';
+  const token = globalThis.window ? (localStorage.getItem('auth_token') ?? '') : '';
   await apiFetch<void>(`${API_BASE_URL}/profiles/me/portfolio/${itemId}/featured`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
@@ -750,7 +755,7 @@ export async function setPortfolioItemFeatured(itemId: string, isFeatured: boole
  * Get current user's skills (simplified)
  */
 export async function getMySkills(): Promise<FreelancerSkill[]> {
-  const token = typeof window !== 'undefined' ? (localStorage.getItem('auth_token') ?? '') : '';
+  const token = globalThis.window ? (localStorage.getItem('auth_token') ?? '') : '';
   return apiFetch<FreelancerSkill[]>(`${API_BASE_URL}/profiles/me/skills`, {
     headers: { Authorization: `Bearer ${token}` },
   });

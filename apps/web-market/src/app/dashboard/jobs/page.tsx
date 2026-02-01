@@ -297,10 +297,11 @@ function JobCard({ isLoading, job, onClose, onPause, onResume }: Readonly<JobCar
 }
 
 function JobsListSkeleton() {
+  const skeletonIds = ['jobs-skeleton-1', 'jobs-skeleton-2', 'jobs-skeleton-3'] as const;
   return (
     <div className="space-y-4">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <Card key={`skeleton-${i}`}>
+      {skeletonIds.map((id) => (
+        <Card key={id}>
           <CardContent className="p-6">
             <Skeleton className="mb-2 h-6 w-3/4" />
             <Skeleton className="mb-4 h-4 w-full" />
@@ -513,41 +514,48 @@ export default function ClientJobsPage() {
       </div>
 
       {/* Jobs list */}
-      {isLoading ? (
-        <JobsListSkeleton />
-      ) : error ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="text-destructive mx-auto mb-4 h-8 w-8" />
-            <p className="text-destructive mb-2 font-medium">Failed to load jobs</p>
-            <p className="text-muted-foreground text-sm">{error.message}</p>
-          </CardContent>
-        </Card>
-      ) : filteredJobs.length === 0 ? (
-        <EmptyState status={statusFilter} />
-      ) : (
-        <div className="space-y-4">
-          {filteredJobs.map((job) => (
-            <JobCard
-              key={job.id}
-              isLoading={isActionLoading}
-              job={job}
-              onClose={handleClose}
-              onPause={handlePause}
-              onResume={handleResume}
-            />
-          ))}
+      {(() => {
+        if (isLoading) {
+          return <JobsListSkeleton />;
+        }
+        if (error) {
+          return (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <AlertCircle className="text-destructive mx-auto mb-4 h-8 w-8" />
+                <p className="text-destructive mb-2 font-medium">Failed to load jobs</p>
+                <p className="text-muted-foreground text-sm">{error.message}</p>
+              </CardContent>
+            </Card>
+          );
+        }
+        if (filteredJobs.length === 0) {
+          return <EmptyState status={statusFilter} />;
+        }
+        return (
+          <div className="space-y-4">
+            {filteredJobs.map((job) => (
+              <JobCard
+                key={job.id}
+                isLoading={isActionLoading}
+                job={job}
+                onClose={handleClose}
+                onPause={handlePause}
+                onResume={handleResume}
+              />
+            ))}
 
-          {/* Load more */}
-          {hasMore && (
-            <div className="flex justify-center pt-4">
-              <Button disabled={isFetching} variant="outline" onClick={loadMore}>
-                {isFetching ? 'Loading...' : 'Load More Jobs'}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
+            {/* Load more */}
+            {hasMore && (
+              <div className="flex justify-center pt-4">
+                <Button disabled={isFetching} variant="outline" onClick={loadMore}>
+                  {isFetching ? 'Loading...' : 'Load More Jobs'}
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

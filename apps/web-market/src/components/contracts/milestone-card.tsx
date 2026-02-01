@@ -181,8 +181,8 @@ export function MilestoneCard({
           <div className="space-y-2">
             <p className="text-muted-foreground text-sm font-medium">Deliverables:</p>
             <ul className="space-y-1 text-sm">
-              {milestone.deliverables.map((deliverable, i) => (
-                <li key={i} className="flex items-center gap-2">
+              {milestone.deliverables.map((deliverable) => (
+                <li key={`deliverable-${deliverable.slice(0, 20)}`} className="flex items-center gap-2">
                   <CheckCircle2
                     className={cn(
                       'h-4 w-4',
