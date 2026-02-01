@@ -383,7 +383,8 @@ export function SavedSearchesList({ className }: Readonly<SavedSearchesListProps
   } = useSavedSearches();
 
   // Note: editingSearch functionality will be implemented in future update
-  const [_editingSearch, _setEditingSearch] = useState<SavedSearch | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
 
   if (isLoading) {
     return (

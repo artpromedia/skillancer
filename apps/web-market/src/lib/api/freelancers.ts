@@ -381,14 +381,23 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
 function buildQueryString(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
 
+  const stringifyValue = (val: unknown): string => {
+    if (typeof val === 'object' && val !== null) {
+      return JSON.stringify(val);
+    }
+    // Only stringify primitive types that can safely be converted
+    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+      return String(val);
+    }
+    return '';
+  };
+
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
       if (Array.isArray(value)) {
-        value.forEach((v) => searchParams.append(key, String(v)));
-      } else if (typeof value === 'object') {
-        searchParams.append(key, JSON.stringify(value));
+        value.forEach((v) => searchParams.append(key, stringifyValue(v)));
       } else {
-        searchParams.append(key, String(value));
+        searchParams.append(key, stringifyValue(value));
       }
     }
   });

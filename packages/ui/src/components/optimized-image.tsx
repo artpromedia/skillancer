@@ -290,7 +290,7 @@ export function BackgroundImage({
         alt={alt}
         fill
         className={cn('-z-10 object-cover', positionClasses[position], parallax && 'transform-gpu')}
-        priority={priority}
+        loading={priority ? 'eager' : 'lazy'}
       />
 
       {/* Overlay */}
