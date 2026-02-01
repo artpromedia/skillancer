@@ -945,15 +945,8 @@ export async function completeContract(
   contractId: string,
   data?: CompleteContractData
 ): Promise<Contract> {
-  await new Promise((r) => setTimeout(r, 500));
-
-  const contract = await getContractById(contractId);
-  return {
-    ...contract,
-    status: 'COMPLETED',
-    endDate: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  // Delegates to endContract with optional feedback
+  return endContract(contractId, 'Contract completed', data?.feedback);
 }
 
 /**
@@ -1450,32 +1443,50 @@ function getMockTimeEntries(contractId: string): TimeEntry[] {
   for (let i = 0; i < 7; i++) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
-
-    if (Math.random() > 0.3) {
-      // 70% chance of having entries
-      const numEntries = Math.floor(Math.random() * 3) + 1;
-
-      for (let j = 0; j < numEntries; j++) {
-        entries.push({
-          id: `time-${i}-${j}`,
-          contractId,
-          date: date.toISOString().split('T')[0],
-          startTime: `${9 + j * 3}:00`,
-          endTime: `${11 + j * 3}:30`,
-          duration: 150, // 2.5 hours
-          description: getRandomWorkDescription(),
-          task: Math.random() > 0.5 ? getRandomTask() : undefined,
-          status: i > 2 ? 'APPROVED' : 'PENDING',
-          activityLevel: Math.floor(Math.random() * 40) + 60,
-          memo: Math.random() > 0.7 ? 'Good progress today' : undefined,
-          createdAt: date.toISOString(),
-          updatedAt: date.toISOString(),
-        });
-      }
-    }
+    const dayEntries = generateDayEntries(contractId, date, i);
+    entries.push(...dayEntries);
   }
 
   return entries;
+}
+
+function generateDayEntries(contractId: string, date: Date, dayOffset: number): TimeEntry[] {
+  // 70% chance of having entries
+  if (Math.random() <= 0.3) {
+    return [];
+  }
+
+  const entries: TimeEntry[] = [];
+  const numEntries = Math.floor(Math.random() * 3) + 1;
+
+  for (let j = 0; j < numEntries; j++) {
+    entries.push(createTimeEntry(contractId, date, dayOffset, j));
+  }
+
+  return entries;
+}
+
+function createTimeEntry(
+  contractId: string,
+  date: Date,
+  dayOffset: number,
+  index: number
+): TimeEntry {
+  return {
+    id: `time-${dayOffset}-${index}`,
+    contractId,
+    date: date.toISOString().split('T')[0],
+    startTime: `${9 + index * 3}:00`,
+    endTime: `${11 + index * 3}:30`,
+    duration: 150, // 2.5 hours
+    description: getRandomWorkDescription(),
+    task: Math.random() > 0.5 ? getRandomTask() : undefined,
+    status: dayOffset > 2 ? 'APPROVED' : 'PENDING',
+    activityLevel: Math.floor(Math.random() * 40) + 60,
+    memo: Math.random() > 0.7 ? 'Good progress today' : undefined,
+    createdAt: date.toISOString(),
+    updatedAt: date.toISOString(),
+  };
 }
 
 function getRandomWorkDescription(): string {

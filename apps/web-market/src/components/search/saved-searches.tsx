@@ -74,6 +74,20 @@ interface SavedSearchCardProps {
 // Helper Functions
 // ============================================================================
 
+function formatBudgetRange(budgetMin?: number, budgetMax?: number): string | null {
+  if (!budgetMin && !budgetMax) return null;
+  const min = budgetMin ? `$${budgetMin}` : '';
+  const max = budgetMax ? `$${budgetMax}` : '';
+  if (min && max) return `${min}-${max}`;
+  if (min) return `${min}+`;
+  return `Up to ${max}`;
+}
+
+function formatSkillCount(skills?: string[]): string | null {
+  if (!skills?.length) return null;
+  return `${skills.length} skill${skills.length > 1 ? 's' : ''}`;
+}
+
 function formatFiltersSummary(filters: JobSearchFilters): string {
   const parts: string[] = [];
 
@@ -83,19 +97,13 @@ function formatFiltersSummary(filters: JobSearchFilters): string {
   if (filters.category) {
     parts.push(`Category: ${filters.category}`);
   }
-  if (filters.skills?.length) {
-    parts.push(`${filters.skills.length} skill${filters.skills.length > 1 ? 's' : ''}`);
+  const skillText = formatSkillCount(filters.skills);
+  if (skillText) {
+    parts.push(skillText);
   }
-  if (filters.budgetMin || filters.budgetMax) {
-    const min = filters.budgetMin ? `$${filters.budgetMin}` : '';
-    const max = filters.budgetMax ? `$${filters.budgetMax}` : '';
-    if (min && max) {
-      parts.push(`${min}-${max}`);
-    } else if (min) {
-      parts.push(`${min}+`);
-    } else if (max) {
-      parts.push(`Up to ${max}`);
-    }
+  const budgetText = formatBudgetRange(filters.budgetMin, filters.budgetMax);
+  if (budgetText) {
+    parts.push(budgetText);
   }
   if (filters.location) {
     parts.push(filters.location);
@@ -382,9 +390,9 @@ export function SavedSearchesList({ className }: Readonly<SavedSearchesListProps
     isDeleting,
   } = useSavedSearches();
 
-  // Note: editingSearch functionality will be implemented in future update
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // State for edit dialog (edit functionality can be expanded later)
   const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
+  const isEditing = editingSearch !== null;
 
   if (isLoading) {
     return (
@@ -452,7 +460,7 @@ export function SavedSearchesList({ className }: Readonly<SavedSearchesListProps
       {savedSearches.map((search) => (
         <SavedSearchCard
           key={search.id}
-          isDeleting={isDeleting}
+          isDeleting={isDeleting || isEditing}
           search={search}
           onDelete={() => deleteSearch(search.id)}
           onEdit={() => setEditingSearch(search)}

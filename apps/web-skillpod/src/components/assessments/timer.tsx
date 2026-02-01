@@ -4,6 +4,18 @@ import { cn } from '@skillancer/ui';
 import { Clock, AlertTriangle, Pause } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
+// Shared time formatting utility
+function formatTimeDisplay(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 interface AssessmentTimerProps {
   /** Total time in seconds */
   totalTime: number;
@@ -39,18 +51,6 @@ export function AssessmentTimer({
   const isCritical = timeRemaining <= criticalThreshold;
   const isWarning = timeRemaining <= warningThreshold && !isCritical;
   const isNormal = !isWarning && !isCritical;
-
-  // Format time
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   // Calculate progress percentage
   const progress = (timeRemaining / totalTime) * 100;
@@ -101,7 +101,7 @@ export function AssessmentTimer({
           <Clock className={cn('h-4 w-4', getStatusColor())} />
         )}
         <span className={cn('font-mono text-sm font-semibold', getStatusColor())}>
-          {formatTime(timeRemaining)}
+          {formatTimeDisplay(timeRemaining)}
         </span>
       </div>
     );
@@ -135,7 +135,7 @@ export function AssessmentTimer({
 
       {/* Time Display */}
       <div className={cn('mb-3 font-mono text-3xl font-bold', getStatusColor())}>
-        {formatTime(timeRemaining)}
+        {formatTimeDisplay(timeRemaining)}
       </div>
 
       {/* Progress Bar */}
@@ -167,17 +167,6 @@ export function InlineTimer({
 }>) {
   const isCritical = timeRemaining <= criticalThreshold;
 
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   return (
     <div
       className={cn(
@@ -186,7 +175,7 @@ export function InlineTimer({
       )}
     >
       <Clock className="h-4 w-4" />
-      <span className="font-mono font-semibold">{formatTime(timeRemaining)}</span>
+      <span className="font-mono font-semibold">{formatTimeDisplay(timeRemaining)}</span>
     </div>
   );
 }
