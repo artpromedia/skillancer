@@ -94,7 +94,7 @@ function ContractHeader({
         <Skeleton className="h-5 w-48" />
         <div className="grid gap-4 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-20" />
+            <Skeleton key={`header-skeleton-${i}`} className="h-20" />
           ))}
         </div>
       </div>
@@ -190,7 +190,7 @@ function ContractDetailSkeleton() {
         <Skeleton className="h-5 w-48" />
         <div className="grid gap-4 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-20" />
+            <Skeleton key={`detail-skeleton-${i}`} className="h-20" />
           ))}
         </div>
       </div>
@@ -280,7 +280,7 @@ export function ContractDetailClient({ contractId }: Readonly<{ contractId: stri
   };
 
   const handleMilestoneClick = (milestone: Milestone | undefined) => {
-    if (milestone && milestone.status === 'IN_PROGRESS' && isFreelancer) {
+    if (milestone?.status === 'IN_PROGRESS' && isFreelancer) {
       setSelectedMilestone(milestone);
       setShowSubmissionModal(true);
     }

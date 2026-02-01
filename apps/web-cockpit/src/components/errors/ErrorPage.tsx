@@ -26,21 +26,21 @@ import { useRouter } from 'next/navigation';
 
 export interface ErrorPageProps {
   /** Error type to display */
-  type?: 'error' | '404' | '403' | '500' | 'offline';
+  readonly type?: 'error' | '404' | '403' | '500' | 'offline';
   /** Error code (e.g., 404, 500) */
-  code?: number;
+  readonly code?: number;
   /** Main error title */
-  title?: string;
+  readonly title?: string;
   /** Detailed error message */
-  message?: string;
+  readonly message?: string;
   /** The actual error object (for development) */
-  error?: Error;
+  readonly error?: Error;
   /** Callback when retry is clicked */
-  onRetry?: () => void;
+  readonly onRetry?: () => void;
   /** Whether to show the back button */
-  showBackButton?: boolean;
+  readonly showBackButton?: boolean;
   /** Whether to show the dashboard button */
-  showDashboardButton?: boolean;
+  readonly showDashboardButton?: boolean;
 }
 
 // ============================================================================
@@ -117,7 +117,7 @@ export function ErrorPage({
         </div>
 
         {/* Error Code */}
-        {code && (
+        {Boolean(code) && (
           <p className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">Error {code}</p>
         )}
 

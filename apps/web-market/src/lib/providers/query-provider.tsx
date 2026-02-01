@@ -26,7 +26,8 @@ function extractErrorDetails(error: unknown): { code?: string; status?: number; 
     return { message: error.message };
   }
 
-  return { message: String(error) };
+  // Convert primitive types safely
+  return { message: typeof error === 'string' ? error : 'Unknown error' };
 }
 
 /**
@@ -74,7 +75,7 @@ function makeQueryClient(): QueryClient {
 let browserQueryClient: QueryClient | undefined;
 
 function getQueryClient(): QueryClient {
-  if (typeof globalThis.window === 'undefined') {
+  if (globalThis.window === undefined) {
     return makeQueryClient();
   }
   browserQueryClient ??= makeQueryClient();

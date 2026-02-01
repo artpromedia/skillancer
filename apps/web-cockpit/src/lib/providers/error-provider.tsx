@@ -153,7 +153,9 @@ function ErrorHandler({ children }: { readonly children: ReactNode }) {
           globalThis.sessionStorage.removeItem('cockpit_auth_token');
         }
 
-        const returnUrl = encodeURIComponent(globalThis.location.pathname + globalThis.location.search);
+        const returnUrl = encodeURIComponent(
+          globalThis.location.pathname + globalThis.location.search
+        );
         router.push(`/auth/login?returnUrl=${returnUrl}&reason=session_expired`);
         return;
       }

@@ -30,19 +30,19 @@ export interface FormErrorProps {
 }
 
 export interface FormFieldErrorProps extends Omit<FormErrorProps, 'messages'> {
-  fieldName?: string;
+  readonly fieldName?: string;
 }
 
 export interface FormSummaryErrorProps {
-  errors: Record<string, string | string[] | undefined>;
-  title?: string;
-  className?: string;
+  readonly errors: Record<string, string | string[] | undefined>;
+  readonly title?: string;
+  readonly className?: string;
 }
 
 export interface ApiFormErrorProps {
-  error?: Error | null;
-  fallbackMessage?: string;
-  className?: string;
+  readonly error?: Error | null;
+  readonly fallbackMessage?: string;
+  readonly className?: string;
 }
 
 // ============================================================================
@@ -120,8 +120,11 @@ export const FormError = forwardRef<HTMLParagraphElement, FormErrorProps>(functi
         role="alert"
       >
         <ul className="space-y-1">
-          {messages.map((msg, index) => (
-            <li key={index} className="flex items-center gap-1.5 text-sm">
+          {messages.map((msg) => (
+            <li
+              key={`msg-${msg.slice(0, 30).replaceAll(/\\s+/g, '-')}`}
+              className="flex items-center gap-1.5 text-sm"
+            >
               {showIcon && <Icon className={`h-4 w-4 flex-shrink-0 ${styles.iconColor}`} />}
               <span>{msg}</span>
             </li>
@@ -168,7 +171,7 @@ export function FormSummaryError({
               return messages.map((msg, index) => (
                 <li key={`${field}-${index}`}>
                   <span className="font-medium capitalize">
-                    {field.replace(/([A-Z])/g, ' $1').trim()}
+                    {field.replaceAll(/([A-Z])/g, ' $1').trim()}
                   </span>
                   : {msg}
                 </li>

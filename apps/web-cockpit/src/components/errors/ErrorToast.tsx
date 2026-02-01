@@ -9,8 +9,8 @@
 
 'use client';
 
-import { AlertTriangle, AlertCircle, Info, CheckCircle2, XCircle, X } from 'lucide-react';
-import { useState, useEffect, createContext, useContext, useCallback, type ReactNode } from 'react';
+import { AlertTriangle, Info, CheckCircle2, XCircle, X } from 'lucide-react';
+import { useState, createContext, useContext, useCallback, useMemo, type ReactNode } from 'react';
 
 // ============================================================================
 // Types
@@ -130,11 +130,11 @@ export function useToast(): ToastContextValue {
 // Toast Provider
 // ============================================================================
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((options: ShowToastOptions): string => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     const toast: Toast = {
       id,
       type: options.type || 'info',
@@ -165,8 +165,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts([]);
   }, []);
 
+  const contextValue = useMemo(
+    () => ({ toasts, showToast, dismissToast, dismissAll }),
+    [toasts, showToast, dismissToast, dismissAll]
+  );
+
   return (
-    <ToastContext.Provider value={{ toasts, showToast, dismissToast, dismissAll }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </ToastContext.Provider>
@@ -180,10 +185,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 function ToastContainer({
   toasts,
   onDismiss,
-}: {
+}: Readonly<{
   toasts: Toast[];
   onDismiss: (id: string) => void;
-}) {
+}>) {
   if (toasts.length === 0) return null;
 
   return (
@@ -199,7 +204,7 @@ function ToastContainer({
 // Toast Item
 // ============================================================================
 
-function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+function ToastItem({ toast, onDismiss }: Readonly<{ toast: Toast; onDismiss: () => void }>) {
   const Icon = TOAST_ICONS[toast.type];
   const styles = TOAST_STYLES[toast.type];
 

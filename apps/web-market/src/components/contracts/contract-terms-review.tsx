@@ -191,7 +191,7 @@ export function ContractTermsReview({
               </div>
             </div>
 
-            {contract.type === 'HOURLY' && contract.hourlyRate && (
+            {contract.type === 'HOURLY' && Boolean(contract.hourlyRate) && (
               <div className="flex items-center gap-2">
                 <Clock className="text-muted-foreground h-4 w-4" />
                 <div>
@@ -201,7 +201,7 @@ export function ContractTermsReview({
               </div>
             )}
 
-            {contract.type === 'HOURLY' && contract.weeklyHoursLimit && (
+            {contract.type === 'HOURLY' && Boolean(contract.weeklyHoursLimit) && (
               <div className="flex items-center gap-2">
                 <Clock className="text-muted-foreground h-4 w-4" />
                 <div>

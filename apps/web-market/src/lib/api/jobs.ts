@@ -8,6 +8,17 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4001/api/v1';
 
 // ============================================================================
+// Type Aliases
+// ============================================================================
+
+export type BudgetType = 'FIXED' | 'HOURLY' | 'MONTHLY';
+export type DurationUnit = 'HOURS' | 'DAYS' | 'WEEKS' | 'MONTHS';
+export type ExperienceLevel = 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
+export type JobVisibility = 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY';
+export type JobStatus = 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED' | 'COMPLETED' | 'OPEN';
+export type AlertFrequency = 'instant' | 'daily' | 'weekly';
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -16,14 +27,14 @@ export interface Job {
   slug: string;
   title: string;
   description: string;
-  budgetType: 'FIXED' | 'HOURLY' | 'MONTHLY';
+  budgetType: BudgetType;
   budgetMin?: number;
   budgetMax?: number;
   estimatedDuration?: number;
-  durationUnit?: 'HOURS' | 'DAYS' | 'WEEKS' | 'MONTHS';
-  experienceLevel?: 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
-  visibility: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY';
-  status: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'CLOSED' | 'COMPLETED' | 'OPEN';
+  durationUnit?: DurationUnit;
+  experienceLevel?: ExperienceLevel;
+  visibility: JobVisibility;
+  status: JobStatus;
   skills: Skill[];
   client: ClientInfo;
   proposalCount: number;
@@ -85,8 +96,8 @@ export interface JobSearchFilters {
   skills?: string[];
   budgetMin?: number;
   budgetMax?: number;
-  budgetType?: 'FIXED' | 'HOURLY' | 'MONTHLY';
-  experienceLevel?: 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
+  budgetType?: BudgetType;
+  experienceLevel?: ExperienceLevel;
   category?: string;
   location?: string;
   remoteOnly?: boolean;
@@ -363,13 +374,13 @@ export async function getTopCategories(limit: number = 8): Promise<Category[]> {
 export interface CreateJobInput {
   title: string;
   description: string;
-  budgetType: 'FIXED' | 'HOURLY' | 'MONTHLY';
+  budgetType: BudgetType;
   budgetMin?: number;
   budgetMax?: number;
   estimatedDuration?: number;
-  durationUnit?: 'HOURS' | 'DAYS' | 'WEEKS' | 'MONTHS';
-  experienceLevel?: 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
-  visibility?: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY';
+  durationUnit?: DurationUnit;
+  experienceLevel?: ExperienceLevel;
+  visibility?: JobVisibility;
   skills: string[]; // skill IDs
   categoryId?: string;
   questions?: Omit<JobQuestion, 'id'>[];
@@ -383,13 +394,13 @@ export interface CreateJobInput {
 export interface UpdateJobInput {
   title?: string;
   description?: string;
-  budgetType?: 'FIXED' | 'HOURLY' | 'MONTHLY';
+  budgetType?: BudgetType;
   budgetMin?: number;
   budgetMax?: number;
   estimatedDuration?: number;
-  durationUnit?: 'HOURS' | 'DAYS' | 'WEEKS' | 'MONTHS';
-  experienceLevel?: 'ENTRY' | 'INTERMEDIATE' | 'EXPERT';
-  visibility?: 'PUBLIC' | 'PRIVATE' | 'INVITE_ONLY';
+  durationUnit?: DurationUnit;
+  experienceLevel?: ExperienceLevel;
+  visibility?: JobVisibility;
   skills?: string[]; // skill IDs
   categoryId?: string;
   questions?: Omit<JobQuestion, 'id'>[];
@@ -649,7 +660,7 @@ export interface SavedSearch {
   name: string;
   filters: JobSearchFilters;
   emailAlerts: boolean;
-  alertFrequency: 'instant' | 'daily' | 'weekly';
+  alertFrequency: AlertFrequency;
   newJobsCount: number;
   lastViewedAt: string;
   createdAt: string;
@@ -660,14 +671,14 @@ export interface CreateSavedSearchData {
   name: string;
   filters: JobSearchFilters;
   emailAlerts?: boolean;
-  alertFrequency?: 'instant' | 'daily' | 'weekly';
+  alertFrequency?: AlertFrequency;
 }
 
 export interface UpdateSavedSearchData {
   name?: string;
   filters?: JobSearchFilters;
   emailAlerts?: boolean;
-  alertFrequency?: 'instant' | 'daily' | 'weekly';
+  alertFrequency?: AlertFrequency;
 }
 
 /**

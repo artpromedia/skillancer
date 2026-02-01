@@ -52,7 +52,7 @@ import {
 import { VdiViewer } from '@/components/viewer/vdi-viewer';
 import { ViewerToolbar } from '@/components/viewer/viewer-toolbar';
 import { WatermarkOverlay, type WatermarkConfig } from '@/components/viewer/watermark-overlay';
-import { useContainment, type ContainmentEvent } from '@/hooks/use-containment';
+import { useContainment } from '@/hooks/use-containment';
 import { useVdiSession } from '@/hooks/use-vdi-session';
 import { initializeScreenshotDetection } from '@/lib/screenshot-detection';
 

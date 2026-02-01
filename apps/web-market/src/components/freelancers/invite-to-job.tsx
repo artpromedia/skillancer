@@ -345,4 +345,5 @@ export function InviteToJobIconButton({
 // Exports
 // ============================================================================
 
-export type { InviteToJobButtonProps, ClientJob };
+export type { InviteToJobButtonProps };
+export type { ClientJob } from '@/hooks/use-freelancer-search';

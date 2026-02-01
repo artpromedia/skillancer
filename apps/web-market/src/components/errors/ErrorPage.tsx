@@ -109,7 +109,9 @@ export function ErrorPage({
         </div>
 
         {/* Error Code */}
-        {Boolean(code) && <p className="text-muted-foreground mb-2 text-sm font-medium">Error {code}</p>}
+        {Boolean(code) && (
+          <p className="text-muted-foreground mb-2 text-sm font-medium">Error {code}</p>
+        )}
 
         {/* Title */}
         <h1 className="mb-3 text-2xl font-bold tracking-tight">{displayTitle}</h1>

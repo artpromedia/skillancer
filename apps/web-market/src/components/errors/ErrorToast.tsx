@@ -10,7 +10,7 @@
 'use client';
 
 import { toast } from '@skillancer/ui';
-import { AlertTriangle, AlertCircle, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { AlertTriangle, Info, CheckCircle2, XCircle } from 'lucide-react';
 
 // ============================================================================
 // Types
@@ -242,10 +242,10 @@ export function dismissAllToasts(): void {
 // ============================================================================
 
 export interface ErrorToastProps {
-  type: ToastType;
-  title: string;
-  message?: string;
-  onDismiss?: () => void;
+  readonly type: ToastType;
+  readonly title: string;
+  readonly message?: string;
+  readonly onDismiss?: () => void;
 }
 
 /**

@@ -136,7 +136,10 @@ export function parseAxiosError(error: AxiosError<ApiErrorResponse>): ApiError {
 
   // Extract message and code from response
   const message = errorData?.message || data?.message || error.message || 'Request failed';
-  const code = (errorData?.code as ErrorCodeValue) || HttpStatusToErrorCode[status] || ErrorCode.CLIENT_UNKNOWN;
+  const code =
+    (errorData?.code as ErrorCodeValue) ||
+    HttpStatusToErrorCode[status] ||
+    ErrorCode.CLIENT_UNKNOWN;
 
   // Create appropriate error type based on status
   switch (status) {
@@ -229,7 +232,10 @@ export async function parseFetchResponse(response: Response): Promise<ApiError> 
 
   const errorData = data?.error || data;
   const message = errorData?.message || data?.message || response.statusText || 'Request failed';
-  const code = (errorData?.code as ErrorCodeValue) || HttpStatusToErrorCode[status] || ErrorCode.CLIENT_UNKNOWN;
+  const code =
+    (errorData?.code as ErrorCodeValue) ||
+    HttpStatusToErrorCode[status] ||
+    ErrorCode.CLIENT_UNKNOWN;
 
   switch (status) {
     case 401:
@@ -256,7 +262,9 @@ export async function parseFetchResponse(response: Response): Promise<ApiError> 
         rateLimit: {
           limit: Number.parseInt(response.headers.get('x-ratelimit-limit') || '0', 10),
           remaining: Number.parseInt(response.headers.get('x-ratelimit-remaining') || '0', 10),
-          reset: new Date(Number.parseInt(response.headers.get('x-ratelimit-reset') || '0', 10) * 1000),
+          reset: new Date(
+            Number.parseInt(response.headers.get('x-ratelimit-reset') || '0', 10) * 1000
+          ),
           retryAfter: Number.parseInt(response.headers.get('retry-after') || '60', 10),
         },
         details: errorData?.details,
@@ -267,10 +275,20 @@ export async function parseFetchResponse(response: Response): Promise<ApiError> 
     case 502:
     case 503:
     case 504:
-      return new ServerError(message, { code, statusCode: status, details: errorData?.details, requestId });
+      return new ServerError(message, {
+        code,
+        statusCode: status,
+        details: errorData?.details,
+        requestId,
+      });
 
     default:
-      return new ApiError(message, { code, statusCode: status, details: errorData?.details, requestId });
+      return new ApiError(message, {
+        code,
+        statusCode: status,
+        details: errorData?.details,
+        requestId,
+      });
   }
 }
 
@@ -344,10 +362,7 @@ export function isRetryable(error: unknown): boolean {
 /**
  * Calculate retry delay with exponential backoff
  */
-export function getRetryDelay(
-  attempt: number,
-  config = DefaultRetryConfig
-): number {
+export function getRetryDelay(attempt: number, config = DefaultRetryConfig): number {
   const delay = Math.min(
     config.baseDelayMs * Math.pow(config.backoffMultiplier, attempt - 1),
     config.maxDelayMs

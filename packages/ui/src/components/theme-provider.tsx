@@ -106,7 +106,8 @@ export function ThemeProvider({
       // Re-enable transitions
       if (disableTransitionOnChange) {
         // Force reflow by reading offsetHeight
-        void root.offsetHeight;
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        root.offsetHeight;
         root.style.removeProperty('transition');
       }
     },

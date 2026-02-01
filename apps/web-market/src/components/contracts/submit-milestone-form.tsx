@@ -115,7 +115,7 @@ export function SubmitMilestoneForm({
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     const newAttachments = files.map((file) => ({
-      id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       file,
       name: file.name,
       size: file.size,

@@ -177,7 +177,9 @@ export function ErrorProvider({ children }: ErrorProviderProps) {
         }
 
         // Redirect to login with return URL
-        const returnUrl = encodeURIComponent(globalThis.location.pathname + globalThis.location.search);
+        const returnUrl = encodeURIComponent(
+          globalThis.location.pathname + globalThis.location.search
+        );
         router.push(`/auth/login?returnUrl=${returnUrl}&reason=session_expired`);
         return;
       }
@@ -282,8 +284,8 @@ export function dispatchApiError(detail: {
   status?: number;
   message?: string;
 }): void {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('api-error', { detail }));
+  if (globalThis.window) {
+    globalThis.dispatchEvent(new CustomEvent('api-error', { detail }));
   }
 }
 

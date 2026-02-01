@@ -91,8 +91,8 @@ export function CreateMilestoneForm({
       newErrors.title = 'Title is required';
     }
 
-    const amountNum = parseFloat(amount);
-    if (!amount || isNaN(amountNum) || amountNum <= 0) {
+    const amountNum = Number.parseFloat(amount);
+    if (!amount || Number.isNaN(amountNum) || amountNum <= 0) {
       newErrors.amount = 'Please enter a valid amount greater than 0';
     }
 
@@ -115,7 +115,7 @@ export function CreateMilestoneForm({
     await onSubmit({
       title: title.trim(),
       description: description.trim() || undefined,
-      amount: parseFloat(amount),
+      amount: Number.parseFloat(amount),
       dueDate: dueDate || undefined,
       deliverables: filteredDeliverables.length > 0 ? filteredDeliverables : undefined,
     });
@@ -209,7 +209,10 @@ export function CreateMilestoneForm({
             </div>
             <div className="space-y-2">
               {deliverables.map((deliverable, index) => (
-                <div key={index} className="flex gap-2">
+                <div
+                  key={`deliverable-${index}-${deliverable.slice(0, 10)}`}
+                  className="flex gap-2"
+                >
                   <Input
                     placeholder={`Deliverable ${index + 1}`}
                     value={deliverable}
