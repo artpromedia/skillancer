@@ -116,6 +116,11 @@ interface ToastContextValue {
   dismissAll: () => void;
 }
 
+// Helper to filter out a toast by id
+function filterOutToast(toasts: Toast[], id: string): Toast[] {
+  return toasts.filter((t) => t.id !== id);
+}
+
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function useToast(): ToastContextValue {
@@ -150,7 +155,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
     // Auto-dismiss
     if (toast.duration && toast.duration > 0) {
       setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
+        setToasts((prev) => filterOutToast(prev, id));
       }, toast.duration);
     }
 
@@ -158,7 +163,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, []);
 
   const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts((prev) => filterOutToast(prev, id));
   }, []);
 
   const dismissAll = useCallback(() => {

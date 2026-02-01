@@ -69,6 +69,32 @@ const TROUBLESHOOTING_TIPS = [
 // CONNECTING STATE
 // ============================================================================
 
+// Helper to create interval handler for step progress
+function createStepProgressHandler(
+  step: { duration: number },
+  startTime: number,
+  currentStep: number,
+  setStepProgress: (value: number) => void,
+  setCurrentStep: (updater: (prev: number) => number) => void,
+  clearIntervalFn: () => void
+) {
+  return () => {
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min((elapsed / step.duration) * 100, 100);
+    setStepProgress(progress);
+
+    if (progress >= 100) {
+      clearIntervalFn();
+      if (currentStep < CONNECTION_STEPS.length - 1) {
+        setTimeout(() => {
+          setCurrentStep((prev) => prev + 1);
+          setStepProgress(0);
+        }, 200);
+      }
+    }
+  };
+}
+
 function ConnectingState() {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepProgress, setStepProgress] = useState(0);
@@ -78,21 +104,16 @@ function ConnectingState() {
 
     const step = CONNECTION_STEPS[currentStep];
     const startTime = Date.now();
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min((elapsed / step.duration) * 100, 100);
-      setStepProgress(progress);
-
-      if (progress >= 100) {
-        clearInterval(interval);
-        if (currentStep < CONNECTION_STEPS.length - 1) {
-          setTimeout(() => {
-            setCurrentStep((prev) => prev + 1);
-            setStepProgress(0);
-          }, 200);
-        }
-      }
-    }, 50);
+    let interval: NodeJS.Timeout;
+    const handler = createStepProgressHandler(
+      step,
+      startTime,
+      currentStep,
+      setStepProgress,
+      setCurrentStep,
+      () => clearInterval(interval)
+    );
+    interval = setInterval(handler, 50);
 
     return () => clearInterval(interval);
   }, [currentStep]);

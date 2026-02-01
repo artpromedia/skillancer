@@ -12,12 +12,20 @@ import { MessageThread } from '@/components/messaging/message-thread';
 import type { TypingUser } from '@/hooks/use-messaging';
 import type { Conversation, Message } from '@/lib/api/messages';
 
-
 // ============================================================================
 // Mock Data (Replace with API/WebSocket)
 // ============================================================================
 
 const mockCurrentUserId = 'user-1';
+
+// Helper to update message status
+function updateMessageStatus<T extends { id: string; status?: string }>(
+  messages: T[],
+  messageId: string,
+  status: 'SENT' | 'DELIVERED' | 'READ'
+): T[] {
+  return messages.map((m) => (m.id === messageId ? { ...m, status } : m));
+}
 
 const mockConversation: Conversation = {
   id: 'conv-1',
@@ -294,15 +302,11 @@ export default function ConversationPage() {
 
       // Simulate API call
       setTimeout(() => {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === newMessage.id ? { ...m, status: 'SENT' as const } : m))
-        );
+        setMessages((prev) => updateMessageStatus(prev, newMessage.id, 'SENT'));
       }, 500);
 
       setTimeout(() => {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === newMessage.id ? { ...m, status: 'DELIVERED' as const } : m))
-        );
+        setMessages((prev) => updateMessageStatus(prev, newMessage.id, 'DELIVERED'));
       }, 1000);
     },
     [conversationId]

@@ -545,6 +545,20 @@ function ChannelCard({
 // Main Page Component
 // ============================================================================
 
+// Helper functions for rule state updates
+function deleteRuleById(rules: AlertRule[], id: string): AlertRule[] {
+  return rules.filter((r) => r.id !== id);
+}
+
+function duplicateRule(rules: AlertRule[], rule: AlertRule): AlertRule[] {
+  const newRule = {
+    ...rule,
+    id: `rule-${Date.now()}`,
+    name: `${rule.name} (Copy)`,
+  };
+  return [...rules, newRule];
+}
+
 export default function AlertRulesPage() {
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [channels, setChannels] = useState<NotificationChannel[]>([]);
@@ -683,15 +697,8 @@ export default function AlertRulesPage() {
                   <RuleCard
                     key={rule.id}
                     rule={rule}
-                    onDelete={() => setRules((prev) => prev.filter((r) => r.id !== rule.id))}
-                    onDuplicate={() => {
-                      const newRule = {
-                        ...rule,
-                        id: `rule-${Date.now()}`,
-                        name: `${rule.name} (Copy)`,
-                      };
-                      setRules((prev) => [...prev, newRule]);
-                    }}
+                    onDelete={() => setRules((prev) => deleteRuleById(prev, rule.id))}
+                    onDuplicate={() => setRules((prev) => duplicateRule(prev, rule))}
                     onEdit={() => {}}
                     onToggle={() => toggleRule(rule.id)}
                   />
