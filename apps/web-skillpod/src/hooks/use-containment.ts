@@ -81,6 +81,15 @@ export interface UseContainmentOptions {
 }
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+// Helper to filter out a filename from scanning files
+function removeScanningFile(scanningFiles: string[], filename: string): string[] {
+  return scanningFiles.filter((f) => f !== filename);
+}
+
+// ============================================================================
 // HOOK
 // ============================================================================
 
@@ -481,7 +490,7 @@ export function useContainment(
         ...prev,
         fileTransfer: {
           ...prev.fileTransfer,
-          scanningFiles: prev.fileTransfer.scanningFiles.filter((f) => f !== data.filename),
+          scanningFiles: removeScanningFile(prev.fileTransfer.scanningFiles, data.filename),
         },
       }));
     });
@@ -492,7 +501,7 @@ export function useContainment(
         ...prev,
         fileTransfer: {
           ...prev.fileTransfer,
-          scanningFiles: prev.fileTransfer.scanningFiles.filter((f) => f !== data.filename),
+          scanningFiles: removeScanningFile(prev.fileTransfer.scanningFiles, data.filename),
           blockedFiles: [...prev.fileTransfer.blockedFiles, data.filename],
         },
       }));

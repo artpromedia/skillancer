@@ -76,6 +76,51 @@ function MilestoneListSkeleton() {
 }
 
 // ============================================================================
+// Empty State Component
+// ============================================================================
+
+interface EmptyMilestoneStateProps {
+  readonly filter: FilterOption;
+  readonly isClient: boolean;
+  readonly onCreateMilestone?: () => void;
+}
+
+function EmptyMilestoneState({ filter, isClient, onCreateMilestone }: EmptyMilestoneStateProps) {
+  const showCreateButton = isClient && onCreateMilestone && filter === 'all';
+
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+        <Clock className="text-muted-foreground mb-4 h-12 w-12" />
+        <h3 className="mb-1 font-semibold">No Milestones Found</h3>
+        <p className="text-muted-foreground mb-4 text-sm">
+          {filter === 'all'
+            ? 'This contract has no milestones yet.'
+            : `No milestones match the "${filter}" filter.`}
+        </p>
+        {showCreateButton && (
+          <Button onClick={onCreateMilestone}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create First Milestone
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// Helper to create milestone action handlers
+// ============================================================================
+
+function createMilestoneAction(
+  handler: ((id: string) => void) | undefined,
+  milestoneId: string
+): (() => void) | undefined {
+  return handler ? () => handler(milestoneId) : undefined;
+}
+
+// ============================================================================
 // Component
 // ============================================================================
 
@@ -241,23 +286,11 @@ export function MilestoneList({
 
       {/* Milestone List */}
       {filteredMilestones.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Clock className="text-muted-foreground mb-4 h-12 w-12" />
-            <h3 className="mb-1 font-semibold">No Milestones Found</h3>
-            <p className="text-muted-foreground mb-4 text-sm">
-              {filter === 'all'
-                ? 'This contract has no milestones yet.'
-                : `No milestones match the "${filter}" filter.`}
-            </p>
-            {isClient && onCreateMilestone && filter === 'all' && (
-              <Button onClick={onCreateMilestone}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create First Milestone
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <EmptyMilestoneState
+          filter={filter}
+          isClient={isClient}
+          onCreateMilestone={onCreateMilestone}
+        />
       ) : (
         <div className="space-y-4">
           {filteredMilestones.map((milestone) => (
@@ -266,14 +299,12 @@ export function MilestoneList({
               isClient={isClient}
               isLoading={loadingMilestoneId === milestone.id}
               milestone={milestone}
-              onApprove={onApproveMilestone ? () => onApproveMilestone(milestone.id) : undefined}
-              onEdit={onEditMilestone ? () => onEditMilestone(milestone.id) : undefined}
-              onFund={onFundMilestone ? () => onFundMilestone(milestone.id) : undefined}
-              onRequestRevision={
-                onRequestRevision ? () => onRequestRevision(milestone.id) : undefined
-              }
-              onSubmit={onSubmitMilestone ? () => onSubmitMilestone(milestone.id) : undefined}
-              onViewSubmission={onViewSubmission ? () => onViewSubmission(milestone.id) : undefined}
+              onApprove={createMilestoneAction(onApproveMilestone, milestone.id)}
+              onEdit={createMilestoneAction(onEditMilestone, milestone.id)}
+              onFund={createMilestoneAction(onFundMilestone, milestone.id)}
+              onRequestRevision={createMilestoneAction(onRequestRevision, milestone.id)}
+              onSubmit={createMilestoneAction(onSubmitMilestone, milestone.id)}
+              onViewSubmission={createMilestoneAction(onViewSubmission, milestone.id)}
             />
           ))}
         </div>
