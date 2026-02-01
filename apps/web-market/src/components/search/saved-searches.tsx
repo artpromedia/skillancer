@@ -382,13 +382,14 @@ export function SavedSearchesList({ className }: Readonly<SavedSearchesListProps
     isDeleting,
   } = useSavedSearches();
 
-  const [, setEditingSearch] = useState<SavedSearch | null>(null);
+  // Note: editingSearch functionality will be implemented in future update
+  const [_editingSearch, _setEditingSearch] = useState<SavedSearch | null>(null);
 
   if (isLoading) {
     return (
       <div className={cn('space-y-4', className)}>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={`skeleton-card-${i}`}>
+        {(['saved-sk-1', 'saved-sk-2', 'saved-sk-3'] as const).map((id) => (
+          <Card key={id}>
             <CardContent className="p-4">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-40" />
@@ -556,8 +557,8 @@ export function SavedSearchesDropdown({ className }: Readonly<SavedSearchesDropd
 
         {isLoading && (
           <div className="space-y-2 p-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={`dropdown-skeleton-${i}`} className="h-10 w-full" />
+            {(['dd-sk-1', 'dd-sk-2', 'dd-sk-3'] as const).map((id) => (
+              <Skeleton key={id} className="h-10 w-full" />
             ))}
           </div>
         )}

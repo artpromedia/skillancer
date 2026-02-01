@@ -241,6 +241,7 @@ function SingleToast({ event, onDismiss, index }: Readonly<SingleToastProps>) {
       )}
 
       {/* styled-jsx is a built-in Next.js CSS-in-JS solution */}
+      {/* eslint-disable-next-line react/no-unknown-property */}
       <style jsx>{`
         @keyframes shrink {
           from {

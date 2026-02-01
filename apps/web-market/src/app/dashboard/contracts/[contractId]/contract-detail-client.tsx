@@ -93,8 +93,8 @@ function ContractHeader({
         </div>
         <Skeleton className="h-5 w-48" />
         <div className="grid gap-4 sm:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={`header-skeleton-${i}`} className="h-20" />
+          {(['sk-h-1', 'sk-h-2', 'sk-h-3', 'sk-h-4'] as const).map((id) => (
+            <Skeleton key={id} className="h-20" />
           ))}
         </div>
       </div>
@@ -189,8 +189,8 @@ function ContractDetailSkeleton() {
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-5 w-48" />
         <div className="grid gap-4 sm:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={`detail-skeleton-${i}`} className="h-20" />
+          {(['sk-d-1', 'sk-d-2', 'sk-d-3', 'sk-d-4'] as const).map((id) => (
+            <Skeleton key={id} className="h-20" />
           ))}
         </div>
       </div>

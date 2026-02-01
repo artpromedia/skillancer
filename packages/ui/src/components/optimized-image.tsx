@@ -92,6 +92,7 @@ export const OptimizedImage = React.forwardRef<HTMLDivElement, OptimizedImagePro
       className,
       onLoadComplete,
       onErrorCapture,
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Transforming deprecated priority to loading='eager'
       priority,
       ...props
     },
@@ -158,7 +159,11 @@ export const OptimizedImage = React.forwardRef<HTMLDivElement, OptimizedImagePro
             roundedClasses[rounded],
             isLoading ? 'opacity-0' : 'opacity-100'
           )}
-          loading={priority ? 'eager' : lazy ? 'lazy' : undefined}
+          loading={(() => {
+            if (priority) return 'eager';
+            if (lazy) return 'lazy';
+            return undefined;
+          })()}
           onLoad={handleLoad}
           onError={handleError}
           {...props}
