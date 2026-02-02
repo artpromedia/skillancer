@@ -22,6 +22,9 @@ import { healthRoutes } from './routes/health.routes.js';
 import { notificationRoutes } from './routes/notification.routes.js';
 import { webhookRoutes } from './routes/webhook.routes.js';
 import { unsubscribeRoutes } from './routes/unsubscribe.routes.js';
+import { preferencesRoutes } from './routes/preferences.routes.js';
+import { deviceRoutes } from './routes/device.routes.js';
+import { initializeFirebase, isFirebaseConfigured } from './providers/firebase.js';
 
 const prisma = new PrismaClient();
 
@@ -73,6 +76,20 @@ async function buildApp() {
   await fastify.register(notificationRoutes, { prefix: '/api/v1/notifications' });
   await fastify.register(webhookRoutes, { prefix: '/webhooks' });
   await fastify.register(unsubscribeRoutes, { prefix: '/api/notifications' });
+  await fastify.register(preferencesRoutes, { prefix: '/api/preferences' });
+  await fastify.register(deviceRoutes, { prefix: '/api/devices' });
+
+  // Initialize Firebase if configured
+  if (isFirebaseConfigured()) {
+    try {
+      initializeFirebase();
+      fastify.log.info('Firebase Cloud Messaging initialized');
+    } catch (error) {
+      fastify.log.warn({ error }, 'Firebase initialization failed - push notifications disabled');
+    }
+  } else {
+    fastify.log.info('Firebase not configured - push notifications disabled');
+  }
 
   // Error handler
   fastify.setErrorHandler((error, request, reply) => {

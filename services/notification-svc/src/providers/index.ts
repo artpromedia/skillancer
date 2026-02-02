@@ -15,6 +15,30 @@ export {
 export * from './push.js';
 export * from './sms.js';
 
+// Firebase Cloud Messaging provider
+export {
+  FirebaseProvider,
+  initializeFirebase,
+  isFirebaseConfigured,
+  sendToDevice,
+  sendToUser,
+  sendToTopic,
+  subscribeToTopic,
+  unsubscribeFromTopic,
+  validateTokens,
+  createDeepLink,
+  type FirebaseConfig,
+  type PushNotificationPayload,
+  type SendToDeviceOptions,
+  type SendToUserOptions,
+  type SendToTopicOptions,
+  type AndroidConfig,
+  type ApnsConfig,
+  type WebPushConfig,
+  type FirebaseSendResult,
+  type BatchSendResult,
+} from './firebase.js';
+
 // SendGrid provider (re-export with unique names to avoid conflicts)
 export {
   SendGridProvider,

@@ -7,3 +7,4 @@ export { notificationRoutes } from './notification.routes.js';
 export { webhookRoutes } from './webhook.routes.js';
 export { unsubscribeRoutes } from './unsubscribe.routes.js';
 export { preferencesRoutes } from './preferences.routes.js';
+export { deviceRoutes } from './device.routes.js';

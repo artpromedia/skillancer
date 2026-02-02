@@ -78,6 +78,7 @@ model User {
   notificationPreferences NotificationPreference[]
   notificationDigests     NotificationDigest[]
   emailUnsubscribes       EmailUnsubscribe[]
+  deviceTokens            DeviceToken[]
   refreshTokens           RefreshToken[]
   auditLogs               AuditLog[]                 @relation("UserAuditLogs")
   mfa                     UserMfa?
@@ -3511,6 +3512,44 @@ model EmailUnsubscribe {
   @@index([email])
   @@index([userId])
   @@map("email_unsubscribes")
+}
+
+// Device Token for Push Notifications
+model DeviceToken {
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // Token info
+  token    String         @db.VarChar(500)
+  platform DevicePlatform
+
+  // Device info
+  deviceId    String  @map("device_id") @db.VarChar(255)
+  deviceName  String? @map("device_name") @db.VarChar(255)
+  deviceModel String? @map("device_model") @db.VarChar(255)
+  osVersion   String? @map("os_version") @db.VarChar(50)
+  appVersion  String? @map("app_version") @db.VarChar(50)
+
+  // Status
+  isActive   Boolean   @default(true) @map("is_active")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@index([userId, isActive])
+  @@index([deviceId])
+  @@map("device_tokens")
+}
+
+enum DevicePlatform {
+  WEB
+  IOS
+  ANDROID
 }
 
 // Notification Enums
