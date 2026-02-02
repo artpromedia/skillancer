@@ -12,10 +12,9 @@
  * - Global: 1000 req/min per user (fallback)
  */
 
-import { RateLimiter, type RateLimitConfig, type RateLimitResult } from '@skillancer/cache';
-
-import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { AuthenticatedUser } from '../plugins/auth.js';
+import type { RateLimiter, RateLimitConfig, RateLimitResult } from '@skillancer/cache';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 
 // =============================================================================
 // TYPES
@@ -191,7 +190,7 @@ export function getRateLimitKey(
   endpoint: SkillpodRateLimitType,
   resourceType?: string
 ): string {
-  const user = request.user as AuthenticatedUser | undefined;
+  const user = request.user;
 
   const baseKey = user?.userId
     ? `skillpod:${endpoint}:user:${user.userId}`
@@ -218,10 +217,7 @@ export function getTenantTier(_request: FastifyRequest): string {
 /**
  * Get adjusted rate limit config based on tenant tier
  */
-export function getAdjustedConfig(
-  baseConfig: RateLimitConfig,
-  tier: string
-): RateLimitConfig {
+export function getAdjustedConfig(baseConfig: RateLimitConfig, tier: string): RateLimitConfig {
   const multiplier = TenantTierMultipliers[tier] || 1;
   return {
     windowMs: baseConfig.windowMs,
@@ -243,7 +239,7 @@ export function logRateLimitViolation(
   result: RateLimitResult,
   resourceType?: string
 ): void {
-  const user = request.user as AuthenticatedUser | undefined;
+  const user = request.user;
   const ip = getClientIp(request);
 
   const logEntry = {
@@ -321,7 +317,7 @@ export function createSkillpodRateLimitHook(
       // Log violation for security monitoring
       logRateLimitViolation(request, type, result, resourceType);
 
-      const user = request.user as AuthenticatedUser | undefined;
+      const user = request.user;
       throw new SkillpodRateLimitExceededError(
         type,
         result.retryAfter,

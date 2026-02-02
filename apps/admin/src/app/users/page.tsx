@@ -22,9 +22,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { adminApi } from '../../lib/api/admin';
 
 // ============================================================================
 // Types
@@ -44,10 +47,10 @@ interface User {
 }
 
 // ============================================================================
-// Mock Data
+// Fallback Data (used when API is unavailable)
 // ============================================================================
 
-const MOCK_USERS: User[] = [
+const FALLBACK_USERS: User[] = [
   {
     id: '1',
     name: 'John Developer',
@@ -157,11 +160,39 @@ export default function UsersPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
 
+  // Fetch users from API
+  const {
+    data: usersResponse,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['admin', 'users', searchQuery],
+    queryFn: () => adminApi.users.list({ search: searchQuery || undefined }),
+    staleTime: 30000,
+  });
+
+  // Transform API data to component format, fallback to sample data if API fails
+  const users: User[] =
+    usersResponse?.success && usersResponse?.data?.data
+      ? usersResponse.data.data.map((u) => ({
+          id: u.id,
+          name: u.name || u.displayName || u.username || 'Unknown',
+          email: u.email,
+          avatar: u.avatarUrl,
+          type: (u.type || 'freelancer') as User['type'],
+          status: (u.status === 'inactive' ? 'suspended' : u.status || 'active') as User['status'],
+          verification: (u.verified ? 'verified' : 'none') as User['verification'],
+          joinedAt: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'Unknown',
+          lastActive: u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Never',
+          trustScore: 80,
+        }))
+      : FALLBACK_USERS;
+
   const toggleSelectAll = () => {
-    if (selectedUsers.length === MOCK_USERS.length) {
+    if (selectedUsers.length === users.length) {
       setSelectedUsers([]);
     } else {
-      setSelectedUsers(MOCK_USERS.map((u) => u.id));
+      setSelectedUsers(users.map((u) => u.id));
     }
   };
 
@@ -306,102 +337,116 @@ export default function UsersPage() {
 
       {/* Users Table */}
       <div className="admin-card overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th className="w-12">
-                  <button
-                    className="flex h-5 w-5 items-center justify-center rounded border border-gray-300 dark:border-gray-600"
-                    onClick={toggleSelectAll}
-                  >
-                    {selectedUsers.length === MOCK_USERS.length && (
-                      <Check className="h-3 w-3 text-indigo-600" />
-                    )}
-                  </button>
-                </th>
-                <th>User</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Verification</th>
-                <th>Trust Score</th>
-                <th>Joined</th>
-                <th>Last Active</th>
-                <th className="w-16">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_USERS.map((user) => (
-                <tr key={user.id}>
-                  <td>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            <span className="ml-2 text-gray-500">Loading users...</span>
+          </div>
+        ) : error ? (
+          <div className="py-12 text-center text-red-500">
+            Failed to load users. Using sample data.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th className="w-12">
                     <button
-                      className={`flex h-5 w-5 items-center justify-center rounded border ${
-                        selectedUsers.includes(user.id)
-                          ? 'border-indigo-600 bg-indigo-600'
-                          : 'border-gray-300 dark:border-gray-600'
-                      }`}
-                      onClick={() => toggleSelectUser(user.id)}
+                      className="flex h-5 w-5 items-center justify-center rounded border border-gray-300 dark:border-gray-600"
+                      onClick={toggleSelectAll}
                     >
-                      {selectedUsers.includes(user.id) && <Check className="h-3 w-3 text-white" />}
+                      {selectedUsers.length === users.length && selectedUsers.length > 0 && (
+                        <Check className="h-3 w-3 text-indigo-600" />
+                      )}
                     </button>
-                  </td>
-                  <td>
-                    <Link
-                      className="flex items-center gap-3 hover:text-indigo-600"
-                      href={`/users/${user.id}`}
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                          {user.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
-                      </div>
-                    </Link>
-                  </td>
-                  <td className="capitalize">{user.type}</td>
-                  <td>{getStatusBadge(user.status)}</td>
-                  <td>{getVerificationBadge(user.verification)}</td>
-                  <td>
-                    <span className={`font-medium ${getTrustScoreColor(user.trustScore)}`}>
-                      {user.trustScore}
-                    </span>
-                  </td>
-                  <td className="text-gray-500">{user.joinedAt}</td>
-                  <td className="text-gray-500">{user.lastActive}</td>
-                  <td>
-                    <div className="flex items-center gap-1">
-                      <Link
-                        className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        href={`/users/${user.id}`}
-                        title="View user"
-                      >
-                        <Eye className="h-4 w-4 text-gray-500" />
-                      </Link>
-                      <button
-                        className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        title="More actions"
-                      >
-                        <MoreVertical className="h-4 w-4 text-gray-500" />
-                      </button>
-                    </div>
-                  </td>
+                  </th>
+                  <th>User</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Verification</th>
+                  <th>Trust Score</th>
+                  <th>Joined</th>
+                  <th>Last Active</th>
+                  <th className="w-16">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <button
+                        className={`flex h-5 w-5 items-center justify-center rounded border ${
+                          selectedUsers.includes(user.id)
+                            ? 'border-indigo-600 bg-indigo-600'
+                            : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                        onClick={() => toggleSelectUser(user.id)}
+                      >
+                        {selectedUsers.includes(user.id) && (
+                          <Check className="h-3 w-3 text-white" />
+                        )}
+                      </button>
+                    </td>
+                    <td>
+                      <Link
+                        className="flex items-center gap-3 hover:text-indigo-600"
+                        href={`/users/${user.id}`}
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                            {user.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{user.name}</p>
+                          <p className="text-xs text-gray-500">{user.email}</p>
+                        </div>
+                      </Link>
+                    </td>
+                    <td className="capitalize">{user.type}</td>
+                    <td>{getStatusBadge(user.status)}</td>
+                    <td>{getVerificationBadge(user.verification)}</td>
+                    <td>
+                      <span className={`font-medium ${getTrustScoreColor(user.trustScore)}`}>
+                        {user.trustScore}
+                      </span>
+                    </td>
+                    <td className="text-gray-500">{user.joinedAt}</td>
+                    <td className="text-gray-500">{user.lastActive}</td>
+                    <td>
+                      <div className="flex items-center gap-1">
+                        <Link
+                          className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          href={`/users/${user.id}`}
+                          title="View user"
+                        >
+                          <Eye className="h-4 w-4 text-gray-500" />
+                        </Link>
+                        <button
+                          className="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          title="More actions"
+                        >
+                          <MoreVertical className="h-4 w-4 text-gray-500" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
         <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 dark:border-gray-700">
           <p className="text-sm text-gray-500">
-            Showing <span className="font-medium">1</span> to <span className="font-medium">5</span>{' '}
-            of <span className="font-medium">12,847</span> users
+            Showing <span className="font-medium">1</span> to{' '}
+            <span className="font-medium">{users.length}</span> of{' '}
+            <span className="font-medium">{usersResponse?.data?.total ?? users.length}</span> users
           </p>
           <div className="flex items-center gap-2">
             <button disabled className="admin-btn-secondary">

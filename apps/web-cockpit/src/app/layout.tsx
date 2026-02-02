@@ -33,12 +33,13 @@ import {
   User,
   HelpCircle,
   Sparkles,
+  Building2,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import '../styles/globals.css';
-import { CockpitAuthProvider, useCockpitAuth, type CockpitUser } from '../lib/providers/auth';
+import { CockpitAuthProvider, useCockpitAuth } from '../lib/auth';
 
 // ============================================================================
 // TanStack Query Client
@@ -67,44 +68,6 @@ interface NavItem {
 }
 
 // ============================================================================
-// Utility Functions
-// ============================================================================
-
-/**
- * Get user initials from name or email
- */
-function getUserInitials(user: CockpitUser | null): string {
-  if (!user) return '?';
-
-  if (user.firstName && user.lastName) {
-    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-  }
-
-  if (user.name) {
-    const parts = user.name.split(' ');
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    }
-    return user.name.substring(0, 2).toUpperCase();
-  }
-
-  return user.email.substring(0, 2).toUpperCase();
-}
-
-/**
- * Get display name for user
- */
-function getUserDisplayName(user: CockpitUser | null): string {
-  if (!user) return 'Guest';
-
-  if (user.name) return user.name;
-  if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
-  if (user.firstName) return user.firstName;
-
-  return user.email.split('@')[0];
-}
-
-// ============================================================================
 // Navigation Config
 // ============================================================================
 
@@ -130,12 +93,10 @@ function Sidebar({
   isOpen,
   onClose,
   currentPath,
-  user,
 }: Readonly<{
   isOpen: boolean;
   onClose: () => void;
   currentPath: string;
-  user: CockpitUser | null;
 }>) {
   return (
     <>
@@ -194,30 +155,71 @@ function Sidebar({
           })}
         </nav>
 
-        {/* User Profile Mini */}
-        <div className="border-t border-gray-200 p-4 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
-              {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={getUserDisplayName(user)}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-              ) : (
-                <User className="h-5 w-5 text-gray-500" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                {getUserDisplayName(user)}
-              </p>
-              <p className="truncate text-xs text-gray-500">{user?.email || 'Not signed in'}</p>
-            </div>
-          </div>
-        </div>
+        {/* User Profile Mini - Uses auth context */}
+        <SidebarUserProfile />
       </aside>
     </>
+  );
+}
+
+// ============================================================================
+// Sidebar User Profile Component
+// ============================================================================
+
+function SidebarUserProfile() {
+  const { user, isLoading } = useCockpitAuth();
+
+  if (isLoading) {
+    return (
+      <div className="border-t border-gray-200 p-4 dark:border-gray-700">
+        <div className="flex animate-pulse items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700" />
+          <div className="flex-1 space-y-2">
+            <div className="h-4 w-20 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="h-3 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="border-t border-gray-200 p-4 dark:border-gray-700">
+        <Link
+          href="/auth/login"
+          className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Sign In
+        </Link>
+      </div>
+    );
+  }
+
+  const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase() || 'U';
+
+  return (
+    <div className="border-t border-gray-200 p-4 dark:border-gray-700">
+      <div className="flex items-center gap-3">
+        {user.avatarUrl ? (
+          <img
+            src={user.avatarUrl}
+            alt={`${user.firstName} ${user.lastName}`}
+            className="h-10 w-10 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
+            <span className="text-sm font-medium">{initials}</span>
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+            {user.firstName} {user.lastName}
+          </p>
+          <p className="truncate text-xs text-gray-500">{user.email}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -293,16 +295,32 @@ function HeaderTimerWidget() {
 function Header({
   onMenuClick,
   notifications,
-  user,
-  onLogout,
 }: Readonly<{
   onMenuClick: () => void;
   notifications: number;
-  user: CockpitUser | null;
-  onLogout: () => void;
 }>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isTenantMenuOpen, setIsTenantMenuOpen] = useState(false);
+  const { user, tenants, currentTenantId, switchTenant, logout } = useCockpitAuth();
+  const router = useRouter();
+
+  const currentTenant = tenants.find((t) => t.id === currentTenantId);
+  const initials = user
+    ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase() || 'U'
+    : 'U';
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/auth/login');
+  };
+
+  const handleSwitchTenant = async (tenantId: string) => {
+    await switchTenant(tenantId);
+    setIsTenantMenuOpen(false);
+    // Refresh the page to load tenant-specific data
+    router.refresh();
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-gray-700 dark:bg-gray-800">
@@ -314,6 +332,68 @@ function Header({
         >
           <Menu className="h-5 w-5 text-gray-500" />
         </button>
+
+        {/* Tenant Selector (for multi-tenant users) */}
+        {tenants.length > 1 && (
+          <div className="relative">
+            <button
+              className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+              onClick={() => setIsTenantMenuOpen(!isTenantMenuOpen)}
+            >
+              <Building2 className="h-4 w-4 text-gray-500" />
+              <span className="max-w-32 truncate text-gray-700 dark:text-gray-300">
+                {currentTenant?.name || 'Select Workspace'}
+              </span>
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            </button>
+
+            {isTenantMenuOpen && (
+              <>
+                <button
+                  aria-label="Close tenant menu"
+                  className="fixed inset-0 z-40 cursor-default border-0 bg-transparent"
+                  type="button"
+                  onClick={() => setIsTenantMenuOpen(false)}
+                />
+                <div className="absolute left-0 z-50 mt-2 w-64 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                  <div className="border-b border-gray-200 px-4 py-2 dark:border-gray-700">
+                    <p className="text-xs font-medium uppercase text-gray-500">Workspaces</p>
+                  </div>
+                  {tenants.map((tenant) => (
+                    <button
+                      key={tenant.id}
+                      className={`flex w-full items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                        tenant.id === currentTenantId
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                          : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                      onClick={() => handleSwitchTenant(tenant.id)}
+                    >
+                      {tenant.logo ? (
+                        <img
+                          src={tenant.logo}
+                          alt={tenant.name}
+                          className="h-6 w-6 rounded object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-6 w-6 items-center justify-center rounded bg-gray-200 dark:bg-gray-600">
+                          <Building2 className="h-3 w-3 text-gray-500" />
+                        </div>
+                      )}
+                      <div className="flex-1 text-left">
+                        <p className="font-medium">{tenant.name}</p>
+                        <p className="text-xs text-gray-500">{tenant.role}</p>
+                      </div>
+                      {tenant.id === currentTenantId && (
+                        <div className="h-2 w-2 rounded-full bg-blue-600" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative hidden sm:block">
@@ -349,17 +429,17 @@ function Header({
             className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white">
-              {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={getUserDisplayName(user)}
-                  className="h-8 w-8 rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-sm font-medium">{getUserInitials(user)}</span>
-              )}
-            </div>
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={`${user.firstName} ${user.lastName}`}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white">
+                <span className="text-sm font-medium">{initials}</span>
+              </div>
+            )}
             <ChevronDown className="h-4 w-4 text-gray-500" />
           </button>
 
@@ -374,13 +454,14 @@ function Header({
               <div className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                 <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {getUserDisplayName(user)}
+                    {user ? `${user.firstName} ${user.lastName}` : 'Guest'}
                   </p>
-                  <p className="text-xs text-gray-500">{user?.email || 'Not signed in'}</p>
+                  <p className="text-xs text-gray-500">{user?.email || ''}</p>
                 </div>
                 <Link
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                   href="/settings/profile"
+                  onClick={() => setIsUserMenuOpen(false)}
                 >
                   <User className="h-4 w-4" />
                   Profile
@@ -388,6 +469,7 @@ function Header({
                 <Link
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                   href="/settings"
+                  onClick={() => setIsUserMenuOpen(false)}
                 >
                   <Settings className="h-4 w-4" />
                   Settings
@@ -395,6 +477,7 @@ function Header({
                 <Link
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                   href="/help"
+                  onClick={() => setIsUserMenuOpen(false)}
                 >
                   <HelpCircle className="h-4 w-4" />
                   Help Center
@@ -402,10 +485,7 @@ function Header({
                 <div className="border-t border-gray-200 dark:border-gray-700">
                   <button
                     className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      onLogout();
-                    }}
+                    onClick={handleLogout}
                   >
                     <LogOut className="h-4 w-4" />
                     Sign Out
@@ -474,65 +554,35 @@ function FloatingActionButton() {
 // Main Layout
 // ============================================================================
 
-function CockpitLayoutInner({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const notifications = 3;
-  const { user, logout, isLoading } = useCockpitAuth();
-
-  // Show loading state while auth is being verified
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-          <p className="text-sm text-gray-500">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <Sidebar
-        currentPath={pathname}
-        isOpen={sidebarOpen}
-        user={user}
-        onClose={() => setSidebarOpen(false)}
-      />
-
-      {/* Main Content */}
-      <div className="flex flex-1 flex-col">
-        <Header
-          notifications={notifications}
-          user={user}
-          onLogout={logout}
-          onMenuClick={() => setSidebarOpen(true)}
-        />
-        <main className="flex-1">{children}</main>
-      </div>
-
-      {/* Floating Action Button */}
-      <FloatingActionButton />
-    </div>
-  );
-}
-
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  // Dynamic import for ErrorProvider to avoid circular deps
-  const ErrorProvider = require('../lib/providers/error-provider').ErrorProvider;
 
   return (
     <html lang="en">
       <body className="bg-gray-50 dark:bg-gray-900">
-        <ErrorProvider>
-          <QueryClientProvider client={queryClient}>
-            <CockpitAuthProvider apiBaseUrl={process.env.NEXT_PUBLIC_API_URL || ''}>
-              <CockpitLayoutInner>{children}</CockpitLayoutInner>
-            </CockpitAuthProvider>
-          </QueryClientProvider>
-        </ErrorProvider>
+        <QueryClientProvider client={queryClient}>
+          <CockpitAuthProvider>
+            <div className="flex min-h-screen">
+              {/* Sidebar */}
+              <Sidebar
+                currentPath={pathname}
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+              />
+
+              {/* Main Content */}
+              <div className="flex flex-1 flex-col">
+                <Header notifications={notifications} onMenuClick={() => setSidebarOpen(true)} />
+                <main className="flex-1">{children}</main>
+              </div>
+            </div>
+
+            {/* Floating Action Button */}
+            <FloatingActionButton />
+          </CockpitAuthProvider>
+        </QueryClientProvider>
       </body>
     </html>
   );

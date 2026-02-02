@@ -1,21 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
+import { adminApi, type AdminUser, type AdminRole } from '../../../lib/api/admin';
 
-type AdminRole = 'super_admin' | 'admin' | 'moderator' | 'support' | 'analyst';
+// ============================================================================
+// Fallback Data
+// ============================================================================
 
-interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  role: AdminRole;
-  status: 'active' | 'invited' | 'suspended';
-  lastLogin: string | null;
-  createdAt: string;
-  permissions: string[];
-}
-
-const mockAdmins: AdminUser[] = [
+const FALLBACK_ADMINS: AdminUser[] = [
   {
     id: 'a1',
     name: 'John Super',
@@ -109,13 +103,29 @@ const permissionGroups = [
 ];
 
 export default function AdminsPage() {
-  const [admins] = useState<AdminUser[]>(mockAdmins);
+  // Fetch admin users from API
+  const { data: adminsData, isLoading } = useQuery({
+    queryKey: ['admin', 'settings', 'admins'],
+    queryFn: () => adminApi.settings.listAdmins(),
+  });
+
+  // Use API data or fallback
+  const admins = adminsData?.data || FALLBACK_ADMINS;
+
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null);
   const [filterRole, setFilterRole] = useState<string>('all');
 
   const filteredAdmins =
     filterRole === 'all' ? admins : admins.filter((a) => a.role === filterRole);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

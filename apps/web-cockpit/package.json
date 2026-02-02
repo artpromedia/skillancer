@@ -32,6 +32,7 @@
   "devDependencies": {
     "@skillancer/api-client": "workspace:*",
     "@skillancer/config": "workspace:*",
+    "@skillancer/shared-api-client": "workspace:*",
     "@skillancer/types": "workspace:*",
     "@skillancer/ui": "workspace:*",
     "@types/react": "^18.2.0",

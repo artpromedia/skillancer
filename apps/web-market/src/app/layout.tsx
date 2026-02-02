@@ -3,9 +3,8 @@ import { Suspense } from 'react';
 
 import { Footer } from '@/components/layout/footer';
 import { Header } from '@/components/layout/header';
-import { ErrorProvider } from '@/lib/providers/error-provider';
+import { AuthProvider } from '@/lib/auth';
 import { QueryProvider } from '@/lib/providers/query-provider';
-import { MarketAuthProvider } from '@/lib/providers/auth-provider';
 
 import type { Metadata, Viewport } from 'next';
 
@@ -108,20 +107,18 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           attribute="class"
           defaultTheme="system"
         >
-          <ErrorProvider>
-            <QueryProvider>
-              <MarketAuthProvider apiBaseUrl={process.env.NEXT_PUBLIC_API_URL || ''}>
-                <div className="relative flex min-h-screen flex-col">
-                  <Suspense fallback={<HeaderSkeleton />}>
-                    <Header />
-                  </Suspense>
-                  <main className="flex-1">{children}</main>
-                  <Footer />
-                </div>
-              </MarketAuthProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <div className="relative flex min-h-screen flex-col">
+                <Suspense fallback={<HeaderSkeleton />}>
+                  <Header />
+                </Suspense>
+                <main className="flex-1">{children}</main>
+                <Footer />
+              </div>
               <Toaster closeButton richColors position="bottom-right" />
-            </QueryProvider>
-          </ErrorProvider>
+            </AuthProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

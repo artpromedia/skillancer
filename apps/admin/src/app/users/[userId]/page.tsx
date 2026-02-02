@@ -30,9 +30,13 @@ import {
   Trash2,
   Edit,
   ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useParams } from 'next/navigation';
+import { adminApi } from '../../../lib/api/admin';
 
 // ============================================================================
 // Types
@@ -71,10 +75,10 @@ interface TrustScoreBreakdown {
 }
 
 // ============================================================================
-// Mock Data
+// Fallback Data (used when API is unavailable)
 // ============================================================================
 
-const MOCK_USER: UserProfile = {
+const FALLBACK_USER: UserProfile = {
   id: '1',
   name: 'John Developer',
   email: 'john@example.com',
@@ -392,7 +396,19 @@ function RiskIndicators() {
 // ============================================================================
 
 export default function UserDetailPage() {
+  const params = useParams();
+  const userId = params.userId as string;
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Fetch user data from API
+  const { data: userData, isLoading } = useQuery({
+    queryKey: ['admin', 'user', userId],
+    queryFn: () => adminApi.users.getById(userId),
+    enabled: !!userId,
+  });
+
+  // Use API data or fallback
+  const user = userData?.user || FALLBACK_USER;
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Briefcase },
@@ -406,7 +422,7 @@ export default function UserDetailPage() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <OverviewTab user={MOCK_USER} />;
+        return <OverviewTab user={user} />;
       case 'activity':
         return <ActivityTab />;
       case 'contracts':
@@ -418,9 +434,17 @@ export default function UserDetailPage() {
       case 'notes':
         return <AdminNotesTab />;
       default:
-        return <OverviewTab user={MOCK_USER} />;
+        return <OverviewTab user={user} />;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -440,7 +464,7 @@ export default function UserDetailPage() {
           <div className="flex items-start gap-4">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
               <span className="text-2xl font-bold">
-                {MOCK_USER.name
+                {user.name
                   .split(' ')
                   .map((n) => n[0])
                   .join('')}
@@ -448,24 +472,22 @@ export default function UserDetailPage() {
             </div>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {MOCK_USER.name}
-                </h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{user.name}</h1>
                 <span className="admin-badge-success">Active</span>
                 <span className="admin-badge-success flex items-center gap-1">
                   <ShieldCheck className="h-3 w-3" />
                   Verified
                 </span>
               </div>
-              <p className="text-gray-500">{MOCK_USER.email}</p>
+              <p className="text-gray-500">{user.email}</p>
               <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  Joined {MOCK_USER.joinedAt}
+                  Joined {user.joinedAt}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  Active {MOCK_USER.lastActive}
+                  Active {user.lastActive}
                 </span>
                 <span className="flex items-center gap-1">
                   <Star className="h-4 w-4 text-yellow-500" />
@@ -483,7 +505,7 @@ export default function UserDetailPage() {
             </button>
             <a
               className="admin-btn-secondary"
-              href={`/impersonate?user=${MOCK_USER.id}`}
+              href={`/impersonate?user=${user.id}`}
               rel="noopener"
               target="_blank"
             >

@@ -12,7 +12,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Badge,
   cn,
   useTheme,
   getInitials,
@@ -21,6 +20,7 @@ import {
   Bell,
   Briefcase,
   ChevronDown,
+  Loader2,
   LogOut,
   Menu,
   Moon,
@@ -31,12 +31,12 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useCallback } from 'react';
 
 import { SearchBar } from '@/components/search/search-bar';
 import { Logo } from '@/components/brand';
-import { useMarketAuth } from '@/lib/providers/auth-provider';
+import { useAuth } from '@/hooks/useAuth';
 
 // Navigation configuration
 const mainNavItems = [
@@ -87,26 +87,28 @@ const mainNavItems = [
   },
 ];
 
-// Mock user data - replace with actual auth
-const mockUser = null as null | {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role: 'freelancer' | 'client';
-  unreadNotifications: number;
-};
-
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
-  const { user, logout } = useMarketAuth();
+
+  // Real auth integration
+  const { user, isLoading, isAuthenticated, logout, isLoggingOut } = useAuth();
 
   const toggleTheme = useCallback(() => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   }, [resolvedTheme, setTheme]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }, [logout, router]);
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
@@ -166,19 +168,24 @@ export function Header() {
               <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
 
-            {user ? (
+            {isLoading ? (
+              // Loading state
+              <div className="flex items-center gap-2">
+                <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+              </div>
+            ) : isAuthenticated && user ? (
               <>
                 {/* Notifications */}
-                <Button aria-label="Notifications" className="relative" size="icon" variant="ghost">
-                  <Bell className="h-5 w-5" />
-                  {user.unreadNotifications > 0 && (
-                    <Badge
-                      className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full p-0 text-xs"
-                      variant="destructive"
-                    >
-                      {user.unreadNotifications > 9 ? '9+' : user.unreadNotifications}
-                    </Badge>
-                  )}
+                <Button
+                  asChild
+                  aria-label="Notifications"
+                  className="relative"
+                  size="icon"
+                  variant="ghost"
+                >
+                  <Link href="/notifications">
+                    <Bell className="h-5 w-5" />
+                  </Link>
                 </Button>
 
                 {/* User Menu */}
@@ -186,15 +193,22 @@ export function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button className="relative h-9 w-9 rounded-full" variant="ghost">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage alt={user.name} src={user.avatar} />
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        <AvatarImage
+                          alt={`${user.firstName} ${user.lastName}`}
+                          src={user.avatarUrl || undefined}
+                        />
+                        <AvatarFallback>
+                          {getInitials(`${user.firstName} ${user.lastName}`)}
+                        </AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user.name}</p>
+                        <p className="text-sm font-medium leading-none">
+                          {user.firstName} {user.lastName}
+                        </p>
                         <p className="text-muted-foreground text-xs leading-none">{user.email}</p>
                       </div>
                     </DropdownMenuLabel>
@@ -209,7 +223,7 @@ export function Header() {
                       <DropdownMenuItem asChild>
                         <Link
                           href={
-                            user.role === 'FREELANCER' || user.role === 'BOTH'
+                            user.role === 'freelancer'
                               ? '/freelancer/dashboard'
                               : '/client/dashboard'
                           }
@@ -228,10 +242,15 @@ export function Header() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive cursor-pointer"
-                      onClick={() => logout()}
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Log out
+                      {isLoggingOut ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <LogOut className="mr-2 h-4 w-4" />
+                      )}
+                      {isLoggingOut ? 'Logging out...' : 'Log out'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -249,7 +268,7 @@ export function Header() {
             )}
 
             {/* Post a Job CTA (for clients) */}
-            {(!user || user.role === 'CLIENT' || user.role === 'BOTH') && (
+            {(!isAuthenticated || !user || user.role === 'client') && (
               <Button
                 asChild
                 className="hidden gap-2 bg-green-600 hover:bg-green-700 lg:inline-flex"
@@ -312,7 +331,7 @@ export function Header() {
               </div>
             ))}
             {/* Mobile Auth */}
-            {!user && (
+            {!isAuthenticated && (
               <div className="flex flex-col gap-2 border-t pt-4">
                 <Button asChild className="w-full" variant="outline">
                   <Link href="/login">Log In</Link>

@@ -1,25 +1,284 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/require-await */
 'use client';
 
-import { Button, cn } from '@skillancer/ui';
-import { Plus } from 'lucide-react';
+import { cn } from '@skillancer/ui';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 
 import { ConversationList } from '@/components/messaging/conversation-list';
-import { NewConversationModal } from '@/components/messaging/conversation-starter';
 import { MessageThread } from '@/components/messaging/message-thread';
-import {
-  useConversations,
-  useMessages,
-  useSendMessage,
-  useDeleteMessage,
-  useEditMessage,
-  useAddReaction,
-  useTogglePinConversation,
-  useToggleMuteConversation,
-  useMarkAsRead,
-} from '@/hooks/api';
-import { useMarketAuth } from '@/lib/providers/auth-provider';
+import { useUser } from '@/hooks/useAuth';
+
+import type { Conversation, Message } from '@/lib/api/messages';
+
+// ============================================================================
+// Mock Data (Replace with API/WebSocket)
+// ============================================================================
+
+// Note: In production, this would be replaced with real API calls
+// The mock conversations now use dynamic user IDs from auth context
+
+const mockConversations: Conversation[] = [
+  {
+    id: 'conv-1',
+    title: undefined,
+    participants: [
+      {
+        id: 'p-1',
+        userId: 'user-1',
+        name: 'John Developer',
+        avatarUrl: undefined,
+        role: 'FREELANCER',
+        isOnline: true,
+        joinedAt: '2024-12-01',
+      },
+      {
+        id: 'p-2',
+        userId: 'client-1',
+        name: 'Sarah from TechCorp',
+        avatarUrl: undefined,
+        role: 'CLIENT',
+        isOnline: true,
+        lastSeenAt: undefined,
+        joinedAt: '2024-12-01',
+      },
+    ],
+    lastMessage: {
+      id: 'msg-1',
+      conversationId: 'conv-1',
+      senderId: 'client-1',
+      senderName: 'Sarah from TechCorp',
+      type: 'TEXT',
+      content: "Great work on the latest milestone! Let's discuss the next steps.",
+      attachments: [],
+      reactions: [],
+      linkPreviews: [],
+      status: 'DELIVERED',
+      isEdited: false,
+      isDeleted: false,
+      createdAt: '2024-12-24T10:30:00Z',
+      updatedAt: '2024-12-24T10:30:00Z',
+    },
+    unreadCount: 2,
+    isPinned: true,
+    isMuted: false,
+    status: 'ACTIVE',
+    context: {
+      type: 'CONTRACT',
+      id: 'contract-1',
+      title: 'E-commerce Platform Development',
+    },
+    createdAt: '2024-12-01',
+    updatedAt: '2024-12-24T10:30:00Z',
+  },
+  {
+    id: 'conv-2',
+    title: undefined,
+    participants: [
+      {
+        id: 'p-3',
+        userId: 'user-1',
+        name: 'John Developer',
+        avatarUrl: undefined,
+        role: 'FREELANCER',
+        isOnline: true,
+        joinedAt: '2024-12-10',
+      },
+      {
+        id: 'p-4',
+        userId: 'client-2',
+        name: 'Mike from StartupXYZ',
+        avatarUrl: undefined,
+        role: 'CLIENT',
+        isOnline: false,
+        lastSeenAt: '2024-12-23T18:00:00Z',
+        joinedAt: '2024-12-10',
+      },
+    ],
+    lastMessage: {
+      id: 'msg-2',
+      conversationId: 'conv-2',
+      senderId: 'user-1',
+      senderName: 'John Developer',
+      type: 'TEXT',
+      content: "I've uploaded the design mockups. Please review when you have a chance.",
+      attachments: [],
+      reactions: [],
+      linkPreviews: [],
+      status: 'READ',
+      isEdited: false,
+      isDeleted: false,
+      createdAt: '2024-12-23T15:45:00Z',
+      updatedAt: '2024-12-23T15:45:00Z',
+    },
+    unreadCount: 0,
+    isPinned: false,
+    isMuted: false,
+    status: 'ACTIVE',
+    context: {
+      type: 'CONTRACT',
+      id: 'contract-2',
+      title: 'Mobile App UI/UX Design',
+    },
+    createdAt: '2024-12-10',
+    updatedAt: '2024-12-23T15:45:00Z',
+  },
+  {
+    id: 'conv-3',
+    title: undefined,
+    participants: [
+      {
+        id: 'p-5',
+        userId: 'user-1',
+        name: 'John Developer',
+        avatarUrl: undefined,
+        role: 'FREELANCER',
+        isOnline: true,
+        joinedAt: '2024-12-20',
+      },
+      {
+        id: 'p-6',
+        userId: 'client-3',
+        name: 'Lisa Chen',
+        avatarUrl: undefined,
+        role: 'CLIENT',
+        isOnline: false,
+        lastSeenAt: '2024-12-22T10:00:00Z',
+        joinedAt: '2024-12-20',
+      },
+    ],
+    lastMessage: {
+      id: 'msg-3',
+      conversationId: 'conv-3',
+      senderId: 'client-3',
+      senderName: 'Lisa Chen',
+      type: 'TEXT',
+      content: 'Thanks for the proposal! I will review it this week.',
+      attachments: [],
+      reactions: [],
+      linkPreviews: [],
+      status: 'READ',
+      isEdited: false,
+      isDeleted: false,
+      createdAt: '2024-12-22T09:30:00Z',
+      updatedAt: '2024-12-22T09:30:00Z',
+    },
+    unreadCount: 0,
+    isPinned: false,
+    isMuted: false,
+    status: 'ACTIVE',
+    context: {
+      type: 'PROPOSAL',
+      id: 'proposal-5',
+      title: 'Website Redesign Project',
+    },
+    createdAt: '2024-12-20',
+    updatedAt: '2024-12-22T09:30:00Z',
+  },
+];
+
+const mockMessages: Record<string, Message[]> = {
+  'conv-1': [
+    {
+      id: 'msg-1-1',
+      conversationId: 'conv-1',
+      senderId: 'client-1',
+      senderName: 'Sarah from TechCorp',
+      type: 'TEXT',
+      content: 'Hi John! Thanks for accepting our contract.',
+      attachments: [],
+      reactions: [],
+      linkPreviews: [],
+      status: 'READ',
+      isEdited: false,
+      isDeleted: false,
+      createdAt: '2024-12-01T10:00:00Z',
+      updatedAt: '2024-12-01T10:00:00Z',
+    },
+    {
+      id: 'msg-1-2',
+      conversationId: 'conv-1',
+      senderId: 'user-1',
+      senderName: 'John Developer',
+      type: 'TEXT',
+      content:
+        "Thank you Sarah! I'm excited to work on this project. I've already started reviewing the requirements.",
+      attachments: [],
+      reactions: [
+        {
+          emoji: '👍',
+          userId: 'client-1',
+          userName: 'Sarah from TechCorp',
+          createdAt: '2024-12-01T10:05:00Z',
+        },
+      ],
+      linkPreviews: [],
+      status: 'READ',
+      isEdited: false,
+      isDeleted: false,
+      createdAt: '2024-12-01T10:02:00Z',
+      updatedAt: '2024-12-01T10:02:00Z',
+    },
+    {
+      id: 'msg-1-3',
+      conversationId: 'conv-1',
+      senderId: 'client-1',
+      senderName: 'Sarah from TechCorp',
+      type: 'SYSTEM',
+      content: 'Milestone 1 "Project Setup & Authentication" has been funded',
+      attachments: [],
+      reactions: [],
+      linkPreviews: [],
+      status: 'READ',
+      isEdited: false,
+      isDeleted: false,
+      createdAt: '2024-11-01T12:00:00Z',
+      updatedAt: '2024-11-01T12:00:00Z',
+    },
+    {
+      id: 'msg-1-4',
+      conversationId: 'conv-1',
+      senderId: 'user-1',
+      senderName: 'John Developer',
+      type: 'TEXT',
+      content:
+        "I've completed the authentication system. Here are the test credentials and documentation:",
+      attachments: [
+        {
+          id: 'att-1',
+          name: 'auth-documentation.pdf',
+          url: '/files/auth-documentation.pdf',
+          type: 'application/pdf',
+          size: 245000,
+          uploadedAt: '2024-11-14T16:00:00Z',
+        },
+      ],
+      reactions: [],
+      linkPreviews: [],
+      status: 'READ',
+      isEdited: false,
+      isDeleted: false,
+      createdAt: '2024-11-14T16:00:00Z',
+      updatedAt: '2024-11-14T16:00:00Z',
+    },
+    {
+      id: 'msg-1-5',
+      conversationId: 'conv-1',
+      senderId: 'client-1',
+      senderName: 'Sarah from TechCorp',
+      type: 'TEXT',
+      content: "Great work on the latest milestone! Let's discuss the next steps.",
+      attachments: [],
+      reactions: [],
+      linkPreviews: [],
+      status: 'DELIVERED',
+      isEdited: false,
+      isDeleted: false,
+      createdAt: '2024-12-24T10:30:00Z',
+      updatedAt: '2024-12-24T10:30:00Z',
+    },
+  ],
+};
 
 // ============================================================================
 // Messages Page Content
@@ -28,40 +287,20 @@ import { useMarketAuth } from '@/lib/providers/auth-provider';
 function MessagesPageContent() {
   const searchParams = useSearchParams();
   const contractId = searchParams.get('contract');
-  const messageContainerRef = useRef<HTMLDivElement>(null);
-  const { user } = useMarketAuth();
-  const currentUserId = user?.id ?? '';
 
-  // Local state
+  // Get current user from auth context
+  const { user } = useUser();
+  const currentUserId = user?.id || 'user-1'; // Fallback for development
+  const currentUserName = user ? `${user.firstName} ${user.lastName}` : 'John Developer';
+
+  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
-
-  // API Hooks
-  const { conversations, isLoading: loadingConversations } = useConversations();
-
-  const {
-    messages,
-    isLoading: loadingMessages,
-    hasMore,
-    loadMore,
-  } = useMessages({
-    conversationId: activeConversationId || '',
-    enabled: !!activeConversationId,
-    pageSize: 50,
-  });
-
-  // Mutation hooks
-  const sendMessageMutation = useSendMessage();
-  const deleteMessageMutation = useDeleteMessage();
-  const editMessageMutation = useEditMessage();
-  const addReactionMutation = useAddReaction();
-  const togglePinMutation = useTogglePinConversation();
-  const toggleMuteMutation = useToggleMuteConversation();
-  const markAsReadMutation = useMarkAsRead();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // Find conversation by contract ID
   useEffect(() => {
-    if (contractId && conversations.length > 0) {
+    if (contractId) {
       const conv = conversations.find((c) => c.context?.id === contractId);
       if (conv) {
         setActiveConversationId(conv.id);
@@ -69,26 +308,17 @@ function MessagesPageContent() {
     }
   }, [contractId, conversations]);
 
-  // Mark messages as read when conversation is selected
+  // Load messages when conversation changes
   useEffect(() => {
     if (activeConversationId) {
-      const conversation = conversations.find((c) => c.id === activeConversationId);
-      if (conversation && conversation.unreadCount > 0) {
-        markAsReadMutation.mutate({ conversationId: activeConversationId });
-      }
+      setLoading(true);
+      // Simulate API call
+      setTimeout(() => {
+        setMessages(mockMessages[activeConversationId] || []);
+        setLoading(false);
+      }, 300);
     }
-  }, [activeConversationId, conversations, markAsReadMutation]);
-
-  // Scroll-up pagination for older messages
-  const handleScroll = useCallback(() => {
-    const container = messageContainerRef.current;
-    if (!container) return;
-
-    // Load more when scrolled near top (100px threshold)
-    if (container.scrollTop < 100 && hasMore) {
-      loadMore().catch(console.error);
-    }
-  }, [hasMore, loadMore]);
+  }, [activeConversationId]);
 
   const handleSelectConversation = useCallback((conversationId: string) => {
     setActiveConversationId(conversationId);
@@ -98,66 +328,42 @@ function MessagesPageContent() {
     async (content: string, attachments?: File[]) => {
       if (!activeConversationId) return;
 
-      await sendMessageMutation.mutateAsync({
+      const newMessage: Message = {
+        id: `msg-${Date.now()}`,
         conversationId: activeConversationId,
-        data: {
-          content,
-          type: 'TEXT',
-          attachments,
-        },
-        optimisticId: `temp-${Date.now()}`,
-      });
-    },
-    [activeConversationId, sendMessageMutation]
-  );
-
-  const handleDeleteMessage = useCallback(
-    async (messageId: string) => {
-      if (!activeConversationId) return;
-      await deleteMessageMutation.mutateAsync({
-        conversationId: activeConversationId,
-        messageId,
-      });
-    },
-    [activeConversationId, deleteMessageMutation]
-  );
-
-  const handleEditMessage = useCallback(
-    async (messageId: string, content: string) => {
-      if (!activeConversationId) return;
-      await editMessageMutation.mutateAsync({
-        conversationId: activeConversationId,
-        messageId,
+        senderId: currentUserId,
+        senderName: currentUserName,
+        type: 'TEXT',
         content,
-      });
-    },
-    [activeConversationId, editMessageMutation]
-  );
+        attachments:
+          attachments?.map((file, i) => ({
+            id: `att-${Date.now()}-${i}`,
+            name: file.name,
+            url: URL.createObjectURL(file),
+            type: file.type,
+            size: file.size,
+            uploadedAt: new Date().toISOString(),
+          })) || [],
+        reactions: [],
+        linkPreviews: [],
+        status: 'SENDING',
+        isEdited: false,
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-  const handleReactToMessage = useCallback(
-    async (messageId: string, emoji: string) => {
-      if (!activeConversationId) return;
-      await addReactionMutation.mutateAsync({
-        conversationId: activeConversationId,
-        messageId,
-        emoji,
-      });
-    },
-    [activeConversationId, addReactionMutation]
-  );
+      // Optimistic update
+      setMessages((prev) => [...prev, newMessage]);
 
-  const handlePinConversation = useCallback(
-    async (conversationId: string, _pinned: boolean) => {
-      await togglePinMutation.mutateAsync(conversationId);
+      // Simulate API call
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === newMessage.id ? { ...m, status: 'SENT' as const } : m))
+        );
+      }, 500);
     },
-    [togglePinMutation]
-  );
-
-  const handleMuteConversation = useCallback(
-    async (conversationId: string, _muted: boolean) => {
-      await toggleMuteMutation.mutateAsync(conversationId);
-    },
-    [toggleMuteMutation]
+    [activeConversationId, currentUserId, currentUserName]
   );
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
@@ -171,39 +377,64 @@ function MessagesPageContent() {
           activeConversationId && 'hidden sm:block'
         )}
       >
-        {/* New Conversation Header */}
-        <div className="flex items-center justify-between border-b p-3">
-          <h2 className="font-semibold">Messages</h2>
-          <Button size="sm" variant="outline" onClick={() => setIsNewConversationOpen(true)}>
-            <Plus className="mr-1 h-4 w-4" />
-            New
-          </Button>
-        </div>
-
         <ConversationList
           activeConversationId={activeConversationId || undefined}
           conversations={conversations}
           currentUserId={currentUserId}
-          loading={loadingConversations}
-          onMuteConversation={handleMuteConversation}
-          onPinConversation={handlePinConversation}
+          loading={false}
+          onMuteConversation={async (id, muted) => {
+            setConversations((prev) =>
+              prev.map((c) => (c.id === id ? { ...c, isMuted: muted } : c))
+            );
+          }}
+          onPinConversation={async (id, pinned) => {
+            setConversations((prev) =>
+              prev.map((c) => (c.id === id ? { ...c, isPinned: pinned } : c))
+            );
+          }}
           onSelectConversation={handleSelectConversation}
         />
       </div>
 
       {/* Main Content - Message Thread */}
-      <div ref={messageContainerRef} className="flex-1" onScroll={handleScroll}>
+      <div className="flex-1">
         {activeConversation ? (
           <MessageThread
             conversation={activeConversation}
             currentUserId={currentUserId}
-            hasMore={hasMore}
-            loading={loadingMessages}
+            hasMore={false}
+            loading={loading}
             messages={messages}
-            onDeleteMessage={handleDeleteMessage}
-            onEditMessage={handleEditMessage}
-            onLoadMore={loadMore}
-            onReactToMessage={handleReactToMessage}
+            onDeleteMessage={async (messageId) => {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === messageId ? { ...m, isDeleted: true } : m))
+              );
+            }}
+            onEditMessage={async (messageId, content) => {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === messageId ? { ...m, content, isEdited: true } : m))
+              );
+            }}
+            onReactToMessage={async (messageId, emoji) => {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === messageId
+                    ? {
+                        ...m,
+                        reactions: [
+                          ...m.reactions,
+                          {
+                            emoji,
+                            userId: currentUserId,
+                            userName: currentUserName,
+                            createdAt: new Date().toISOString(),
+                          },
+                        ],
+                      }
+                    : m
+                )
+              );
+            }}
             onSendMessage={handleSendMessage}
           />
         ) : (
@@ -214,20 +445,9 @@ function MessagesPageContent() {
               Select a conversation from the list to start messaging, or messages will appear here
               when clients contact you.
             </p>
-            <Button className="mt-4" onClick={() => setIsNewConversationOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Start a Conversation
-            </Button>
           </div>
         )}
       </div>
-
-      {/* New Conversation Modal */}
-      <NewConversationModal
-        contacts={[]} // Would be populated with contacts from API
-        isOpen={isNewConversationOpen}
-        onClose={() => setIsNewConversationOpen(false)}
-      />
     </div>
   );
 }

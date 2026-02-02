@@ -1,42 +1,156 @@
 /**
- * Messaging API Hooks
+ * API Hooks Index
  *
- * Re-exports all messaging-related TanStack Query hooks.
+ * Export all React Query hooks for API operations.
  */
 
-// Conversations
+// Jobs hooks
 export {
-  useConversations,
-  useConversation,
-  useCreateConversation,
-  useUpdateConversation,
-  useArchiveConversation,
-  useTogglePinConversation,
-  useToggleMuteConversation,
-  usePrefetchConversation,
-  useUpdateUnreadCount,
-  conversationQueryKeys,
-  type UseConversationsOptions,
-  type UseConversationOptions,
-  type UseConversationsReturn,
-  type UseConversationReturn,
-  type CreateConversationData,
-  type UpdateConversationData,
-} from './use-conversations';
+  jobKeys,
+  useJobSearch,
+  useInfiniteJobSearch,
+  useJob,
+  useJobBySlug,
+  useMyJobs,
+  useFeaturedJobs,
+  useRecommendedJobs,
+  useCategories,
+  useSkillsSearch,
+  usePopularSkills,
+  useCreateJob,
+  useUpdateJob,
+  useDeleteJob,
+  usePublishJob,
+  usePauseJob,
+  useCloseJob,
+} from './use-jobs';
 
-// Messages
+// Proposals hooks
 export {
-  useMessages,
-  useSendMessage,
-  useDeleteMessage,
-  useEditMessage,
-  useAddReaction,
-  useRemoveReaction,
-  useMarkAsRead,
-  useAddMessageToCache,
-  useUpdateMessageInCache,
-  useRemoveMessageFromCache,
-  messageQueryKeys,
-  type UseMessagesOptions,
-  type UseMessagesReturn,
-} from './use-messages';
+  proposalKeys,
+  useMyProposals,
+  useJobProposals,
+  useProposal,
+  useProposalDraft,
+  useProposalStats,
+  useSubmitProposal,
+  useUpdateProposal,
+  useWithdrawProposal,
+  useAcceptProposal,
+  useDeclineProposal,
+  useShortlistProposal,
+  useSaveProposalDraft,
+  useDeleteProposalDraft,
+} from './use-proposals';
+
+// Contracts hooks
+export {
+  contractKeys,
+  useMyContracts,
+  useClientContracts,
+  useFreelancerContracts,
+  useContract,
+  useContractMilestones,
+  useTimeEntries,
+  useContractReviews,
+  useCreateContract,
+  useUpdateContract,
+  useSignContract,
+  usePauseContract,
+  useResumeContract,
+  useCompleteContract,
+  useCancelContract,
+  useFundMilestone,
+  useSubmitMilestone,
+  useApproveMilestone,
+  useRequestRevision,
+  useReleaseMilestone,
+  useLogTimeEntry,
+  useUpdateTimeEntry,
+  useDeleteTimeEntry,
+  useApproveTimeEntries,
+  useSubmitReview,
+} from './use-contracts';
+
+// Users hooks
+export {
+  userKeys,
+  useCurrentUser,
+  useFreelancerProfile,
+  useMyFreelancerProfile,
+  useMyClientProfile,
+  useFreelancerSearch,
+  useUserReviews,
+  useUpdateProfile,
+  useUpdateFreelancerProfile,
+  useUpdateClientProfile,
+  useUpdateAvatar,
+  useDeleteAvatar,
+  useAddSkill,
+  useUpdateSkill,
+  useRemoveSkill,
+  useAddPortfolioItem,
+  useUpdatePortfolioItem,
+  useDeletePortfolioItem,
+  useReorderPortfolio,
+  useAddWorkExperience,
+  useUpdateWorkExperience,
+  useDeleteWorkExperience,
+  useAddEducation,
+  useUpdateEducation,
+  useDeleteEducation,
+  useAddCertification,
+  useUpdateCertification,
+  useDeleteCertification,
+} from './use-users';
+
+// Re-export types from hooks
+export type {
+  Job,
+  JobSearchParams,
+  CreateJobInput,
+  UpdateJobInput,
+  Category,
+  JobSkill,
+} from './use-jobs';
+
+export type {
+  Proposal,
+  ProposalListParams,
+  SubmitProposalInput,
+  UpdateProposalInput,
+  ProposalStatus,
+  ProposalDraft,
+} from './use-proposals';
+
+export type {
+  Contract,
+  ContractMilestone,
+  ContractListParams,
+  CreateContractInput,
+  UpdateContractInput,
+  SubmitMilestoneInput,
+  RequestRevisionInput,
+  TimeEntry,
+  TimeEntryInput,
+  ContractReview,
+  SubmitReviewInput,
+  ContractStatus,
+  MilestoneStatus,
+} from './use-contracts';
+
+export type {
+  UserProfile,
+  FreelancerProfile,
+  ClientProfile,
+  UpdateProfileInput,
+  UpdateFreelancerProfileInput,
+  UpdateClientProfileInput,
+  FreelancerSearchParams,
+  UserReview,
+  UserSkill,
+  PortfolioItem,
+  WorkExperience,
+  Education,
+  Certification,
+} from './use-users';

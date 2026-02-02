@@ -33,17 +33,12 @@ import {
   Activity,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 
 import type { LucideIcon } from 'lucide-react';
 import '../styles/globals.css';
-import {
-  AdminAuthProvider,
-  useAdminAuth,
-  type AdminUser,
-  type AdminRole,
-} from '../lib/providers/auth';
+import { AdminAuthProvider, useAdminAuth } from '../lib/auth';
 
 // ============================================================================
 // Query Client
@@ -73,48 +68,21 @@ interface NavItem {
   children?: NavItem[];
 }
 
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/**
- * Get user initials from name or email
- */
-function getUserInitials(user: AdminUser | null): string {
-  if (!user) return '?';
-
-  if (user.firstName && user.lastName) {
-    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-  }
-
-  if (user.name) {
-    const parts = user.name.split(' ');
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    }
-    return user.name.substring(0, 2).toUpperCase();
-  }
-
-  return user.email.substring(0, 2).toUpperCase();
-}
-
-/**
- * Get display name for role
- */
-function getRoleDisplayName(role: AdminRole): string {
-  const roleNames: Record<string, string> = {
-    SUPER_ADMIN: 'Super Admin',
-    super_admin: 'Super Admin',
-    ADMIN: 'Admin',
-    admin: 'Admin',
-    operations: 'Operations',
-    moderator: 'Moderator',
-    support: 'Support',
-    finance: 'Finance',
-    analytics: 'Analytics',
-  };
-  return roleNames[role] || role.replace('_', ' ');
-}
+// Admin roles for nav filtering
+type AdminRole =
+  | 'SUPER_ADMIN'
+  | 'ADMIN'
+  | 'OPERATIONS'
+  | 'MODERATOR'
+  | 'SUPPORT'
+  | 'FINANCE'
+  | 'ANALYTICS'
+  | 'super_admin'
+  | 'operations'
+  | 'moderator'
+  | 'support'
+  | 'finance'
+  | 'analytics';
 
 // ============================================================================
 // Navigation Config
@@ -132,28 +100,44 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Users',
     icon: Users,
     href: '/users',
-    roles: ['super_admin', 'operations', 'support'],
+    roles: [
+      'SUPER_ADMIN',
+      'ADMIN',
+      'OPERATIONS',
+      'SUPPORT',
+      'super_admin',
+      'operations',
+      'support',
+    ],
   },
   {
     id: 'jobs',
     label: 'Jobs & Projects',
     icon: Briefcase,
     href: '/jobs',
-    roles: ['super_admin', 'operations', 'moderator'],
+    roles: [
+      'SUPER_ADMIN',
+      'ADMIN',
+      'OPERATIONS',
+      'MODERATOR',
+      'super_admin',
+      'operations',
+      'moderator',
+    ],
   },
   {
     id: 'contracts',
     label: 'Contracts',
     icon: FileText,
     href: '/contracts',
-    roles: ['super_admin', 'operations'],
+    roles: ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS', 'super_admin', 'operations'],
   },
   {
     id: 'payments',
     label: 'Payments',
     icon: CreditCard,
     href: '/payments',
-    roles: ['super_admin', 'finance'],
+    roles: ['SUPER_ADMIN', 'ADMIN', 'FINANCE', 'super_admin', 'finance'],
   },
   {
     id: 'disputes',
@@ -161,7 +145,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: Scale,
     href: '/disputes',
     badge: 12,
-    roles: ['super_admin', 'operations'],
+    roles: ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS', 'super_admin', 'operations'],
   },
   {
     id: 'moderation',
@@ -169,28 +153,28 @@ const NAV_ITEMS: NavItem[] = [
     icon: Shield,
     href: '/moderation',
     badge: 45,
-    roles: ['super_admin', 'moderator'],
+    roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR', 'super_admin', 'moderator'],
   },
   {
     id: 'skillpod',
     label: 'SkillPod Sessions',
     icon: MonitorPlay,
     href: '/skillpod',
-    roles: ['super_admin', 'operations'],
+    roles: ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS', 'super_admin', 'operations'],
   },
   {
     id: 'reports',
     label: 'Reports & Analytics',
     icon: BarChart3,
     href: '/reports',
-    roles: ['super_admin', 'analytics'],
+    roles: ['SUPER_ADMIN', 'ADMIN', 'ANALYTICS', 'super_admin', 'analytics'],
   },
   {
     id: 'settings',
     label: 'Settings',
     icon: Settings,
     href: '/settings',
-    roles: ['super_admin'],
+    roles: ['SUPER_ADMIN', 'ADMIN', 'super_admin'],
   },
 ];
 
@@ -204,7 +188,8 @@ function EnvironmentIndicator() {
   if (env === 'production') {
     return (
       <div className="flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700">
-        <span className="h-2 w-2 rounded-full bg-red-500" /> PRODUCTION
+        <span className="h-2 w-2 rounded-full bg-red-500" />
+        PRODUCTION
       </div>
     );
   }
@@ -212,14 +197,16 @@ function EnvironmentIndicator() {
   if (env === 'staging') {
     return (
       <div className="flex items-center gap-1.5 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-700">
-        <span className="h-2 w-2 rounded-full bg-yellow-500" /> STAGING
+        <span className="h-2 w-2 rounded-full bg-yellow-500" />
+        STAGING
       </div>
     );
   }
 
   return (
     <div className="flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
-      <span className="h-2 w-2 rounded-full bg-green-500" /> DEV
+      <span className="h-2 w-2 rounded-full bg-green-500" />
+      DEV
     </div>
   );
 }
@@ -297,7 +284,7 @@ function Sidebar({
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}
-                {Boolean(item.badge && item.badge > 0) && (
+                {item.badge && item.badge > 0 && (
                   <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
                     {item.badge}
                   </span>
@@ -338,16 +325,25 @@ function Sidebar({
 function Header({
   onMenuClick,
   notifications,
-  user,
-  onLogout,
 }: Readonly<{
   onMenuClick: () => void;
   notifications: number;
-  user: AdminUser | null;
-  onLogout: () => void;
 }>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const { user, logout } = useAdminAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/auth/login');
+  };
+
+  const displayName = user ? `${user.firstName} ${user.lastName}` : 'Admin';
+  const initials = user
+    ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase()
+    : 'A';
+  const displayRole = user?.role?.replaceAll('_', ' ').toLowerCase() ?? 'admin';
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-gray-700 dark:bg-gray-800">
@@ -402,24 +398,20 @@ function Header({
             className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white">
-              {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="h-8 w-8 rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-sm font-medium">{getUserInitials(user)}</span>
-              )}
-            </div>
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={displayName}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white">
+                <span className="text-sm font-medium">{initials}</span>
+              </div>
+            )}
             <div className="hidden text-left md:block">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {user?.name || 'Admin'}
-              </p>
-              <p className="text-xs text-gray-500">
-                {user ? getRoleDisplayName(user.role) : 'Not signed in'}
-              </p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{displayName}</p>
+              <p className="text-xs capitalize text-gray-500">{displayRole}</p>
             </div>
             <ChevronDown className="h-4 w-4 text-gray-500" />
           </button>
@@ -434,14 +426,13 @@ function Header({
               />
               <div className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                 <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {user?.name || 'Admin'}
-                  </p>
-                  <p className="text-sm text-gray-500">{user?.email || 'Not signed in'}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{displayName}</p>
+                  <p className="text-sm text-gray-500">{user?.email ?? ''}</p>
                 </div>
                 <Link
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                   href="/settings/profile"
+                  onClick={() => setIsUserMenuOpen(false)}
                 >
                   <User className="h-4 w-4" />
                   My Profile
@@ -449,6 +440,7 @@ function Header({
                 <Link
                   className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                   href="/settings/activity"
+                  onClick={() => setIsUserMenuOpen(false)}
                 >
                   <Activity className="h-4 w-4" />
                   My Activity Log
@@ -456,10 +448,7 @@ function Header({
                 <div className="border-t border-gray-200 dark:border-gray-700">
                   <button
                     className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      onLogout();
-                    }}
+                    onClick={handleLogout}
                   >
                     <LogOut className="h-4 w-4" />
                     Sign out
@@ -475,17 +464,19 @@ function Header({
 }
 
 // ============================================================================
-// Admin Layout Inner
+// Admin Content Wrapper
 // ============================================================================
 
-function AdminLayoutInner({
+function AdminContent({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user, logout, isLoading } = useAdminAuth();
+  const { user, isLoading } = useAdminAuth();
+
+  const userRole = (user?.role ?? 'SUPPORT') as AdminRole;
 
   const closeSidebar = useCallback(() => {
     setIsSidebarOpen(false);
@@ -502,7 +493,7 @@ function AdminLayoutInner({
       <div className="flex h-screen items-center justify-center bg-gray-100 dark:bg-gray-900">
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-          <p className="text-sm text-gray-500">Verifying admin access...</p>
+          <p className="text-sm text-gray-500">Loading admin panel...</p>
         </div>
       </div>
     );
@@ -514,19 +505,14 @@ function AdminLayoutInner({
       <Sidebar
         currentPath={pathname}
         isOpen={isSidebarOpen}
-        userRole={user?.role || 'support'}
+        userRole={userRole}
         onClose={closeSidebar}
       />
 
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <Header
-          notifications={5}
-          user={user}
-          onLogout={logout}
-          onMenuClick={() => setIsSidebarOpen(true)}
-        />
+        <Header notifications={5} onMenuClick={() => setIsSidebarOpen(true)} />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
@@ -544,9 +530,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Dynamic import for ErrorProvider
-  const ErrorProvider = require('../lib/providers/error-provider').ErrorProvider;
-
   return (
     <html lang="en">
       <head>
@@ -555,13 +538,11 @@ export default function RootLayout({
         <meta content="noindex, nofollow" name="robots" />
       </head>
       <body className="bg-gray-100 dark:bg-gray-900">
-        <ErrorProvider>
-          <QueryClientProvider client={queryClient}>
-            <AdminAuthProvider apiBaseUrl={process.env.NEXT_PUBLIC_API_URL || ''}>
-              <AdminLayoutInner>{children}</AdminLayoutInner>
-            </AdminAuthProvider>
-          </QueryClientProvider>
-        </ErrorProvider>
+        <QueryClientProvider client={queryClient}>
+          <AdminAuthProvider>
+            <AdminContent>{children}</AdminContent>
+          </AdminAuthProvider>
+        </QueryClientProvider>
       </body>
     </html>
   );

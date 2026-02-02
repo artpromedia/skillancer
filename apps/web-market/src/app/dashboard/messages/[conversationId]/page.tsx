@@ -1,31 +1,221 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/require-await, no-console */
 'use client';
 
 import { Button } from '@skillancer/ui';
-import { ArrowLeft, Search, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { ConversationActions } from '@/components/messaging/conversation-actions';
-import { ConversationSearch } from '@/components/messaging/conversation-search';
 import { MessageThread } from '@/components/messaging/message-thread';
-import {
-  useConversation,
-  useMessages,
-  useSendMessage,
-  useDeleteMessage,
-  useEditMessage,
-  useAddReaction,
-  useMarkAsRead,
-  useArchiveConversation,
-  useTogglePinConversation,
-  useToggleMuteConversation,
-} from '@/hooks/api';
-import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
-import { blockUser, reportConversation } from '@/lib/api/messages';
-import { useMarketAuth } from '@/lib/providers/auth-provider';
+import { useUser } from '@/hooks/useAuth';
 
-import type { Message } from '@/lib/api/messages';
+import type { TypingUser } from '@/hooks/use-messaging';
+import type { Conversation, Message } from '@/lib/api/messages';
+
+// ============================================================================
+// Mock Data (Replace with API/WebSocket)
+// ============================================================================
+
+// Note: In production, this would be replaced with real API calls
+// The mock conversations now use dynamic user IDs from auth context
+
+const mockConversation: Conversation = {
+  id: 'conv-1',
+  title: undefined,
+  participants: [
+    {
+      id: 'p-1',
+      userId: 'user-1',
+      name: 'John Developer',
+      avatarUrl: undefined,
+      role: 'FREELANCER',
+      isOnline: true,
+      joinedAt: '2024-12-01',
+    },
+    {
+      id: 'p-2',
+      userId: 'client-1',
+      name: 'Sarah from TechCorp',
+      avatarUrl: undefined,
+      role: 'CLIENT',
+      isOnline: true,
+      lastSeenAt: undefined,
+      joinedAt: '2024-12-01',
+    },
+  ],
+  lastMessage: undefined,
+  unreadCount: 0,
+  isPinned: true,
+  isMuted: false,
+  status: 'ACTIVE',
+  context: {
+    type: 'CONTRACT',
+    id: 'contract-1',
+    title: 'E-commerce Platform Development',
+  },
+  createdAt: '2024-12-01',
+  updatedAt: '2024-12-24T10:30:00Z',
+};
+
+const mockMessages: Message[] = [
+  {
+    id: 'msg-1-1',
+    conversationId: 'conv-1',
+    senderId: 'client-1',
+    senderName: 'Sarah from TechCorp',
+    type: 'TEXT',
+    content: 'Hi John! Thanks for accepting our contract.',
+    attachments: [],
+    reactions: [],
+    linkPreviews: [],
+    status: 'READ',
+    isEdited: false,
+    isDeleted: false,
+    createdAt: '2024-12-01T10:00:00Z',
+    updatedAt: '2024-12-01T10:00:00Z',
+  },
+  {
+    id: 'msg-1-2',
+    conversationId: 'conv-1',
+    senderId: 'user-1',
+    senderName: 'John Developer',
+    type: 'TEXT',
+    content:
+      "Thank you Sarah! I'm excited to work on this project. I've already started reviewing the requirements.",
+    attachments: [],
+    reactions: [
+      {
+        emoji: '👍',
+        userId: 'client-1',
+        userName: 'Sarah from TechCorp',
+        createdAt: '2024-12-01T10:05:00Z',
+      },
+    ],
+    linkPreviews: [],
+    status: 'READ',
+    isEdited: false,
+    isDeleted: false,
+    createdAt: '2024-12-01T10:02:00Z',
+    updatedAt: '2024-12-01T10:02:00Z',
+  },
+  {
+    id: 'msg-1-3',
+    conversationId: 'conv-1',
+    senderId: 'client-1',
+    senderName: 'Sarah from TechCorp',
+    type: 'SYSTEM',
+    content: 'Milestone 1 "Project Setup & Authentication" has been funded',
+    attachments: [],
+    reactions: [],
+    linkPreviews: [],
+    status: 'READ',
+    isEdited: false,
+    isDeleted: false,
+    createdAt: '2024-11-01T12:00:00Z',
+    updatedAt: '2024-11-01T12:00:00Z',
+  },
+  {
+    id: 'msg-1-4',
+    conversationId: 'conv-1',
+    senderId: 'user-1',
+    senderName: 'John Developer',
+    type: 'TEXT',
+    content:
+      "I've completed the authentication system. Here are the test credentials and documentation:",
+    attachments: [
+      {
+        id: 'att-1',
+        name: 'auth-documentation.pdf',
+        url: '/files/auth-documentation.pdf',
+        type: 'application/pdf',
+        size: 245000,
+        uploadedAt: '2024-11-14T16:00:00Z',
+      },
+    ],
+    reactions: [],
+    linkPreviews: [],
+    status: 'READ',
+    isEdited: false,
+    isDeleted: false,
+    createdAt: '2024-11-14T16:00:00Z',
+    updatedAt: '2024-11-14T16:00:00Z',
+  },
+  {
+    id: 'msg-1-5',
+    conversationId: 'conv-1',
+    senderId: 'client-1',
+    senderName: 'Sarah from TechCorp',
+    type: 'TEXT',
+    content:
+      'This looks great! The login flow works perfectly. I tested it with multiple accounts.',
+    attachments: [],
+    reactions: [
+      {
+        emoji: '🎉',
+        userId: 'user-1',
+        userName: 'John Developer',
+        createdAt: '2024-11-14T17:00:00Z',
+      },
+    ],
+    linkPreviews: [],
+    status: 'READ',
+    isEdited: false,
+    isDeleted: false,
+    createdAt: '2024-11-14T16:45:00Z',
+    updatedAt: '2024-11-14T16:45:00Z',
+  },
+  {
+    id: 'msg-1-6',
+    conversationId: 'conv-1',
+    senderId: 'client-1',
+    senderName: 'Sarah from TechCorp',
+    type: 'CONTRACT_EVENT',
+    content: 'Milestone 1 has been approved and payment released',
+    attachments: [],
+    reactions: [],
+    linkPreviews: [],
+    status: 'READ',
+    isEdited: false,
+    isDeleted: false,
+    createdAt: '2024-11-15T09:00:00Z',
+    updatedAt: '2024-11-15T09:00:00Z',
+  },
+  {
+    id: 'msg-1-7',
+    conversationId: 'conv-1',
+    senderId: 'user-1',
+    senderName: 'John Developer',
+    type: 'TEXT',
+    content:
+      "Thank you! Starting work on the product catalog now. I'll have the first version ready by end of week.",
+    attachments: [],
+    reactions: [],
+    linkPreviews: [],
+    status: 'READ',
+    isEdited: false,
+    isDeleted: false,
+    createdAt: '2024-11-15T09:15:00Z',
+    updatedAt: '2024-11-15T09:15:00Z',
+  },
+  {
+    id: 'msg-1-8',
+    conversationId: 'conv-1',
+    senderId: 'client-1',
+    senderName: 'Sarah from TechCorp',
+    type: 'TEXT',
+    content:
+      "Great work on the latest milestone! Let's discuss the next steps for the checkout integration.",
+    attachments: [],
+    reactions: [],
+    linkPreviews: [],
+    status: 'DELIVERED',
+    isEdited: false,
+    isDeleted: false,
+    createdAt: '2024-12-24T10:30:00Z',
+    updatedAt: '2024-12-24T10:30:00Z',
+  },
+];
 
 // ============================================================================
 // Page Component
@@ -35,173 +225,136 @@ export default function ConversationPage() {
   const params = useParams();
   const router = useRouter();
   const conversationId = params.conversationId as string;
-  const { user } = useMarketAuth();
-  const currentUserId = user?.id ?? '';
 
-  // Track last read message for read receipts
-  const lastReadMessageRef = useRef<string | null>(null);
+  // Get current user from auth context
+  const { user } = useUser();
+  const currentUserId = user?.id || 'user-1'; // Fallback for development
+  const currentUserName = user ? `${user.firstName} ${user.lastName}` : 'John Developer';
 
-  // UI State
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
 
-  // API Hooks
-  const {
-    conversation,
-    isLoading: loadingConversation,
-    error: conversationError,
-  } = useConversation(conversationId);
-
-  const {
-    messages,
-    isLoading: loadingMessages,
-    hasMore,
-    loadMore,
-  } = useMessages({
-    conversationId,
-    enabled: !!conversationId,
-    pageSize: 50,
-  });
-
-  // Real-time messaging hook
-  const { connectionStatus, typingUsers, sendTyping, sendReadReceipt, isConnected } =
-    useRealtimeMessages({
-      conversationId,
-      currentUserId,
-      autoConnect: true,
-      debug: process.env.NODE_ENV === 'development',
-    });
-
-  // Conversation action mutations
-  const archiveMutation = useArchiveConversation();
-  const pinMutation = useTogglePinConversation();
-  const muteMutation = useToggleMuteConversation();
-
-  // Message mutation hooks
-  const sendMessageMutation = useSendMessage();
-  const deleteMessageMutation = useDeleteMessage();
-  const editMessageMutation = useEditMessage();
-  const addReactionMutation = useAddReaction();
-  const markAsReadMutation = useMarkAsRead();
-
-  // Mark messages as read when conversation loads and send read receipt
+  // Load conversation and messages
   useEffect(() => {
-    if (conversation && conversation.unreadCount > 0) {
-      markAsReadMutation.mutate({ conversationId });
-    }
-  }, [conversation, conversationId, markAsReadMutation]);
+    setLoading(true);
+    // Simulate API call
+    setTimeout(() => {
+      // In real app, fetch by conversationId
+      setConversation(mockConversation);
+      setMessages(mockMessages);
+      setLoading(false);
+    }, 300);
+  }, [conversationId]);
 
-  // Send read receipt for the latest message when messages are loaded
+  // Simulate typing indicator
   useEffect(() => {
-    if (messages.length > 0 && isConnected) {
-      const lastMessage = messages[messages.length - 1];
-      // Only send read receipt if it's from another user and not already read
-      if (
-        lastMessage &&
-        lastMessage.senderId !== currentUserId &&
-        lastMessage.id !== lastReadMessageRef.current
-      ) {
-        lastReadMessageRef.current = lastMessage.id;
-        sendReadReceipt(lastMessage.id);
+    const interval = setInterval(() => {
+      // Randomly show typing indicator
+      if (Math.random() > 0.9) {
+        setTypingUsers([
+          {
+            userId: 'client-1',
+            userName: 'Sarah',
+            conversationId,
+            startedAt: Date.now(),
+          },
+        ]);
+        setTimeout(() => setTypingUsers([]), 3000);
       }
-    }
-  }, [messages, currentUserId, isConnected, sendReadReceipt]);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [conversationId]);
 
   const handleSendMessage = useCallback(
     async (content: string, attachments?: File[]) => {
-      await sendMessageMutation.mutateAsync({
+      const newMessage: Message = {
+        id: `msg-${Date.now()}`,
         conversationId,
-        data: {
-          content,
-          type: 'TEXT',
-          attachments,
-        },
-        optimisticId: `temp-${Date.now()}`,
-      });
-    },
-    [conversationId, sendMessageMutation]
-  );
-
-  const handleEditMessage = useCallback(
-    async (messageId: string, content: string) => {
-      await editMessageMutation.mutateAsync({
-        conversationId,
-        messageId,
+        senderId: currentUserId,
+        senderName: currentUserName,
+        type: 'TEXT',
         content,
-      });
+        attachments:
+          attachments?.map((file, i) => ({
+            id: `att-${Date.now()}-${i}`,
+            name: file.name,
+            url: URL.createObjectURL(file),
+            type: file.type,
+            size: file.size,
+            uploadedAt: new Date().toISOString(),
+          })) || [],
+        reactions: [],
+        linkPreviews: [],
+        status: 'SENDING',
+        isEdited: false,
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Optimistic update
+      setMessages((prev) => [...prev, newMessage]);
+
+      // Simulate API call
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === newMessage.id ? { ...m, status: 'SENT' as const } : m))
+        );
+      }, 500);
+
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === newMessage.id ? { ...m, status: 'DELIVERED' as const } : m))
+        );
+      }, 1000);
     },
-    [conversationId, editMessageMutation]
+    [conversationId, currentUserId, currentUserName]
   );
 
-  const handleDeleteMessage = useCallback(
-    async (messageId: string) => {
-      await deleteMessageMutation.mutateAsync({
-        conversationId,
-        messageId,
-      });
-    },
-    [conversationId, deleteMessageMutation]
-  );
+  const handleEditMessage = useCallback(async (messageId: string, content: string) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? { ...m, content, isEdited: true, updatedAt: new Date().toISOString() }
+          : m
+      )
+    );
+  }, []);
+
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId ? { ...m, isDeleted: true, deletedAt: new Date().toISOString() } : m
+      )
+    );
+  }, []);
 
   const handleReactToMessage = useCallback(
     async (messageId: string, emoji: string) => {
-      await addReactionMutation.mutateAsync({
-        conversationId,
-        messageId,
-        emoji,
-      });
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                reactions: [
+                  ...m.reactions,
+                  {
+                    emoji,
+                    userId: currentUserId,
+                    userName: currentUserName,
+                    createdAt: new Date().toISOString(),
+                  },
+                ],
+              }
+            : m
+        )
+      );
     },
-    [conversationId, addReactionMutation]
+    [currentUserId, currentUserName]
   );
-
-  const handleTypingChange = useCallback(
-    (isTyping: boolean) => {
-      // Send typing indicator via WebSocket using the realtime hook
-      sendTyping(isTyping);
-    },
-    [sendTyping]
-  );
-
-  // Conversation action handlers
-  const handleArchive = useCallback(async () => {
-    await archiveMutation.mutateAsync(conversationId);
-    router.push('/dashboard/messages');
-  }, [archiveMutation, conversationId, router]);
-
-  const handleBlock = useCallback(
-    async (userId: string) => {
-      await blockUser(userId);
-      router.push('/dashboard/messages');
-    },
-    [router]
-  );
-
-  const handlePin = useCallback(async () => {
-    await pinMutation.mutateAsync(conversationId);
-  }, [pinMutation, conversationId]);
-
-  const handleMute = useCallback(async () => {
-    await muteMutation.mutateAsync(conversationId);
-  }, [muteMutation, conversationId]);
-
-  const handleReport = useCallback(
-    async (reason: string, description?: string) => {
-      await reportConversation(conversationId, reason, description ?? '');
-    },
-    [conversationId]
-  );
-
-  const handleSearchResultSelect = useCallback((message: Message) => {
-    // Highlight the message and scroll to it
-    setHighlightedMessageId(message.id);
-    // Clear highlight after animation
-    setTimeout(() => setHighlightedMessageId(null), 2000);
-  }, []);
-
-  // Get the other participant for block action
-  const otherParticipant = conversation?.participants.find((p) => p.userId !== currentUserId);
-
-  const loading = loadingConversation || loadingMessages;
 
   if (loading) {
     return (
@@ -211,7 +364,7 @@ export default function ConversationPage() {
     );
   }
 
-  if (conversationError || !conversation) {
+  if (!conversation) {
     return (
       <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center">
         <div className="text-muted-foreground mb-4 text-6xl">🔍</div>
@@ -228,99 +381,33 @@ export default function ConversationPage() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
-      {/* Header with Actions */}
-      <div className="flex items-center justify-between border-b p-2">
-        {/* Back Button (mobile) */}
-        <div className="flex items-center gap-2">
-          <Button
-            className="sm:hidden"
-            size="sm"
-            variant="ghost"
-            onClick={() => router.push('/dashboard/messages')}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-
-          {/* Conversation Title (desktop) */}
-          <div className="hidden sm:block">
-            <h1 className="font-semibold">
-              {conversation.title || otherParticipant?.name || 'Conversation'}
-            </h1>
-            {otherParticipant?.name && conversation.title && (
-              <p className="text-muted-foreground text-sm">with {otherParticipant.name}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-1">
-          {/* Connection Status */}
-          {isConnected ? (
-            <Wifi className="text-muted-foreground h-4 w-4" />
-          ) : (
-            <WifiOff className="text-muted-foreground h-4 w-4" />
-          )}
-
-          {/* Search Toggle */}
-          <Button
-            size="sm"
-            variant={isSearchOpen ? 'secondary' : 'ghost'}
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-
-          {/* Conversation Actions */}
-          <ConversationActions
-            conversation={conversation}
-            onArchive={handleArchive}
-            onBlock={otherParticipant ? () => handleBlock(otherParticipant.userId) : undefined}
-            onMute={handleMute}
-            onPin={handlePin}
-            onReport={handleReport}
-            onSearch={() => setIsSearchOpen(true)}
-          />
-        </div>
+      {/* Mobile Back Button */}
+      <div className="border-b p-2 sm:hidden">
+        <Button size="sm" variant="ghost" onClick={() => router.push('/dashboard/messages')}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Messages
+        </Button>
       </div>
-
-      {/* Search Bar */}
-      <ConversationSearch
-        isOpen={isSearchOpen}
-        messages={messages}
-        placeholder="Search in conversation..."
-        onClose={() => setIsSearchOpen(false)}
-        onResultSelect={handleSearchResultSelect}
-      />
-
-      {/* Connection Status Banner (when disconnected) */}
-      {connectionStatus === 'RECONNECTING' && (
-        <div className="bg-yellow-50 px-4 py-2 text-center text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
-          Reconnecting to real-time messaging...
-        </div>
-      )}
-      {connectionStatus === 'ERROR' && (
-        <div className="bg-red-50 px-4 py-2 text-center text-sm text-red-800 dark:bg-red-900/20 dark:text-red-200">
-          Unable to connect to real-time messaging. Messages may be delayed.
-        </div>
-      )}
 
       {/* Message Thread */}
       <div className="flex-1 overflow-hidden">
         <MessageThread
           conversation={conversation}
           currentUserId={currentUserId}
-          hasMore={hasMore}
-          highlightedMessageId={highlightedMessageId}
-          loading={loadingMessages}
+          hasMore={messages.length > 20}
+          loading={false}
           messages={messages}
           typingUsers={typingUsers}
           onDeleteMessage={handleDeleteMessage}
           onEditMessage={handleEditMessage}
-          onLoadMore={loadMore}
+          onLoadMore={async () => {
+            // Feature: Load more messages via pagination - not yet implemented
+          }}
           onReactToMessage={handleReactToMessage}
           onSendMessage={handleSendMessage}
-          onTypingChange={handleTypingChange}
+          onTypingChange={(_isTyping) => {
+            // Feature: Send typing indicator via WebSocket - not yet implemented
+          }}
         />
       </div>
     </div>

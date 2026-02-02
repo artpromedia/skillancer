@@ -183,26 +183,30 @@ export function recordingRoutes(recordingService: RecordingService) {
      * POST /recordings
      * Rate limit: 30 requests/minute (vdiOperations - starting recordings)
      */
-    fastify.post('/recordings', { preHandler: [requireAuth, vdiOperations] }, async (request, reply) => {
-      const body = StartRecordingSchema.parse(request.body);
+    fastify.post(
+      '/recordings',
+      { preHandler: [requireAuth, vdiOperations] },
+      async (request, reply) => {
+        const body = StartRecordingSchema.parse(request.body);
 
-      const result = await recordingService.startRecording({
-        sessionId: body.sessionId,
-        tenantId: body.tenantId,
-        userId: body.userId,
-        kasmId: body.kasmId,
-        format: body.format,
-        codec: body.codec,
-        resolution: body.resolution,
-        frameRate: body.frameRate,
-        retentionPolicy: body.retentionPolicy,
-      });
+        const result = await recordingService.startRecording({
+          sessionId: body.sessionId,
+          tenantId: body.tenantId,
+          userId: body.userId,
+          kasmId: body.kasmId,
+          format: body.format,
+          codec: body.codec,
+          resolution: body.resolution,
+          frameRate: body.frameRate,
+          retentionPolicy: body.retentionPolicy,
+        });
 
-      return reply.status(201).send({
-        success: true,
-        data: result,
-      });
-    });
+        return reply.status(201).send({
+          success: true,
+          data: result,
+        });
+      }
+    );
 
     /**
      * Stop a recording

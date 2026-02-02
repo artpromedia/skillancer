@@ -421,6 +421,19 @@ export interface PlatformSettings {
   registrationOpen: boolean;
 }
 
+export type AdminRole = 'super_admin' | 'admin' | 'moderator' | 'support' | 'analyst';
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  status: 'active' | 'invited' | 'suspended';
+  lastLogin: string | null;
+  createdAt: string;
+  permissions: string[];
+}
+
 export const settingsApi = {
   getFlags: () => fetchApi<FeatureFlag[]>(`/admin/settings/feature-flags`),
 
@@ -446,6 +459,35 @@ export const settingsApi = {
       method: 'PATCH',
       body: JSON.stringify(settings),
     }),
+
+  // Admin users management
+  listAdmins: () => fetchApi<AdminUser[]>(`/admin/settings/admins`),
+
+  getAdmin: (adminId: string) => fetchApi<AdminUser>(`/admin/settings/admins/${adminId}`),
+
+  createAdmin: (admin: Omit<AdminUser, 'id' | 'createdAt' | 'lastLogin'>) =>
+    fetchApi<AdminUser>(`/admin/settings/admins`, {
+      method: 'POST',
+      body: JSON.stringify(admin),
+    }),
+
+  updateAdmin: (adminId: string, updates: Partial<AdminUser>) =>
+    fetchApi<AdminUser>(`/admin/settings/admins/${adminId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    }),
+
+  deleteAdmin: (adminId: string) =>
+    fetchApi<void>(`/admin/settings/admins/${adminId}`, { method: 'DELETE' }),
+
+  inviteAdmin: (email: string, role: AdminRole, permissions: string[]) =>
+    fetchApi<AdminUser>(`/admin/settings/admins/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ email, role, permissions }),
+    }),
+
+  resendInvite: (adminId: string) =>
+    fetchApi<void>(`/admin/settings/admins/${adminId}/resend-invite`, { method: 'POST' }),
 };
 
 // ============================================================================

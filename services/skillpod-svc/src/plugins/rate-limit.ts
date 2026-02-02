@@ -217,12 +217,8 @@ async function rateLimitPluginImpl(
   app.decorate(
     'checkSkillpodRateLimit',
     async (request: FastifyRequest, endpoint: keyof SkillpodRateLimitHooks) => {
-      const {
-        SkillpodRateLimitConfigs,
-        getRateLimitKey,
-        getTenantTier,
-        getAdjustedConfig,
-      } = await import('../middleware/rate-limit.js');
+      const { SkillpodRateLimitConfigs, getRateLimitKey, getTenantTier, getAdjustedConfig } =
+        await import('../middleware/rate-limit.js');
 
       const key = getRateLimitKey(request, endpoint);
       const tier = getTenantTier(request);
@@ -240,9 +236,8 @@ async function rateLimitPluginImpl(
 
   // Add helper to get rate limit status across all endpoints for a user
   app.decorate('getSkillpodRateLimitStatus', async (userId: string) => {
-    const { SkillpodRateLimitConfigs, TenantTierMultipliers } = await import(
-      '../middleware/rate-limit.js'
-    );
+    const { SkillpodRateLimitConfigs, TenantTierMultipliers } =
+      await import('../middleware/rate-limit.js');
 
     // Default to PROFESSIONAL tier
     const tier = 'PROFESSIONAL';
