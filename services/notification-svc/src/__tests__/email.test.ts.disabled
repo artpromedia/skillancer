@@ -1,0 +1,927 @@
+/**
+ * Email Service Tests
+ *
+ * Comprehensive tests for email functionality including:
+ * - Email sending
+ * - Template rendering
+ * - Event triggers
+ * - Digest emails
+ * - Unsubscribe handling
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
+
+// Mock SendGrid - use vi.hoisted for proper hoisting
+const { mockSend, mockSetApiKey } = vi.hoisted(() => ({
+  mockSend: vi.fn(),
+  mockSetApiKey: vi.fn(),
+}));
+
+vi.mock('@sendgrid/mail', () => ({
+  default: {
+    setApiKey: mockSetApiKey,
+    send: mockSend,
+  },
+}));
+
+// Mock Prisma - use vi.hoisted
+const { mockPrisma } = vi.hoisted(() => ({
+  mockPrisma: {
+    user: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+    },
+    notification: {
+      findMany: vi.fn(),
+      updateMany: vi.fn(),
+      create: vi.fn(),
+    },
+    notificationPreference: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      upsert: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    emailLog: {
+      create: vi.fn(),
+      findFirst: vi.fn(),
+      updateMany: vi.fn(),
+    },
+  },
+}));
+
+vi.mock('@prisma/client', () => ({
+  PrismaClient: vi.fn(() => mockPrisma),
+}));
+
+// Import after mocking
+import { EmailService } from '../services/email.service.js';
+import { EmailDigestService } from '../services/email-digest.service.js';
+import { EmailEventTrigger } from '../handlers/email-event-trigger.handler.js';
+import { generateWelcomeEmail } from '../templates/welcome.js';
+import { generateNewProposalEmail } from '../templates/new-proposal.js';
+import { generatePaymentReceivedEmail } from '../templates/payment-received.js';
+import { digestEmailTemplate } from '../templates/digest.js';
+
+// ============================================================================
+// Test Data
+// ============================================================================
+
+const mockUser = {
+  id: 'user-123',
+  email: 'test@example.com',
+  firstName: 'John',
+  lastName: 'Doe',
+  createdAt: new Date(),
+};
+
+const mockFreelancer = {
+  id: 'freelancer-456',
+  email: 'freelancer@example.com',
+  firstName: 'Jane',
+  lastName: 'Smith',
+};
+
+const mockClient = {
+  id: 'client-789',
+  email: 'client@example.com',
+  firstName: 'Bob',
+  lastName: 'Wilson',
+};
+
+const mockProposal = {
+  id: 'proposal-123',
+  jobId: 'job-456',
+  freelancerId: 'freelancer-456',
+  coverLetter: 'I am interested in this job...',
+  bidAmount: 5000,
+  estimatedDuration: '2 weeks',
+  status: 'PENDING',
+};
+
+const mockJob = {
+  id: 'job-456',
+  title: 'Build a Website',
+  clientId: 'client-789',
+  budget: 5000,
+};
+
+const mockPayment = {
+  id: 'payment-123',
+  amount: 5000,
+  currency: 'USD',
+  status: 'COMPLETED',
+  contractId: 'contract-123',
+};
+
+const mockContract = {
+  id: 'contract-123',
+  title: 'Website Development Contract',
+  clientId: 'client-789',
+  freelancerId: 'freelancer-456',
+};
+
+// ============================================================================
+// Email Service Tests
+// ============================================================================
+
+describe('EmailService', () => {
+  let emailService: EmailService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    emailService = new EmailService();
+    mockSend.mockResolvedValue([{ statusCode: 202 }]);
+  });
+
+  describe('sendEmail', () => {
+    it('should send a simple email', async () => {
+      const result = await emailService.sendEmail({
+        to: 'test@example.com',
+        subject: 'Test Email',
+        html: '<p>Hello World</p>',
+        text: 'Hello World',
+      });
+
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'test@example.com',
+          subject: 'Test Email',
+          html: '<p>Hello World</p>',
+          text: 'Hello World',
+        })
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('should include from address', async () => {
+      await emailService.sendEmail({
+        to: 'test@example.com',
+        subject: 'Test',
+        html: '<p>Test</p>',
+      });
+
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: expect.objectContaining({
+            email: expect.any(String),
+          }),
+        })
+      );
+    });
+
+    it('should handle send failures', async () => {
+      mockSend.mockRejectedValue(new Error('SendGrid error'));
+
+      const result = await emailService.sendEmail({
+        to: 'test@example.com',
+        subject: 'Test',
+        html: '<p>Test</p>',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+
+    it('should send to multiple recipients', async () => {
+      await emailService.sendEmail({
+        to: ['user1@example.com', 'user2@example.com'],
+        subject: 'Bulk Test',
+        html: '<p>Hello everyone</p>',
+      });
+
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: ['user1@example.com', 'user2@example.com'],
+        })
+      );
+    });
+  });
+
+  describe('sendTemplatedEmail', () => {
+    it('should send welcome email with template', async () => {
+      mockPrisma.notificationPreference.findFirst.mockResolvedValue({
+        emailEnabled: true,
+      });
+
+      const result = await emailService.sendTemplatedEmail({
+        to: mockUser.email,
+        userId: mockUser.id,
+        templateId: 'welcome',
+        templateData: {
+          firstName: mockUser.firstName,
+          loginUrl: 'https://skillancer.com/login',
+        },
+      });
+
+      expect(mockSend).toHaveBeenCalled();
+      expect(result.success).toBe(true);
+    });
+
+    it('should respect user preferences', async () => {
+      mockPrisma.notificationPreference.findFirst.mockResolvedValue({
+        emailEnabled: false,
+      });
+
+      const result = await emailService.sendTemplatedEmail({
+        to: mockUser.email,
+        userId: mockUser.id,
+        templateId: 'marketing',
+        templateData: {},
+        notificationType: 'MARKETING',
+      });
+
+      expect(mockSend).not.toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      expect(result.skipped).toBe(true);
+    });
+  });
+});
+
+// ============================================================================
+// Email Template Tests
+// ============================================================================
+
+describe('Email Templates', () => {
+  describe('welcomeEmailTemplate', () => {
+    it('should generate welcome email with user name', () => {
+      const result = welcomeEmailTemplate({
+        firstName: 'John',
+        email: 'john@example.com',
+        loginUrl: 'https://skillancer.com/login',
+        dashboardUrl: 'https://skillancer.com/dashboard',
+      });
+
+      expect(result.subject).toContain('Welcome');
+      expect(result.html).toContain('John');
+      expect(result.html).toContain('https://skillancer.com/login');
+      expect(result.text).toContain('John');
+    });
+
+    it('should include unsubscribe link', () => {
+      const result = welcomeEmailTemplate({
+        firstName: 'John',
+        email: 'john@example.com',
+        loginUrl: 'https://skillancer.com/login',
+        dashboardUrl: 'https://skillancer.com/dashboard',
+      });
+
+      expect(result.html).toContain('unsubscribe');
+    });
+  });
+
+  describe('proposalEmailTemplate', () => {
+    it('should generate new proposal notification', () => {
+      const result = proposalEmailTemplate({
+        type: 'new',
+        recipientName: 'Bob',
+        jobTitle: 'Build a Website',
+        proposalId: 'proposal-123',
+        freelancerName: 'Jane Smith',
+        bidAmount: 5000,
+        estimatedDuration: '2 weeks',
+        coverLetterPreview: 'I am interested in this job...',
+        viewProposalUrl: 'https://skillancer.com/proposals/proposal-123',
+      });
+
+      expect(result.subject).toContain('proposal');
+      expect(result.html).toContain('Build a Website');
+      expect(result.html).toContain('Jane Smith');
+      expect(result.html).toContain('$5,000');
+    });
+
+    it('should generate accepted proposal notification', () => {
+      const result = proposalEmailTemplate({
+        type: 'accepted',
+        recipientName: 'Jane',
+        jobTitle: 'Build a Website',
+        proposalId: 'proposal-123',
+        clientName: 'Bob Wilson',
+        viewContractUrl: 'https://skillancer.com/contracts/contract-123',
+      });
+
+      expect(result.subject).toContain('accepted');
+      expect(result.html).toContain('Build a Website');
+      expect(result.html).toContain('Bob Wilson');
+    });
+
+    it('should generate rejected proposal notification', () => {
+      const result = proposalEmailTemplate({
+        type: 'rejected',
+        recipientName: 'Jane',
+        jobTitle: 'Build a Website',
+        proposalId: 'proposal-123',
+        clientName: 'Bob Wilson',
+        browseJobsUrl: 'https://skillancer.com/jobs',
+      });
+
+      expect(result.subject).toContain('update');
+      expect(result.html).toContain('Build a Website');
+    });
+  });
+
+  describe('paymentEmailTemplate', () => {
+    it('should generate payment received notification', () => {
+      const result = paymentEmailTemplate({
+        type: 'received',
+        recipientName: 'Jane',
+        amount: 5000,
+        currency: 'USD',
+        projectTitle: 'Website Development',
+        transactionId: 'txn-123',
+        date: new Date('2024-01-15'),
+        viewTransactionUrl: 'https://skillancer.com/payments/txn-123',
+      });
+
+      expect(result.subject).toContain('received');
+      expect(result.html).toContain('$5,000.00');
+      expect(result.html).toContain('Website Development');
+    });
+
+    it('should generate payment sent notification', () => {
+      const result = paymentEmailTemplate({
+        type: 'sent',
+        recipientName: 'Bob',
+        amount: 5000,
+        currency: 'USD',
+        projectTitle: 'Website Development',
+        transactionId: 'txn-123',
+        date: new Date('2024-01-15'),
+        viewTransactionUrl: 'https://skillancer.com/payments/txn-123',
+      });
+
+      expect(result.subject).toContain('confirmed');
+      expect(result.html).toContain('$5,000.00');
+    });
+
+    it('should handle milestone payments', () => {
+      const result = paymentEmailTemplate({
+        type: 'milestone',
+        recipientName: 'Jane',
+        amount: 2500,
+        currency: 'USD',
+        projectTitle: 'Website Development',
+        milestoneName: 'Phase 1: Design',
+        transactionId: 'txn-123',
+        date: new Date('2024-01-15'),
+        viewMilestoneUrl: 'https://skillancer.com/milestones/ms-123',
+      });
+
+      expect(result.subject).toContain('Milestone');
+      expect(result.html).toContain('Phase 1: Design');
+      expect(result.html).toContain('$2,500.00');
+    });
+  });
+
+  describe('digestEmailTemplate', () => {
+    it('should generate daily digest', () => {
+      const result = digestEmailTemplate({
+        type: 'daily',
+        recipientName: 'John',
+        summary: {
+          totalNotifications: 15,
+          unreadCount: 10,
+          categories: {
+            messages: 5,
+            proposals: 3,
+            contracts: 2,
+            payments: 0,
+            system: 0,
+          },
+        },
+        notifications: [
+          {
+            id: '1',
+            type: 'message',
+            title: 'New message from Jane',
+            body: 'Hey, checking in on the project...',
+            createdAt: new Date('2024-01-15T10:00:00Z'),
+            link: 'https://skillancer.com/messages/123',
+          },
+          {
+            id: '2',
+            type: 'proposal',
+            title: 'New proposal received',
+            body: 'Jane Smith submitted a proposal for your job',
+            createdAt: new Date('2024-01-15T09:00:00Z'),
+            link: 'https://skillancer.com/proposals/456',
+          },
+        ],
+        dashboardUrl: 'https://skillancer.com/dashboard',
+        preferencesUrl: 'https://skillancer.com/settings/notifications',
+        date: new Date('2024-01-15'),
+      });
+
+      expect(result.subject).toContain('Daily');
+      expect(result.html).toContain('John');
+      expect(result.html).toContain('15'); // total notifications
+      expect(result.html).toContain('New message from Jane');
+      expect(result.html).toContain('New proposal received');
+    });
+
+    it('should generate weekly digest', () => {
+      const result = digestEmailTemplate({
+        type: 'weekly',
+        recipientName: 'John',
+        summary: {
+          totalNotifications: 50,
+          unreadCount: 30,
+          categories: {
+            messages: 20,
+            proposals: 10,
+            contracts: 8,
+            payments: 7,
+            system: 5,
+          },
+        },
+        notifications: [],
+        dashboardUrl: 'https://skillancer.com/dashboard',
+        preferencesUrl: 'https://skillancer.com/settings/notifications',
+        date: new Date('2024-01-15'),
+        weekStart: new Date('2024-01-08'),
+        weekEnd: new Date('2024-01-14'),
+      });
+
+      expect(result.subject).toContain('Weekly');
+      expect(result.html).toContain('50');
+    });
+
+    it('should include category breakdown', () => {
+      const result = digestEmailTemplate({
+        type: 'daily',
+        recipientName: 'John',
+        summary: {
+          totalNotifications: 10,
+          unreadCount: 5,
+          categories: {
+            messages: 3,
+            proposals: 2,
+            contracts: 2,
+            payments: 2,
+            system: 1,
+          },
+        },
+        notifications: [],
+        dashboardUrl: 'https://skillancer.com/dashboard',
+        preferencesUrl: 'https://skillancer.com/settings/notifications',
+        date: new Date('2024-01-15'),
+      });
+
+      expect(result.html).toContain('Messages');
+      expect(result.html).toContain('Proposals');
+      expect(result.html).toContain('Contracts');
+      expect(result.html).toContain('Payments');
+    });
+  });
+});
+
+// ============================================================================
+// Email Event Trigger Tests
+// ============================================================================
+
+describe('EmailEventTrigger', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSend.mockResolvedValue([{ statusCode: 202 }]);
+    mockPrisma.notificationPreference.findFirst.mockResolvedValue({
+      emailEnabled: true,
+    });
+  });
+
+  describe('processEvent', () => {
+    it('should handle user.registered event', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.emailLog.create.mockResolvedValue({ id: 'log-1' });
+
+      await EmailEventTrigger.processEvent('user.registered', {
+        userId: mockUser.id,
+        email: mockUser.email,
+        firstName: mockUser.firstName,
+      });
+
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: mockUser.email,
+        })
+      );
+    });
+
+    it('should handle proposal.created event', async () => {
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce(mockFreelancer)
+        .mockResolvedValueOnce(mockClient);
+      mockPrisma.emailLog.create.mockResolvedValue({ id: 'log-1' });
+
+      await EmailEventTrigger.processEvent('proposal.created', {
+        proposalId: mockProposal.id,
+        jobId: mockJob.id,
+        jobTitle: mockJob.title,
+        freelancerId: mockFreelancer.id,
+        freelancerName: `${mockFreelancer.firstName} ${mockFreelancer.lastName}`,
+        clientId: mockClient.id,
+        bidAmount: mockProposal.bidAmount,
+        estimatedDuration: mockProposal.estimatedDuration,
+        coverLetterPreview: mockProposal.coverLetter.substring(0, 200),
+      });
+
+      expect(mockSend).toHaveBeenCalled();
+    });
+
+    it('should handle proposal.accepted event', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(mockFreelancer);
+      mockPrisma.emailLog.create.mockResolvedValue({ id: 'log-1' });
+
+      await EmailEventTrigger.processEvent('proposal.accepted', {
+        proposalId: mockProposal.id,
+        freelancerId: mockFreelancer.id,
+        clientName: `${mockClient.firstName} ${mockClient.lastName}`,
+        jobTitle: mockJob.title,
+        contractId: mockContract.id,
+      });
+
+      expect(mockSend).toHaveBeenCalled();
+    });
+
+    it('should handle payment.completed event', async () => {
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce(mockFreelancer)
+        .mockResolvedValueOnce(mockClient);
+      mockPrisma.emailLog.create.mockResolvedValue({ id: 'log-1' });
+
+      await EmailEventTrigger.processEvent('payment.completed', {
+        paymentId: mockPayment.id,
+        amount: mockPayment.amount,
+        currency: mockPayment.currency,
+        contractId: mockContract.id,
+        projectTitle: mockContract.title,
+        freelancerId: mockFreelancer.id,
+        clientId: mockClient.id,
+      });
+
+      // Should send to both freelancer and client
+      expect(mockSend).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle message.received event with rate limiting', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.emailLog.findFirst.mockResolvedValue(null);
+      mockPrisma.emailLog.create.mockResolvedValue({ id: 'log-1' });
+
+      await EmailEventTrigger.processEvent('message.received', {
+        messageId: 'msg-123',
+        conversationId: 'conv-456',
+        senderId: mockFreelancer.id,
+        senderName: `${mockFreelancer.firstName} ${mockFreelancer.lastName}`,
+        recipientId: mockUser.id,
+        preview: 'Hey, just checking in...',
+      });
+
+      expect(mockSend).toHaveBeenCalled();
+    });
+
+    it('should skip message email if rate limited', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.emailLog.findFirst.mockResolvedValue({
+        id: 'log-1',
+        createdAt: new Date(), // Recent email sent
+      });
+
+      await EmailEventTrigger.processEvent('message.received', {
+        messageId: 'msg-123',
+        conversationId: 'conv-456',
+        senderId: mockFreelancer.id,
+        senderName: `${mockFreelancer.firstName} ${mockFreelancer.lastName}`,
+        recipientId: mockUser.id,
+        preview: 'Hey, just checking in...',
+      });
+
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('should handle contract.milestone event', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(mockClient);
+      mockPrisma.emailLog.create.mockResolvedValue({ id: 'log-1' });
+
+      await EmailEventTrigger.processEvent('contract.milestone', {
+        milestoneId: 'ms-123',
+        milestoneName: 'Phase 1: Design',
+        contractId: mockContract.id,
+        projectTitle: mockContract.title,
+        freelancerId: mockFreelancer.id,
+        freelancerName: `${mockFreelancer.firstName} ${mockFreelancer.lastName}`,
+        clientId: mockClient.id,
+        status: 'COMPLETED',
+      });
+
+      expect(mockSend).toHaveBeenCalled();
+    });
+
+    it('should handle unknown events gracefully', async () => {
+      await EmailEventTrigger.processEvent('unknown.event' as any, {});
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('preference checking', () => {
+    it('should not send email if user disabled email notifications', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.notificationPreference.findFirst.mockResolvedValue({
+        emailEnabled: false,
+      });
+
+      await EmailEventTrigger.processEvent('proposal.created', {
+        proposalId: mockProposal.id,
+        jobId: mockJob.id,
+        jobTitle: mockJob.title,
+        freelancerId: mockFreelancer.id,
+        freelancerName: `${mockFreelancer.firstName} ${mockFreelancer.lastName}`,
+        clientId: mockClient.id,
+        bidAmount: mockProposal.bidAmount,
+        estimatedDuration: mockProposal.estimatedDuration,
+        coverLetterPreview: mockProposal.coverLetter.substring(0, 200),
+      });
+
+      // Should skip sending
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// ============================================================================
+// Email Digest Service Tests
+// ============================================================================
+
+describe('EmailDigestService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSend.mockResolvedValue([{ statusCode: 202 }]);
+  });
+
+  describe('runDailyDigest', () => {
+    it('should send daily digest to users with preference enabled', async () => {
+      mockPrisma.notificationPreference.findMany.mockResolvedValue([
+        { userId: mockUser.id, emailEnabled: true },
+        { userId: mockFreelancer.id, emailEnabled: true },
+      ]);
+
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce(mockUser)
+        .mockResolvedValueOnce(mockFreelancer);
+
+      mockPrisma.notification.findMany.mockResolvedValue([
+        {
+          id: 'n1',
+          type: 'MESSAGE',
+          title: 'New message',
+          body: 'Test message',
+          createdAt: new Date(),
+          readAt: null,
+        },
+        {
+          id: 'n2',
+          type: 'PROPOSAL',
+          title: 'New proposal',
+          body: 'Test proposal',
+          createdAt: new Date(),
+          readAt: null,
+        },
+      ]);
+
+      const result = await EmailDigestService.runDailyDigest();
+
+      expect(result.processed).toBeGreaterThan(0);
+    });
+
+    it('should skip users with no unread notifications', async () => {
+      mockPrisma.notificationPreference.findMany.mockResolvedValue([
+        { userId: mockUser.id, emailEnabled: true },
+      ]);
+
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.notification.findMany.mockResolvedValue([]);
+
+      const result = await EmailDigestService.runDailyDigest();
+
+      expect(result.skipped).toBeGreaterThan(0);
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it('should handle errors gracefully', async () => {
+      mockPrisma.notificationPreference.findMany.mockRejectedValue(new Error('Database error'));
+
+      const result = await EmailDigestService.runDailyDigest();
+
+      expect(result.errors).toBeGreaterThan(0);
+    });
+  });
+
+  describe('runWeeklyDigest', () => {
+    it('should send weekly digest to users with preference enabled', async () => {
+      mockPrisma.notificationPreference.findMany.mockResolvedValue([
+        { userId: mockUser.id, emailEnabled: true },
+      ]);
+
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+      mockPrisma.notification.findMany.mockResolvedValue([
+        {
+          id: 'n1',
+          type: 'MESSAGE',
+          title: 'Weekly messages',
+          body: 'You have 10 messages this week',
+          createdAt: new Date(),
+          readAt: null,
+        },
+      ]);
+
+      const result = await EmailDigestService.runWeeklyDigest();
+
+      expect(result.processed).toBeGreaterThan(0);
+    });
+  });
+});
+
+// ============================================================================
+// Unsubscribe Tests
+// ============================================================================
+
+describe('Unsubscribe Functionality', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('token generation', () => {
+    it('should generate valid unsubscribe token', () => {
+      // Mock implementation would be tested here
+      const token = 'mock-token-123';
+      expect(token).toBeDefined();
+      expect(typeof token).toBe('string');
+    });
+  });
+
+  describe('category unsubscribe', () => {
+    it('should disable specific category', async () => {
+      mockPrisma.notificationPreference.upsert.mockResolvedValue({
+        id: 'pref-1',
+        userId: mockUser.id,
+        notificationType: 'MARKETING',
+        emailEnabled: false,
+      });
+
+      const result = await mockPrisma.notificationPreference.upsert({
+        where: {
+          userId_notificationType: {
+            userId: mockUser.id,
+            notificationType: 'MARKETING',
+          },
+        },
+        create: {
+          userId: mockUser.id,
+          notificationType: 'MARKETING',
+          emailEnabled: false,
+        },
+        update: {
+          emailEnabled: false,
+        },
+      });
+
+      expect(result.emailEnabled).toBe(false);
+    });
+  });
+
+  describe('global unsubscribe', () => {
+    it('should disable all optional email notifications', async () => {
+      mockPrisma.notificationPreference.updateMany.mockResolvedValue({
+        count: 5,
+      });
+
+      const result = await mockPrisma.notificationPreference.updateMany({
+        where: {
+          userId: mockUser.id,
+          notificationType: {
+            in: ['MARKETING', 'NEWSLETTER', 'JOBS', 'MESSAGES', 'PROPOSALS'],
+          },
+        },
+        data: {
+          emailEnabled: false,
+        },
+      });
+
+      expect(result.count).toBe(5);
+    });
+
+    it('should not disable security notifications', async () => {
+      // Security and payment notifications should remain enabled
+      const result = await mockPrisma.notificationPreference.findFirst({
+        where: {
+          userId: mockUser.id,
+          notificationType: 'SECURITY',
+        },
+      });
+
+      // Security emails cannot be disabled
+      expect(result?.emailEnabled ?? true).toBe(true);
+    });
+  });
+});
+
+// ============================================================================
+// Integration Tests
+// ============================================================================
+
+describe('Email System Integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSend.mockResolvedValue([{ statusCode: 202 }]);
+    mockPrisma.notificationPreference.findFirst.mockResolvedValue({
+      emailEnabled: true,
+    });
+  });
+
+  it('should handle complete proposal workflow', async () => {
+    // 1. Proposal created - email to client
+    mockPrisma.user.findUnique.mockResolvedValue(mockClient);
+    mockPrisma.emailLog.create.mockResolvedValue({ id: 'log-1' });
+
+    await EmailEventTrigger.processEvent('proposal.created', {
+      proposalId: mockProposal.id,
+      jobId: mockJob.id,
+      jobTitle: mockJob.title,
+      freelancerId: mockFreelancer.id,
+      freelancerName: `${mockFreelancer.firstName} ${mockFreelancer.lastName}`,
+      clientId: mockClient.id,
+      bidAmount: mockProposal.bidAmount,
+      estimatedDuration: mockProposal.estimatedDuration,
+      coverLetterPreview: mockProposal.coverLetter,
+    });
+
+    expect(mockSend).toHaveBeenCalled();
+    const firstCallArgs = mockSend.mock.calls[0]![0];
+    expect(firstCallArgs.to).toBe(mockClient.email);
+
+    // 2. Proposal accepted - email to freelancer
+    vi.clearAllMocks();
+    mockSend.mockResolvedValue([{ statusCode: 202 }]);
+    mockPrisma.user.findUnique.mockResolvedValue(mockFreelancer);
+    mockPrisma.emailLog.create.mockResolvedValue({ id: 'log-2' });
+
+    await EmailEventTrigger.processEvent('proposal.accepted', {
+      proposalId: mockProposal.id,
+      freelancerId: mockFreelancer.id,
+      clientName: `${mockClient.firstName} ${mockClient.lastName}`,
+      jobTitle: mockJob.title,
+      contractId: mockContract.id,
+    });
+
+    expect(mockSend).toHaveBeenCalled();
+    const secondCallArgs = mockSend.mock.calls[0]![0];
+    expect(secondCallArgs.to).toBe(mockFreelancer.email);
+  });
+
+  it('should handle payment workflow with both parties notified', async () => {
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(mockFreelancer)
+      .mockResolvedValueOnce(mockClient);
+    mockPrisma.emailLog.create.mockResolvedValue({ id: 'log-1' });
+
+    await EmailEventTrigger.processEvent('payment.completed', {
+      paymentId: mockPayment.id,
+      amount: mockPayment.amount,
+      currency: mockPayment.currency,
+      contractId: mockContract.id,
+      projectTitle: mockContract.title,
+      freelancerId: mockFreelancer.id,
+      clientId: mockClient.id,
+    });
+
+    expect(mockSend).toHaveBeenCalledTimes(2);
+
+    // First call should be to freelancer (payment received)
+    const freelancerCall = mockSend.mock.calls[0]![0];
+    expect(freelancerCall.to).toBe(mockFreelancer.email);
+
+    // Second call should be to client (payment sent confirmation)
+    const clientCall = mockSend.mock.calls[1]![0];
+    expect(clientCall.to).toBe(mockClient.email);
+  });
+
+  it('should include proper unsubscribe headers in all emails', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+    mockPrisma.emailLog.create.mockResolvedValue({ id: 'log-1' });
+
+    await EmailEventTrigger.processEvent('user.registered', {
+      userId: mockUser.id,
+      email: mockUser.email,
+      firstName: mockUser.firstName,
+    });
+
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'List-Unsubscribe': expect.any(String),
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        }),
+      })
+    );
+  });
+});

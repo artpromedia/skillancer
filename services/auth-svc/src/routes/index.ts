@@ -22,4 +22,7 @@ export { gdprRoutes } from './gdpr.js';
 // Verification and webhooks are exported as default plugins
 export { default as verificationRoutes } from './verification.js';
 export { default as contactVerificationRoutes } from './contact-verification.js';
+export { default as skillsVerificationRoutes } from './skills-verification.js';
+export { default as paymentVerificationRoutes } from './payment-verification.js';
+export { default as businessVerificationRoutes } from './business-verification.js';
 export { default as webhookRoutes } from './webhooks.js';

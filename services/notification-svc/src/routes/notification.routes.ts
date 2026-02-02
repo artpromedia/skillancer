@@ -51,7 +51,8 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         ...input,
         userId,
         channels: ['EMAIL'],
-      });
+        emailType: input.emailType || 'TRANSACTIONAL',
+      } as any);
 
       return reply.status(result.status === 'SENT' ? 200 : 400).send(result);
     } catch (error: any) {
@@ -77,7 +78,8 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         ...input,
         userId,
         channels: ['PUSH'],
-      });
+        pushType: input.pushType || 'GENERAL',
+      } as any);
 
       return reply.status(result.status === 'SENT' ? 200 : 400).send(result);
     } catch (error: any) {
@@ -218,7 +220,10 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         return handleValidationError(validation.error, reply);
       }
 
-      const updated = await notificationService.updateUserPreferences(userId, validation.data);
+      const updated = await notificationService.updateUserPreferences(
+        userId,
+        validation.data as any
+      );
       return reply.send(updated);
     } catch (error: any) {
       return reply.status(500).send({ error: error.message });

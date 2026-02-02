@@ -1,11 +1,15 @@
 /**
  * Email Unsubscribe Routes
  * CAN-SPAM and GDPR compliant email preference management
+ *
+ * Works with actual Prisma schema:
+ * - EmailUnsubscribe: userId, email, unsubscribeType, category, notificationType, source
+ * - NotificationPreference: userId, notificationType, emailEnabled, pushEnabled, etc.
  */
 
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UnsubscribeType, type NotificationCategory } from '@prisma/client';
 import { z } from 'zod';
 
 import { getConfig } from '../config/index.js';
@@ -24,32 +28,44 @@ const UnsubscribeTokenSchema = z.object({
 
 const UnsubscribeCategorySchema = z.object({
   token: z.string().min(32).max(128),
-  category: z.enum([
-    'MARKETING',
-    'TRANSACTIONAL',
-    'DIGEST',
-    'PROPOSALS',
-    'MESSAGES',
-    'CONTRACTS',
-    'PAYMENTS',
-    'SECURITY',
-    'ALL',
-  ]),
+  category: z.enum(['MESSAGES', 'PROJECTS', 'CONTRACTS', 'PAYMENTS', 'SECURITY', 'SYSTEM', 'ALL']),
 });
 
 const UpdatePreferencesWithTokenSchema = z.object({
   token: z.string().min(32).max(128),
   preferences: z.object({
-    marketing: z.boolean().optional(),
-    transactional: z.boolean().optional(),
-    digest: z.boolean().optional(),
-    proposals: z.boolean().optional(),
     messages: z.boolean().optional(),
+    projects: z.boolean().optional(),
     contracts: z.boolean().optional(),
     payments: z.boolean().optional(),
-    security: z.boolean().optional(),
+    system: z.boolean().optional(),
   }),
 });
+
+// =============================================================================
+// TOKEN STORAGE (In-Memory with TTL - for production use Redis)
+// =============================================================================
+
+interface TokenData {
+  userId: string;
+  email: string;
+  expiresAt: Date;
+}
+
+const tokenStore = new Map<string, TokenData>();
+
+// Clean expired tokens periodically
+setInterval(
+  () => {
+    const now = new Date();
+    for (const [token, data] of tokenStore.entries()) {
+      if (data.expiresAt < now) {
+        tokenStore.delete(token);
+      }
+    }
+  },
+  60 * 60 * 1000
+); // Clean every hour
 
 // =============================================================================
 // HELPERS
@@ -60,83 +76,128 @@ const UpdatePreferencesWithTokenSchema = z.object({
  */
 function generateUnsubscribeToken(userId: string, email: string): string {
   const config = getConfig();
-  const secret = config.jwtSecret || process.env.JWT_SECRET || 'default-secret';
-  const data = `${userId}:${email}:${Date.now()}`;
+  const secret = String(config.jwtSecret ?? process.env.JWT_SECRET ?? 'default-secret');
+  const data = `${userId}:${email}:${Date.now()}:${crypto.randomBytes(16).toString('hex')}`;
   return crypto.createHmac('sha256', secret).update(data).digest('hex');
+}
+
+/**
+ * Store and get unsubscribe token
+ */
+function storeUnsubscribeToken(token: string, userId: string, email: string): void {
+  tokenStore.set(token, {
+    userId,
+    email,
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+  });
 }
 
 /**
  * Verify and decode unsubscribe token
  */
-async function verifyUnsubscribeToken(
-  token: string
-): Promise<{ userId: string; email: string } | null> {
-  try {
-    // Look up the token in the database
-    const unsubscribeRecord = await prisma.emailUnsubscribe.findFirst({
-      where: {
-        token,
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    if (unsubscribeRecord?.user) {
-      return {
-        userId: unsubscribeRecord.user.id,
-        email: unsubscribeRecord.user.email,
-      };
-    }
-
-    return null;
-  } catch {
+function verifyUnsubscribeToken(token: string): { userId: string; email: string } | null {
+  const data = tokenStore.get(token);
+  if (!data) return null;
+  if (data.expiresAt < new Date()) {
+    tokenStore.delete(token);
     return null;
   }
+  return { userId: data.userId, email: data.email };
 }
 
 /**
- * Create or update unsubscribe token for a user
+ * Create or refresh unsubscribe token for a user
  */
-async function createUnsubscribeToken(userId: string, email: string): Promise<string> {
+function createUnsubscribeToken(userId: string, email: string): string {
   const token = generateUnsubscribeToken(userId, email);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+  storeUnsubscribeToken(token, userId, email);
+  return token;
+}
 
-  await prisma.emailUnsubscribe.upsert({
+/**
+ * Get email preferences for a user
+ */
+async function getEmailPreferences(userId: string): Promise<Record<string, boolean>> {
+  const prefs = await prisma.notificationPreference.findMany({
+    where: { userId },
+  });
+
+  const defaultPrefs: Record<string, boolean> = {
+    messages: true,
+    projects: true,
+    contracts: true,
+    payments: true,
+    security: true,
+    system: true,
+  };
+
+  prefs.forEach((pref) => {
+    const key = pref.notificationType.toLowerCase();
+    if (key in defaultPrefs) {
+      defaultPrefs[key] = pref.emailEnabled;
+    }
+  });
+
+  return defaultPrefs;
+}
+
+/**
+ * Update email preference for a notification type
+ */
+async function updateEmailPreference(
+  userId: string,
+  notificationType: string,
+  emailEnabled: boolean
+): Promise<void> {
+  await prisma.notificationPreference.upsert({
     where: {
-      userId_category: {
+      userId_notificationType: {
         userId,
-        category: 'TOKEN',
+        notificationType: notificationType.toUpperCase(),
       },
     },
     create: {
       userId,
-      category: 'TOKEN',
-      token,
-      expiresAt,
+      notificationType: notificationType.toUpperCase(),
+      emailEnabled,
+      inAppEnabled: true,
+      pushEnabled: true,
+      smsEnabled: false,
     },
     update: {
-      token,
-      expiresAt,
+      emailEnabled,
     },
   });
+}
 
-  return token;
+/**
+ * Log unsubscribe action
+ */
+async function logUnsubscribe(
+  userId: string,
+  email: string,
+  unsubscribeType: UnsubscribeType,
+  category?: NotificationCategory,
+  notificationType?: string,
+  source: string = 'EMAIL_LINK'
+): Promise<void> {
+  await prisma.emailUnsubscribe.create({
+    data: {
+      userId,
+      email,
+      unsubscribeType,
+      category,
+      notificationType,
+      source,
+    },
+  });
 }
 
 // =============================================================================
 // ROUTES
 // =============================================================================
 
-export async function unsubscribeRoutes(fastify: FastifyInstance) {
+export function unsubscribeRoutes(fastify: FastifyInstance): void {
   /**
    * GET /unsubscribe - Render unsubscribe page (public, no auth required)
    * This is the link users click from emails
@@ -146,42 +207,31 @@ export async function unsubscribeRoutes(fastify: FastifyInstance) {
       const { token } = request.query as { token?: string };
 
       if (!token) {
-        return reply.status(400).send({
+        return await reply.status(400).send({
           error: 'Missing unsubscribe token',
           message: 'Please use the unsubscribe link from your email.',
         });
       }
 
-      const user = await verifyUnsubscribeToken(token);
+      const user = verifyUnsubscribeToken(token);
       if (!user) {
-        return reply.status(400).send({
+        return await reply.status(400).send({
           error: 'Invalid or expired token',
           message: 'This unsubscribe link has expired. Please use a link from a more recent email.',
         });
       }
 
       // Get current preferences
-      const preferences = await prisma.notificationPreference.findUnique({
-        where: { userId: user.userId },
-      });
+      const preferences = await getEmailPreferences(user.userId);
 
-      return reply.send({
+      return await reply.send({
         success: true,
         email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'), // Mask email
-        preferences: {
-          marketing: preferences?.marketingEmails ?? true,
-          transactional: preferences?.transactionalEmails ?? true,
-          digest: preferences?.digestEmails ?? true,
-          proposals: preferences?.proposalEmails ?? true,
-          messages: preferences?.messageEmails ?? true,
-          contracts: preferences?.contractEmails ?? true,
-          payments: preferences?.paymentEmails ?? true,
-          security: preferences?.securityEmails ?? true,
-        },
+        preferences,
         unsubscribeUrl: `/api/notifications/unsubscribe/confirm?token=${token}`,
         preferencesUrl: `/api/notifications/unsubscribe/preferences?token=${token}`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       fastify.log.error(error, 'Unsubscribe page error');
       return reply.status(500).send({ error: 'Internal server error' });
     }
@@ -195,63 +245,46 @@ export async function unsubscribeRoutes(fastify: FastifyInstance) {
     try {
       const validation = UnsubscribeTokenSchema.safeParse(request.body);
       if (!validation.success) {
-        return reply.status(400).send({
+        return await reply.status(400).send({
           error: 'Validation error',
           details: validation.error.errors,
         });
       }
 
       const { token } = validation.data;
-      const user = await verifyUnsubscribeToken(token);
+      const user = verifyUnsubscribeToken(token);
 
       if (!user) {
-        return reply.status(400).send({
+        return await reply.status(400).send({
           error: 'Invalid or expired token',
           message: 'This unsubscribe link has expired.',
         });
       }
 
-      // Unsubscribe from all non-essential emails
-      await prisma.notificationPreference.upsert({
-        where: { userId: user.userId },
-        create: {
-          userId: user.userId,
-          marketingEmails: false,
-          digestEmails: false,
-          proposalEmails: false,
-          // Keep essential notifications enabled
-          transactionalEmails: true,
-          securityEmails: true,
-          paymentEmails: true,
-          contractEmails: true,
-          messageEmails: true,
-        },
-        update: {
-          marketingEmails: false,
-          digestEmails: false,
-          proposalEmails: false,
-        },
-      });
+      // Disable emails for non-essential categories
+      const categoriesToDisable = ['messages', 'projects', 'system'];
+      for (const cat of categoriesToDisable) {
+        await updateEmailPreference(user.userId, cat, false);
+      }
 
       // Log the unsubscribe action
-      await prisma.emailUnsubscribe.create({
-        data: {
-          userId: user.userId,
-          category: 'MARKETING',
-          reason: 'ONE_CLICK_UNSUBSCRIBE',
-          ipAddress: request.ip,
-          userAgent: request.headers['user-agent'] || undefined,
-        },
-      });
+      await logUnsubscribe(
+        user.userId,
+        user.email,
+        UnsubscribeType.CATEGORY,
+        undefined,
+        undefined,
+        'EMAIL_LINK'
+      );
 
       fastify.log.info({ userId: user.userId }, 'User unsubscribed via one-click');
 
-      return reply.send({
+      return await reply.send({
         success: true,
         message: 'You have been successfully unsubscribed from marketing emails.',
         note: 'You will still receive important account and security notifications.',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       fastify.log.error(error, 'Unsubscribe confirm error');
       return reply.status(500).send({ error: 'Internal server error' });
     }
@@ -264,83 +297,56 @@ export async function unsubscribeRoutes(fastify: FastifyInstance) {
     try {
       const validation = UnsubscribeCategorySchema.safeParse(request.body);
       if (!validation.success) {
-        return reply.status(400).send({
+        return await reply.status(400).send({
           error: 'Validation error',
           details: validation.error.errors,
         });
       }
 
       const { token, category } = validation.data;
-      const user = await verifyUnsubscribeToken(token);
+      const user = verifyUnsubscribeToken(token);
 
       if (!user) {
-        return reply.status(400).send({
+        return await reply.status(400).send({
           error: 'Invalid or expired token',
         });
       }
 
-      // Build update based on category
-      const updateData: Record<string, boolean> = {};
-
       if (category === 'ALL') {
         // Unsubscribe from everything except security
-        updateData.marketingEmails = false;
-        updateData.transactionalEmails = false;
-        updateData.digestEmails = false;
-        updateData.proposalEmails = false;
-        updateData.messageEmails = false;
-        updateData.contractEmails = false;
-        updateData.paymentEmails = false;
-        // Security emails cannot be disabled
-      } else {
-        const categoryMap: Record<string, string> = {
-          MARKETING: 'marketingEmails',
-          TRANSACTIONAL: 'transactionalEmails',
-          DIGEST: 'digestEmails',
-          PROPOSALS: 'proposalEmails',
-          MESSAGES: 'messageEmails',
-          CONTRACTS: 'contractEmails',
-          PAYMENTS: 'paymentEmails',
-          SECURITY: 'securityEmails', // Will be ignored in update
-        };
-
-        const field = categoryMap[category];
-        if (field && field !== 'securityEmails') {
-          updateData[field] = false;
+        const allCategories = ['messages', 'projects', 'contracts', 'payments', 'system'];
+        for (const cat of allCategories) {
+          await updateEmailPreference(user.userId, cat, false);
         }
+        await logUnsubscribe(
+          user.userId,
+          user.email,
+          UnsubscribeType.ALL,
+          undefined,
+          undefined,
+          'EMAIL_LINK'
+        );
+      } else if (category !== 'SECURITY') {
+        // Security cannot be disabled
+        await updateEmailPreference(user.userId, category.toLowerCase(), false);
+        await logUnsubscribe(
+          user.userId,
+          user.email,
+          UnsubscribeType.CATEGORY,
+          category as NotificationCategory,
+          undefined,
+          'EMAIL_LINK'
+        );
       }
-
-      if (Object.keys(updateData).length > 0) {
-        await prisma.notificationPreference.upsert({
-          where: { userId: user.userId },
-          create: {
-            userId: user.userId,
-            ...updateData,
-            securityEmails: true, // Always keep security enabled
-          },
-          update: updateData,
-        });
-      }
-
-      // Log the unsubscribe
-      await prisma.emailUnsubscribe.create({
-        data: {
-          userId: user.userId,
-          category,
-          reason: 'CATEGORY_UNSUBSCRIBE',
-          ipAddress: request.ip,
-          userAgent: request.headers['user-agent'] || undefined,
-        },
-      });
 
       fastify.log.info({ userId: user.userId, category }, 'User unsubscribed from category');
 
-      return reply.send({
+      return await reply.send({
         success: true,
         message: `Successfully unsubscribed from ${category.toLowerCase()} emails.`,
         category,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       fastify.log.error(error, 'Unsubscribe category error');
       return reply.status(500).send({ error: 'Internal server error' });
     }
@@ -353,67 +359,46 @@ export async function unsubscribeRoutes(fastify: FastifyInstance) {
     try {
       const validation = UpdatePreferencesWithTokenSchema.safeParse(request.body);
       if (!validation.success) {
-        return reply.status(400).send({
+        return await reply.status(400).send({
           error: 'Validation error',
           details: validation.error.errors,
         });
       }
 
       const { token, preferences } = validation.data;
-      const user = await verifyUnsubscribeToken(token);
+      const user = verifyUnsubscribeToken(token);
 
       if (!user) {
-        return reply.status(400).send({
+        return await reply.status(400).send({
           error: 'Invalid or expired token',
         });
       }
 
-      // Map preferences to database fields
-      const updateData: Record<string, boolean> = {};
-      if (preferences.marketing !== undefined) updateData.marketingEmails = preferences.marketing;
-      if (preferences.transactional !== undefined)
-        updateData.transactionalEmails = preferences.transactional;
-      if (preferences.digest !== undefined) updateData.digestEmails = preferences.digest;
-      if (preferences.proposals !== undefined) updateData.proposalEmails = preferences.proposals;
-      if (preferences.messages !== undefined) updateData.messageEmails = preferences.messages;
-      if (preferences.contracts !== undefined) updateData.contractEmails = preferences.contracts;
-      if (preferences.payments !== undefined) updateData.paymentEmails = preferences.payments;
-      // Security emails cannot be disabled via this endpoint
-      updateData.securityEmails = true;
+      // Update each preference
+      for (const [key, value] of Object.entries(preferences)) {
+        if (value !== undefined && key !== 'security') {
+          await updateEmailPreference(user.userId, key, value);
+        }
+      }
 
-      await prisma.notificationPreference.upsert({
-        where: { userId: user.userId },
-        create: {
-          userId: user.userId,
-          marketingEmails: preferences.marketing ?? true,
-          transactionalEmails: preferences.transactional ?? true,
-          digestEmails: preferences.digest ?? true,
-          proposalEmails: preferences.proposals ?? true,
-          messageEmails: preferences.messages ?? true,
-          contractEmails: preferences.contracts ?? true,
-          paymentEmails: preferences.payments ?? true,
-          securityEmails: true,
-        },
-        update: updateData,
-      });
+      // Security is always enabled
+      await updateEmailPreference(user.userId, 'security', true);
 
       fastify.log.info({ userId: user.userId }, 'User updated email preferences');
 
-      return reply.send({
+      return await reply.send({
         success: true,
         message: 'Email preferences updated successfully.',
         preferences: {
-          marketing: preferences.marketing ?? true,
-          transactional: preferences.transactional ?? true,
-          digest: preferences.digest ?? true,
-          proposals: preferences.proposals ?? true,
           messages: preferences.messages ?? true,
+          projects: preferences.projects ?? true,
           contracts: preferences.contracts ?? true,
           payments: preferences.payments ?? true,
           security: true, // Always enabled
+          system: preferences.system ?? true,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       fastify.log.error(error, 'Update preferences error');
       return reply.status(500).send({ error: 'Internal server error' });
     }
@@ -431,24 +416,26 @@ export async function unsubscribeRoutes(fastify: FastifyInstance) {
         const apiKey = request.headers['x-internal-api-key'];
         const config = getConfig();
         if (apiKey !== config.internalApiKey) {
-          return reply.status(403).send({ error: 'Forbidden' });
+          return await reply.status(403).send({ error: 'Forbidden' });
         }
 
         const { userId, email } = request.body as { userId: string; email: string };
         if (!userId || !email) {
-          return reply.status(400).send({ error: 'userId and email are required' });
+          return await reply.status(400).send({ error: 'userId and email are required' });
         }
 
-        const token = await createUnsubscribeToken(userId, email);
-        const baseUrl = config.appBaseUrl || process.env.APP_BASE_URL || 'https://skillancer.com';
+        const token = createUnsubscribeToken(userId, email);
+        const baseUrl = String(
+          config.appBaseUrl ?? process.env.APP_BASE_URL ?? 'https://skillancer.com'
+        );
 
-        return reply.send({
+        return await reply.send({
           success: true,
           token,
           unsubscribeUrl: `${baseUrl}/unsubscribe?token=${token}`,
           oneClickUrl: `${baseUrl}/api/notifications/unsubscribe/confirm`,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         fastify.log.error(error, 'Generate token error');
         return reply.status(500).send({ error: 'Internal server error' });
       }
@@ -464,16 +451,18 @@ export async function unsubscribeRoutes(fastify: FastifyInstance) {
       const apiKey = request.headers['x-internal-api-key'];
       const config = getConfig();
       if (apiKey !== config.internalApiKey) {
-        return reply.status(403).send({ error: 'Forbidden' });
+        return await reply.status(403).send({ error: 'Forbidden' });
       }
 
       const { userId, email } = request.query as { userId: string; email: string };
       if (!userId || !email) {
-        return reply.status(400).send({ error: 'userId and email are required' });
+        return await reply.status(400).send({ error: 'userId and email are required' });
       }
 
-      const token = await createUnsubscribeToken(userId, email);
-      const baseUrl = config.appBaseUrl || process.env.APP_BASE_URL || 'https://skillancer.com';
+      const token = createUnsubscribeToken(userId, email);
+      const baseUrl = String(
+        config.appBaseUrl ?? process.env.APP_BASE_URL ?? 'https://skillancer.com'
+      );
 
       // RFC 2369 List-Unsubscribe header
       const unsubscribeUrl = `${baseUrl}/unsubscribe?token=${token}`;
@@ -482,7 +471,7 @@ export async function unsubscribeRoutes(fastify: FastifyInstance) {
       // RFC 8058 List-Unsubscribe-Post header for one-click unsubscribe
       const listUnsubscribePost = 'List-Unsubscribe=One-Click';
 
-      return reply.send({
+      return await reply.send({
         success: true,
         headers: {
           'List-Unsubscribe': `<${unsubscribeUrl}>, <${unsubscribeMailto}>`,
@@ -490,7 +479,7 @@ export async function unsubscribeRoutes(fastify: FastifyInstance) {
         },
         token,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       fastify.log.error(error, 'List header error');
       return reply.status(500).send({ error: 'Internal server error' });
     }

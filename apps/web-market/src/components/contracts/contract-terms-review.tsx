@@ -330,8 +330,7 @@ export function ContractTermsReview({
                 and{' '}
                 <a className="text-primary hover:underline" href="/privacy">
                   Privacy Policy
-                </a>
-                .
+                </a>.
               </label>
             </div>
           </CardContent>

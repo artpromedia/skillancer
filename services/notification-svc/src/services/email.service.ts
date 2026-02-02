@@ -54,6 +54,8 @@ export class EmailService {
         replyTo: input.replyTo,
         cc: input.cc,
         bcc: input.bcc,
+        // Default text content to satisfy MailDataRequired
+        text: input.textContent || ' ',
       };
 
       // Use template or raw content
@@ -259,8 +261,8 @@ export class EmailService {
    */
   private stripHtml(html: string): string {
     return html
-      .replace(/<[^>]*>/g, '')
-      .replace(/\s+/g, ' ')
+      .replaceAll(/<[^>]*>/g, '')
+      .replaceAll(/\s+/g, ' ')
       .trim();
   }
 

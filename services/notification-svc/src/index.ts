@@ -53,12 +53,12 @@ async function buildApp() {
   });
 
   // Register plugins
-  await fastify.register(cors, {
+  await fastify.register(cors as any, {
     origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
     credentials: true,
   });
 
-  await fastify.register(helmet, {
+  await fastify.register(helmet as any, {
     contentSecurityPolicy: false,
   });
 
@@ -126,16 +126,14 @@ async function start() {
 
 const { logger } = await import('@skillancer/logger');
 
-prisma
-  .$connect()
-  .then(() => {
-    logger.info('Connected to database');
-    return start();
-  })
-  .catch((error) => {
-    logger.error({ error }, 'Failed to connect to database');
-    process.exit(1);
-  });
+try {
+  await prisma.$connect();
+  logger.info('Connected to database');
+  await start();
+} catch (error) {
+  logger.error({ error }, 'Failed to connect to database');
+  process.exit(1);
+}
 
 // Exports
 export { buildApp };
@@ -143,3 +141,6 @@ export * from './config/index.js';
 export * from './services/index.js';
 export * from './routes/index.js';
 export * from './types/notification.types.js';
+export * from './handlers/index.js';
+export * from './templates/index.js';
+// Note: providers/index.js selectively exports to avoid EmailAttachment conflict

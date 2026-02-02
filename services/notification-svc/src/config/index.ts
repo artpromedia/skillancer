@@ -39,6 +39,13 @@ const configSchema = z.object({
   // Retry settings
   maxRetries: z.number().default(3),
   retryDelayMs: z.number().default(5000),
+
+  // Auth & Security
+  jwtSecret: z.string().optional(),
+  internalApiKey: z.string().optional(),
+
+  // App URLs
+  appBaseUrl: z.string().optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -65,7 +72,7 @@ export function validateConfig(): Config {
     sendgridFromName: process.env.SENDGRID_FROM_NAME || 'Skillancer',
     sendgridWebhookKey: process.env.SENDGRID_WEBHOOK_KEY,
     firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
-    firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY?.replaceAll(String.raw`\n`, '\n'),
     firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     rateLimitMax: Number.parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
     rateLimitTimeWindow: Number.parseInt(process.env.RATE_LIMIT_TIME_WINDOW || '60000', 10),
@@ -73,6 +80,9 @@ export function validateConfig(): Config {
     batchDelayMs: Number.parseInt(process.env.BATCH_DELAY_MS || '1000', 10),
     maxRetries: Number.parseInt(process.env.MAX_RETRIES || '3', 10),
     retryDelayMs: Number.parseInt(process.env.RETRY_DELAY_MS || '5000', 10),
+    jwtSecret: process.env.JWT_SECRET,
+    internalApiKey: process.env.INTERNAL_API_KEY,
+    appBaseUrl: process.env.APP_BASE_URL,
   };
 
   config = configSchema.parse(rawConfig);

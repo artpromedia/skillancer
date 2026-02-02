@@ -1181,3 +1181,458 @@ export interface VerifiedSkillData {
 export async function getFreelancerVerifiedSkills(userId: string): Promise<VerifiedSkillData[]> {
   return apiFetch<VerifiedSkillData[]>(`${API_BASE_URL}/profiles/${userId}/verified-skills`);
 }
+
+// ============================================================================
+// Skills Verification API
+// ============================================================================
+
+export interface SkillVerificationStatus {
+  summary: {
+    totalVerifiedSkills: number;
+    assessmentVerified: number;
+    endorsementCount: number;
+    pendingEndorsementRequests: number;
+  };
+  skills: Array<{
+    skillId: string;
+    skillName: string;
+    category: string;
+    currentLevel: string | null;
+    verifications: Array<{
+      type: string;
+      score: number | null;
+      verifiedAt: string;
+      validUntil: string | null;
+      isActive: boolean;
+    }>;
+    endorsements: Array<{
+      endorserId: string;
+      endorserName: string;
+      endorserTitle: string | null;
+      relationshipType: string;
+      endorsedAt: string;
+      message: string | null;
+    }>;
+    assessmentAvailable: boolean;
+    nextAssessmentAvailableAt: string | null;
+  }>;
+  pendingEndorsements: Array<{
+    id: string;
+    skillId: string;
+    endorserEmail: string;
+    requestedAt: string;
+  }>;
+}
+
+export interface SkillAssessment {
+  skillId: string;
+  skillName: string;
+  category: string;
+  description: string | null;
+  assessmentTypes: Array<{
+    type: 'QUICK' | 'STANDARD' | 'COMPREHENSIVE';
+    duration: number;
+    questions: number;
+    description: string;
+  }>;
+  proctoredAvailable: boolean;
+  lastAttempt: {
+    score: number;
+    maxScore: number;
+    proficiencyLevel: string;
+    verifiedAt: string;
+  } | null;
+  canRetake: boolean;
+  nextAttemptAt: string | null;
+}
+
+export interface SkillAssessmentSession {
+  assessmentId: string;
+  skillId: string;
+  skillName: string;
+  assessmentType: string;
+  proctored: boolean;
+  duration: number;
+  expiresAt: string;
+  questions: Array<{
+    id: string;
+    number: number;
+    text: string;
+    type: string;
+    options?: string[];
+    category: string;
+  }>;
+}
+
+export interface SkillAssessmentResult {
+  assessmentId: string;
+  skillId: string;
+  skillName: string;
+  score: number;
+  maxScore: number;
+  percentage: number;
+  percentile: number;
+  proficiencyLevel: string;
+  badge: {
+    type: string;
+    level: string;
+    issuedAt: string;
+    validUntil: string;
+  };
+  breakdown: Record<string, { correct: number; total: number }>;
+}
+
+/**
+ * Get skills verification status
+ */
+export async function getSkillsVerificationStatus(): Promise<SkillVerificationStatus> {
+  return apiFetch<SkillVerificationStatus>(`${AUTH_API_URL}/skills-verification/status`);
+}
+
+/**
+ * Get available skill assessments
+ */
+export async function getAvailableAssessments(params?: {
+  skillId?: string;
+  category?: string;
+}): Promise<{ assessments: SkillAssessment[]; categories: string[] }> {
+  const searchParams = new URLSearchParams();
+  if (params?.skillId) searchParams.set('skillId', params.skillId);
+  if (params?.category) searchParams.set('category', params.category);
+  const query = searchParams.toString();
+  return apiFetch<{ assessments: SkillAssessment[]; categories: string[] }>(
+    `${AUTH_API_URL}/skills-verification/assessments${query ? `?${query}` : ''}`
+  );
+}
+
+/**
+ * Start a skill assessment
+ */
+export async function startSkillAssessment(data: {
+  skillId: string;
+  assessmentType?: 'QUICK' | 'STANDARD' | 'COMPREHENSIVE';
+  proctored?: boolean;
+}): Promise<SkillAssessmentSession> {
+  return apiFetch<SkillAssessmentSession>(`${AUTH_API_URL}/skills-verification/assessments/start`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Submit assessment answers
+ */
+export async function submitSkillAssessment(data: {
+  assessmentId: string;
+  answers: Array<{
+    questionId: string;
+    answer: string | number | string[];
+    timeSpent: number;
+  }>;
+}): Promise<SkillAssessmentResult> {
+  return apiFetch<SkillAssessmentResult>(`${AUTH_API_URL}/skills-verification/assessments/submit`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Request a peer endorsement
+ */
+export async function requestEndorsement(data: {
+  skillId: string;
+  endorserEmail: string;
+  message?: string;
+  relationshipType: 'COLLEAGUE' | 'MANAGER' | 'CLIENT' | 'MENTOR' | 'OTHER';
+}): Promise<{
+  id: string;
+  skillId: string;
+  skillName: string;
+  endorserEmail: string;
+  status: string;
+  expiresAt: string;
+}> {
+  return apiFetch(`${AUTH_API_URL}/skills-verification/endorsements/request`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Get detailed skill verification status
+ */
+export async function getSkillVerificationDetails(skillId: string): Promise<{
+  skillId: string;
+  skillName: string;
+  category: string;
+  currentLevel: string | null;
+  confidenceScore: number;
+  verifications: Array<{
+    id: string;
+    type: string;
+    score: number | null;
+    maxScore: number | null;
+    percentile: number | null;
+    proficiencyLevel: string;
+    proctored: boolean;
+    verifiedAt: string;
+    validUntil: string | null;
+    isActive: boolean;
+    showOnProfile: boolean;
+  }>;
+  endorsements: Array<{
+    id: string;
+    endorser: { id: string; name: string; avatar: string | null };
+    relationshipType: string;
+    message: string | null;
+    endorsedAt: string;
+  }>;
+  pendingRequests: Array<{
+    id: string;
+    endorserEmail: string;
+    requestedAt: string;
+    expiresAt: string;
+  }>;
+  stats: {
+    endorsementCount: number;
+    hasAssessment: boolean;
+    lastVerifiedAt: string | null;
+  };
+}> {
+  return apiFetch(`${AUTH_API_URL}/skills-verification/${skillId}`);
+}
+
+// ============================================================================
+// Payment Verification API
+// ============================================================================
+
+export interface PaymentVerificationStatus {
+  isVerified: boolean;
+  verifiedAt: string | null;
+  hasStripeCustomer: boolean;
+  paymentMethodsCount: number;
+  benefits: Array<{ label: string; available: boolean }>;
+}
+
+export interface PaymentSetupIntent {
+  setupIntentId: string;
+  clientSecret: string;
+  paymentMethodType: string;
+  publishableKey: string;
+}
+
+export interface PaymentMethod {
+  id: string;
+  type: string;
+  brand: string | null;
+  last4: string | null;
+  expiryMonth: number | null;
+  expiryYear: number | null;
+  isDefault: boolean;
+  addedAt: string;
+}
+
+/**
+ * Get payment verification status
+ */
+export async function getPaymentVerificationStatus(): Promise<PaymentVerificationStatus> {
+  return apiFetch<PaymentVerificationStatus>(`${AUTH_API_URL}/payment-verification/status`);
+}
+
+/**
+ * Create a setup intent for payment method verification
+ */
+export async function createPaymentSetupIntent(
+  paymentMethodType: 'card' | 'bank_account' = 'card'
+): Promise<PaymentSetupIntent> {
+  return apiFetch<PaymentSetupIntent>(`${AUTH_API_URL}/payment-verification/setup-intent`, {
+    method: 'POST',
+    body: JSON.stringify({ paymentMethodType }),
+  });
+}
+
+/**
+ * Confirm payment verification
+ */
+export async function confirmPaymentVerification(data: {
+  setupIntentId: string;
+  paymentMethodId: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  paymentMethod: { type: string; brand: string; last4: string };
+  verifiedAt: string;
+  benefits: Array<{ label: string; available: boolean }>;
+}> {
+  return apiFetch(`${AUTH_API_URL}/payment-verification/confirm`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Get verified payment methods
+ */
+export async function getVerifiedPaymentMethods(): Promise<{
+  paymentMethods: PaymentMethod[];
+}> {
+  return apiFetch(`${AUTH_API_URL}/payment-verification/methods`);
+}
+
+/**
+ * Remove a payment method
+ */
+export async function removePaymentMethod(methodId: string): Promise<{
+  success: boolean;
+  message: string;
+  remainingMethods: number;
+  paymentVerified: boolean;
+}> {
+  return apiFetch(`${AUTH_API_URL}/payment-verification/methods/${methodId}`, {
+    method: 'DELETE',
+  });
+}
+
+// ============================================================================
+// Business Verification API
+// ============================================================================
+
+export type BusinessType = 'SOLE_PROPRIETOR' | 'LLC' | 'CORPORATION' | 'PARTNERSHIP' | 'NON_PROFIT';
+export type BusinessDocumentType =
+  | 'BUSINESS_LICENSE'
+  | 'CERTIFICATE_OF_INCORPORATION'
+  | 'TAX_REGISTRATION'
+  | 'PROOF_OF_ADDRESS'
+  | 'ARTICLES_OF_ORGANIZATION'
+  | 'OPERATING_AGREEMENT'
+  | 'EIN_LETTER'
+  | 'OTHER';
+
+export interface BusinessVerificationStatus {
+  hasBusinessProfile: boolean;
+  status: string;
+  verifiedAt: string | null;
+  business?: {
+    type: BusinessType;
+    name: string;
+    address: {
+      street: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+    };
+    taxIdType: string;
+    taxIdLastFour: string | null;
+    website: string | null;
+    yearEstablished: number | null;
+  };
+  documents: Array<{
+    id: string;
+    type: BusinessDocumentType;
+    fileName: string;
+    status: string;
+    uploadedAt: string;
+    verifiedAt: string | null;
+    rejectionReason: string | null;
+  }>;
+  documentsProgress: {
+    required: number;
+    uploaded: number;
+    verified: number;
+  };
+  requiredDocuments: string[];
+  missingDocuments: string[];
+  benefits: Array<{ label: string; available: boolean }>;
+}
+
+/**
+ * Get business verification status
+ */
+export async function getBusinessVerificationStatus(): Promise<BusinessVerificationStatus> {
+  return apiFetch<BusinessVerificationStatus>(`${AUTH_API_URL}/business-verification/status`);
+}
+
+/**
+ * Start business verification
+ */
+export async function startBusinessVerification(data: {
+  businessType: BusinessType;
+  businessName: string;
+  businessAddress: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+  taxIdType: 'EIN' | 'SSN' | 'VAT' | 'OTHER';
+  taxIdNumber: string;
+  website?: string;
+  yearEstablished?: number;
+}): Promise<{
+  verificationId: string;
+  status: string;
+  businessType: BusinessType;
+  businessName: string;
+  requiredDocuments: string[];
+  nextStep: string;
+}> {
+  return apiFetch(`${AUTH_API_URL}/business-verification/start`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Get document upload URL
+ */
+export async function getDocumentUploadUrl(data: {
+  documentType: BusinessDocumentType;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+}): Promise<{
+  documentId: string;
+  uploadUrl: string;
+  uploadKey: string;
+  expiresAt: string;
+  instructions: string;
+}> {
+  return apiFetch(`${AUTH_API_URL}/business-verification/documents/upload-url`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Confirm document upload
+ */
+export async function confirmDocumentUpload(documentId: string): Promise<{
+  success: boolean;
+  documentId: string;
+  status: string;
+  allRequiredDocumentsUploaded: boolean;
+  verificationStatus: string;
+}> {
+  return apiFetch(`${AUTH_API_URL}/business-verification/documents/${documentId}/confirm`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Get business verification requirements
+ */
+export async function getBusinessVerificationRequirements(): Promise<{
+  requirements: Array<{
+    businessType: BusinessType;
+    displayName: string;
+    requiredDocuments: Array<{
+      type: BusinessDocumentType;
+      displayName: string;
+      description: string;
+    }>;
+  }>;
+}> {
+  return apiFetch(`${AUTH_API_URL}/business-verification/requirements`);
+}
