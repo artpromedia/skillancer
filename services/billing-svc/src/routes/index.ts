@@ -18,6 +18,8 @@ export { milestoneRoutes } from './milestones.routes.js';
 export { disputeRoutes } from './disputes.routes.js';
 export { timeLogRoutes } from './time-logs.routes.js';
 export { connectRoutes } from './connect.routes.js';
+export { default as paymentMethodRoutes } from './payment-methods.routes.js';
+export { chargeRoutes } from './charges.routes.js';
 
 // Internal imports for registerRoutes function
 import { connectRoutes } from './connect.routes.js';
@@ -34,6 +36,8 @@ import { timeLogRoutes } from './time-logs.routes.js';
 import { transactionRoutes } from './transactions.routes.js';
 import { registerTrialRoutes } from './trials.routes.js';
 import { registerUsageRoutes } from './usage.routes.js';
+import paymentMethodRoutes from './payment-methods.routes.js';
+import { chargeRoutes } from './charges.routes.js';
 
 import type { FastifyInstance } from 'fastify';
 
@@ -60,4 +64,10 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
 
   // Register Connect onboarding routes
   await fastify.register(connectRoutes, { prefix: '/connect' });
+
+  // Register payment methods routes
+  await fastify.register(paymentMethodRoutes, { prefix: '/payment-methods' });
+
+  // Register charges routes (payment processing)
+  await fastify.register(chargeRoutes, { prefix: '/charges' });
 }
