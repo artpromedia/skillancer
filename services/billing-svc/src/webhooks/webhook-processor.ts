@@ -13,15 +13,15 @@
  */
 
 import { prisma } from '@skillancer/database';
-import { logger } from '../lib/logger.js';
 import Stripe from 'stripe';
 
-// Handler imports
+import { logger } from '../lib/logger.js';
 import {
   handleAccountUpdated,
   handlePayoutPaid,
   handlePayoutFailed,
   handleTransferCreated,
+  handleAccountDeauthorized,
 } from './handlers/connect-handlers.js';
 import {
   handleDisputeCreated,
@@ -128,6 +128,7 @@ export class WebhookProcessor {
 
     // Connect events
     this.handlers.set('account.updated', handleAccountUpdated);
+    this.handlers.set('account.application.deauthorized', handleAccountDeauthorized);
     this.handlers.set('payout.paid', handlePayoutPaid);
     this.handlers.set('payout.failed', handlePayoutFailed);
     this.handlers.set('transfer.created', handleTransferCreated);
@@ -543,4 +544,3 @@ export function getWebhookProcessor(): WebhookProcessor {
   }
   return webhookProcessor;
 }
-

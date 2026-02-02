@@ -25,6 +25,7 @@ export {
   handlePayoutPaid,
   handlePayoutFailed,
   handleTransferCreated,
+  handleAccountDeauthorized,
 } from './connect-handlers.js';
 
 // Dispute handlers

@@ -11,6 +11,7 @@
  */
 
 import { prisma } from '@skillancer/database';
+
 import { logger } from '../../lib/logger.js';
 
 import type Stripe from 'stripe';
@@ -621,3 +622,89 @@ export async function handleTransferCreated(event: Stripe.Event): Promise<void> 
   logger.info({ transferId: transfer.id }, 'Transfer created handler completed');
 }
 
+// =============================================================================
+// ACCOUNT DEAUTHORIZED
+// =============================================================================
+
+/**
+ * Handle account.application.deauthorized webhook
+ * - Disconnect the Connect account
+ * - Disable payouts
+ * - Notify the freelancer
+ * - Maintain audit trail
+ */
+export async function handleAccountDeauthorized(event: Stripe.Event): Promise<void> {
+  const account = event.data.object as Stripe.Account;
+
+  logger.info(
+    {
+      accountId: account.id,
+    },
+    'Processing account.application.deauthorized'
+  );
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Find the Connect account
+    const connectAccount = await tx.connectAccount.findUnique({
+      where: { stripeAccountId: account.id },
+      include: { user: true },
+    });
+
+    if (!connectAccount) {
+      logger.warn({ accountId: account.id }, 'Deauthorization for unknown account');
+      return;
+    }
+
+    // 2. Disable the account
+    await tx.connectAccount.update({
+      where: { id: connectAccount.id },
+      data: {
+        onboardingStatus: 'DISABLED',
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        updatedAt: new Date(),
+      },
+    });
+
+    // 3. Update user payout eligibility
+    await tx.user.update({
+      where: { id: connectAccount.userId },
+      data: {
+        payoutsEnabled: false,
+        onboardingComplete: false,
+      },
+    });
+
+    // 4. Audit log
+    await tx.auditLog.create({
+      data: {
+        action: 'CONNECT_ACCOUNT_DEAUTHORIZED',
+        resourceType: 'connect_account',
+        resourceId: account.id,
+        userId: connectAccount.userId,
+        details: {
+          accountId: account.id,
+          reason: 'Application deauthorized by user or Stripe',
+        },
+        ipAddress: 'webhook',
+      },
+    });
+
+    // 5. Create a notification for the freelancer
+    await tx.notification.create({
+      data: {
+        userId: connectAccount.userId,
+        type: 'SECURITY',
+        title: 'Stripe Connect Disconnected',
+        body: 'Your Stripe Connect account has been disconnected. Please reconnect if you want to continue receiving payouts.',
+        read: false,
+        channel: 'IN_APP',
+      },
+    });
+
+    logger.info(
+      { userId: connectAccount.userId, accountId: account.id },
+      'Connect account deauthorized'
+    );
+  });
+}

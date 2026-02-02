@@ -17,8 +17,10 @@ export { escrowRoutes } from './escrow.routes.js';
 export { milestoneRoutes } from './milestones.routes.js';
 export { disputeRoutes } from './disputes.routes.js';
 export { timeLogRoutes } from './time-logs.routes.js';
+export { connectRoutes } from './connect.routes.js';
 
 // Internal imports for registerRoutes function
+import { connectRoutes } from './connect.routes.js';
 import { registerCouponRoutes } from './coupons.routes.js';
 import { disputeRoutes } from './disputes.routes.js';
 import { escrowRoutes } from './escrow.routes.js';
@@ -55,4 +57,7 @@ export async function registerRoutes(fastify: FastifyInstance): Promise<void> {
   await fastify.register(milestoneRoutes, { prefix: '/milestones' });
   await fastify.register(disputeRoutes, { prefix: '/disputes' });
   await fastify.register(timeLogRoutes, { prefix: '/time-logs' });
+
+  // Register Connect onboarding routes
+  await fastify.register(connectRoutes, { prefix: '/connect' });
 }

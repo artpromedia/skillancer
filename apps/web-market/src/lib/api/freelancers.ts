@@ -1636,3 +1636,110 @@ export async function getBusinessVerificationRequirements(): Promise<{
 }> {
   return apiFetch(`${AUTH_API_URL}/business-verification/requirements`);
 }
+
+// ============================================================================
+// Stripe Connect API (Freelancer Payouts)
+// ============================================================================
+
+const BILLING_API_URL =
+  process.env.NEXT_PUBLIC_BILLING_API_URL ?? 'http://localhost:4000/api/billing';
+
+export type ConnectAccountStatus =
+  | 'NOT_STARTED'
+  | 'PENDING'
+  | 'ONBOARDING'
+  | 'ACTIVE'
+  | 'RESTRICTED'
+  | 'DISABLED';
+
+export interface ConnectAccountInfo {
+  status: ConnectAccountStatus;
+  accountId: string | null;
+  detailsSubmitted: boolean;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  requirements: {
+    currentlyDue: string[];
+    eventuallyDue: string[];
+    pastDue: string[];
+    pendingVerification: string[];
+  };
+  externalAccount: {
+    type: string | null;
+    last4: string | null;
+    bank: string | null;
+  } | null;
+  payoutSchedule: {
+    interval: string;
+    delayDays: number;
+  } | null;
+  // Computed property for convenience
+  exists: boolean;
+}
+
+export interface ConnectAccountLinkResponse {
+  url: string;
+  expiresAt: string;
+}
+
+export interface ConnectDashboardLinkResponse {
+  url: string;
+}
+
+/**
+ * Get Stripe Connect account status for current user
+ */
+export async function getConnectAccountStatus(): Promise<ConnectAccountInfo> {
+  return apiFetch<ConnectAccountInfo>(`${BILLING_API_URL}/connect/status`);
+}
+
+/**
+ * Create a new Stripe Connect Express account
+ */
+export async function createConnectAccount(): Promise<{
+  accountId: string;
+  status: ConnectAccountStatus;
+  onboardingUrl: string;
+  expiresAt: string;
+}> {
+  return apiFetch(`${BILLING_API_URL}/connect/account`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Generate an account link for onboarding or updating
+ */
+export async function createConnectAccountLink(
+  type: 'account_onboarding' | 'account_update' = 'account_onboarding',
+  returnPath?: string,
+  refreshPath?: string
+): Promise<ConnectAccountLinkResponse> {
+  return apiFetch<ConnectAccountLinkResponse>(`${BILLING_API_URL}/connect/account-link`, {
+    method: 'POST',
+    body: JSON.stringify({
+      type,
+      returnUrl: returnPath ? `${window.location.origin}${returnPath}` : undefined,
+      refreshUrl: refreshPath ? `${window.location.origin}${refreshPath}` : undefined,
+    }),
+  });
+}
+
+/**
+ * Get Stripe Express Dashboard link
+ */
+export async function getConnectDashboardLink(): Promise<ConnectDashboardLinkResponse> {
+  return apiFetch<ConnectDashboardLinkResponse>(`${BILLING_API_URL}/connect/dashboard`);
+}
+
+/**
+ * Disconnect/delete Stripe Connect account
+ */
+export async function disconnectConnectAccount(): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  return apiFetch(`${BILLING_API_URL}/connect/account`, {
+    method: 'DELETE',
+  });
+}

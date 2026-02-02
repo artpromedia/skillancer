@@ -38,6 +38,8 @@ export * from './use-freelancer-search';
 
 // Verification hooks
 export * from './use-verification';
+export * from './use-payment-verification';
+export * from './use-stripe-connect';
 
 // Utility hooks
 export * from './use-debounce';

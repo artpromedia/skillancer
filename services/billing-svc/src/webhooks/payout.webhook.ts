@@ -6,8 +6,9 @@
  * Handles webhook events for payout status updates from Stripe.
  */
 
-import { createLogger } from '../lib/logger.js';
+import { prisma } from '@skillancer/database';
 
+import { createLogger } from '../lib/logger.js';
 import { getGlobalPayoutService } from '../services/global-payout.service.js';
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
@@ -210,9 +211,73 @@ async function handleAccountUpdated(account: Stripe.Account): Promise<void> {
     payoutsEnabled: account.payouts_enabled,
   });
 
-  // Update local account status
-  // This would sync with PayoutAccountService
-  // Implementation depends on having access to the account mapping
+  // Find the payout account by Stripe Connect account ID
+  const payoutAccount = await prisma.payoutAccount.findFirst({
+    where: { stripeConnectAccountId: account.id },
+  });
+
+  if (!payoutAccount) {
+    logger.warn('Received account.updated for unknown account', { accountId: account.id });
+    return;
+  }
+
+  // Determine status
+  let status: 'PENDING' | 'ONBOARDING' | 'ACTIVE' | 'RESTRICTED' | 'DISABLED' = 'PENDING';
+
+  if (account.requirements?.disabled_reason) {
+    status = 'DISABLED';
+  } else if (account.payouts_enabled && account.charges_enabled) {
+    status = 'ACTIVE';
+  } else if ((account.requirements?.past_due?.length || 0) > 0) {
+    status = 'RESTRICTED';
+  } else if (account.details_submitted) {
+    status = 'RESTRICTED';
+  } else if ((account.requirements?.currently_due?.length || 0) > 0) {
+    status = 'ONBOARDING';
+  }
+
+  // Extract external account info
+  const externalAccount = account.external_accounts?.data?.[0];
+  let externalAccountType: string | null = null;
+  let externalAccountLast4: string | null = null;
+  let externalAccountBank: string | null = null;
+
+  if (externalAccount?.object === 'bank_account') {
+    const bankAccount = externalAccount as Stripe.BankAccount;
+    externalAccountType = 'bank_account';
+    externalAccountLast4 = bankAccount.last4;
+    externalAccountBank = bankAccount.bank_name || null;
+  } else if (externalAccount?.object === 'card') {
+    const card = externalAccount as Stripe.Card;
+    externalAccountType = 'card';
+    externalAccountLast4 = card.last4;
+    externalAccountBank = card.brand || null;
+  }
+
+  // Update the local record
+  await prisma.payoutAccount.update({
+    where: { id: payoutAccount.id },
+    data: {
+      status,
+      detailsSubmitted: account.details_submitted || false,
+      chargesEnabled: account.charges_enabled || false,
+      payoutsEnabled: account.payouts_enabled || false,
+      currentlyDue: account.requirements?.currently_due || [],
+      eventuallyDue: account.requirements?.eventually_due || [],
+      pastDue: account.requirements?.past_due || [],
+      externalAccountType,
+      externalAccountLast4,
+      externalAccountBank,
+      updatedAt: new Date(),
+    },
+  });
+
+  logger.info('Updated payout account status', {
+    userId: payoutAccount.userId,
+    accountId: account.id,
+    status,
+    payoutsEnabled: account.payouts_enabled,
+  });
 }
 
 async function handleAccountDeauthorized(account: Stripe.Account): Promise<void> {
@@ -220,28 +285,113 @@ async function handleAccountDeauthorized(account: Stripe.Account): Promise<void>
     accountId: account.id,
   });
 
-  // Mark local account as deauthorized
-  // Notify user
+  // Find and disable the payout account
+  const payoutAccount = await prisma.payoutAccount.findFirst({
+    where: { stripeConnectAccountId: account.id },
+  });
+
+  if (!payoutAccount) {
+    logger.warn('Received deauthorized for unknown account', { accountId: account.id });
+    return;
+  }
+
+  // Mark as disabled
+  await prisma.payoutAccount.update({
+    where: { id: payoutAccount.id },
+    data: {
+      status: 'DISABLED',
+      payoutsEnabled: false,
+      chargesEnabled: false,
+      updatedAt: new Date(),
+    },
+  });
+
+  logger.info('Disabled deauthorized payout account', {
+    userId: payoutAccount.userId,
+    accountId: account.id,
+  });
+
+  // TODO: Send notification to user about account disconnection
 }
 
 async function handleCapabilityUpdated(capability: Stripe.Capability): Promise<void> {
+  const accountId =
+    typeof capability.account === 'string' ? capability.account : capability.account.id;
+
   logger.info('Capability updated', {
-    accountId: capability.account,
+    accountId,
     capability: capability.id,
     status: capability.status,
   });
 
-  // Update account capabilities
-  // May affect what payout methods are available
+  // Find the payout account
+  const payoutAccount = await prisma.payoutAccount.findFirst({
+    where: { stripeConnectAccountId: accountId },
+  });
+
+  if (!payoutAccount) {
+    logger.debug('Capability updated for unknown account', { accountId });
+    return;
+  }
+
+  // If transfers or card_payments capability changed, may need to refresh full account
+  // For now, log the important capabilities
+  if (capability.id === 'transfers' || capability.id === 'card_payments') {
+    logger.info('Important capability status change', {
+      userId: payoutAccount.userId,
+      capability: capability.id,
+      status: capability.status,
+      requirements: capability.requirements,
+    });
+
+    // If capability is now inactive, may need to update account status
+    if (capability.status === 'inactive' && payoutAccount.status === 'ACTIVE') {
+      await prisma.payoutAccount.update({
+        where: { id: payoutAccount.id },
+        data: {
+          status: 'RESTRICTED',
+          updatedAt: new Date(),
+        },
+      });
+    }
+  }
 }
 
 async function handlePersonUpdated(person: Stripe.Person): Promise<void> {
+  const accountId = typeof person.account === 'string' ? person.account : person.account;
+
   logger.info('Person updated', {
     personId: person.id,
-    accountId: person.account,
+    accountId,
+    verification: person.verification?.status,
   });
 
-  // Verification updates for account representatives
+  // Find the payout account
+  const payoutAccount = await prisma.payoutAccount.findFirst({
+    where: { stripeConnectAccountId: accountId },
+  });
+
+  if (!payoutAccount) {
+    logger.debug('Person updated for unknown account', { accountId });
+    return;
+  }
+
+  // Log verification status changes - account.updated will handle status sync
+  if (person.verification?.status === 'verified') {
+    logger.info('Person verification completed', {
+      userId: payoutAccount.userId,
+      personId: person.id,
+    });
+  } else if (
+    person.verification?.status === 'unverified' &&
+    person.requirements?.currently_due?.length
+  ) {
+    logger.warn('Person requires additional verification', {
+      userId: payoutAccount.userId,
+      personId: person.id,
+      currentlyDue: person.requirements.currently_due,
+    });
+  }
 }
 
 export default payoutWebhookRoutes;
