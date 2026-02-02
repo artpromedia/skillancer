@@ -1,0 +1,26 @@
+# Handle line endings automatically for files detected as text
+# and leave all files detected as binary untouched.
+* text=auto
+
+# Force the following filetypes to have unix eols, so Windows does not break them
+*.sh text eol=lf
+*.bash text eol=lf
+
+# These files are text and should be normalized (convert crlf => lf)
+*.css text eol=lf
+*.scss text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.html text eol=lf
+*.vue text eol=lf
+*.svg text eol=lf
+
+# Exclude files from exporting
+.gitattributes export-ignore
+.gitignore export-ignore

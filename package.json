@@ -58,6 +58,7 @@
     "@skillancer/config": "workspace:*",
     "@types/minimatch": "^6.0.0",
     "@types/node": "^20.11.0",
+    "cross-env": "^10.1.0",
     "eslint": "^8.56.0",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.0",
@@ -68,7 +69,7 @@
   },
   "lint-staged": {
     "**/src/**/!(*.test|*.spec).{ts,tsx}": [
-      "eslint --fix --max-warnings=0",
+      "cross-env NODE_OPTIONS='--max-old-space-size=4096' eslint --fix --max-warnings=0",
       "prettier --write"
     ],
     "*.{js,jsx}": [
