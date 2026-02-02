@@ -28,15 +28,39 @@ vi.mock('stripe', () => {
   };
 });
 
-// Mock Logger
-vi.mock('@skillancer/logger', () => ({
-  createLogger: vi.fn(() => ({
+// Mock Logger - must export both createLogger and logger for src/lib/logger.ts
+vi.mock('@skillancer/logger', () => {
+  const mockLoggerInstance = {
     info: vi.fn(),
     debug: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-  })),
-}));
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  };
+  return {
+    createLogger: vi.fn(() => mockLoggerInstance),
+    logger: mockLoggerInstance,
+  };
+});
+
+// Mock local logger module (services import from here)
+vi.mock('../lib/logger.js', () => {
+  const mockLoggerInstance = {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  };
+  return {
+    createLogger: vi.fn(() => mockLoggerInstance),
+    logger: mockLoggerInstance,
+  };
+});
 
 // Mock repositories
 const mockPayoutRepo = {

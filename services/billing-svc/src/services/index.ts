@@ -23,3 +23,4 @@ export * from './time-log.service.js';
 // Global Payout System
 export * from './exchange-rate.service.js';
 export * from './global-payout.service.js';
+export * from './payout-failure.service.js';

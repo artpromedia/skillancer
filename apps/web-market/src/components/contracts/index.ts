@@ -6,6 +6,7 @@ export { ContractTermsReview, type ContractTermsReviewProps } from './contract-t
 export { CreateMilestoneForm, type CreateMilestoneFormProps } from './create-milestone-form';
 export { DisputeCenter } from './dispute-center';
 export { EscrowWidget } from './escrow-widget';
+export { FundMilestone, FundAllMilestonesButton, type FundMilestoneProps } from './FundMilestone';
 export { MilestoneCard, type MilestoneCardProps } from './milestone-card';
 export { MilestoneList, type MilestoneListProps } from './milestone-list';
 export { MilestoneSubmissionModal } from './milestone-submission-modal';

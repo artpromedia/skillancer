@@ -27,20 +27,23 @@ import {
   type ContractMilestoneEmailData,
   type MilestoneEventType,
 } from './contract-milestone.js';
+import {
+  digestEmailTemplate,
+  type DigestEmailOptions,
+  type DigestNotificationItem,
+} from './digest.js';
 import { generateNewMessageEmail, type NewMessageEmailData } from './new-message.js';
 import { generateNewProposalEmail, type NewProposalEmailData } from './new-proposal.js';
 import { generatePaymentReceivedEmail, type PaymentReceivedEmailData } from './payment-received.js';
+import { generatePayoutArrivedEmail, type PayoutArrivedEmailData } from './payout-arrived.js';
+import { generatePayoutFailedEmail, type PayoutFailedEmailData } from './payout-failed.js';
+import { generatePayoutSentEmail, type PayoutSentEmailData } from './payout-sent.js';
 import {
   generateProposalAcceptedEmail,
   type ProposalAcceptedEmailData,
 } from './proposal-accepted.js';
 import { generateVerificationEmail, type VerificationEmailData } from './verification.js';
 import { generateWelcomeEmail, type WelcomeEmailData } from './welcome.js';
-import {
-  digestEmailTemplate,
-  type DigestEmailOptions,
-  type DigestNotificationItem,
-} from './digest.js';
 
 // Re-export template generators and types
 export { generateWelcomeEmail, type WelcomeEmailData };
@@ -49,6 +52,9 @@ export { generateNewProposalEmail, type NewProposalEmailData };
 export { generateProposalAcceptedEmail, type ProposalAcceptedEmailData };
 export { generateNewMessageEmail, type NewMessageEmailData };
 export { generatePaymentReceivedEmail, type PaymentReceivedEmailData };
+export { generatePayoutSentEmail, type PayoutSentEmailData };
+export { generatePayoutFailedEmail, type PayoutFailedEmailData };
+export { generatePayoutArrivedEmail, type PayoutArrivedEmailData };
 export { generateContractMilestoneEmail, type ContractMilestoneEmailData, type MilestoneEventType };
 export { digestEmailTemplate, type DigestEmailOptions, type DigestNotificationItem };
 
@@ -63,6 +69,9 @@ export type EmailTemplateType =
   | 'proposal-accepted'
   | 'new-message'
   | 'payment-received'
+  | 'payout-sent'
+  | 'payout-failed'
+  | 'payout-arrived'
   | 'contract-milestone'
   | 'password-reset'
   | 'password-changed'
@@ -99,6 +108,9 @@ export const EMAIL_TEMPLATE_GENERATORS = {
   'proposal-accepted': generateProposalAcceptedEmail,
   'new-message': generateNewMessageEmail,
   'payment-received': generatePaymentReceivedEmail,
+  'payout-sent': generatePayoutSentEmail,
+  'payout-failed': generatePayoutFailedEmail,
+  'payout-arrived': generatePayoutArrivedEmail,
   'contract-milestone': generateContractMilestoneEmail,
 } as const;
 

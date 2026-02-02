@@ -6,6 +6,7 @@
  *
  * Individual milestone card showing status, amount, due date,
  * and available actions based on user role and milestone status.
+ * Enhanced with escrow status display and funding requirements.
  */
 
 import {
@@ -35,6 +36,9 @@ import {
   Eye,
   Calendar,
   Loader2,
+  Shield,
+  Lock,
+  AlertTriangle,
 } from 'lucide-react';
 
 import { type Milestone, type MilestoneStatus, getMilestoneStatusInfo } from '@/lib/api/contracts';
@@ -108,12 +112,21 @@ export function MilestoneCard({
 
   const isCompleted = milestone.status === 'APPROVED' || milestone.status === 'RELEASED';
   const isPending = milestone.status === 'PENDING';
+  const isEscrowFunded = milestone.escrowFunded;
+
+  // Freelancer can only submit work if:
+  // 1. They are not the client
+  // 2. Milestone is in a workable status (FUNDED, IN_PROGRESS, or needs revision)
+  // 3. Escrow must be funded for milestone work to begin
   const canSubmit =
     !isClient &&
+    isEscrowFunded &&
     (milestone.status === 'FUNDED' ||
       milestone.status === 'IN_PROGRESS' ||
       milestone.status === 'REVISION_REQUESTED');
-  const canFund = isClient && milestone.status === 'PENDING';
+
+  // Client can fund milestone if it's pending and not yet funded
+  const canFund = isClient && milestone.status === 'PENDING' && !isEscrowFunded;
   const canReview = isClient && milestone.status === 'SUBMITTED';
 
   return (
@@ -159,22 +172,86 @@ export function MilestoneCard({
               </div>
             )}
           </div>
-          {milestone.escrowFunded && (
+          {milestone.escrowFunded ? (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
                   <Badge className="bg-green-50 text-green-700" variant="secondary">
-                    <DollarSign className="mr-1 h-3 w-3" />
+                    <Lock className="mr-1 h-3 w-3" />
                     Escrow Funded
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Payment is secured in escrow and will be released upon approval
+                  <div className="max-w-xs">
+                    <p className="font-medium">Payment Secured</p>
+                    <p className="text-muted-foreground text-xs">
+                      {formatCurrency(milestone.amount)} is held in escrow and will be released to
+                      the freelancer upon milestone approval.
+                    </p>
+                  </div>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          ) : (
+            isPending && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Badge className="bg-amber-50 text-amber-700" variant="secondary">
+                      <AlertTriangle className="mr-1 h-3 w-3" />
+                      Awaiting Funding
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="max-w-xs">
+                      <p className="font-medium">Escrow Not Funded</p>
+                      <p className="text-muted-foreground text-xs">
+                        The client needs to fund this milestone before work can begin. Funding
+                        protects both parties.
+                      </p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )
           )}
         </div>
+
+        {/* Escrow Funding Required Warning (for freelancers on unfunded milestones) */}
+        {!isClient && isPending && !milestone.escrowFunded && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
+            <div className="flex items-start gap-2">
+              <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+              <div>
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  Escrow Funding Required
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Work cannot begin until the client funds the milestone. Escrow protects your
+                  payment and ensures you&apos;ll be paid for approved work.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Client Funding Prompt */}
+        {isClient && isPending && !milestone.escrowFunded && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/20">
+            <div className="flex items-start gap-2">
+              <Lock className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  Fund Milestone to Start Work
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Funding milestones upfront protects both parties. Your payment is held securely
+                  and only released when you approve the completed work.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Deliverables */}
         {milestone.deliverables && milestone.deliverables.length > 0 && (
