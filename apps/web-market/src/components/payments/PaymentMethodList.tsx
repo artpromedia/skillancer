@@ -118,16 +118,25 @@ function PaymentMethodItem({
   };
 
   const isCard = paymentMethod.type === 'card';
-  const isBank = paymentMethod.type === 'us_bank_account';
+  const _isBank = paymentMethod.type === 'us_bank_account';
 
   return (
     <div
+      aria-label={`Select payment method ending in ${isCard ? paymentMethod.card?.last4 : paymentMethod.bankAccount?.last4}`}
       className={`relative rounded-lg border transition-all ${
         isSelected
           ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200'
           : 'border-gray-200 bg-white hover:border-gray-300'
       } ${onSelect ? 'cursor-pointer' : ''} ${compact ? 'p-3' : 'p-4'}`}
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect?.();
+        }
+      }}
     >
       <div className="flex items-center gap-4">
         {/* Icon */}
@@ -194,10 +203,18 @@ function PaymentMethodItem({
               <>
                 {/* Backdrop */}
                 <div
+                  aria-label="Close menu"
                   className="fixed inset-0 z-10"
+                  role="button"
+                  tabIndex={-1}
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowMenu(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setShowMenu(false);
+                    }
                   }}
                 />
                 {/* Menu */}

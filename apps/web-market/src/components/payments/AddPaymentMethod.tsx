@@ -11,9 +11,9 @@ import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { CreditCard, Loader2, CheckCircle, AlertCircle, Lock, Shield } from 'lucide-react';
 import { useState, useCallback, useEffect } from 'react';
 
-import { usePaymentMethods, type PaymentMethodType } from '@/hooks/use-payment-methods';
-
 import { StripeProvider } from './StripeProvider';
+
+import { usePaymentMethods, type PaymentMethodType } from '@/hooks/use-payment-methods';
 
 // ============================================================================
 // Types
@@ -37,7 +37,7 @@ interface AddPaymentMethodFormProps extends AddPaymentMethodProps {
 // ============================================================================
 
 function AddPaymentMethodForm({
-  clientSecret,
+  clientSecret: _clientSecret,
   onSuccess,
   onCancel,
   setAsDefault = true,
@@ -115,7 +115,7 @@ function AddPaymentMethodForm({
   }
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form className="space-y-6" onSubmit={(e) => void handleSubmit(e)}>
       {/* Payment Element */}
       <div className="rounded-lg border border-gray-200 bg-white p-4">
         <PaymentElement
@@ -273,6 +273,7 @@ export function AddPaymentMethod({
           <Lock className="h-4 w-4" />
           <span>256-bit SSL</span>
         </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           alt="Powered by Stripe"
           className="h-6"

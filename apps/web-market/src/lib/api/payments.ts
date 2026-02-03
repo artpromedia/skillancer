@@ -109,7 +109,7 @@ export interface ChargeRequest {
 // Helper Functions
 // ============================================================================
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
+function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -146,7 +146,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export async function getPaymentMethods(
   type?: 'card' | 'bank_account' | 'all'
 ): Promise<PaymentMethod[]> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const params = new URLSearchParams();
   if (type) {
     params.set('type', type);
@@ -167,7 +167,7 @@ export async function getPaymentMethods(
  * Get a specific payment method by ID
  */
 export async function getPaymentMethod(paymentMethodId: string): Promise<PaymentMethod> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/payment-methods/${paymentMethodId}`, {
     method: 'GET',
     headers,
@@ -184,7 +184,7 @@ export async function addPaymentMethod(
   paymentMethodId: string,
   setAsDefault = false
 ): Promise<PaymentMethod> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/payment-methods`, {
     method: 'POST',
     headers,
@@ -199,7 +199,7 @@ export async function addPaymentMethod(
  * Set a payment method as the default
  */
 export async function setDefaultPaymentMethod(paymentMethodId: string): Promise<PaymentMethod> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/payment-methods/${paymentMethodId}/default`, {
     method: 'PUT',
     headers,
@@ -213,7 +213,7 @@ export async function setDefaultPaymentMethod(paymentMethodId: string): Promise<
  * Remove a payment method
  */
 export async function removePaymentMethod(paymentMethodId: string): Promise<void> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/payment-methods/${paymentMethodId}`, {
     method: 'DELETE',
     headers,
@@ -230,7 +230,7 @@ export async function createSetupIntent(
   type: PaymentMethodType = 'card',
   metadata?: Record<string, string>
 ): Promise<SetupIntentResponse> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/payment-methods/setup-intent`, {
     method: 'POST',
     headers,
@@ -249,7 +249,7 @@ export async function createSetupIntent(
  * Create a payment charge
  */
 export async function createCharge(params: ChargeRequest): Promise<ChargeResult> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/charges`, {
     method: 'POST',
     headers,
@@ -268,7 +268,7 @@ export async function confirmPayment(
   paymentMethodId?: string,
   returnUrl?: string
 ): Promise<ChargeResult> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/charges/${paymentIntentId}/confirm`, {
     method: 'POST',
     headers,
@@ -283,7 +283,7 @@ export async function confirmPayment(
  * Get payment status
  */
 export async function getPaymentStatus(paymentIntentId: string): Promise<ChargeResult> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/charges/${paymentIntentId}`, {
     method: 'GET',
     headers,
@@ -300,7 +300,7 @@ export async function capturePayment(
   paymentIntentId: string,
   amountToCapture?: number
 ): Promise<ChargeResult> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/charges/${paymentIntentId}/capture`, {
     method: 'POST',
     headers,
@@ -319,7 +319,7 @@ export async function refundPayment(
   amount?: number,
   reason?: 'duplicate' | 'fraudulent' | 'requested_by_customer'
 ): Promise<{ refundId: string; status: string; amount: number; currency: string }> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/charges/${paymentIntentId}/refund`, {
     method: 'POST',
     headers,
@@ -337,7 +337,7 @@ export async function previewFees(
   amount: number,
   applicationFeePercent?: number
 ): Promise<FeePreview> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const response = await fetch(`${BILLING_API_URL}/charges/fee-preview`, {
     method: 'POST',
     headers,

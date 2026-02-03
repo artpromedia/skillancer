@@ -143,7 +143,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
         // Verify payment method belongs to customer
         const paymentMethod = await stripe.paymentMethods.retrieve(body.paymentMethodId);
         if (paymentMethod.customer !== stripeCustomerId) {
-          return reply.status(403).send({
+          return await reply.status(403).send({
             error: 'Payment method does not belong to this customer',
             code: 'INVALID_PAYMENT_METHOD',
           });
@@ -227,7 +227,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Return appropriate status based on payment state
         const statusCode = paymentIntent.status === 'succeeded' ? 200 : 202;
-        return reply.status(statusCode).send(result);
+        return await reply.status(statusCode).send(result);
       } catch (error) {
         logger.error({ error, userId: user.id }, '[Charges] Failed to create charge');
 
@@ -276,7 +276,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
         // Verify this belongs to the user's customer
         const stripeCustomerId = await getStripeCustomerId(user.id);
         if (paymentIntent.customer !== stripeCustomerId) {
-          return reply.status(403).send({
+          return await reply.status(403).send({
             error: 'Payment intent does not belong to this customer',
             code: 'UNAUTHORIZED',
           });
@@ -312,7 +312,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
           '[Charges] Payment confirmed'
         );
 
-        return reply.send(result);
+        return await reply.send(result);
       } catch (error) {
         logger.error({ error, paymentIntentId }, '[Charges] Failed to confirm payment');
 
@@ -351,7 +351,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
         // Verify this belongs to the user's customer
         const stripeCustomerId = await getStripeCustomerId(user.id);
         if (paymentIntent.customer !== stripeCustomerId) {
-          return reply.status(403).send({
+          return await reply.status(403).send({
             error: 'Payment intent does not belong to this customer',
             code: 'UNAUTHORIZED',
           });
@@ -359,7 +359,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
 
         const result = buildChargeResult(paymentIntent);
 
-        return reply.send(result);
+        return await reply.send(result);
       } catch (error) {
         logger.error({ error, paymentIntentId }, '[Charges] Failed to get payment status');
 
@@ -399,7 +399,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
         // Verify this belongs to the user's customer
         const stripeCustomerId = await getStripeCustomerId(user.id);
         if (paymentIntent.customer !== stripeCustomerId) {
-          return reply.status(403).send({
+          return await reply.status(403).send({
             error: 'Payment intent does not belong to this customer',
             code: 'UNAUTHORIZED',
           });
@@ -407,7 +407,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
 
         // Check if payment can be captured
         if (paymentIntent.status !== 'requires_capture') {
-          return reply.status(400).send({
+          return await reply.status(400).send({
             error: `Payment cannot be captured. Current status: ${paymentIntent.status}`,
             code: 'INVALID_STATUS',
           });
@@ -440,7 +440,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
           '[Charges] Payment captured'
         );
 
-        return reply.send(result);
+        return await reply.send(result);
       } catch (error) {
         logger.error({ error, paymentIntentId }, '[Charges] Failed to capture payment');
         throw error;
@@ -472,7 +472,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
         // Verify this belongs to the user's customer
         const stripeCustomerId = await getStripeCustomerId(user.id);
         if (paymentIntent.customer !== stripeCustomerId) {
-          return reply.status(403).send({
+          return await reply.status(403).send({
             error: 'Payment intent does not belong to this customer',
             code: 'UNAUTHORIZED',
           });
@@ -510,7 +510,7 @@ export async function chargeRoutes(fastify: FastifyInstance): Promise<void> {
           '[Charges] Payment refunded'
         );
 
-        return reply.send({
+        return await reply.send({
           refundId: refund.id,
           status: refund.status,
           amount: refund.amount / 100,

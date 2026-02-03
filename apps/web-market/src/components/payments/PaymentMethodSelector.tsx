@@ -10,10 +10,10 @@
 import { Plus, CreditCard } from 'lucide-react';
 import { useState, useCallback } from 'react';
 
-import { usePaymentMethods, type PaymentMethod } from '@/hooks/use-payment-methods';
-
 import { AddPaymentMethod } from './AddPaymentMethod';
 import { PaymentMethodList } from './PaymentMethodList';
+
+import { usePaymentMethods, type PaymentMethod } from '@/hooks/use-payment-methods';
 
 // ============================================================================
 // Types
@@ -38,7 +38,12 @@ export function PaymentMethodSelector({
   label = 'Payment Method',
   description,
 }: PaymentMethodSelectorProps) {
-  const { paymentMethods, hasPaymentMethod, isLoading, defaultPaymentMethod } = usePaymentMethods();
+  const {
+    paymentMethods,
+    hasPaymentMethod,
+    isLoading: _isLoading,
+    defaultPaymentMethod: _defaultPaymentMethod,
+  } = usePaymentMethods();
   const [showAddForm, setShowAddForm] = useState(false);
 
   // Auto-select default payment method if none selected

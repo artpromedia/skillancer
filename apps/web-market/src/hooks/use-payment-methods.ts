@@ -12,7 +12,7 @@ import { useCallback } from 'react';
 
 import {
   getPaymentMethods,
-  getPaymentMethod,
+  getPaymentMethod as _getPaymentMethod,
   addPaymentMethod,
   setDefaultPaymentMethod,
   removePaymentMethod,
