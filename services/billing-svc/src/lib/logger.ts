@@ -46,3 +46,62 @@ export const logger = {
 };
 
 export type Logger = typeof logger;
+
+/**
+ * Create a named logger instance for a specific module
+ * @param name - The name of the module (used for context)
+ * @returns A logger instance with the module name in context
+ */
+export function createLogger(name: string): Logger {
+  return {
+    info: (first: string | Record<string, unknown>, second?: string | Record<string, unknown>) => {
+      const obj =
+        typeof first === 'string'
+          ? { module: name, ...((second as Record<string, unknown>) ?? {}) }
+          : { module: name, ...first };
+      const msg = typeof first === 'string' ? first : ((second as string) ?? '');
+      (baseLogger.info as (obj: Record<string, unknown>, msg: string) => void)(obj, msg);
+    },
+    warn: (first: string | Record<string, unknown>, second?: string | Record<string, unknown>) => {
+      const obj =
+        typeof first === 'string'
+          ? { module: name, ...((second as Record<string, unknown>) ?? {}) }
+          : { module: name, ...first };
+      const msg = typeof first === 'string' ? first : ((second as string) ?? '');
+      (baseLogger.warn as (obj: Record<string, unknown>, msg: string) => void)(obj, msg);
+    },
+    error: (first: string | Record<string, unknown>, second?: string | Record<string, unknown>) => {
+      const obj =
+        typeof first === 'string'
+          ? { module: name, ...((second as Record<string, unknown>) ?? {}) }
+          : { module: name, ...first };
+      const msg = typeof first === 'string' ? first : ((second as string) ?? '');
+      (baseLogger.error as (obj: Record<string, unknown>, msg: string) => void)(obj, msg);
+    },
+    debug: (first: string | Record<string, unknown>, second?: string | Record<string, unknown>) => {
+      const obj =
+        typeof first === 'string'
+          ? { module: name, ...((second as Record<string, unknown>) ?? {}) }
+          : { module: name, ...first };
+      const msg = typeof first === 'string' ? first : ((second as string) ?? '');
+      (baseLogger.debug as (obj: Record<string, unknown>, msg: string) => void)(obj, msg);
+    },
+    trace: (first: string | Record<string, unknown>, second?: string | Record<string, unknown>) => {
+      const obj =
+        typeof first === 'string'
+          ? { module: name, ...((second as Record<string, unknown>) ?? {}) }
+          : { module: name, ...first };
+      const msg = typeof first === 'string' ? first : ((second as string) ?? '');
+      (baseLogger.trace as (obj: Record<string, unknown>, msg: string) => void)(obj, msg);
+    },
+    fatal: (first: string | Record<string, unknown>, second?: string | Record<string, unknown>) => {
+      const obj =
+        typeof first === 'string'
+          ? { module: name, ...((second as Record<string, unknown>) ?? {}) }
+          : { module: name, ...first };
+      const msg = typeof first === 'string' ? first : ((second as string) ?? '');
+      (baseLogger.fatal as (obj: Record<string, unknown>, msg: string) => void)(obj, msg);
+    },
+    child: baseLogger.child.bind(baseLogger),
+  };
+}
