@@ -19,13 +19,37 @@ CREATE TYPE "ExecutiveBillingCycle" AS ENUM ('WEEKLY', 'BIWEEKLY', 'MONTHLY', 'Q
 CREATE TYPE "ExecutiveTier" AS ENUM ('BASIC', 'PRO', 'ENTERPRISE');
 
 -- Integration Hub Enums
-CREATE TYPE "IntegrationCategory" AS ENUM ('ACCOUNTING', 'ANALYTICS', 'DEVTOOLS', 'SECURITY', 'HR', 'MARKETING', 'PRODUCTIVITY', 'COMMUNICATION', 'CLOUD', 'PROJECT_MANAGEMENT', 'CRM');
+-- IntegrationCategory already defined in previous migration, extending with new values
+DO $$ BEGIN
+    ALTER TYPE "IntegrationCategory" ADD VALUE IF NOT EXISTS 'ANALYTICS';
+    ALTER TYPE "IntegrationCategory" ADD VALUE IF NOT EXISTS 'DEVTOOLS';
+    ALTER TYPE "IntegrationCategory" ADD VALUE IF NOT EXISTS 'SECURITY';
+    ALTER TYPE "IntegrationCategory" ADD VALUE IF NOT EXISTS 'HR';
+    ALTER TYPE "IntegrationCategory" ADD VALUE IF NOT EXISTS 'MARKETING';
+    ALTER TYPE "IntegrationCategory" ADD VALUE IF NOT EXISTS 'CLOUD';
+    ALTER TYPE "IntegrationCategory" ADD VALUE IF NOT EXISTS 'PROJECT_MANAGEMENT';
+    ALTER TYPE "IntegrationCategory" ADD VALUE IF NOT EXISTS 'CRM';
+EXCEPTION WHEN others THEN NULL;
+END $$;
 
-CREATE TYPE "IntegrationTier" AS ENUM ('BASIC', 'PRO', 'ENTERPRISE', 'ADDON');
+-- IntegrationTier - create if not exists
+DO $$ BEGIN
+    CREATE TYPE "IntegrationTier" AS ENUM ('BASIC', 'PRO', 'ENTERPRISE', 'ADDON');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE "IntegrationStatus" AS ENUM ('PENDING', 'CONNECTED', 'EXPIRED', 'REVOKED', 'ERROR', 'REQUIRES_REAUTH');
+-- IntegrationStatus - extend if exists, create if not
+DO $$ BEGIN
+    CREATE TYPE "IntegrationStatus" AS ENUM ('PENDING', 'CONNECTED', 'EXPIRED', 'REVOKED', 'ERROR', 'REQUIRES_REAUTH');
+EXCEPTION WHEN duplicate_object THEN
+    ALTER TYPE "IntegrationStatus" ADD VALUE IF NOT EXISTS 'REQUIRES_REAUTH';
+END $$;
 
-CREATE TYPE "IntegrationAccessLevel" AS ENUM ('READ_ONLY', 'READ_WRITE', 'ADMIN');
+-- IntegrationAccessLevel - create if not exists
+DO $$ BEGIN
+    CREATE TYPE "IntegrationAccessLevel" AS ENUM ('READ_ONLY', 'READ_WRITE', 'ADMIN');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Financial Services Enums
 CREATE TYPE "SkillancerCardStatus" AS ENUM ('PENDING_APPROVAL', 'ACTIVE', 'FROZEN', 'CANCELLED', 'EXPIRED');

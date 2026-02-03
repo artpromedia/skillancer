@@ -299,6 +299,46 @@ CREATE INDEX idx_skillpod_webhook_events_status ON skillpod_webhook_events(statu
 CREATE INDEX idx_skillpod_webhook_events_created ON skillpod_webhook_events(created_at);
 
 -- ============================================================================
+-- SKILLPOD REPORT SCHEDULES (must be created before reports for FK)
+-- ============================================================================
+
+CREATE TABLE skillpod_report_schedules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID NOT NULL REFERENCES skillpod_tenants(id) ON DELETE CASCADE,
+    
+    -- Schedule Definition
+    name VARCHAR(200) NOT NULL,
+    report_type VARCHAR(50) NOT NULL,
+    frequency VARCHAR(20) NOT NULL, -- daily, weekly, monthly
+    day_of_week INTEGER, -- 0-6 for weekly
+    day_of_month INTEGER, -- 1-31 for monthly
+    time_utc TIME NOT NULL DEFAULT '09:00:00',
+    
+    -- Report Configuration
+    filters JSONB NOT NULL DEFAULT '{}',
+    format VARCHAR(20) NOT NULL DEFAULT 'pdf',
+    
+    -- Distribution
+    recipients TEXT[] NOT NULL DEFAULT '{}',
+    
+    -- Status
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    
+    -- Execution
+    last_run_at TIMESTAMPTZ,
+    next_run_at TIMESTAMPTZ,
+    last_run_status VARCHAR(50),
+    
+    -- Timestamps
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_skillpod_report_schedules_tenant ON skillpod_report_schedules(tenant_id);
+CREATE INDEX idx_skillpod_report_schedules_next_run ON skillpod_report_schedules(next_run_at);
+CREATE INDEX idx_skillpod_report_schedules_enabled ON skillpod_report_schedules(enabled);
+
+-- ============================================================================
 -- SKILLPOD ENTERPRISE REPORTS
 -- ============================================================================
 
@@ -344,46 +384,6 @@ CREATE INDEX idx_skillpod_reports_tenant ON skillpod_reports(tenant_id);
 CREATE INDEX idx_skillpod_reports_type ON skillpod_reports(type);
 CREATE INDEX idx_skillpod_reports_status ON skillpod_reports(status);
 CREATE INDEX idx_skillpod_reports_created ON skillpod_reports(created_at);
-
--- ============================================================================
--- SKILLPOD REPORT SCHEDULES
--- ============================================================================
-
-CREATE TABLE skillpod_report_schedules (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id UUID NOT NULL REFERENCES skillpod_tenants(id) ON DELETE CASCADE,
-    
-    -- Schedule Definition
-    name VARCHAR(200) NOT NULL,
-    report_type VARCHAR(50) NOT NULL,
-    frequency VARCHAR(20) NOT NULL, -- daily, weekly, monthly
-    day_of_week INTEGER, -- 0-6 for weekly
-    day_of_month INTEGER, -- 1-31 for monthly
-    time_utc TIME NOT NULL DEFAULT '09:00:00',
-    
-    -- Report Configuration
-    filters JSONB NOT NULL DEFAULT '{}',
-    format VARCHAR(20) NOT NULL DEFAULT 'pdf',
-    
-    -- Distribution
-    recipients TEXT[] NOT NULL DEFAULT '{}',
-    
-    -- Status
-    enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    
-    -- Execution
-    last_run_at TIMESTAMPTZ,
-    next_run_at TIMESTAMPTZ,
-    last_run_status VARCHAR(50),
-    
-    -- Timestamps
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_skillpod_report_schedules_tenant ON skillpod_report_schedules(tenant_id);
-CREATE INDEX idx_skillpod_report_schedules_next_run ON skillpod_report_schedules(next_run_at);
-CREATE INDEX idx_skillpod_report_schedules_enabled ON skillpod_report_schedules(enabled);
 
 -- ============================================================================
 -- SKILLPOD SECURITY POLICIES (ENTERPRISE)
