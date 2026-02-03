@@ -24,7 +24,7 @@ import {
   type RecordPaymentInput,
   type CreateFromTimeEntriesInput,
   type InvoiceLineItem,
-} from '../lib/api/services/invoicing';
+} from '../../lib/api/services/invoicing';
 
 import type { ApiResponse, PaginatedResponse } from '@skillancer/shared-api-client';
 
@@ -122,8 +122,8 @@ export function useCreateInvoice(
   return useMutation({
     mutationFn: (data: InvoiceCreate) => invoicingService.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
     },
     ...options,
   });
@@ -137,8 +137,8 @@ export function useUpdateInvoice(
   return useMutation({
     mutationFn: ({ id, data }) => invoicingService.update(id, data),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
     },
     ...options,
   });
@@ -150,8 +150,8 @@ export function useDeleteInvoice(options?: UseMutationOptions<ApiResponse<void>,
   return useMutation({
     mutationFn: (id: string) => invoicingService.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
     },
     ...options,
   });
@@ -165,7 +165,7 @@ export function useDuplicateInvoice(
   return useMutation({
     mutationFn: (id: string) => invoicingService.duplicate(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
     },
     ...options,
   });
@@ -183,8 +183,8 @@ export function useFinalizeInvoice(
   return useMutation({
     mutationFn: (id: string) => invoicingService.finalize(id),
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
     },
     ...options,
   });
@@ -202,9 +202,9 @@ export function useSendInvoice(
   return useMutation({
     mutationFn: ({ id, options: sendOptions }) => invoicingService.send(id, sendOptions),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
     },
     ...options,
   });
@@ -218,10 +218,10 @@ export function useMarkInvoicePaid(
   return useMutation({
     mutationFn: ({ id, paidDate }) => invoicingService.markPaid(id, paidDate),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.overdue() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.overdue() });
     },
     ...options,
   });
@@ -235,9 +235,9 @@ export function useCancelInvoice(
   return useMutation({
     mutationFn: ({ id, reason }) => invoicingService.cancel(id, reason),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
     },
     ...options,
   });
@@ -255,9 +255,9 @@ export function useRecordPayment(
   return useMutation({
     mutationFn: ({ id, data }) => invoicingService.recordPayment(id, data),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
     },
     ...options,
   });
@@ -275,8 +275,8 @@ export function useDeletePayment(
   return useMutation({
     mutationFn: ({ invoiceId, paymentId }) => invoicingService.deletePayment(invoiceId, paymentId),
     onSuccess: (_, { invoiceId }) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(invoiceId) });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(invoiceId) });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
     },
     ...options,
   });
@@ -288,7 +288,7 @@ export function useSendReminder(options?: UseMutationOptions<ApiResponse<Invoice
   return useMutation({
     mutationFn: (id: string) => invoicingService.sendReminder(id),
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
     },
     ...options,
   });
@@ -306,9 +306,9 @@ export function useRefundInvoice(
   return useMutation({
     mutationFn: ({ id, amount, reason }) => invoicingService.refund(id, amount, reason),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
     },
     ...options,
   });
@@ -326,8 +326,8 @@ export function useCreateInvoiceFromTimeEntries(
   return useMutation({
     mutationFn: (data: CreateFromTimeEntriesInput) => invoicingService.createFromTimeEntries(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.summary() });
     },
     ...options,
   });
@@ -372,7 +372,7 @@ export function useCreateInvoiceTemplate(
   return useMutation({
     mutationFn: (data) => invoicingService.createTemplate(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.templates() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.templates() });
     },
     ...options,
   });
@@ -390,7 +390,7 @@ export function useUpdateInvoiceTemplate(
   return useMutation({
     mutationFn: ({ id, data }) => invoicingService.updateTemplate(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.templates() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.templates() });
     },
     ...options,
   });
@@ -404,7 +404,7 @@ export function useDeleteInvoiceTemplate(
   return useMutation({
     mutationFn: (id: string) => invoicingService.deleteTemplate(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.templates() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.templates() });
     },
     ...options,
   });
@@ -432,7 +432,7 @@ export function useUpdateInvoiceSettings(
   return useMutation({
     mutationFn: (data: Partial<InvoiceSettings>) => invoicingService.updateSettings(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: invoiceKeys.settings() });
+      void queryClient.invalidateQueries({ queryKey: invoiceKeys.settings() });
     },
     ...options,
   });
