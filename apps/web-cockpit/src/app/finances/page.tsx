@@ -7,15 +7,19 @@ import {
   Building2,
   AlertTriangle,
   Calendar,
+  Clock,
   ArrowUpRight,
   ArrowDownRight,
   ChevronRight,
-  Clock,
-  PieChart,
+  Loader2,
+  DollarSign,
   BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+
+import { EarningsChart, PayoutHistory, PendingPayments, TaxSummary } from '@/components/finances';
+import { useFinancialSummary, useBalance, useTransactions } from '@/hooks/api/use-cockpit-finances';
 
 // Types
 type TrendDirection = 'up' | 'down' | 'neutral';
@@ -33,7 +37,7 @@ interface Transaction {
   date: string;
   description: string;
   amount: number;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'payout';
   category?: string;
   status?: 'pending' | 'completed' | 'failed';
 }
@@ -45,93 +49,6 @@ interface Alert {
   description: string;
   action?: { label: string; href: string };
 }
-
-// TODO(Sprint-10): Replace with API call to GET /api/cockpit/finances/overview
-const metrics: FinancialMetric[] = [
-  { label: 'Revenue (MTD)', value: 12450, previousValue: 10200, format: 'currency', trend: 'up' },
-  { label: 'Revenue (YTD)', value: 148500, previousValue: 132000, format: 'currency', trend: 'up' },
-  { label: 'Outstanding', value: 8750, format: 'currency', trend: 'neutral' },
-  { label: 'Expenses (MTD)', value: 2340, previousValue: 2100, format: 'currency', trend: 'up' },
-  { label: 'Profit (MTD)', value: 10110, previousValue: 8100, format: 'currency', trend: 'up' },
-  { label: 'Profit Margin', value: 81.2, previousValue: 79.4, format: 'percentage', trend: 'up' },
-];
-
-const recentTransactions: Transaction[] = [
-  {
-    id: '1',
-    date: '2024-12-26',
-    description: 'Payment from Acme Corp',
-    amount: 4500,
-    type: 'income',
-    status: 'completed',
-  },
-  {
-    id: '2',
-    date: '2024-12-25',
-    description: 'Figma Subscription',
-    amount: -15,
-    type: 'expense',
-    category: 'Software',
-  },
-  {
-    id: '3',
-    date: '2024-12-24',
-    description: 'Payment from TechStart',
-    amount: 2800,
-    type: 'income',
-    status: 'completed',
-  },
-  {
-    id: '4',
-    date: '2024-12-23',
-    description: 'AWS Hosting',
-    amount: -89,
-    type: 'expense',
-    category: 'Infrastructure',
-  },
-  {
-    id: '5',
-    date: '2024-12-22',
-    description: 'Payment from Design Co',
-    amount: 1650,
-    type: 'income',
-    status: 'completed',
-  },
-  {
-    id: '6',
-    date: '2024-12-21',
-    description: 'Adobe Creative Cloud',
-    amount: -55,
-    type: 'expense',
-    category: 'Software',
-  },
-];
-
-const alerts: Alert[] = [
-  {
-    id: '1',
-    type: 'urgent',
-    title: '2 Overdue Invoices',
-    description: '$3,200 outstanding for more than 30 days',
-    action: { label: 'View Invoices', href: '/invoices?status=overdue' },
-  },
-  {
-    id: '2',
-    type: 'warning',
-    title: 'Q4 Estimated Taxes Due',
-    description: 'Due January 15, 2025 - Estimated: $4,850',
-    action: { label: 'View Details', href: '/finances/taxes' },
-  },
-];
-
-const cashFlowData = [
-  { month: 'Jul', income: 11200, expenses: 1800 },
-  { month: 'Aug', income: 13500, expenses: 2100 },
-  { month: 'Sep', income: 10800, expenses: 1950 },
-  { month: 'Oct', income: 15200, expenses: 2400 },
-  { month: 'Nov', income: 12800, expenses: 2200 },
-  { month: 'Dec', income: 12450, expenses: 2340 },
-];
 
 // Helper functions
 function getTrendColorClass(trend?: TrendDirection): string {
@@ -166,7 +83,7 @@ function MetricCard({ metric }: Readonly<{ metric: FinancialMetric }>) {
           ? `$${metric.value.toLocaleString()}`
           : `${metric.value.toFixed(1)}%`}
       </div>
-      {metric.previousValue && (
+      {Boolean(metric.previousValue) && (
         <div
           className={cn('mt-1 flex items-center gap-1 text-sm', getTrendColorClass(metric.trend))}
         >
@@ -174,81 +91,6 @@ function MetricCard({ metric }: Readonly<{ metric: FinancialMetric }>) {
           <span>{Math.abs(percentChange).toFixed(1)}% vs last month</span>
         </div>
       )}
-    </div>
-  );
-}
-
-function CashFlowChart() {
-  const maxValue = Math.max(...cashFlowData.flatMap((d) => [d.income, d.expenses]));
-
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900">Cash Flow</h3>
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-green-500" />
-            <span className="text-gray-600">Income</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-red-400" />
-            <span className="text-gray-600">Expenses</span>
-          </div>
-        </div>
-      </div>
-      <div className="flex h-48 items-end gap-4">
-        {cashFlowData.map((data) => (
-          <div key={data.month} className="flex flex-1 flex-col items-center gap-1">
-            <div className="flex w-full items-end gap-1" style={{ height: '180px' }}>
-              <div
-                className="flex-1 rounded-t bg-green-500 transition-all"
-                style={{ height: `${(data.income / maxValue) * 100}%` }}
-              />
-              <div
-                className="flex-1 rounded-t bg-red-400 transition-all"
-                style={{ height: `${(data.expenses / maxValue) * 100}%` }}
-              />
-            </div>
-            <span className="text-xs text-gray-500">{data.month}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function IncomeBreakdown() {
-  const sources = [
-    { name: 'Skillancer', amount: 45000, color: '#3B82F6', percent: 30 },
-    { name: 'Upwork', amount: 52000, color: '#14A800', percent: 35 },
-    { name: 'Direct Clients', amount: 38000, color: '#8B5CF6', percent: 26 },
-    { name: 'Fiverr', amount: 13500, color: '#1DBF73', percent: 9 },
-  ];
-
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900">Income by Source</h3>
-        <Link className="text-sm text-blue-600 hover:text-blue-700" href="/finances/reports">
-          View Report
-        </Link>
-      </div>
-      <div className="space-y-3">
-        {sources.map((source) => (
-          <div key={source.name} className="space-y-1">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-700">{source.name}</span>
-              <span className="font-medium text-gray-900">${source.amount.toLocaleString()}</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${source.percent}%`, backgroundColor: source.color }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -288,20 +130,23 @@ function AlertCard({ alert }: Readonly<{ alert: Alert }>) {
 
 function TransactionRow({ transaction }: Readonly<{ transaction: Transaction }>) {
   const isIncome = transaction.type === 'income';
+  const isPayout = transaction.type === 'payout';
+
+  let bgClass = 'bg-red-50';
+  let iconElement = <ArrowUpRight className="h-5 w-5 text-red-500" />;
+
+  if (isIncome) {
+    bgClass = 'bg-green-100';
+    iconElement = <ArrowDownRight className="h-5 w-5 text-green-600" />;
+  } else if (isPayout) {
+    bgClass = 'bg-blue-100';
+    iconElement = <DollarSign className="h-5 w-5 text-blue-600" />;
+  }
 
   return (
     <div className="flex items-center gap-4 border-b border-gray-100 py-3 last:border-0">
-      <div
-        className={cn(
-          'flex h-10 w-10 items-center justify-center rounded-full',
-          isIncome ? 'bg-green-100' : 'bg-red-50'
-        )}
-      >
-        {isIncome ? (
-          <ArrowDownRight className="h-5 w-5 text-green-600" />
-        ) : (
-          <ArrowUpRight className="h-5 w-5 text-red-500" />
-        )}
+      <div className={cn('flex h-10 w-10 items-center justify-center rounded-full', bgClass)}>
+        {iconElement}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-gray-900">{transaction.description}</p>
@@ -313,6 +158,11 @@ function TransactionRow({ transaction }: Readonly<{ transaction: Transaction }>)
       <div className={cn('font-semibold', isIncome ? 'text-green-600' : 'text-gray-900')}>
         {isIncome ? '+' : ''}${Math.abs(transaction.amount).toLocaleString()}
       </div>
+      {transaction.status === 'pending' && (
+        <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">
+          Pending
+        </span>
+      )}
     </div>
   );
 }
@@ -361,6 +211,107 @@ function QuickActions() {
 export default function FinancesPage() {
   const [period, setPeriod] = useState<'mtd' | 'ytd' | 'all'>('mtd');
 
+  // Fetch real financial data
+  const { data: financialSummary, isLoading: isLoadingSummary } = useFinancialSummary();
+  const { data: balanceData, isLoading: isLoadingBalance } = useBalance();
+  const { data: transactionsData, isLoading: isLoadingTransactions } = useTransactions({
+    limit: 6,
+  });
+
+  const isLoading = isLoadingSummary || isLoadingBalance || isLoadingTransactions;
+
+  // Build metrics from real data
+  const metrics: FinancialMetric[] = financialSummary
+    ? [
+        {
+          label: 'Revenue (MTD)',
+          value: financialSummary.revenue.monthToDate,
+          format: 'currency' as const,
+          trend: financialSummary.revenue.growthRate > 0 ? ('up' as const) : ('down' as const),
+        },
+        {
+          label: 'Revenue (YTD)',
+          value: financialSummary.revenue.yearToDate,
+          format: 'currency' as const,
+          trend: 'up' as const,
+        },
+        {
+          label: 'Available Balance',
+          value: financialSummary.balance.available,
+          format: 'currency' as const,
+          trend: 'neutral' as const,
+        },
+        {
+          label: 'Pending',
+          value: financialSummary.balance.pending,
+          format: 'currency' as const,
+          trend: 'neutral' as const,
+        },
+        {
+          label: 'Profit (MTD)',
+          value: financialSummary.profit.monthToDate,
+          format: 'currency' as const,
+          trend: 'up' as const,
+        },
+        {
+          label: 'Profit Margin',
+          value: financialSummary.profit.margin,
+          format: 'percentage' as const,
+          trend: 'up' as const,
+        },
+      ]
+    : [];
+
+  // Map transactions from API
+  const recentTransactions: Transaction[] =
+    transactionsData?.transactions.map((t) => ({
+      id: t.id,
+      date: t.date,
+      description: t.description,
+      amount: t.amount,
+      type: t.type as 'income' | 'expense' | 'payout',
+      category: t.category,
+      status: t.status,
+    })) ?? [];
+
+  // Generate alerts from real data
+  const alerts: Alert[] = [];
+
+  if (balanceData && balanceData.pending > 0) {
+    alerts.push({
+      id: 'pending-balance',
+      type: 'info' as const,
+      title: 'Pending Payments',
+      description: `$${balanceData.pending.toLocaleString()} in pending escrow releases`,
+      action: { label: 'View Details', href: '/finances/payout' },
+    });
+  }
+
+  if (balanceData?.pendingReleases && balanceData.pendingReleases.length > 0) {
+    const totalPending = balanceData.pendingReleases.reduce(
+      (sum, release) => sum + release.amount,
+      0
+    );
+    alerts.push({
+      id: 'escrow-releases',
+      type: 'info' as const,
+      title: `${balanceData.pendingReleases.length} Pending Escrow Releases`,
+      description: `$${totalPending.toLocaleString()} will be released upon milestone completion`,
+      action: { label: 'View Contracts', href: '/projects' },
+    });
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-12 w-12 animate-spin text-blue-600" />
+          <p className="mt-4 text-gray-600">Loading financial data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
@@ -407,10 +358,16 @@ export default function FinancesPage() {
         ))}
       </div>
 
-      {/* Charts Row */}
+      {/* Charts and Widgets Grid */}
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <CashFlowChart />
-        <IncomeBreakdown />
+        <EarningsChart period={period === 'mtd' ? 'month' : 'year'} />
+        <PendingPayments />
+      </div>
+
+      {/* Payout History and Tax Summary */}
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <PayoutHistory limit={5} />
+        <TaxSummary />
       </div>
 
       {/* Recent Transactions */}
@@ -443,7 +400,7 @@ export default function FinancesPage() {
           </div>
           <div>
             <p className="font-medium text-gray-900">Invoices</p>
-            <p className="text-sm text-gray-500">3 pending</p>
+            <p className="text-sm text-gray-500">Manage billing</p>
           </div>
         </Link>
         <Link
@@ -455,27 +412,31 @@ export default function FinancesPage() {
           </div>
           <div>
             <p className="font-medium text-gray-900">Expenses</p>
-            <p className="text-sm text-gray-500">$2,340 MTD</p>
+            <p className="text-sm text-gray-500">
+              ${financialSummary?.expenses.monthToDate.toLocaleString() ?? '0'} MTD
+            </p>
           </div>
         </Link>
         <Link
           className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300"
-          href="/finances/taxes"
+          href="/finances/payout"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
-            <PieChart className="h-5 w-5 text-amber-600" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+            <DollarSign className="h-5 w-5 text-green-600" />
           </div>
           <div>
-            <p className="font-medium text-gray-900">Taxes</p>
-            <p className="text-sm text-gray-500">Q4 due soon</p>
+            <p className="font-medium text-gray-900">Payouts</p>
+            <p className="text-sm text-gray-500">
+              ${balanceData?.available.toLocaleString() ?? '0'} available
+            </p>
           </div>
         </Link>
         <Link
           className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300"
           href="/finances/reports"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-            <BarChart3 className="h-5 w-5 text-green-600" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+            <BarChart3 className="h-5 w-5 text-amber-600" />
           </div>
           <div>
             <p className="font-medium text-gray-900">Reports</p>
