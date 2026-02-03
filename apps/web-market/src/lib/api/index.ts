@@ -62,9 +62,185 @@ export {
   getSkillsSuggestions,
 } from './jobs';
 
-// Other modules (no conflicts or we handle them)
-export * from './endorsements';
-export * from './freelancers';
+// Escrow API
+export {
+  fundEscrow,
+  completeFunding,
+  releaseEscrow,
+  refundEscrow,
+  getEscrowFeePreview,
+  getEscrowSummary,
+  getEscrowBalance,
+  getEscrowTransactions,
+  isMilestoneFunded,
+  formatEscrowAmount,
+  getTransactionTypeLabel,
+  getTransactionStatusColor,
+  calculateTotalEscrowNeeded,
+} from './escrow';
+export type {
+  EscrowTransaction,
+  EscrowBalance,
+  FundEscrowRequest,
+  FundEscrowResponse,
+  ReleaseEscrowRequest,
+  ReleaseEscrowResponse,
+  RefundEscrowRequest,
+  RefundEscrowResponse,
+  EscrowFeePreviewRequest,
+  EscrowFeePreview,
+  EscrowSummary,
+  CompleteFundingRequest,
+  CompleteFundingResponse,
+} from './escrow';
+
+// Payout API
+export {
+  getBalance,
+  requestPayout,
+  requestInstantPayout,
+  previewPayout,
+  getPayoutHistory,
+  getPayout,
+  cancelPayout,
+  getPayoutSchedule,
+  updatePayoutSchedule,
+  getSupportedCurrencies,
+  getExchangeRate,
+  previewConversion,
+} from './payouts';
+export type {
+  BalanceSummary,
+  PayoutResponse,
+  PayoutPreviewResponse,
+  PayoutListResponse,
+  PayoutSchedule,
+  RequestPayoutParams,
+  InstantPayoutParams,
+  UpdateScheduleParams,
+  PayoutStatus,
+  PayoutMethod,
+  SupportedCurrency,
+  ExchangeRate,
+  CurrencyBalance,
+  PendingRelease,
+  LifetimeStats,
+  PayoutFees,
+  PayoutDestination,
+  PayoutTimeline,
+} from './payouts';
+
+// Other modules - using explicit exports to avoid conflicts
+export { endorsementsApi } from './endorsements';
+export type {
+  Endorsement,
+  EndorsementRequest,
+  EndorsementStats,
+  EndorsementInput,
+  EndorsementRequestInput,
+} from './endorsements';
+
+// Freelancers - export all except conflicts with skills module
+export {
+  getFreelancerByUsername,
+  getFreelancerById,
+  searchFreelancers,
+  getFreelancerSkills,
+  getFreelancerCredentials,
+  getFreelancerPortfolio,
+  getPortfolioItem,
+  getFreelancerWorkHistory,
+  getFreelancerReviews,
+  getSimilarFreelancers,
+  getMyProfile,
+  updateProfile,
+  uploadAvatar,
+  addSkill,
+  updateSkill,
+  removeSkill,
+  reorderSkills,
+  addPortfolioItem,
+  uploadPortfolioMedia,
+  updatePortfolioItem,
+  deletePortfolioItem,
+  addWorkHistory,
+  updateWorkHistory,
+  deleteWorkHistory,
+  addEducation,
+  updateEducation,
+  deleteEducation,
+  addCredential,
+  updateCredential,
+  deleteCredential,
+  getMySkills,
+  getMyPortfolio,
+  getMyWorkHistory,
+  getMyEducation,
+  getMyCredentials,
+  createFreelancerProfile,
+  updateBasicInfo,
+  updateAbout,
+  updateHourlyRate,
+  updateAvailability,
+  updateLocation,
+  updateServiceTypes,
+  updateBioVideo,
+  removeBioVideo,
+  toggleProfileVisibility,
+  verifySkill,
+  unverifySkill,
+  getSkillVerifications,
+  getVerifiedSkillBadge,
+  getRecommendedJobs,
+  getSmartMatchJobs,
+  getJobCompatibilityScore,
+  updateNotificationSettings,
+  getFreelancerStats,
+  getFreelancerBadges,
+  getFreelancerAchievements,
+  // Note: startSkillAssessment, requestEndorsement excluded - use from skills module
+} from './freelancers';
+export type {
+  FreelancerProfile,
+  ProfileStats,
+  FreelancerCredential,
+  PortfolioItem,
+  PortfolioMedia,
+  WorkHistoryItem,
+  EducationItem,
+  FreelancerAvailability,
+  ServiceType,
+  NotificationSettings,
+  FreelancerBadge,
+  FreelancerAchievement,
+  // Note: FreelancerSkill, SkillAssessment types excluded - use from skills module
+} from './freelancers';
+
 export * from './messages';
 export * from './recommendations';
-export * from './skills';
+// Skills module exports (SkillAssessment, startSkillAssessment, requestEndorsement come from skills only)
+export {
+  getSkills,
+  getSkillById,
+  getSkillBySlug,
+  getRelatedSkills,
+  getSkillsForFreelancer,
+  addFreelancerSkill,
+  removeFreelancerSkill,
+  updateSkillLevel,
+  getSkillStats,
+  getSkillAssessments,
+  getAssessmentById,
+  startSkillAssessment,
+  requestEndorsement,
+  getSkillsMatchScore,
+} from './skills';
+export type {
+  Skill,
+  FreelancerSkill,
+  SkillLevel,
+  SkillCategory,
+  SkillAssessment,
+  SkillStats,
+  SkillMatchScore,
+} from './skills';

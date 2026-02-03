@@ -570,18 +570,56 @@ export async function requestRevision(milestoneId: string, notes: string): Promi
 
 /**
  * Fund a milestone (client escrow deposit)
+ * @deprecated Use fundEscrow from @/lib/api/escrow instead for full Stripe integration
+ * This function now delegates to the escrow API
  */
-export async function fundMilestone(milestoneId: string): Promise<Milestone> {
-  await new Promise((r) => setTimeout(r, 600));
+export async function fundMilestone(
+  milestoneId: string,
+  options?: {
+    contractId?: string;
+    amount?: number;
+    paymentMethodId?: string;
+  }
+): Promise<Milestone> {
+  // For backward compatibility, simulate funding if no options provided
+  // In production, this should always go through the escrow API
+  if (!options?.contractId || !options?.paymentMethodId) {
+    // Legacy mock behavior for tests and development
+    await new Promise((r) => setTimeout(r, 600));
+    return {
+      id: milestoneId,
+      contractId: options?.contractId ?? 'contract-1',
+      title: 'Milestone',
+      amount: options?.amount ?? 500,
+      status: 'FUNDED',
+      order: 0,
+      escrowFunded: true,
+      fundedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
 
+  // Real escrow funding - import dynamically to avoid circular dependencies
+  const { fundEscrow } = await import('./escrow');
+
+  const result = await fundEscrow({
+    contractId: options.contractId,
+    milestoneId,
+    amount: options.amount ?? 0,
+    paymentMethodId: options.paymentMethodId,
+  });
+
+  // Return milestone-like response for backward compatibility
   return {
     id: milestoneId,
-    contractId: 'contract-1',
+    contractId: options.contractId,
     title: 'Milestone',
-    amount: 500,
+    amount: options.amount ?? 0,
     status: 'FUNDED',
     order: 0,
     escrowFunded: true,
+    fundedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
