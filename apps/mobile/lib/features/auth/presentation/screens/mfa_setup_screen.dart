@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/navigation/app_router.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -24,7 +23,6 @@ class _MfaSetupScreenState extends ConsumerState<MfaSetupScreen> {
   final _codeController = TextEditingController();
   final _codeFocusNode = FocusNode();
 
-  bool _isLoadingSetup = true;
   bool _isVerifying = false;
   String? _errorMessage;
 
@@ -56,7 +54,6 @@ class _MfaSetupScreenState extends ConsumerState<MfaSetupScreen> {
   /// Calls POST /mfa/setup/totp to generate a new TOTP secret and QR code.
   Future<void> _initiateMfaSetup() async {
     setState(() {
-      _isLoadingSetup = true;
       _errorMessage = null;
     });
 
@@ -73,13 +70,11 @@ class _MfaSetupScreenState extends ConsumerState<MfaSetupScreen> {
                 .toList() ??
             [];
         _phase = _MfaSetupPhase.scanAndVerify;
-        _isLoadingSetup = false;
       });
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to initialise MFA setup. Please try again.';
         _phase = _MfaSetupPhase.error;
-        _isLoadingSetup = false;
       });
     }
   }
@@ -380,34 +375,34 @@ class _MfaSetupScreenState extends ConsumerState<MfaSetupScreen> {
           const SizedBox(height: AppTheme.spacingMd),
 
           // Error message
-          if (_errorMessage != null && _phase == _MfaSetupPhase.scanAndVerify)
-            ...[
-              Container(
-                padding: const EdgeInsets.all(AppTheme.spacingMd),
-                decoration: BoxDecoration(
-                  color: AppTheme.errorColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                  border: Border.all(color: AppTheme.errorColor),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: AppTheme.errorColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: AppTheme.spacingSm),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: AppTheme.errorColor),
-                      ),
-                    ),
-                  ],
-                ),
+          if (_errorMessage != null &&
+              _phase == _MfaSetupPhase.scanAndVerify) ...[
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spacingMd),
+              decoration: BoxDecoration(
+                color: AppTheme.errorColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                border: Border.all(color: AppTheme.errorColor),
               ),
-              const SizedBox(height: AppTheme.spacingMd),
-            ],
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: AppTheme.errorColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppTheme.spacingSm),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: AppTheme.errorColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacingMd),
+          ],
 
           // 6-digit code field
           TextFormField(
@@ -622,7 +617,8 @@ class _MfaSetupScreenState extends ConsumerState<MfaSetupScreen> {
         Expanded(
           child: Container(
             height: 2,
-            color: currentStep > 1 ? AppTheme.primaryColor : AppTheme.neutral200,
+            color:
+                currentStep > 1 ? AppTheme.primaryColor : AppTheme.neutral200,
           ),
         ),
         _buildStepDot(
@@ -686,7 +682,8 @@ class _MfaSetupScreenState extends ConsumerState<MfaSetupScreen> {
           label,
           style: TextStyle(
             fontSize: 12,
-            fontWeight: isActive || isCompleted ? FontWeight.w600 : FontWeight.w400,
+            fontWeight:
+                isActive || isCompleted ? FontWeight.w600 : FontWeight.w400,
             color: isActive || isCompleted
                 ? AppTheme.primaryColor
                 : AppTheme.neutral400,

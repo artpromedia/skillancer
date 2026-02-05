@@ -9,6 +9,7 @@ import '../../../../core/navigation/app_router.dart';
 import '../../../../widgets/status_badge.dart';
 import '../../../../widgets/loading_indicator.dart';
 import '../../../../widgets/error_widget.dart';
+import '../../../auth/domain/models/user.dart';
 import '../../domain/models/contract.dart';
 
 /// Screen displaying milestones for a contract as a visual timeline.
@@ -47,7 +48,8 @@ class _MilestoneScreenState extends ConsumerState<MilestoneScreen> {
           if (contract == null) {
             return const AppErrorWidget(
               message: 'Contract not found',
-              description: 'The contract you are looking for could not be loaded.',
+              description:
+                  'The contract you are looking for could not be loaded.',
             );
           }
 
@@ -372,8 +374,7 @@ class _ProgressHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: AppTheme.spacingSm),
                     ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(AppTheme.radiusFull),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusFull),
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 8,
@@ -571,10 +572,12 @@ class _MilestoneTimelineItem extends StatelessWidget {
                         Expanded(
                           child: Text(
                             milestone.title,
-                            style:
-                                Theme.of(context).textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                         ),
                         const SizedBox(width: AppTheme.spacingSm),
@@ -588,10 +591,9 @@ class _MilestoneTimelineItem extends StatelessWidget {
                       const SizedBox(height: AppTheme.spacingSm),
                       Text(
                         milestone.description!,
-                        style:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppTheme.neutral500,
-                                ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.neutral500,
+                            ),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -627,17 +629,15 @@ class _MilestoneTimelineItem extends StatelessWidget {
                           const SizedBox(width: AppTheme.spacingXs),
                           Text(
                             dateFormat.format(milestone.dueDate!),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: _isDueDateOverdue
-                                      ? AppTheme.errorColor
-                                      : AppTheme.neutral500,
-                                  fontWeight: _isDueDateOverdue
-                                      ? FontWeight.w600
-                                      : null,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: _isDueDateOverdue
+                                          ? AppTheme.errorColor
+                                          : AppTheme.neutral500,
+                                      fontWeight: _isDueDateOverdue
+                                          ? FontWeight.w600
+                                          : null,
+                                    ),
                           ),
                         ],
                       ],
@@ -793,9 +793,7 @@ class _MilestoneTimelineItem extends StatelessWidget {
 
   Widget? get _dotIcon {
     final iconData = switch (milestone.status) {
-      MilestoneStatus.approved ||
-      MilestoneStatus.paid =>
-        Icons.check,
+      MilestoneStatus.approved || MilestoneStatus.paid => Icons.check,
       MilestoneStatus.rejected => Icons.refresh,
       _ => null,
     };

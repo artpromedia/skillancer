@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * InvoiceDetail Component
@@ -592,7 +592,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                           {formatCurrency(payment.amount, invoice.currency)}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {payment.method} â€¢ {formatDate(payment.paidAt)}
+                          {payment.method} • {formatDate(payment.paidAt)}
                         </div>
                       </div>
                       <CheckCircle className="h-5 w-5 text-green-500" />

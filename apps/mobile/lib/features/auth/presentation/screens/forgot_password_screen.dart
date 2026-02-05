@@ -28,9 +28,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   /// Number of reset requests sent in this session
   int _attemptCount = 0;
 
-  /// Timestamp of last successful request for cooldown enforcement
-  DateTime? _lastRequestTime;
-
   /// Cooldown duration between resend attempts
   static const _cooldownDuration = Duration(seconds: 60);
 
@@ -108,7 +105,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         setState(() {
           _isSuccess = true;
           _attemptCount++;
-          _lastRequestTime = DateTime.now();
         });
         _startCooldown();
       } else {
@@ -147,7 +143,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       if (success) {
         setState(() {
           _attemptCount++;
-          _lastRequestTime = DateTime.now();
         });
         _startCooldown();
 
@@ -165,8 +160,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         }
       } else {
         setState(() {
-          _errorMessage =
-              'Unable to resend the email. Please try again later.';
+          _errorMessage = 'Unable to resend the email. Please try again later.';
         });
       }
     } catch (e) {

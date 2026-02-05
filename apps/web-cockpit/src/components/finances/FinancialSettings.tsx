@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * Financial Settings Component
@@ -65,13 +65,13 @@ interface FinancialSettingsData {
 
 const currencies = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
-  { code: 'EUR', symbol: 'â‚¬', name: 'Euro' },
-  { code: 'GBP', symbol: 'Â£', name: 'British Pound' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
   { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
   { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
-  { code: 'JPY', symbol: 'Â¥', name: 'Japanese Yen' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
   { code: 'CHF', symbol: 'Fr', name: 'Swiss Franc' },
-  { code: 'INR', symbol: 'â‚¹', name: 'Indian Rupee' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
 ];
 
 const usStates = [
