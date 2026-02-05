@@ -23,6 +23,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 // Types
 interface LineItem {
@@ -42,62 +45,51 @@ interface Client {
   company?: string;
 }
 
-// TODO(Sprint-10): Replace with API call to GET /api/cockpit/clients
-const mockClients: Client[] = [
-  {
-    id: '1',
-    name: 'John Smith',
-    email: 'john@acme.com',
-    company: 'Acme Corp',
-    phone: '+1 555-0123',
-    address: '123 Main St, San Francisco, CA',
-  },
-  {
-    id: '2',
-    name: 'Sarah Johnson',
-    email: 'sarah@techstart.io',
-    company: 'TechStart Inc',
-    phone: '+1 555-0124',
-  },
-  { id: '3', name: 'Mike Williams', email: 'mike@designstudio.co', company: 'Design Studio' },
-];
+function useInvoiceClients() {
+  return useQuery<Client[]>({
+    queryKey: ['cockpit', 'clients', 'list'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/cockpit/clients?limit=100`);
+      if (!res.ok) throw new Error('Failed to fetch clients');
+      const json = await res.json();
+      return json.data?.items ?? json.items ?? json.data ?? [];
+    },
+  });
+}
 
-// Mock Projects
-const mockProjects = [
-  { id: '1', name: 'Website Redesign', clientId: '1' },
-  { id: '2', name: 'Mobile App Phase 1', clientId: '2' },
-  { id: '3', name: 'Brand Identity', clientId: '3' },
-];
+function useInvoiceProjects() {
+  return useQuery<Array<{ id: string; name: string; clientId: string }>>({
+    queryKey: ['cockpit', 'projects', 'invoice'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/cockpit/projects?status=active&limit=100`);
+      if (!res.ok) throw new Error('Failed to fetch projects');
+      const json = await res.json();
+      const items = json.data?.items ?? json.items ?? json.data ?? [];
+      return items.map((p: Record<string, unknown>) => ({
+        id: p.id,
+        name: p.name ?? p.title,
+        clientId: p.clientId ?? (p.client as Record<string, unknown>)?.id ?? '',
+      }));
+    },
+  });
+}
 
-// Mock Time Entries
-const mockTimeEntries = [
-  {
-    id: '1',
-    description: 'Frontend development',
-    hours: 8,
-    rate: 150,
-    date: '2024-12-10',
-    projectId: '1',
-  },
-  {
-    id: '2',
-    description: 'Backend API integration',
-    hours: 6,
-    rate: 150,
-    date: '2024-12-11',
-    projectId: '1',
-  },
-  {
-    id: '3',
-    description: 'UI/UX design review',
-    hours: 4,
-    rate: 125,
-    date: '2024-12-12',
-    projectId: '1',
-  },
-];
+function useUnbilledTimeEntries(projectId: string) {
+  return useQuery<Array<{ id: string; description: string; hours: number; rate: number; date: string; projectId: string }>>({
+    queryKey: ['cockpit', 'time', 'unbilled', projectId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/cockpit/time?projectId=${projectId}&billable=true&invoiced=false`);
+      if (!res.ok) throw new Error('Failed to fetch time entries');
+      const json = await res.json();
+      return json.data?.items ?? json.items ?? json.data ?? [];
+    },
+    enabled: !!projectId,
+  });
+}
 
 export default function NewInvoicePage() {
+  const { data: clients = [] } = useInvoiceClients();
+  const { data: projects = [] } = useInvoiceProjects();
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [invoiceNumber, setInvoiceNumber] = useState('INV-2024-007');
@@ -146,8 +138,10 @@ export default function NewInvoicePage() {
     setLineItems(lineItems.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
   };
 
+  const { data: unbilledEntries = [] } = useUnbilledTimeEntries(selectedProject);
+
   const importTimeEntries = () => {
-    const projectEntries = mockTimeEntries.filter((e) => e.projectId === selectedProject);
+    const projectEntries = unbilledEntries.filter((e) => e.projectId === selectedProject);
     const newItems: LineItem[] = projectEntries.map((entry) => ({
       id: Date.now().toString() + entry.id,
       description: `${entry.description} (${entry.date})`,
@@ -251,7 +245,7 @@ export default function NewInvoicePage() {
 
                   {showClientDropdown && (
                     <div className="absolute left-0 right-0 top-full z-10 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg">
-                      {mockClients.map((client) => (
+                      {clients.map((client) => (
                         <button
                           key={client.id}
                           className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-gray-50"
@@ -471,7 +465,7 @@ export default function NewInvoicePage() {
                     onChange={(e) => setSelectedProject(e.target.value)}
                   >
                     <option value="">No project</option>
-                    {mockProjects.map((project) => (
+                    {projects.map((project) => (
                       <option key={project.id} value={project.id}>
                         {project.name}
                       </option>
@@ -657,7 +651,7 @@ export default function NewInvoicePage() {
             {selectedProject ? (
               <>
                 <div className="mb-4 max-h-64 space-y-2 overflow-y-auto">
-                  {mockTimeEntries
+                  {unbilledEntries
                     .filter((e) => e.projectId === selectedProject)
                     .map((entry) => (
                       <div

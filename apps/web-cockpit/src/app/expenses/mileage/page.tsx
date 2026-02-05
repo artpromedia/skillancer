@@ -19,7 +19,10 @@ import {
   Navigation,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface MileageTrip {
   id: string;
@@ -37,64 +40,46 @@ interface MileageTrip {
 
 const IRS_RATE_2024 = 0.67; // IRS standard mileage rate for 2024
 
-// TODO(Sprint-10): Replace with API call to GET /api/cockpit/expenses/mileage
-const mockTrips: MileageTrip[] = [
-  {
-    id: '1',
-    date: '2024-01-15',
-    purpose: 'Client meeting',
-    startLocation: 'Home Office',
-    endLocation: 'Acme Corp - Downtown',
-    distance: 12.5,
-    ratePerMile: IRS_RATE_2024,
-    projectId: 'proj-1',
-    projectName: 'Website Redesign',
-    isRoundTrip: true,
-    notes: 'Met with stakeholders for project kickoff',
-  },
-  {
-    id: '2',
-    date: '2024-01-14',
-    purpose: 'Equipment pickup',
-    startLocation: 'Home Office',
-    endLocation: 'Best Buy - Tech District',
-    distance: 8.2,
-    ratePerMile: IRS_RATE_2024,
-    isRoundTrip: true,
-  },
-  {
-    id: '3',
-    date: '2024-01-12',
-    purpose: 'Networking event',
-    startLocation: 'Home Office',
-    endLocation: 'Convention Center',
-    distance: 15.0,
-    ratePerMile: IRS_RATE_2024,
-    isRoundTrip: true,
-  },
-  {
-    id: '4',
-    date: '2024-01-10',
-    purpose: 'Site visit',
-    startLocation: 'Home Office',
-    endLocation: 'TechStart Inc - North Campus',
-    distance: 22.3,
-    ratePerMile: IRS_RATE_2024,
-    projectId: 'proj-2',
-    projectName: 'Mobile App',
-    isRoundTrip: true,
-  },
-];
+function useMileageTrips() {
+  return useQuery<MileageTrip[]>({
+    queryKey: ['cockpit', 'expenses', 'mileage'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/cockpit/expenses/mileage`);
+      if (!res.ok) throw new Error('Failed to fetch mileage trips');
+      const json = await res.json();
+      return json.data?.items ?? json.items ?? json.data ?? [];
+    },
+  });
+}
 
-const mockProjects = [
-  { id: 'proj-1', name: 'Website Redesign', clientName: 'Acme Corp' },
-  { id: 'proj-2', name: 'Mobile App', clientName: 'TechStart Inc' },
-  { id: 'proj-3', name: 'Brand Identity', clientName: 'Design Studio' },
-];
+function useMileageProjects() {
+  return useQuery<Array<{ id: string; name: string; clientName: string }>>({
+    queryKey: ['cockpit', 'projects', 'active'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/cockpit/projects?status=active&limit=50`);
+      if (!res.ok) throw new Error('Failed to fetch projects');
+      const json = await res.json();
+      const items = json.data?.items ?? json.items ?? json.data ?? [];
+      return items.map((p: Record<string, unknown>) => ({
+        id: p.id,
+        name: p.name ?? p.title,
+        clientName: p.clientName ?? (p.client as Record<string, unknown>)?.name ?? '',
+      }));
+    },
+  });
+}
 
 export default function MileagePage() {
-  const [trips, setTrips] = useState<MileageTrip[]>(mockTrips);
+  const { data: apiTrips } = useMileageTrips();
+  const { data: apiProjects } = useMileageProjects();
+  const [trips, setTrips] = useState<MileageTrip[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (apiTrips && apiTrips.length > 0) {
+      setTrips(apiTrips);
+    }
+  }, [apiTrips]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [editingTrip, setEditingTrip] = useState<MileageTrip | null>(null);
@@ -357,7 +342,7 @@ export default function MileagePage() {
         <TripModal
           initialData={editingTrip || undefined}
           isOpen={true}
-          projects={mockProjects}
+          projects={apiProjects ?? []}
           onClose={() => {
             setShowAddModal(false);
             setEditingTrip(null);

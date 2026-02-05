@@ -104,6 +104,20 @@ export {
   useDeleteCertification,
 } from './use-users';
 
+// Payments hooks
+export {
+  useConnectStatus,
+  useCreateConnectAccount,
+  useDisconnectAccount,
+  usePaymentMethods,
+  useAddPaymentMethod,
+  useRemovePaymentMethod,
+  useSetDefaultPaymentMethod,
+  useCreateSetupIntent,
+  useCreateCharge,
+  useEscrowStatus,
+} from './use-payments';
+
 // Re-export types from hooks
 export type {
   Job,

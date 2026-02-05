@@ -21,126 +21,27 @@ import {
   Building2,
   MailCheck,
   RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { useInvoices, useInvoiceSummary } from '@/hooks/api/use-invoicing';
+import type { Invoice, InvoiceStatus } from '@/lib/api/services/invoicing';
 import type { ReactNode } from 'react';
-
-// Types
-type InvoiceStatus = 'draft' | 'sent' | 'viewed' | 'paid' | 'overdue' | 'cancelled';
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  clientName: string;
-  clientEmail: string;
-  amount: number;
-  tax: number;
-  total: number;
-  status: InvoiceStatus;
-  issueDate: string;
-  dueDate: string;
-  paidDate?: string;
-  projectName?: string;
-  isRecurring?: boolean;
-}
-
-// TODO(Sprint-10): Replace with API call to GET /api/cockpit/invoices
-const mockInvoices: Invoice[] = [
-  {
-    id: '1',
-    invoiceNumber: 'INV-2024-001',
-    clientName: 'Acme Corp',
-    clientEmail: 'billing@acme.com',
-    amount: 5000,
-    tax: 450,
-    total: 5450,
-    status: 'paid',
-    issueDate: '2024-12-01',
-    dueDate: '2024-12-15',
-    paidDate: '2024-12-12',
-    projectName: 'Website Redesign',
-  },
-  {
-    id: '2',
-    invoiceNumber: 'INV-2024-002',
-    clientName: 'TechStart Inc',
-    clientEmail: 'accounts@techstart.io',
-    amount: 8500,
-    tax: 765,
-    total: 9265,
-    status: 'sent',
-    issueDate: '2024-12-05',
-    dueDate: '2024-12-19',
-    projectName: 'Mobile App Phase 1',
-  },
-  {
-    id: '3',
-    invoiceNumber: 'INV-2024-003',
-    clientName: 'Design Studio',
-    clientEmail: 'hello@designstudio.co',
-    amount: 2400,
-    tax: 216,
-    total: 2616,
-    status: 'overdue',
-    issueDate: '2024-11-20',
-    dueDate: '2024-12-04',
-    projectName: 'Brand Identity',
-  },
-  {
-    id: '4',
-    invoiceNumber: 'INV-2024-004',
-    clientName: 'Global Enterprises',
-    clientEmail: 'finance@globalent.com',
-    amount: 12000,
-    tax: 1080,
-    total: 13080,
-    status: 'viewed',
-    issueDate: '2024-12-10',
-    dueDate: '2024-12-24',
-    projectName: 'E-commerce Platform',
-  },
-  {
-    id: '5',
-    invoiceNumber: 'INV-2024-005',
-    clientName: 'Startup Labs',
-    clientEmail: 'pay@startuplabs.io',
-    amount: 3200,
-    tax: 288,
-    total: 3488,
-    status: 'draft',
-    issueDate: '2024-12-14',
-    dueDate: '2024-12-28',
-    projectName: 'MVP Development',
-  },
-  {
-    id: '6',
-    invoiceNumber: 'INV-2024-006',
-    clientName: 'Acme Corp',
-    clientEmail: 'billing@acme.com',
-    amount: 1800,
-    tax: 162,
-    total: 1962,
-    status: 'paid',
-    issueDate: '2024-11-15',
-    dueDate: '2024-11-29',
-    paidDate: '2024-11-28',
-    projectName: 'Monthly Retainer',
-    isRecurring: true,
-  },
-];
 
 const statusConfig: Record<
   InvoiceStatus,
   { label: string; color: string; icon: React.ElementType }
 > = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700', icon: FileText },
+  pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
   sent: { label: 'Sent', color: 'bg-blue-100 text-blue-700', icon: Send },
   viewed: { label: 'Viewed', color: 'bg-purple-100 text-purple-700', icon: Eye },
   paid: { label: 'Paid', color: 'bg-green-100 text-green-700', icon: CheckCircle },
   overdue: { label: 'Overdue', color: 'bg-red-100 text-red-700', icon: AlertCircle },
   cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-500', icon: Trash2 },
+  refunded: { label: 'Refunded', color: 'bg-orange-100 text-orange-600', icon: RefreshCw },
 };
 
 const tabs = [
@@ -158,29 +59,27 @@ export default function InvoicesPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
+  const { data: invoicesResponse, isLoading, error } = useInvoices();
+  const { data: summaryResponse } = useInvoiceSummary();
+
+  const invoices: Invoice[] = invoicesResponse?.data ?? [];
+  const summary = summaryResponse?.data;
+
   // Filter invoices
-  const filteredInvoices = mockInvoices.filter((invoice) => {
+  const filteredInvoices = invoices.filter((invoice) => {
     const matchesTab = activeTab === 'all' || invoice.status === activeTab;
     const matchesSearch =
       invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.projectName?.toLowerCase().includes(searchQuery.toLowerCase());
+      invoice.clientId?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
-  // Stats
+  // Stats from API summary
   const stats = {
-    total: mockInvoices.length,
-    draft: mockInvoices.filter((i) => i.status === 'draft').length,
-    outstanding: mockInvoices
-      .filter((i) => ['sent', 'viewed', 'overdue'].includes(i.status))
-      .reduce((sum, i) => sum + i.total, 0),
-    overdue: mockInvoices
-      .filter((i) => i.status === 'overdue')
-      .reduce((sum, i) => sum + i.total, 0),
-    paidThisMonth: mockInvoices
-      .filter((i) => i.status === 'paid')
-      .reduce((sum, i) => sum + i.total, 0),
+    draft: summary?.byStatus?.draft?.count ?? 0,
+    outstanding: summary?.outstandingAmount ?? 0,
+    overdue: summary?.overdueAmount ?? 0,
+    paidThisMonth: summary?.paidAmount ?? 0,
   };
 
   const toggleSelect = (id: string) => {
@@ -228,6 +127,26 @@ export default function InvoicesPage() {
     }
     return null;
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-7xl p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <AlertCircle className="mx-auto mb-2 h-8 w-8 text-red-500" />
+          <h3 className="text-lg font-medium text-red-800">Failed to load invoices</h3>
+          <p className="mt-1 text-sm text-red-600">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl p-6">
@@ -298,7 +217,7 @@ export default function InvoicesPage() {
             {tab.label}
             {tab.id !== 'all' && (
               <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs">
-                {mockInvoices.filter((i) => i.status === tab.id).length}
+                {summary?.byStatus?.[tab.id as InvoiceStatus]?.count ?? 0}
               </span>
             )}
           </button>
@@ -393,7 +312,8 @@ export default function InvoicesPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filteredInvoices.map((invoice) => {
-              const StatusIcon = statusConfig[invoice.status].icon;
+              const statusEntry = statusConfig[invoice.status] ?? statusConfig.draft;
+              const StatusIcon = statusEntry.icon;
               const daysUntilDue = getDaysUntilDue(invoice.dueDate);
 
               return (
@@ -410,10 +330,9 @@ export default function InvoicesPage() {
                     <Link className="hover:text-indigo-600" href={`/invoices/${invoice.id}`}>
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-gray-900">{invoice.invoiceNumber}</span>
-                        {invoice.isRecurring && <RefreshCw className="h-3.5 w-3.5 text-gray-400" />}
                       </div>
-                      {invoice.projectName && (
-                        <div className="text-sm text-gray-500">{invoice.projectName}</div>
+                      {invoice.projectId && (
+                        <div className="text-sm text-gray-500">{invoice.projectId}</div>
                       )}
                     </Link>
                   </td>
@@ -423,8 +342,7 @@ export default function InvoicesPage() {
                         <Building2 className="h-4 w-4 text-gray-500" />
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{invoice.clientName}</div>
-                        <div className="text-sm text-gray-500">{invoice.clientEmail}</div>
+                        <div className="font-medium text-gray-900">{invoice.clientId}</div>
                       </div>
                     </div>
                   </td>
@@ -432,9 +350,9 @@ export default function InvoicesPage() {
                     <div className="font-semibold text-gray-900">
                       ${invoice.total.toLocaleString()}
                     </div>
-                    {invoice.tax > 0 && (
+                    {invoice.taxAmount > 0 && (
                       <div className="text-xs text-gray-500">
-                        Tax: ${invoice.tax.toLocaleString()}
+                        Tax: ${invoice.taxAmount.toLocaleString()}
                       </div>
                     )}
                   </td>
@@ -442,11 +360,11 @@ export default function InvoicesPage() {
                     <span
                       className={cn(
                         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
-                        statusConfig[invoice.status].color
+                        statusEntry.color
                       )}
                     >
                       <StatusIcon className="h-3.5 w-3.5" />
-                      {statusConfig[invoice.status].label}
+                      {statusEntry.label}
                     </span>
                   </td>
                   <td className="px-4 py-4">

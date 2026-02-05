@@ -27,10 +27,14 @@ import {
   Trash2,
   Tag,
   Briefcase,
+  Loader2,
   MoreHorizontal,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 // ============================================================================
 // Types
@@ -73,60 +77,38 @@ interface ActiveTimer {
 }
 
 // ============================================================================
-// Sample Data
+// API Hooks
 // ============================================================================
 
-const SAMPLE_PROJECTS: Project[] = [
-  { id: 'proj-1', name: 'Website Redesign', color: '#3B82F6', clientName: 'Acme Corp' },
-  { id: 'proj-2', name: 'Mobile App', color: '#10B981', clientName: 'TechStart Inc' },
-  { id: 'proj-3', name: 'Marketing Campaign', color: '#8B5CF6', clientName: 'GlobalBrand' },
-  { id: 'proj-4', name: 'API Integration', color: '#F59E0B', clientName: 'DataSync Ltd' },
-];
+function useTimeProjects() {
+  return useQuery<Project[]>({
+    queryKey: ['cockpit', 'time', 'projects'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/cockpit/projects?status=active&limit=50`);
+      if (!res.ok) throw new Error('Failed to fetch projects');
+      const json = await res.json();
+      const items = json.data?.items ?? json.items ?? json.data ?? [];
+      return items.map((p: Record<string, unknown>) => ({
+        id: p.id,
+        name: p.name ?? p.title,
+        color: p.color ?? '#3B82F6',
+        clientName: p.clientName ?? (p.client as Record<string, unknown>)?.name ?? '',
+      }));
+    },
+  });
+}
 
-const SAMPLE_ENTRIES: TimeEntry[] = [
-  {
-    id: 'entry-1',
-    description: 'Homepage design mockups',
-    projectId: 'proj-1',
-    projectName: 'Website Redesign',
-    projectColor: '#3B82F6',
-    date: new Date().toISOString().split('T')[0],
-    startTime: '09:00',
-    endTime: '11:30',
-    duration: 150,
-    hourlyRate: 150,
-    billable: true,
-    tags: ['design', 'mockup'],
-  },
-  {
-    id: 'entry-2',
-    description: 'Client feedback meeting',
-    projectId: 'proj-1',
-    projectName: 'Website Redesign',
-    projectColor: '#3B82F6',
-    date: new Date().toISOString().split('T')[0],
-    startTime: '14:00',
-    endTime: '15:00',
-    duration: 60,
-    hourlyRate: 150,
-    billable: true,
-    tags: ['meeting'],
-  },
-  {
-    id: 'entry-3',
-    description: 'Bug fixes and testing',
-    projectId: 'proj-2',
-    projectName: 'Mobile App',
-    projectColor: '#10B981',
-    date: new Date().toISOString().split('T')[0],
-    startTime: '15:30',
-    endTime: '17:00',
-    duration: 90,
-    hourlyRate: 175,
-    billable: true,
-    tags: ['development', 'testing'],
-  },
-];
+function useTimeEntriesData() {
+  return useQuery<TimeEntry[]>({
+    queryKey: ['cockpit', 'time', 'entries'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/cockpit/time`);
+      if (!res.ok) throw new Error('Failed to fetch time entries');
+      const json = await res.json();
+      return json.data?.items ?? json.items ?? json.data ?? [];
+    },
+  });
+}
 
 // ============================================================================
 // Utility Functions
@@ -657,7 +639,15 @@ function TimeTrackingPageContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('timesheet');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null);
-  const [entries, setEntries] = useState<TimeEntry[]>(SAMPLE_ENTRIES);
+  const { data: apiEntries } = useTimeEntriesData();
+  const { data: apiProjects } = useTimeProjects();
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
+
+  useEffect(() => {
+    if (apiEntries && apiEntries.length > 0) {
+      setEntries(apiEntries);
+    }
+  }, [apiEntries]);
 
   // Check for active timer on mount
   useEffect(() => {
@@ -690,7 +680,8 @@ function TimeTrackingPageContent() {
   }, [searchParams]);
 
   const handleStartTimer = (projectId: string, description: string) => {
-    const project = SAMPLE_PROJECTS.find((p) => p.id === projectId);
+    const projects = apiProjects ?? [];
+    const project = projects.find((p) => p.id === projectId);
     if (!project) return;
 
     const newTimer: ActiveTimer = {
@@ -784,7 +775,7 @@ function TimeTrackingPageContent() {
       <ActiveTimerBanner timer={activeTimer} onPause={handlePauseTimer} onStop={handleStopTimer} />
 
       {/* Quick Timer Start */}
-      {!activeTimer && <QuickTimerStart projects={SAMPLE_PROJECTS} onStart={handleStartTimer} />}
+      {!activeTimer && <QuickTimerStart projects={apiProjects ?? []} onStart={handleStartTimer} />}
 
       {/* Week Stats */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">

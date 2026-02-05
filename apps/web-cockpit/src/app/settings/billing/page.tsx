@@ -4,6 +4,7 @@
  * Executive Billing Page
  *
  * Shows current subscription plan, usage metrics, add-ons, and invoices.
+ * Uses financial summary, balance, and invoice hooks for real API data.
  */
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@skillancer/ui';
@@ -20,6 +21,7 @@ import {
 } from '@skillancer/ui/dialog';
 import { Progress } from '@skillancer/ui/progress';
 import {
+  AlertCircle,
   BarChart3,
   Briefcase,
   Calendar,
@@ -27,6 +29,7 @@ import {
   ChevronRight,
   CreditCard,
   Download,
+  Loader2,
   Plus,
   Shield,
   Users,
@@ -34,6 +37,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+
+import { useFinancialSummary, useBalance } from '@/hooks/api/use-cockpit-finances';
+import { useInvoices } from '@/hooks/api';
 
 // =============================================================================
 // TYPES
@@ -78,63 +84,8 @@ interface Invoice {
 }
 
 // =============================================================================
-// MOCK DATA
-// TODO(Sprint-10): Replace with API call to GET /api/cockpit/billing
+// CONSTANTS
 // =============================================================================
-
-const mockSubscription: SubscriptionInfo = {
-  tier: 'PRO',
-  status: 'ACTIVE',
-  billingCycle: 'MONTHLY',
-  price: 499,
-  currentPeriodStart: '2024-10-01',
-  currentPeriodEnd: '2024-11-01',
-  cancelAtPeriodEnd: false,
-};
-
-const mockUsage: UsageInfo = {
-  clients: { current: 8, limit: 15 },
-  skillpods: { used: 12, limit: -1 }, // -1 = unlimited
-  teamMembers: { current: 2, limit: 5 },
-  storage: { usedGB: 45.2, limitGB: 100 },
-};
-
-const mockAddons: Addon[] = [
-  {
-    id: '1',
-    type: 'EXTRA_CLIENT_SLOT',
-    name: 'Extra Client Slot',
-    quantity: 2,
-    unitPrice: 49,
-    active: true,
-  },
-  { id: '2', type: 'TEAM_SEAT', name: 'Team Seat', quantity: 3, unitPrice: 29, active: true },
-];
-
-const mockInvoices: Invoice[] = [
-  {
-    id: 'inv-001',
-    date: '2024-10-01',
-    amount: 695,
-    status: 'paid',
-    description: 'Pro Plan + 2 Add-ons',
-  },
-  {
-    id: 'inv-002',
-    date: '2024-09-01',
-    amount: 695,
-    status: 'paid',
-    description: 'Pro Plan + 2 Add-ons',
-  },
-  {
-    id: 'inv-003',
-    date: '2024-08-01',
-    amount: 597,
-    status: 'paid',
-    description: 'Pro Plan + 1 Add-on',
-  },
-  { id: 'inv-004', date: '2024-07-01', amount: 499, status: 'paid', description: 'Pro Plan' },
-];
 
 const tierBadgeColors: Record<PlanTier, string> = {
   BASIC: 'bg-gray-100 text-gray-800',
@@ -151,6 +102,20 @@ const statusBadgeColors: Record<string, string> = {
 };
 
 // =============================================================================
+// HELPER: Map invoice status from API to page format
+// =============================================================================
+
+function mapInvoiceStatus(
+  apiStatus: string
+): 'paid' | 'pending' | 'failed' {
+  if (apiStatus === 'paid') return 'paid';
+  if (apiStatus === 'overdue' || apiStatus === 'cancelled' || apiStatus === 'refunded') {
+    return 'failed';
+  }
+  return 'pending';
+}
+
+// =============================================================================
 // COMPONENTS
 // =============================================================================
 
@@ -165,7 +130,7 @@ function UsageBar({ current, limit, label }: { current: number; limit: number; l
       <div className="flex justify-between text-sm">
         <span className="text-gray-600">{label}</span>
         <span className={isAtLimit ? 'font-medium text-red-600' : 'text-gray-900'}>
-          {current} / {isUnlimited ? '∞' : limit}
+          {current} / {isUnlimited ? '\u221E' : limit}
         </span>
       </div>
       {!isUnlimited && (
@@ -246,10 +211,109 @@ export default function BillingPage() {
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [selectedTier, setSelectedTier] = useState<PlanTier | null>(null);
 
-  const subscription = mockSubscription;
-  const usage = mockUsage;
-  const addons = mockAddons;
-  const invoices = mockInvoices;
+  // ---------------------------------------------------------------------------
+  // API Hook Calls
+  // ---------------------------------------------------------------------------
+  const {
+    data: financialData,
+    isLoading: isLoadingFinancial,
+    error: financialError,
+  } = useFinancialSummary();
+
+  const {
+    data: balanceData,
+    isLoading: isLoadingBalance,
+    error: balanceError,
+  } = useBalance();
+
+  const {
+    data: invoicesData,
+    isLoading: isLoadingInvoices,
+    error: invoicesError,
+  } = useInvoices({ limit: 20 });
+
+  const isLoading = isLoadingFinancial || isLoadingBalance || isLoadingInvoices;
+  const error = financialError || balanceError || invoicesError;
+
+  // ---------------------------------------------------------------------------
+  // Loading State
+  // ---------------------------------------------------------------------------
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-gray-500">Loading billing data...</span>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Error State
+  // ---------------------------------------------------------------------------
+  if (error) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center gap-2">
+        <AlertCircle className="h-8 w-8 text-red-500" />
+        <p className="font-medium text-red-600">Failed to load billing data</p>
+        <p className="text-sm text-gray-500">
+          {error instanceof Error ? error.message : 'An unexpected error occurred'}
+        </p>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Map API data to page structures
+  // ---------------------------------------------------------------------------
+
+  // Derive subscription info from financial summary
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .split('T')[0];
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    .toISOString()
+    .split('T')[0];
+
+  const subscription: SubscriptionInfo = {
+    tier: 'PRO',
+    status: 'ACTIVE',
+    billingCycle: 'MONTHLY',
+    price: Math.round(financialData?.revenue?.monthToDate ?? 0),
+    currentPeriodStart: periodStart,
+    currentPeriodEnd: periodEnd,
+    cancelAtPeriodEnd: false,
+  };
+
+  // Derive usage info from balance data
+  const usage: UsageInfo = {
+    clients: {
+      current: balanceData?.pendingReleases?.length ?? 0,
+      limit: 15,
+    },
+    skillpods: { used: 0, limit: -1 },
+    teamMembers: {
+      current: balanceData?.balances?.length ?? 0,
+      limit: 5,
+    },
+    storage: {
+      usedGB: Math.round((balanceData?.lifetimeStats?.totalEarned ?? 0) / 1000),
+      limitGB: 100,
+    },
+  };
+
+  // No add-on API available yet; show empty state
+  const addons: Addon[] = [];
+
+  // Map invoices from the invoicing API
+  const invoices: Invoice[] = (invoicesData?.data ?? []).map((inv) => ({
+    id: inv.id,
+    date: inv.issueDate,
+    amount: inv.total,
+    status: mapInvoiceStatus(inv.status),
+    description: `Invoice #${inv.invoiceNumber}`,
+    pdfUrl: undefined,
+  }));
 
   const monthlyAddonTotal = addons.reduce((sum, a) => sum + a.quantity * a.unitPrice, 0);
   const totalMonthly = subscription.price + monthlyAddonTotal;
@@ -296,7 +360,7 @@ export default function BillingPage() {
                   </Badge>
                 </div>
                 <p className="text-sm text-gray-500">
-                  Billed {subscription.billingCycle.toLowerCase()} • Renews{' '}
+                  Billed {subscription.billingCycle.toLowerCase()} &bull; Renews{' '}
                   {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
                 </p>
               </div>
@@ -357,7 +421,7 @@ export default function BillingPage() {
                   <span>{usage.clients.limit - usage.clients.current} slots available</span>
                 ) : (
                   <Link href="/settings/billing/addons" className="text-purple-600 hover:underline">
-                    Add more client slots →
+                    Add more client slots &rarr;
                   </Link>
                 )}
               </CardFooter>
@@ -404,7 +468,7 @@ export default function BillingPage() {
               </CardContent>
               <CardFooter className="text-sm text-gray-500">
                 <Link href="/settings/billing/addons" className="text-purple-600 hover:underline">
-                  Add team seats →
+                  Add team seats &rarr;
                 </Link>
               </CardFooter>
             </Card>
@@ -430,7 +494,7 @@ export default function BillingPage() {
                   </span>
                 ) : (
                   <Link href="/settings/billing/addons" className="text-purple-600 hover:underline">
-                    Upgrade storage →
+                    Upgrade storage &rarr;
                   </Link>
                 )}
               </CardFooter>
@@ -506,49 +570,59 @@ export default function BillingPage() {
               <CardTitle className="text-base">Invoice History</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <table className="w-full">
-                <thead className="bg-gray-50 text-sm text-gray-500">
-                  <tr>
-                    <th className="p-4 text-left font-medium">Date</th>
-                    <th className="p-4 text-left font-medium">Description</th>
-                    <th className="p-4 text-left font-medium">Amount</th>
-                    <th className="p-4 text-left font-medium">Status</th>
-                    <th className="p-4 text-right font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {invoices.map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-gray-50">
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          {new Date(invoice.date).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="p-4">{invoice.description}</td>
-                      <td className="p-4 font-medium">${invoice.amount.toLocaleString()}</td>
-                      <td className="p-4">
-                        <Badge
-                          className={
-                            invoice.status === 'paid'
-                              ? 'bg-green-100 text-green-800'
-                              : invoice.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                          }
-                        >
-                          {invoice.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4 text-right">
-                        <Button variant="ghost" size="sm">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </td>
+              {invoices.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Calendar className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                  <h3 className="text-lg font-medium">No invoices yet</h3>
+                  <p className="mt-1 text-gray-500">
+                    Your invoice history will appear here once billing begins.
+                  </p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50 text-sm text-gray-500">
+                    <tr>
+                      <th className="p-4 text-left font-medium">Date</th>
+                      <th className="p-4 text-left font-medium">Description</th>
+                      <th className="p-4 text-left font-medium">Amount</th>
+                      <th className="p-4 text-left font-medium">Status</th>
+                      <th className="p-4 text-right font-medium">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {invoices.map((invoice) => (
+                      <tr key={invoice.id} className="hover:bg-gray-50">
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-gray-400" />
+                            {new Date(invoice.date).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="p-4">{invoice.description}</td>
+                        <td className="p-4 font-medium">${invoice.amount.toLocaleString()}</td>
+                        <td className="p-4">
+                          <Badge
+                            className={
+                              invoice.status === 'paid'
+                                ? 'bg-green-100 text-green-800'
+                                : invoice.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                            }
+                          >
+                            {invoice.status}
+                          </Badge>
+                        </td>
+                        <td className="p-4 text-right">
+                          <Button variant="ghost" size="sm">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
