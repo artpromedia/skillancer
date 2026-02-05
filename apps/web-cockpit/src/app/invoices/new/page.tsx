@@ -20,12 +20,17 @@ import {
   ChevronDown,
   Paperclip,
   RefreshCw,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+import { useClients } from '@/hooks/api/use-clients';
+import { useProjects } from '@/hooks/api/use-projects';
+import type { Client, Address } from '@/lib/api/services/clients';
+import type { Project } from '@/lib/api/services/projects';
 
 // Types
 interface LineItem {
@@ -36,43 +41,15 @@ interface LineItem {
   taxable: boolean;
 }
 
-interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  company?: string;
+// Helpers
+function formatAddress(address?: Address): string | undefined {
+  if (!address) return undefined;
+  const parts = [address.line1, address.line2, address.city, address.state, address.postalCode].filter(Boolean);
+  return parts.length > 0 ? parts.join(', ') : undefined;
 }
 
-function useInvoiceClients() {
-  return useQuery<Client[]>({
-    queryKey: ['cockpit', 'clients', 'list'],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/cockpit/clients?limit=100`);
-      if (!res.ok) throw new Error('Failed to fetch clients');
-      const json = await res.json();
-      return json.data?.items ?? json.items ?? json.data ?? [];
-    },
-  });
-}
-
-function useInvoiceProjects() {
-  return useQuery<Array<{ id: string; name: string; clientId: string }>>({
-    queryKey: ['cockpit', 'projects', 'invoice'],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/cockpit/projects?status=active&limit=100`);
-      if (!res.ok) throw new Error('Failed to fetch projects');
-      const json = await res.json();
-      const items = json.data?.items ?? json.items ?? json.data ?? [];
-      return items.map((p: Record<string, unknown>) => ({
-        id: p.id,
-        name: p.name ?? p.title,
-        clientId: p.clientId ?? (p.client as Record<string, unknown>)?.id ?? '',
-      }));
-    },
-  });
-}
+// Inline hook for unbilled time entries (no dedicated hook available yet)
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 function useUnbilledTimeEntries(projectId: string) {
   return useQuery<Array<{ id: string; description: string; hours: number; rate: number; date: string; projectId: string }>>({
@@ -88,8 +65,12 @@ function useUnbilledTimeEntries(projectId: string) {
 }
 
 export default function NewInvoicePage() {
-  const { data: clients = [] } = useInvoiceClients();
-  const { data: projects = [] } = useInvoiceProjects();
+  const { data: clientsResponse, isLoading: clientsLoading, error: clientsError } = useClients();
+  const { data: projectsResponse, isLoading: projectsLoading, error: projectsError } = useProjects({ status: 'active' });
+
+  const clients: Client[] = clientsResponse?.data ?? [];
+  const projects: Project[] = projectsResponse?.data ?? [];
+
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [invoiceNumber, setInvoiceNumber] = useState('INV-2024-007');
@@ -153,6 +134,29 @@ export default function NewInvoicePage() {
     setShowImportTime(false);
   };
 
+  const isLoading = clientsLoading || projectsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (clientsError || projectsError) {
+    const errorMsg = clientsError?.message || projectsError?.message || 'Unknown error';
+    return (
+      <div className="mx-auto max-w-6xl p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <AlertCircle className="mx-auto mb-2 h-8 w-8 text-red-500" />
+          <h3 className="text-lg font-medium text-red-800">Failed to load form data</h3>
+          <p className="mt-1 text-sm text-red-600">{errorMsg}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -202,7 +206,7 @@ export default function NewInvoicePage() {
                     </div>
                     <div>
                       <div className="font-medium text-gray-900">
-                        {selectedClient.company || selectedClient.name}
+                        {selectedClient.displayName || selectedClient.name}
                       </div>
                       <div className="mt-1 text-sm text-gray-500">{selectedClient.name}</div>
                       <div className="flex items-center gap-1 text-sm text-gray-500">
@@ -215,10 +219,10 @@ export default function NewInvoicePage() {
                           {selectedClient.phone}
                         </div>
                       )}
-                      {selectedClient.address && (
+                      {selectedClient.billingAddress && (
                         <div className="flex items-center gap-1 text-sm text-gray-500">
                           <MapPin className="h-3.5 w-3.5" />
-                          {selectedClient.address}
+                          {formatAddress(selectedClient.billingAddress)}
                         </div>
                       )}
                     </div>
@@ -259,7 +263,7 @@ export default function NewInvoicePage() {
                           </div>
                           <div>
                             <div className="font-medium text-gray-900">
-                              {client.company || client.name}
+                              {client.displayName || client.name}
                             </div>
                             <div className="text-sm text-gray-500">{client.email}</div>
                           </div>
@@ -667,7 +671,7 @@ export default function NewInvoicePage() {
                             ${(entry.hours * entry.rate).toLocaleString()}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {entry.hours}h × ${entry.rate}
+                            {entry.hours}h x ${entry.rate}
                           </div>
                         </div>
                       </div>
