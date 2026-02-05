@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/providers/providers.dart';
-import '../../../../core/navigation/app_router.dart';
 import '../../../../widgets/status_badge.dart';
 import '../../../../widgets/loading_indicator.dart';
 import '../../../../widgets/error_widget.dart';
