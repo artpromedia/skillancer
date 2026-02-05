@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/navigation/app_router.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../domain/services/auth_service.dart';
 
 /// Login screen with email, password, social login, and biometrics
 class LoginScreen extends ConsumerStatefulWidget {
@@ -22,6 +23,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
+  bool _isBiometricAvailable = false;
+
+  late final AuthService _authService;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = AuthService(
+      secureStorage: ref.read(secureStorageProvider),
+    );
+    _checkBiometricAvailability();
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final isAvailable = await _authService.isBiometricAvailable();
+    final isEnabled = await _authService.isBiometricEnabled();
+    if (mounted) {
+      setState(() {
+        _isBiometricAvailable = isAvailable && isEnabled;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -53,15 +76,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleBiometricLogin() async {
-    // TODO: Implement biometric login
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authenticated = await _authService.authenticateWithBiometrics();
+      if (!mounted) return;
+
+      if (authenticated) {
+        await ref.read(authStateProvider.notifier).checkAuthStatus();
+      } else {
+        setState(() => _errorMessage = 'Biometric authentication failed');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = e.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _handleGoogleLogin() async {
-    // TODO: Implement Google login
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Coming soon')),
+    );
   }
 
   Future<void> _handleLinkedInLogin() async {
-    // TODO: Implement LinkedIn login
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Coming soon')),
+    );
   }
 
   @override
@@ -199,9 +250,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      // TODO: Navigate to forgot password
-                    },
+                    onPressed: () => context.push(AppRoutes.forgotPassword),
                     child: const Text('Forgot password?'),
                   ),
                 ),
@@ -227,15 +276,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: AppTheme.spacingLg),
 
                 // Biometric login
-                Center(
-                  child: IconButton(
-                    onPressed: _handleBiometricLogin,
-                    icon: const Icon(Icons.fingerprint, size: 48),
-                    color: AppTheme.primaryColor,
+                if (_isBiometricAvailable)
+                  Center(
+                    child: IconButton(
+                      onPressed: _isLoading ? null : _handleBiometricLogin,
+                      icon: const Icon(Icons.fingerprint, size: 48),
+                      color: AppTheme.primaryColor,
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: AppTheme.spacingLg),
+                if (_isBiometricAvailable)
+                  const SizedBox(height: AppTheme.spacingLg),
 
                 // Divider
                 Row(

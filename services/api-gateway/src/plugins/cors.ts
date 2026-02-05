@@ -1,4 +1,3 @@
-// @ts-nocheck - Fastify type compatibility issues
 /**
  * @module @skillancer/api-gateway/plugins/cors
  * CORS configuration plugin
@@ -43,8 +42,9 @@ async function corsPluginImpl(app: FastifyInstance): Promise<void> {
 
   const allowedOrigins = [...new Set([...defaultOrigins, ...configuredOrigins, ...devOrigins])];
 
-  await app.register(cors, {
-    origin: (origin, callback) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+  await app.register(cors as any, {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) => {
       // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) {
         callback(null, true);
@@ -87,6 +87,7 @@ async function corsPluginImpl(app: FastifyInstance): Promise<void> {
   });
 }
 
-export const corsPlugin = fp(corsPluginImpl, {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+export const corsPlugin = fp(corsPluginImpl as any, {
   name: 'cors-plugin',
 });

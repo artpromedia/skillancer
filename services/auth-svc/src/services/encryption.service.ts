@@ -60,10 +60,12 @@ export class EncryptionService {
       throw new Error('Invalid encrypted data format');
     }
 
-    const [ivBase64, authTagBase64, encrypted] = parts;
+    const ivBase64 = parts[0] as string;
+    const authTagBase64 = parts[1] as string;
+    const encrypted = parts[2] as string;
 
-    const iv = Buffer.from(ivBase64!, 'base64');
-    const authTag = Buffer.from(authTagBase64!, 'base64');
+    const iv = Buffer.from(ivBase64, 'base64');
+    const authTag = Buffer.from(authTagBase64, 'base64');
 
     // Create decipher
     const decipher = crypto.createDecipheriv(ALGORITHM, this.masterKey, iv, {
@@ -72,7 +74,7 @@ export class EncryptionService {
     decipher.setAuthTag(authTag);
 
     // Decrypt
-    let decrypted = decipher.update(encrypted!, 'base64', 'utf8');
+    let decrypted = decipher.update(encrypted, 'base64', 'utf8');
     decrypted += decipher.final('utf8');
 
     return decrypted;
@@ -115,19 +117,13 @@ export function initializeEncryptionService(masterKey: string): EncryptionServic
 
 /**
  * Get encryption service singleton instance
- * Falls back to JWT secret if ENCRYPTION_KEY not set
+ * Requires ENCRYPTION_KEY environment variable
  */
 export function getEncryptionService(): EncryptionService {
   if (!encryptionServiceInstance) {
-    const encryptionKey =
-      process.env['ENCRYPTION_KEY'] ||
-      process.env['JWT_SECRET'] ||
-      process.env['AUTH_JWT_SECRET'];
-
+    const encryptionKey = process.env['ENCRYPTION_KEY'];
     if (!encryptionKey) {
-      throw new Error(
-        'Encryption service not initialized. Set ENCRYPTION_KEY or call initializeEncryptionService.'
-      );
+      throw new Error('ENCRYPTION_KEY environment variable must be set');
     }
 
     encryptionServiceInstance = new EncryptionService(encryptionKey);

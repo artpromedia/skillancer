@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * @module @skillancer/auth-svc/app
  * Fastify application factory
@@ -23,8 +22,10 @@ import { authSecurityPlugin } from './plugins/security.js';
 import { authRoutes } from './routes/auth.js';
 import { certificationRoutes } from './routes/certification.js';
 import { clientProfileRoutes } from './routes/client-profile.js';
+import { contactVerificationRoutes } from './routes/contact-verification.js';
 import { educationRoutes } from './routes/education.js';
 import { freelancerProfileRoutes } from './routes/freelancer-profile.js';
+import { gdprRoutes } from './routes/gdpr.js';
 import { healthRoutes } from './routes/health.js';
 import { hipaaRoutes } from './routes/hipaa.js';
 import { mfaRoutes } from './routes/mfa.js';
@@ -34,10 +35,8 @@ import { profileCompletionRoutes } from './routes/profile-completion.js';
 import { profileRoutes } from './routes/profile.js';
 import { createTrustScoreRoutes } from './routes/trust-score.js';
 import { verificationRoutes } from './routes/verification.js';
-import { contactVerificationRoutes } from './routes/contact-verification.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { workHistoryRoutes } from './routes/work-history.js';
-import { gdprRoutes } from './routes/gdpr.js';
 import { initializeAuthService } from './services/auth.service.js';
 import { initializeAvatarService } from './services/avatar.service.js';
 import { initializeCertificationService } from './services/certification.service.js';
@@ -127,7 +126,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   // ==========================================================================
 
   // CORS
-  await app.register(cors, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await app.register(cors as any, {
     origin: config.nodeEnv === 'production' ? [config.appUrl] : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -135,24 +135,29 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   });
 
   // Security headers
-  await app.register(helmet, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await app.register(helmet as any, {
     contentSecurityPolicy: config.nodeEnv === 'production',
   });
 
   // Sensible defaults (error utilities)
-  await app.register(sensible);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await app.register(sensible as any);
 
   // Cookie support (for trusted devices)
-  await app.register(cookie, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await app.register(cookie as any, {
     secret: config.jwt.secret, // Use JWT secret for cookie signing
     parseOptions: {}, // default cookie parsing options
   });
 
   // Form body parser (for OAuth callbacks)
-  await app.register(formBody);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await app.register(formBody as any);
 
   // Multipart file upload (for avatar uploads)
-  await app.register(multipart, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await app.register(multipart as any, {
     limits: {
       fileSize: config.profile.maxAvatarSize,
       files: 1,
@@ -160,6 +165,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   });
 
   // Rate limiting
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await app.register(rateLimitPlugin, { redis });
 
   // Auth security plugin (SOC 2 compliance)

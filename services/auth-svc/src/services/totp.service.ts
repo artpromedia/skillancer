@@ -42,10 +42,13 @@ const IV_LENGTH = 16;
  */
 function getEncryptionKey(): Buffer {
   const config = getConfig();
-  const secret = config.mfa?.encryptionKey ?? config.jwt.secret;
+  const encryptionKey = config.mfa?.encryptionKey;
+  if (!encryptionKey) {
+    throw new Error('MFA_ENCRYPTION_KEY must be set for TOTP operations');
+  }
 
   // Derive a consistent 32-byte key from the secret
-  return crypto.scryptSync(secret, 'skillancer-totp-encryption', 32);
+  return crypto.scryptSync(encryptionKey, 'skillancer-totp-encryption', 32);
 }
 
 /**

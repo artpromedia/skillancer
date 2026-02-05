@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * @module @skillancer/auth-svc/middleware/rate-limit
  * Rate limiting middleware for authentication endpoints
@@ -161,7 +160,8 @@ async function rateLimitPluginImpl(
   });
 }
 
-export const rateLimitPlugin = fp(rateLimitPluginImpl, {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const rateLimitPlugin = fp(rateLimitPluginImpl as any, {
   name: 'auth-rate-limit',
   dependencies: [],
 });
@@ -313,7 +313,7 @@ export function rateLimitMiddleware(type: MfaRateLimitType) {
     reply: FastifyReply
   ): Promise<void> {
     const fastify = request.server;
-    const user = request.user as AuthenticatedUser | undefined;
+    const user = request.user;
     const userId = user?.id;
     const key = userId ?? getClientIp(request);
 
@@ -366,7 +366,7 @@ export async function profileRateLimitHook(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const user = request.user as AuthenticatedUser | undefined;
+  const user = request.user;
   if (!user) {
     return;
   }
@@ -398,7 +398,7 @@ export async function avatarUploadRateLimitHook(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const user = request.user as AuthenticatedUser | undefined;
+  const user = request.user;
   if (!user) {
     return;
   }

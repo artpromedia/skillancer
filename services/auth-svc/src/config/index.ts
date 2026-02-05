@@ -98,7 +98,7 @@ const configSchema = z.object({
   // Multi-Factor Authentication
   mfa: z.object({
     issuer: z.string().default('Skillancer'),
-    encryptionKey: z.string().optional(), // Falls back to JWT secret
+    encryptionKey: z.string().min(32).optional(),
     totpWindow: z.coerce.number().default(1), // Time steps to allow (30 sec each)
     challengeTtl: z.coerce.number().default(5 * 60 * 1000), // 5 minutes
     recoveryCodeCount: z.coerce.number().default(10),

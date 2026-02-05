@@ -20,7 +20,13 @@ import {
 // Configuration
 // =============================================================================
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.DOPPLER_JWT_SECRET || 'development-secret';
+const JWT_SECRET = process.env.JWT_SECRET || process.env.DOPPLER_JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error(
+    'FATAL: JWT_SECRET environment variable is not set. ' +
+      'Set JWT_SECRET or DOPPLER_JWT_SECRET before starting the application.'
+  );
+}
 const JWT_ALGORITHM = 'HS256' as const;
 
 // Cookie names

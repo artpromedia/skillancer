@@ -98,7 +98,16 @@ export function getConfig(): SkillPodConfig {
       : undefined,
     vdi: vdiConfig,
     security: {
-      jwtSecret: process.env.JWT_SECRET || 'development-secret',
+      jwtSecret: (() => {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+          throw new Error(
+            'FATAL: JWT_SECRET environment variable is not set. ' +
+              'Set JWT_SECRET before starting the application.'
+          );
+        }
+        return secret;
+      })(),
       sessionTimeout: Number.parseInt(process.env.SESSION_TIMEOUT_MINUTES || '15', 10),
       maxSessionDuration: Number.parseInt(process.env.MAX_SESSION_DURATION_MINUTES || '480', 10),
     },

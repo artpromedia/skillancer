@@ -2,19 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/mfa_setup_screen.dart';
+import '../../features/auth/presentation/screens/mfa_verify_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
+import '../../features/auth/presentation/screens/verify_email_screen.dart';
 import '../../features/contracts/presentation/screens/contract_detail_screen.dart';
 import '../../features/contracts/presentation/screens/contracts_screen.dart';
+import '../../features/contracts/presentation/screens/milestone_screen.dart';
+import '../../features/contracts/presentation/screens/submit_work_screen.dart';
 import '../../features/executive/executive.dart';
 import '../../features/jobs/presentation/screens/job_detail_screen.dart';
 import '../../features/jobs/presentation/screens/job_filters_screen.dart';
 import '../../features/jobs/presentation/screens/jobs_screen.dart';
 import '../../features/messages/presentation/screens/chat_screen.dart';
 import '../../features/messages/presentation/screens/conversations_screen.dart';
+import '../../features/messages/presentation/screens/new_message_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/screens/settings_screen.dart';
 import '../../features/proposals/presentation/screens/my_proposals_screen.dart';
 import '../../features/proposals/presentation/screens/proposal_detail_screen.dart';
 import '../../features/proposals/presentation/screens/submit_proposal_screen.dart';
@@ -29,6 +37,9 @@ class AppRoutes {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String forgotPassword = '/forgot-password';
+  static const String verifyEmail = '/verify-email';
+  static const String mfaVerify = '/mfa-verify';
+  static const String mfaSetup = '/mfa-setup';
 
   // Main tabs
   static const String jobs = '/jobs';
@@ -44,8 +55,11 @@ class AppRoutes {
   static const String proposalDetail = '/proposals/:proposalId';
   static const String contracts = '/contracts';
   static const String contractDetail = '/contracts/:contractId';
+  static const String milestones = '/contracts/:contractId/milestones';
+  static const String submitWork = '/contracts/:contractId/milestones/:milestoneId/submit';
   static const String addTimeEntry = '/time/add';
   static const String chat = '/messages/:conversationId';
+  static const String newMessage = '/messages/new';
   static const String editProfile = '/profile/edit';
   static const String notifications = '/notifications';
   static const String settings = '/settings';
@@ -69,7 +83,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = authState.isAuthenticated;
       final isAuthRoute = state.matchedLocation == AppRoutes.login ||
           state.matchedLocation == AppRoutes.signup ||
-          state.matchedLocation == AppRoutes.forgotPassword;
+          state.matchedLocation == AppRoutes.forgotPassword ||
+          state.matchedLocation == AppRoutes.verifyEmail ||
+          state.matchedLocation == AppRoutes.mfaVerify;
 
       // Redirect to login if not authenticated and not on auth route
       if (!isAuthenticated && !isAuthRoute) {
@@ -94,6 +110,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.signup,
         name: 'signup',
         builder: (context, state) => const SignupScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        name: 'forgotPassword',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.verifyEmail,
+        name: 'verifyEmail',
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          return VerifyEmailScreen(email: email);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.mfaVerify,
+        name: 'mfaVerify',
+        builder: (context, state) {
+          final sessionToken = state.uri.queryParameters['sessionToken'];
+          return MfaVerifyScreen(sessionToken: sessionToken);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.mfaSetup,
+        name: 'mfaSetup',
+        builder: (context, state) => const MfaSetupScreen(),
       ),
 
       // Main shell with bottom navigation
@@ -172,6 +214,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ConversationsScreen(),
             routes: [
               GoRoute(
+                path: 'new',
+                name: 'newMessage',
+                builder: (context, state) => const NewMessageScreen(),
+              ),
+              GoRoute(
                 path: ':conversationId',
                 name: 'chat',
                 builder: (context, state) {
@@ -212,8 +259,39 @@ final routerProvider = Provider<GoRouter>((ref) {
               final contractId = state.pathParameters['contractId']!;
               return ContractDetailScreen(contractId: contractId);
             },
+            routes: [
+              GoRoute(
+                path: 'milestones',
+                name: 'milestones',
+                builder: (context, state) {
+                  final contractId = state.pathParameters['contractId']!;
+                  return MilestoneScreen(contractId: contractId);
+                },
+                routes: [
+                  GoRoute(
+                    path: ':milestoneId/submit',
+                    name: 'submitWork',
+                    builder: (context, state) {
+                      final contractId = state.pathParameters['contractId']!;
+                      final milestoneId = state.pathParameters['milestoneId']!;
+                      return SubmitWorkScreen(
+                        contractId: contractId,
+                        milestoneId: milestoneId,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
+      ),
+
+      // Settings
+      GoRoute(
+        path: AppRoutes.settings,
+        name: 'settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
 
       // Notifications
