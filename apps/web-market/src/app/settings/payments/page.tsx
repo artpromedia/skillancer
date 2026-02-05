@@ -510,9 +510,10 @@ function PaymentsSettingsContent() {
   // Handle return from Stripe
   useEffect(() => {
     const status = searchParams.get('status');
+    const connected = searchParams.get('connected');
     const refresh = searchParams.get('refresh');
 
-    if (status === 'success') {
+    if (status === 'success' || connected === 'true') {
       setBanner({
         type: 'success',
         title: 'Setup Complete',
@@ -534,7 +535,7 @@ function PaymentsSettingsContent() {
     }
 
     // Clear URL params
-    if (status || refresh) {
+    if (status || refresh || connected) {
       window.history.replaceState({}, '', '/settings/payments');
     }
   }, [searchParams, refetch]);

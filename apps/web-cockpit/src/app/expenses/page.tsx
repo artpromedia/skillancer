@@ -25,13 +25,19 @@ import {
   ChevronDown,
   TrendingUp,
   TrendingDown,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
-// Types
-type ExpenseStatus = 'pending' | 'approved' | 'reimbursed' | 'rejected';
-type ExpenseCategory =
+import { useExpenses, useExpenseSummary } from '@/hooks/api/use-expenses';
+import type {
+  Expense,
+  ExpenseStatus as ApiExpenseStatus,
+} from '@/lib/api/services/expenses';
+
+// Display category type for UI styling
+type DisplayExpenseCategory =
   | 'software'
   | 'hardware'
   | 'cloud'
@@ -44,122 +50,8 @@ type ExpenseCategory =
   | 'mileage'
   | 'other';
 
-interface Expense {
-  id: string;
-  description: string;
-  amount: number;
-  category: ExpenseCategory;
-  date: string;
-  merchant: string;
-  status: ExpenseStatus;
-  isDeductible: boolean;
-  hasReceipt: boolean;
-  projectId?: string;
-  projectName?: string;
-  paymentMethod?: string;
-  notes?: string;
-}
-
-// TODO(Sprint-10): Replace with API call to GET /api/cockpit/expenses
-const mockExpenses: Expense[] = [
-  {
-    id: '1',
-    description: 'Figma Annual Subscription',
-    amount: 144,
-    category: 'software',
-    date: '2024-12-10',
-    merchant: 'Figma Inc',
-    status: 'approved',
-    isDeductible: true,
-    hasReceipt: true,
-    paymentMethod: 'Credit Card',
-  },
-  {
-    id: '2',
-    description: 'AWS Hosting - November',
-    amount: 287.45,
-    category: 'cloud',
-    date: '2024-12-01',
-    merchant: 'Amazon Web Services',
-    status: 'approved',
-    isDeductible: true,
-    hasReceipt: true,
-    projectName: 'Website Redesign',
-  },
-  {
-    id: '3',
-    description: 'MacBook Pro M3 Max',
-    amount: 3499,
-    category: 'hardware',
-    date: '2024-11-25',
-    merchant: 'Apple Store',
-    status: 'approved',
-    isDeductible: true,
-    hasReceipt: true,
-  },
-  {
-    id: '4',
-    description: 'Client Lunch Meeting',
-    amount: 85.5,
-    category: 'meals',
-    date: '2024-12-12',
-    merchant: 'The Capital Grille',
-    status: 'pending',
-    isDeductible: true,
-    hasReceipt: true,
-    projectName: 'Mobile App',
-    notes: 'Quarterly review with TechStart team',
-  },
-  {
-    id: '5',
-    description: 'Uber to Client Office',
-    amount: 24.5,
-    category: 'travel',
-    date: '2024-12-12',
-    merchant: 'Uber',
-    status: 'pending',
-    isDeductible: true,
-    hasReceipt: true,
-    projectName: 'Mobile App',
-  },
-  {
-    id: '6',
-    description: 'Business Mileage - Dec Week 1',
-    amount: 58.5,
-    category: 'mileage',
-    date: '2024-12-07',
-    merchant: 'Personal Vehicle',
-    status: 'approved',
-    isDeductible: true,
-    hasReceipt: false,
-    notes: '90 miles @ $0.65/mile',
-  },
-  {
-    id: '7',
-    description: 'LinkedIn Learning',
-    amount: 29.99,
-    category: 'education',
-    date: '2024-12-01',
-    merchant: 'LinkedIn',
-    status: 'approved',
-    isDeductible: true,
-    hasReceipt: true,
-  },
-  {
-    id: '8',
-    description: 'Google Workspace',
-    amount: 18,
-    category: 'software',
-    date: '2024-12-01',
-    merchant: 'Google',
-    status: 'approved',
-    isDeductible: true,
-    hasReceipt: true,
-  },
-];
-
 const categoryConfig: Record<
-  ExpenseCategory,
+  DisplayExpenseCategory,
   { label: string; color: string; icon: React.ElementType }
 > = {
   software: { label: 'Software & Tools', color: 'bg-blue-100 text-blue-700', icon: FileText },
@@ -180,9 +72,10 @@ const categoryConfig: Record<
 };
 
 const statusConfig: Record<
-  ExpenseStatus,
+  ApiExpenseStatus,
   { label: string; color: string; icon: React.ElementType }
 > = {
+  draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700', icon: FileText },
   pending: { label: 'Pending', color: 'bg-amber-100 text-amber-700', icon: Clock },
   approved: { label: 'Approved', color: 'bg-green-100 text-green-700', icon: CheckCircle },
   reimbursed: { label: 'Reimbursed', color: 'bg-blue-100 text-blue-700', icon: DollarSign },
@@ -196,35 +89,56 @@ const tabs = [
   { id: 'deductible', label: 'Tax Deductible' },
 ];
 
+/**
+ * Resolve an API expense category to a display category key for styling.
+ */
+function getDisplayCategoryKey(expense: Expense): DisplayExpenseCategory {
+  const name = (expense.category?.name ?? '').toLowerCase();
+  if (name.includes('software') || name.includes('tool')) return 'software';
+  if (name.includes('hardware')) return 'hardware';
+  if (name.includes('cloud') || name.includes('hosting')) return 'cloud';
+  if (name.includes('professional')) return 'professional';
+  if (name.includes('marketing')) return 'marketing';
+  if (name.includes('office')) return 'office';
+  if (name.includes('travel')) return 'travel';
+  if (name.includes('meal') || name.includes('entertainment')) return 'meals';
+  if (name.includes('education')) return 'education';
+  if (name.includes('mileage')) return 'mileage';
+  return 'other';
+}
+
 export default function ExpensesPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<DisplayExpenseCategory | 'all'>('all');
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  const { data: expensesResponse, isLoading, error } = useExpenses();
+  const { data: summaryResponse } = useExpenseSummary();
+
+  const expenses: Expense[] = expensesResponse?.data ?? [];
+  const summary = summaryResponse?.data;
+
   // Filter expenses
-  const filteredExpenses = mockExpenses.filter((expense) => {
+  const filteredExpenses = expenses.filter((expense) => {
     const matchesTab =
       activeTab === 'all' ||
       expense.status === activeTab ||
-      (activeTab === 'deductible' && expense.isDeductible);
+      (activeTab === 'deductible' && expense.taxDeductible);
     const matchesSearch =
       expense.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      expense.merchant.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || expense.category === selectedCategory;
+      expense.vendor.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === 'all' || getDisplayCategoryKey(expense) === selectedCategory;
     return matchesTab && matchesSearch && matchesCategory;
   });
 
-  // Stats
-  const totalExpenses = mockExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const thisMonthExpenses = mockExpenses
-    .filter((e) => e.date.startsWith('2024-12'))
-    .reduce((sum, e) => sum + e.amount, 0);
-  const deductibleAmount = mockExpenses
-    .filter((e) => e.isDeductible)
-    .reduce((sum, e) => sum + e.amount, 0);
-  const pendingCount = mockExpenses.filter((e) => e.status === 'pending').length;
+  // Stats from API summary
+  const totalExpenses = summary?.totalAmount ?? 0;
+  const thisMonthExpenses = summary?.byMonth?.[summary.byMonth.length - 1]?.amount ?? totalExpenses;
+  const deductibleAmount = summary?.taxDeductibleAmount ?? 0;
+  const pendingCount = summary?.byStatus?.pending?.count ?? 0;
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -233,6 +147,26 @@ export default function ExpensesPage() {
       year: 'numeric',
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-7xl p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <AlertCircle className="mx-auto mb-2 h-8 w-8 text-red-500" />
+          <h3 className="text-lg font-medium text-red-800">Failed to load expenses</h3>
+          <p className="mt-1 text-sm text-red-600">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl p-6">
@@ -332,7 +266,7 @@ export default function ExpensesPage() {
             <select
               className="appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value as ExpenseCategory | 'all')}
+              onChange={(e) => setSelectedCategory(e.target.value as DisplayExpenseCategory | 'all')}
             >
               <option value="all">All Categories</option>
               {Object.entries(categoryConfig).map(([key, config]) => (
@@ -378,8 +312,12 @@ export default function ExpensesPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filteredExpenses.map((expense) => {
-              const CategoryIcon = categoryConfig[expense.category].icon;
-              const StatusIcon = statusConfig[expense.status].icon;
+              const displayCategoryKey = getDisplayCategoryKey(expense);
+              const catConfig = categoryConfig[displayCategoryKey];
+              const CategoryIcon = catConfig.icon;
+              const expenseStatusEntry = statusConfig[expense.status] ?? statusConfig.pending;
+              const StatusIcon = expenseStatusEntry.icon;
+              const hasReceipt = (expense.receipts?.length ?? 0) > 0;
 
               return (
                 <tr key={expense.id} className="transition-colors hover:bg-gray-50">
@@ -392,11 +330,11 @@ export default function ExpensesPage() {
                   <td className="px-4 py-4">
                     <div>
                       <div className="font-medium text-gray-900">{expense.description}</div>
-                      <div className="text-sm text-gray-500">{expense.merchant}</div>
-                      {expense.projectName && (
+                      <div className="text-sm text-gray-500">{expense.vendor}</div>
+                      {expense.projectId && (
                         <div className="mt-1 flex items-center gap-1 text-xs text-indigo-600">
                           <Briefcase className="h-3 w-3" />
-                          {expense.projectName}
+                          {expense.projectId}
                         </div>
                       )}
                     </div>
@@ -405,18 +343,18 @@ export default function ExpensesPage() {
                     <span
                       className={cn(
                         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
-                        categoryConfig[expense.category].color
+                        catConfig.color
                       )}
                     >
                       <CategoryIcon className="h-3.5 w-3.5" />
-                      {categoryConfig[expense.category].label}
+                      {expense.category?.name ?? catConfig.label}
                     </span>
                   </td>
                   <td className="px-4 py-4">
                     <div className="font-semibold text-gray-900">
                       ${expense.amount.toLocaleString()}
                     </div>
-                    {expense.isDeductible && (
+                    {expense.taxDeductible && (
                       <span className="text-xs text-green-600">Tax Deductible</span>
                     )}
                   </td>
@@ -424,15 +362,15 @@ export default function ExpensesPage() {
                     <span
                       className={cn(
                         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
-                        statusConfig[expense.status].color
+                        expenseStatusEntry.color
                       )}
                     >
                       <StatusIcon className="h-3.5 w-3.5" />
-                      {statusConfig[expense.status].label}
+                      {expenseStatusEntry.label}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-center">
-                    {expense.hasReceipt ? (
+                    {hasReceipt ? (
                       <button className="rounded-full bg-green-50 p-1.5 text-green-600 transition-colors hover:bg-green-100">
                         <Receipt className="h-4 w-4" />
                       </button>
@@ -463,7 +401,7 @@ export default function ExpensesPage() {
                           </button>
                           <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                             <Receipt className="h-4 w-4" />
-                            {expense.hasReceipt ? 'View Receipt' : 'Attach Receipt'}
+                            {hasReceipt ? 'View Receipt' : 'Attach Receipt'}
                           </button>
                           <hr className="my-1 border-gray-100" />
                           <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50">

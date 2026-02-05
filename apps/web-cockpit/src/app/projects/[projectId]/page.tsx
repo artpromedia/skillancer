@@ -26,202 +26,27 @@ import {
   Paperclip,
   Flag,
   LayoutList,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+
+import { useProject, useProjectStats, useProjectTasks } from '@/hooks/api/use-projects';
+import type {
+  Project,
+  ProjectStatus,
+  ProjectTask,
+  ProjectStats,
+} from '@/lib/api/services/projects';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type ProjectStatus = 'active' | 'completed' | 'on_hold' | 'cancelled';
-type ProjectType = 'fixed' | 'hourly' | 'retainer' | 'milestone';
 type TabType = 'overview' | 'tasks' | 'time' | 'budget' | 'files' | 'activity';
 type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done';
 type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  dueDate?: string;
-  estimatedHours?: number;
-  loggedHours: number;
-  assignee?: string;
-}
-
-interface TimeEntry {
-  id: string;
-  date: string;
-  hours: number;
-  description: string;
-  task?: string;
-  billable: boolean;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  client: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  status: ProjectStatus;
-  type: ProjectType;
-  platform: string;
-  budget: number;
-  spent: number;
-  progress: number;
-  startDate: string;
-  endDate?: string;
-  dueDate?: string;
-  hoursLogged: number;
-  hoursEstimated?: number;
-  hourlyRate?: number;
-  tasksTotal: number;
-  tasksCompleted: number;
-  tags?: string[];
-  priority: 'low' | 'medium' | 'high';
-  notes?: string;
-}
-
-// ============================================================================
-// Mock Data
-// TODO(Sprint-10): Replace with API call to GET /api/cockpit/projects/:id
-// ============================================================================
-
-const mockProject: Project = {
-  id: '1',
-  name: 'E-commerce Platform Redesign',
-  description:
-    'Complete redesign of the main shopping experience including checkout flow, product pages, and mobile optimization. Focus on improving conversion rates and user experience.',
-  client: { id: '1', name: 'TechCorp Inc', avatar: undefined },
-  status: 'active',
-  type: 'fixed',
-  platform: 'Skillancer',
-  budget: 25000,
-  spent: 15000,
-  progress: 65,
-  startDate: '2024-01-15',
-  dueDate: '2024-04-15',
-  hoursLogged: 180,
-  hoursEstimated: 280,
-  hourlyRate: 100,
-  tasksTotal: 24,
-  tasksCompleted: 16,
-  tags: ['React', 'TypeScript', 'E-commerce', 'UI/UX'],
-  priority: 'high',
-  notes: 'Client prefers async communication via Slack. Weekly sync calls on Fridays.',
-};
-
-const mockTasks: Task[] = [
-  {
-    id: '1',
-    title: 'Design system setup',
-    status: 'done',
-    priority: 'high',
-    loggedHours: 8,
-    estimatedHours: 8,
-  },
-  {
-    id: '2',
-    title: 'Product listing page',
-    status: 'done',
-    priority: 'high',
-    loggedHours: 16,
-    estimatedHours: 16,
-  },
-  {
-    id: '3',
-    title: 'Product detail page',
-    status: 'done',
-    priority: 'high',
-    loggedHours: 12,
-    estimatedHours: 12,
-  },
-  {
-    id: '4',
-    title: 'Shopping cart implementation',
-    status: 'in_progress',
-    priority: 'high',
-    loggedHours: 10,
-    estimatedHours: 16,
-    dueDate: '2024-03-20',
-  },
-  {
-    id: '5',
-    title: 'Checkout flow - Step 1',
-    status: 'in_progress',
-    priority: 'high',
-    loggedHours: 6,
-    estimatedHours: 12,
-    dueDate: '2024-03-22',
-  },
-  {
-    id: '6',
-    title: 'Checkout flow - Step 2',
-    status: 'todo',
-    priority: 'medium',
-    loggedHours: 0,
-    estimatedHours: 12,
-    dueDate: '2024-03-25',
-  },
-  {
-    id: '7',
-    title: 'Payment integration',
-    status: 'todo',
-    priority: 'high',
-    loggedHours: 0,
-    estimatedHours: 20,
-    dueDate: '2024-03-28',
-  },
-  {
-    id: '8',
-    title: 'Mobile optimization',
-    status: 'todo',
-    priority: 'medium',
-    loggedHours: 0,
-    estimatedHours: 16,
-  },
-];
-
-const mockTimeEntries: TimeEntry[] = [
-  {
-    id: '1',
-    date: '2024-03-15',
-    hours: 4.5,
-    description: 'Shopping cart UI implementation',
-    task: 'Shopping cart',
-    billable: true,
-  },
-  {
-    id: '2',
-    date: '2024-03-14',
-    hours: 6,
-    description: 'Product detail responsive design',
-    task: 'Product detail',
-    billable: true,
-  },
-  {
-    id: '3',
-    date: '2024-03-13',
-    hours: 5.5,
-    description: 'API integration for product listing',
-    task: 'Product listing',
-    billable: true,
-  },
-  {
-    id: '4',
-    date: '2024-03-12',
-    hours: 3,
-    description: 'Client meeting and feedback review',
-    billable: false,
-  },
-];
 
 // ============================================================================
 // Utility Functions
@@ -246,12 +71,13 @@ function formatDate(dateStr: string): string {
 
 function getStatusColor(status: ProjectStatus): string {
   const colors: Record<ProjectStatus, string> = {
+    draft: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
     active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    on_hold: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    paused: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     cancelled: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
   };
-  return colors[status];
+  return colors[status] ?? colors.draft;
 }
 
 function getTaskStatusColor(status: TaskStatus): string {
@@ -271,7 +97,7 @@ function getTaskPriorityColor(priority: TaskPriority): string {
     medium: 'text-amber-600 dark:text-amber-400',
     low: 'text-gray-400 dark:text-gray-500',
   };
-  return colors[priority];
+  return colors[priority] ?? colors.medium;
 }
 
 function getInitials(name: string): string {
@@ -287,12 +113,21 @@ function getInitials(name: string): string {
 // Overview Tab Component
 // ============================================================================
 
-function OverviewTab({ project }: Readonly<{ project: Project }>) {
-  const budgetPercent = (project.spent / project.budget) * 100;
-  const hoursPercent = project.hoursEstimated
-    ? (project.hoursLogged / project.hoursEstimated) * 100
-    : 0;
-  const tasksPercent = (project.tasksCompleted / project.tasksTotal) * 100;
+function OverviewTab({
+  project,
+  stats,
+  tasks,
+}: Readonly<{ project: Project; stats?: ProjectStats; tasks: ProjectTask[] }>) {
+  const budgetAmount = project.budget?.amount ?? 0;
+  const spent = stats?.spent ?? 0;
+  const hoursLogged = stats?.hoursLogged ?? 0;
+  const hoursEstimated = stats?.hoursEstimated ?? project.budget?.estimatedHours ?? 0;
+  const tasksTotal = stats?.tasksTotal ?? 0;
+  const tasksCompleted = stats?.tasksCompleted ?? 0;
+
+  const budgetPercent = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0;
+  const hoursPercent = hoursEstimated > 0 ? (hoursLogged / hoursEstimated) * 100 : 0;
+  const tasksPercent = tasksTotal > 0 ? (tasksCompleted / tasksTotal) * 100 : 0;
 
   const daysRemaining = project.dueDate
     ? Math.ceil((new Date(project.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -333,7 +168,7 @@ function OverviewTab({ project }: Readonly<{ project: Project }>) {
             />
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            {formatCurrency(project.spent)} / {formatCurrency(project.budget)}
+            {formatCurrency(spent)} / {formatCurrency(budgetAmount)}
           </p>
         </div>
 
@@ -341,7 +176,7 @@ function OverviewTab({ project }: Readonly<{ project: Project }>) {
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-500 dark:text-gray-400">Hours Logged</span>
             <span className="text-2xl font-bold text-gray-900 dark:text-white">
-              {project.hoursLogged}h
+              {hoursLogged}h
             </span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
@@ -350,9 +185,9 @@ function OverviewTab({ project }: Readonly<{ project: Project }>) {
               style={{ width: `${Math.min(hoursPercent, 100)}%` }}
             />
           </div>
-          {project.hoursEstimated && (
+          {hoursEstimated > 0 && (
             <p className="mt-1 text-xs text-gray-500">
-              {project.hoursLogged}h / {project.hoursEstimated}h estimated
+              {hoursLogged}h / {hoursEstimated}h estimated
             </p>
           )}
         </div>
@@ -361,7 +196,7 @@ function OverviewTab({ project }: Readonly<{ project: Project }>) {
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-500 dark:text-gray-400">Tasks Completed</span>
             <span className="text-2xl font-bold text-gray-900 dark:text-white">
-              {project.tasksCompleted}/{project.tasksTotal}
+              {tasksCompleted}/{tasksTotal}
             </span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
@@ -398,7 +233,7 @@ function OverviewTab({ project }: Readonly<{ project: Project }>) {
               </Link>
             </div>
             <div className="mt-4 space-y-3">
-              {mockTasks
+              {tasks
                 .filter((t) => t.status === 'in_progress')
                 .slice(0, 3)
                 .map((task) => (
@@ -406,13 +241,13 @@ function OverviewTab({ project }: Readonly<{ project: Project }>) {
                     key={task.id}
                     className="flex items-center gap-3 rounded-lg border border-gray-100 p-3 dark:border-gray-700"
                   >
-                    <Circle className={`h-4 w-4 ${getTaskPriorityColor(task.priority)}`} />
+                    <Circle className={`h-4 w-4 ${getTaskPriorityColor(task.priority as TaskPriority)}`} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
                         {task.title}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {task.loggedHours}h / {task.estimatedHours}h
+                        {task.actualHours ?? 0}h / {task.estimatedHours ?? 0}h
                       </p>
                     </div>
                     <span
@@ -438,12 +273,14 @@ function OverviewTab({ project }: Readonly<{ project: Project }>) {
                   {project.type} Price
                 </dd>
               </div>
-              <div>
-                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">Start Date</dt>
-                <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                  {formatDate(project.startDate)}
-                </dd>
-              </div>
+              {project.startDate && (
+                <div>
+                  <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">Start Date</dt>
+                  <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                    {formatDate(project.startDate)}
+                  </dd>
+                </div>
+              )}
               {project.dueDate && (
                 <div>
                   <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">Due Date</dt>
@@ -452,26 +289,18 @@ function OverviewTab({ project }: Readonly<{ project: Project }>) {
                   </dd>
                 </div>
               )}
-              {project.hourlyRate && (
+              {project.budget?.hourlyRate && (
                 <div>
                   <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">
                     Hourly Rate
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {formatCurrency(project.hourlyRate)}/hr
+                    {formatCurrency(project.budget.hourlyRate)}/hr
                   </dd>
                 </div>
               )}
             </dl>
           </div>
-
-          {/* Notes */}
-          {project.notes && (
-            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Notes</h3>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{project.notes}</p>
-            </div>
-          )}
 
           {/* Tags */}
           {project.tags && project.tags.length > 0 && (
@@ -499,7 +328,7 @@ function OverviewTab({ project }: Readonly<{ project: Project }>) {
 // Tasks Tab Component
 // ============================================================================
 
-function TasksTab({ tasks }: Readonly<{ tasks: Task[] }>) {
+function TasksTab({ tasks }: Readonly<{ tasks: ProjectTask[] }>) {
   const [view, setView] = useState<'list' | 'board'>('list');
 
   const tasksByStatus = {
@@ -541,7 +370,7 @@ function TasksTab({ tasks }: Readonly<{ tasks: Task[] }>) {
               key={task.id}
               className="flex items-center gap-4 border-b border-gray-100 px-4 py-3 last:border-0 dark:border-gray-700"
             >
-              <Flag className={`h-4 w-4 flex-shrink-0 ${getTaskPriorityColor(task.priority)}`} />
+              <Flag className={`h-4 w-4 flex-shrink-0 ${getTaskPriorityColor(task.priority as TaskPriority)}`} />
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-gray-900 dark:text-white">{task.title}</p>
                 {task.dueDate && (
@@ -554,7 +383,7 @@ function TasksTab({ tasks }: Readonly<{ tasks: Task[] }>) {
                 {task.status.replace('_', ' ')}
               </span>
               <div className="w-20 text-right text-sm text-gray-500">
-                {task.loggedHours}h / {task.estimatedHours}h
+                {task.actualHours ?? 0}h / {task.estimatedHours ?? 0}h
               </div>
             </div>
           ))}
@@ -581,11 +410,11 @@ function TasksTab({ tasks }: Readonly<{ tasks: Task[] }>) {
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {task.title}
                       </p>
-                      <Flag className={`h-3.5 w-3.5 ${getTaskPriorityColor(task.priority)}`} />
+                      <Flag className={`h-3.5 w-3.5 ${getTaskPriorityColor(task.priority as TaskPriority)}`} />
                     </div>
                     <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
                       <span>
-                        <Timer className="inline h-3 w-3" /> {task.loggedHours}h
+                        <Timer className="inline h-3 w-3" /> {task.actualHours ?? 0}h
                       </span>
                       {task.dueDate && <span>{formatDate(task.dueDate)}</span>}
                     </div>
@@ -604,9 +433,8 @@ function TasksTab({ tasks }: Readonly<{ tasks: Task[] }>) {
 // Time Tab Component
 // ============================================================================
 
-function TimeTab({ entries, project }: Readonly<{ entries: TimeEntry[]; project: Project }>) {
-  const totalBillable = entries.filter((e) => e.billable).reduce((sum, e) => sum + e.hours, 0);
-  const totalNonBillable = entries.filter((e) => !e.billable).reduce((sum, e) => sum + e.hours, 0);
+function TimeTab({ stats }: Readonly<{ stats?: ProjectStats }>) {
+  const totalHours = stats?.hoursLogged ?? 0;
 
   return (
     <div className="space-y-6">
@@ -619,7 +447,7 @@ function TimeTab({ entries, project }: Readonly<{ entries: TimeEntry[]; project:
             <div>
               <p className="text-sm text-gray-500">Total Hours</p>
               <p className="text-xl font-bold text-gray-900 dark:text-white">
-                {project.hoursLogged}h
+                {totalHours}h
               </p>
             </div>
           </div>
@@ -630,8 +458,10 @@ function TimeTab({ entries, project }: Readonly<{ entries: TimeEntry[]; project:
               <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Billable Hours</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{totalBillable}h</p>
+              <p className="text-sm text-gray-500">Hours Estimated</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">
+                {stats?.hoursEstimated ?? 0}h
+              </p>
             </div>
           </div>
         </div>
@@ -641,8 +471,10 @@ function TimeTab({ entries, project }: Readonly<{ entries: TimeEntry[]; project:
               <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Non-Billable</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{totalNonBillable}h</p>
+              <p className="text-sm text-gray-500">Remaining</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">
+                {Math.max((stats?.hoursEstimated ?? 0) - totalHours, 0)}h
+              </p>
             </div>
           </div>
         </div>
@@ -656,27 +488,10 @@ function TimeTab({ entries, project }: Readonly<{ entries: TimeEntry[]; project:
         </button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        {entries.map((entry) => (
-          <div
-            key={entry.id}
-            className="flex items-center gap-4 border-b border-gray-100 px-4 py-3 last:border-0 dark:border-gray-700"
-          >
-            <div className="flex-shrink-0 text-sm text-gray-500">{formatDate(entry.date)}</div>
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-gray-900 dark:text-white">{entry.description}</p>
-              {entry.task && <p className="text-xs text-gray-500">{entry.task}</p>}
-            </div>
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${entry.billable ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}
-            >
-              {entry.billable ? 'Billable' : 'Non-billable'}
-            </span>
-            <span className="w-16 text-right font-medium text-gray-900 dark:text-white">
-              {entry.hours}h
-            </span>
-          </div>
-        ))}
+      <div className="rounded-xl border border-gray-200 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-800">
+        <Timer className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
+        <h3 className="mt-4 font-medium text-gray-900 dark:text-white">Time Entries</h3>
+        <p className="mt-1 text-sm text-gray-500">Time entries will appear here</p>
       </div>
     </div>
   );
@@ -688,9 +503,16 @@ function TimeTab({ entries, project }: Readonly<{ entries: TimeEntry[]; project:
 
 export default function ProjectDetailPage({ params }: Readonly<{ params: { projectId: string } }>) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
-  const project = mockProject;
 
-  const tabs: { id: TabType; label: string; icon: typeof FolderKanban }[] = [
+  const { data: projectResponse, isLoading: projectLoading, error: projectError } = useProject(params.projectId);
+  const { data: statsResponse } = useProjectStats(params.projectId);
+  const { data: tasksResponse } = useProjectTasks(params.projectId);
+
+  const project = projectResponse?.data;
+  const stats = statsResponse?.data;
+  const tasks: ProjectTask[] = tasksResponse?.data ?? [];
+
+  const tabItems: { id: TabType; label: string; icon: typeof FolderKanban }[] = [
     { id: 'overview', label: 'Overview', icon: FolderKanban },
     { id: 'tasks', label: 'Tasks', icon: CheckCircle2 },
     { id: 'time', label: 'Time', icon: Timer },
@@ -698,6 +520,42 @@ export default function ProjectDetailPage({ params }: Readonly<{ params: { proje
     { id: 'files', label: 'Files', icon: Paperclip },
     { id: 'activity', label: 'Activity', icon: MessageSquare },
   ];
+
+  if (projectLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (projectError) {
+    return (
+      <div className="p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-900/20">
+          <AlertCircle className="mx-auto mb-2 h-8 w-8 text-red-500" />
+          <h3 className="text-lg font-medium text-red-800 dark:text-red-400">
+            Failed to load project
+          </h3>
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{projectError.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="p-6">
+        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-800">
+          <FolderKanban className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
+          <h3 className="mt-4 font-medium text-gray-900 dark:text-white">Project not found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            The project you are looking for does not exist.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -718,7 +576,7 @@ export default function ProjectDetailPage({ params }: Readonly<{ params: { proje
                 {project.status.replace('_', ' ')}
               </span>
               <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                {project.platform}
+                {project.source}
               </span>
             </div>
             <h1 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
@@ -726,10 +584,10 @@ export default function ProjectDetailPage({ params }: Readonly<{ params: { proje
             </h1>
             <Link
               className="mt-1 inline-flex items-center gap-2 text-gray-500 hover:text-blue-600 dark:text-gray-400"
-              href={`/clients/${project.client.id}`}
+              href={`/clients/${project.clientId}`}
             >
               <Building2 className="h-4 w-4" />
-              {project.client.name}
+              {project.clientName ?? project.clientId}
             </Link>
           </div>
           <div className="flex items-center gap-2">
@@ -746,7 +604,7 @@ export default function ProjectDetailPage({ params }: Readonly<{ params: { proje
 
         {/* Tabs */}
         <div className="flex gap-1 border-t border-gray-200 pt-4 dark:border-gray-700">
-          {tabs.map((tab) => (
+          {tabItems.map((tab) => (
             <button
               key={tab.id}
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
@@ -765,9 +623,11 @@ export default function ProjectDetailPage({ params }: Readonly<{ params: { proje
 
       {/* Content */}
       <div className="p-6">
-        {activeTab === 'overview' && <OverviewTab project={project} />}
-        {activeTab === 'tasks' && <TasksTab tasks={mockTasks} />}
-        {activeTab === 'time' && <TimeTab entries={mockTimeEntries} project={project} />}
+        {activeTab === 'overview' && (
+          <OverviewTab project={project} stats={stats} tasks={tasks} />
+        )}
+        {activeTab === 'tasks' && <TasksTab tasks={tasks} />}
+        {activeTab === 'time' && <TimeTab stats={stats} />}
         {activeTab === 'budget' && (
           <div className="rounded-xl border border-gray-200 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-800">
             <DollarSign className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />

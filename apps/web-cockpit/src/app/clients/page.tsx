@@ -34,6 +34,9 @@ import {
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
 
+import { useClients } from '@/hooks/api/use-clients';
+import type { Client as ApiClient } from '@/lib/api/services/clients';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -59,79 +62,27 @@ interface Client {
 }
 
 // ============================================================================
-// Sample Data
+// Helpers
 // ============================================================================
 
-const SAMPLE_CLIENTS: Client[] = [
-  {
-    id: 'client-1',
-    companyName: 'TechStart Inc',
-    contactName: 'Sarah Chen',
-    contactTitle: 'CTO',
-    email: 'sarah@techstart.io',
-    phone: '+1 555-0123',
-    status: 'active',
-    platform: 'Skillancer',
-    projectsCount: 5,
-    totalRevenue: 45000,
-    lastContact: '2025-01-05',
-    tags: ['Startup', 'SaaS'],
-  },
-  {
-    id: 'client-2',
-    companyName: 'Global Retail Co',
-    contactName: 'Mike Johnson',
-    contactTitle: 'Head of Digital',
-    email: 'mike.j@globalretail.com',
-    phone: '+1 555-0456',
-    status: 'active',
-    platform: 'Upwork',
-    projectsCount: 3,
-    totalRevenue: 28500,
-    lastContact: '2025-01-03',
-    tags: ['Enterprise', 'E-commerce'],
-  },
-  {
-    id: 'client-3',
-    companyName: 'Creative Agency',
-    contactName: 'Emma Wilson',
-    contactTitle: 'Founder',
-    email: 'emma@creativeagency.co',
-    status: 'active',
-    platform: 'Skillancer',
-    projectsCount: 2,
-    totalRevenue: 12000,
-    lastContact: '2025-01-01',
-    tags: ['Agency', 'Design'],
-  },
-  {
-    id: 'client-4',
-    companyName: 'FinTech Solutions',
-    contactName: 'David Park',
-    contactTitle: 'VP Engineering',
-    email: 'david.p@fintechsol.com',
-    phone: '+1 555-0789',
-    status: 'prospect',
-    platform: 'Direct',
-    projectsCount: 0,
-    totalRevenue: 0,
-    lastContact: '2024-12-28',
-    tags: ['FinTech', 'Enterprise'],
-  },
-  {
-    id: 'client-5',
-    companyName: 'HealthApp Pro',
-    contactName: 'Lisa Martinez',
-    contactTitle: 'Product Manager',
-    email: 'lisa@healthapp.pro',
-    status: 'inactive',
-    platform: 'Fiverr',
-    projectsCount: 1,
-    totalRevenue: 3500,
-    lastContact: '2024-11-15',
-    tags: ['Healthcare', 'Mobile'],
-  },
-];
+function mapApiClient(apiClient: ApiClient): Client {
+  const primaryContact = apiClient.contacts?.find((c) => c.isPrimary) ?? apiClient.contacts?.[0];
+  return {
+    id: apiClient.id,
+    companyName: apiClient.displayName || apiClient.name,
+    contactName: primaryContact?.name || apiClient.name,
+    contactTitle: primaryContact?.role,
+    email: apiClient.email,
+    phone: apiClient.phone,
+    avatar: apiClient.logoUrl,
+    status: (apiClient.status === 'archived' ? 'inactive' : apiClient.status) as ClientStatus,
+    platform: (apiClient.metadata?.platform as string) || 'Direct',
+    projectsCount: (apiClient.metadata?.projectsCount as number) || 0,
+    totalRevenue: (apiClient.metadata?.totalRevenue as number) || 0,
+    lastContact: apiClient.updatedAt,
+    tags: apiClient.tags || [],
+  };
+}
 
 const PLATFORMS = ['All', 'Skillancer', 'Upwork', 'Fiverr', 'Direct'];
 const STATUSES: ClientStatus[] = ['active', 'inactive', 'prospect'];
@@ -413,7 +364,11 @@ function ClientListRow({ client }: Readonly<{ client: Client }>) {
 // ============================================================================
 
 export default function ClientsPage() {
-  const [clients] = useState<Client[]>(SAMPLE_CLIENTS);
+  const { data: clientsResponse, isLoading, error } = useClients();
+  const clients = useMemo(
+    () => (clientsResponse?.data ?? []).map(mapApiClient),
+    [clientsResponse]
+  );
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('All');
@@ -631,19 +586,37 @@ export default function ClientsPage() {
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+          <span className="ml-3 text-gray-500 dark:text-gray-400">Loading clients...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-900/20">
+          <p className="font-medium text-red-800 dark:text-red-400">Failed to load clients</p>
+          <p className="mt-1 text-sm text-red-600 dark:text-red-500">{error.message}</p>
+        </div>
+      )}
+
       {/* Results Count */}
-      <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-        {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''}
-      </p>
+      {!isLoading && !error && (
+        <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+          {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''}
+        </p>
+      )}
 
       {/* Clients Grid/List */}
-      {viewMode === 'cards' ? (
+      {!isLoading && !error && viewMode === 'cards' ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredClients.map((client) => (
             <ClientCard key={client.id} client={client} />
           ))}
         </div>
-      ) : (
+      ) : !isLoading && !error ? (
         <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           {/* List Header */}
           <div className="flex items-center gap-4 border-b border-gray-200 px-4 py-3 text-xs font-medium text-gray-500 dark:border-gray-700 dark:text-gray-400">
@@ -660,10 +633,10 @@ export default function ClientsPage() {
             <ClientListRow key={client.id} client={client} />
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Empty State */}
-      {filteredClients.length === 0 && (
+      {!isLoading && !error && filteredClients.length === 0 && (
         <div className="rounded-xl border border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-gray-800">
           <Users className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-4 font-medium text-gray-900 dark:text-white">No clients found</h3>

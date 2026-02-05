@@ -170,6 +170,28 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['SUPER_ADMIN', 'ADMIN', 'ANALYTICS', 'super_admin', 'analytics'],
   },
   {
+    id: 'support',
+    label: 'Support',
+    icon: HelpCircle,
+    href: '/support',
+    roles: [
+      'SUPER_ADMIN',
+      'ADMIN',
+      'SUPPORT',
+      'OPERATIONS',
+      'super_admin',
+      'support',
+      'operations',
+    ],
+  },
+  {
+    id: 'audit-logs',
+    label: 'Audit Logs',
+    icon: Activity,
+    href: '/audit-logs',
+    roles: ['SUPER_ADMIN', 'ADMIN', 'super_admin'],
+  },
+  {
     id: 'settings',
     label: 'Settings',
     icon: Settings,

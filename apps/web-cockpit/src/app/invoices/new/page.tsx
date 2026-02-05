@@ -20,9 +20,17 @@ import {
   ChevronDown,
   Paperclip,
   RefreshCw,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+import { useClients } from '@/hooks/api/use-clients';
+import { useProjects } from '@/hooks/api/use-projects';
+import type { Client, Address } from '@/lib/api/services/clients';
+import type { Project } from '@/lib/api/services/projects';
 
 // Types
 interface LineItem {
@@ -33,71 +41,36 @@ interface LineItem {
   taxable: boolean;
 }
 
-interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  company?: string;
+// Helpers
+function formatAddress(address?: Address): string | undefined {
+  if (!address) return undefined;
+  const parts = [address.line1, address.line2, address.city, address.state, address.postalCode].filter(Boolean);
+  return parts.length > 0 ? parts.join(', ') : undefined;
 }
 
-// TODO(Sprint-10): Replace with API call to GET /api/cockpit/clients
-const mockClients: Client[] = [
-  {
-    id: '1',
-    name: 'John Smith',
-    email: 'john@acme.com',
-    company: 'Acme Corp',
-    phone: '+1 555-0123',
-    address: '123 Main St, San Francisco, CA',
-  },
-  {
-    id: '2',
-    name: 'Sarah Johnson',
-    email: 'sarah@techstart.io',
-    company: 'TechStart Inc',
-    phone: '+1 555-0124',
-  },
-  { id: '3', name: 'Mike Williams', email: 'mike@designstudio.co', company: 'Design Studio' },
-];
+// Inline hook for unbilled time entries (no dedicated hook available yet)
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
-// Mock Projects
-const mockProjects = [
-  { id: '1', name: 'Website Redesign', clientId: '1' },
-  { id: '2', name: 'Mobile App Phase 1', clientId: '2' },
-  { id: '3', name: 'Brand Identity', clientId: '3' },
-];
-
-// Mock Time Entries
-const mockTimeEntries = [
-  {
-    id: '1',
-    description: 'Frontend development',
-    hours: 8,
-    rate: 150,
-    date: '2024-12-10',
-    projectId: '1',
-  },
-  {
-    id: '2',
-    description: 'Backend API integration',
-    hours: 6,
-    rate: 150,
-    date: '2024-12-11',
-    projectId: '1',
-  },
-  {
-    id: '3',
-    description: 'UI/UX design review',
-    hours: 4,
-    rate: 125,
-    date: '2024-12-12',
-    projectId: '1',
-  },
-];
+function useUnbilledTimeEntries(projectId: string) {
+  return useQuery<Array<{ id: string; description: string; hours: number; rate: number; date: string; projectId: string }>>({
+    queryKey: ['cockpit', 'time', 'unbilled', projectId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/cockpit/time?projectId=${projectId}&billable=true&invoiced=false`);
+      if (!res.ok) throw new Error('Failed to fetch time entries');
+      const json = await res.json();
+      return json.data?.items ?? json.items ?? json.data ?? [];
+    },
+    enabled: !!projectId,
+  });
+}
 
 export default function NewInvoicePage() {
+  const { data: clientsResponse, isLoading: clientsLoading, error: clientsError } = useClients();
+  const { data: projectsResponse, isLoading: projectsLoading, error: projectsError } = useProjects({ status: 'active' });
+
+  const clients: Client[] = clientsResponse?.data ?? [];
+  const projects: Project[] = projectsResponse?.data ?? [];
+
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedProject, setSelectedProject] = useState<string>('');
   const [invoiceNumber, setInvoiceNumber] = useState('INV-2024-007');
@@ -146,8 +119,10 @@ export default function NewInvoicePage() {
     setLineItems(lineItems.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
   };
 
+  const { data: unbilledEntries = [] } = useUnbilledTimeEntries(selectedProject);
+
   const importTimeEntries = () => {
-    const projectEntries = mockTimeEntries.filter((e) => e.projectId === selectedProject);
+    const projectEntries = unbilledEntries.filter((e) => e.projectId === selectedProject);
     const newItems: LineItem[] = projectEntries.map((entry) => ({
       id: Date.now().toString() + entry.id,
       description: `${entry.description} (${entry.date})`,
@@ -158,6 +133,29 @@ export default function NewInvoicePage() {
     setLineItems([...lineItems.filter((item) => item.description !== ''), ...newItems]);
     setShowImportTime(false);
   };
+
+  const isLoading = clientsLoading || projectsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (clientsError || projectsError) {
+    const errorMsg = clientsError?.message || projectsError?.message || 'Unknown error';
+    return (
+      <div className="mx-auto max-w-6xl p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <AlertCircle className="mx-auto mb-2 h-8 w-8 text-red-500" />
+          <h3 className="text-lg font-medium text-red-800">Failed to load form data</h3>
+          <p className="mt-1 text-sm text-red-600">{errorMsg}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -208,7 +206,7 @@ export default function NewInvoicePage() {
                     </div>
                     <div>
                       <div className="font-medium text-gray-900">
-                        {selectedClient.company || selectedClient.name}
+                        {selectedClient.displayName || selectedClient.name}
                       </div>
                       <div className="mt-1 text-sm text-gray-500">{selectedClient.name}</div>
                       <div className="flex items-center gap-1 text-sm text-gray-500">
@@ -221,10 +219,10 @@ export default function NewInvoicePage() {
                           {selectedClient.phone}
                         </div>
                       )}
-                      {selectedClient.address && (
+                      {selectedClient.billingAddress && (
                         <div className="flex items-center gap-1 text-sm text-gray-500">
                           <MapPin className="h-3.5 w-3.5" />
-                          {selectedClient.address}
+                          {formatAddress(selectedClient.billingAddress)}
                         </div>
                       )}
                     </div>
@@ -251,7 +249,7 @@ export default function NewInvoicePage() {
 
                   {showClientDropdown && (
                     <div className="absolute left-0 right-0 top-full z-10 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg">
-                      {mockClients.map((client) => (
+                      {clients.map((client) => (
                         <button
                           key={client.id}
                           className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-gray-50"
@@ -265,7 +263,7 @@ export default function NewInvoicePage() {
                           </div>
                           <div>
                             <div className="font-medium text-gray-900">
-                              {client.company || client.name}
+                              {client.displayName || client.name}
                             </div>
                             <div className="text-sm text-gray-500">{client.email}</div>
                           </div>
@@ -471,7 +469,7 @@ export default function NewInvoicePage() {
                     onChange={(e) => setSelectedProject(e.target.value)}
                   >
                     <option value="">No project</option>
-                    {mockProjects.map((project) => (
+                    {projects.map((project) => (
                       <option key={project.id} value={project.id}>
                         {project.name}
                       </option>
@@ -657,7 +655,7 @@ export default function NewInvoicePage() {
             {selectedProject ? (
               <>
                 <div className="mb-4 max-h-64 space-y-2 overflow-y-auto">
-                  {mockTimeEntries
+                  {unbilledEntries
                     .filter((e) => e.projectId === selectedProject)
                     .map((entry) => (
                       <div
@@ -673,7 +671,7 @@ export default function NewInvoicePage() {
                             ${(entry.hours * entry.rate).toLocaleString()}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {entry.hours}h × ${entry.rate}
+                            {entry.hours}h x ${entry.rate}
                           </div>
                         </div>
                       </div>

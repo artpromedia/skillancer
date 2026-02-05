@@ -12,6 +12,9 @@ import {
   Download,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 // Types
 interface IncomeCategory {
@@ -40,39 +43,23 @@ interface ProfitLossSummaryProps {
   className?: string;
 }
 
-// Mock data
-const mockIncomeByClient: IncomeCategory[] = [
-  { id: '1', name: 'Acme Corp', amount: 28500, previousAmount: 24000 },
-  { id: '2', name: 'TechStart Inc', amount: 22000, previousAmount: 18500 },
-  { id: '3', name: 'Design Studio', amount: 15800, previousAmount: 16200 },
-  { id: '4', name: 'Global Enterprises', amount: 12400, previousAmount: 10000 },
-  { id: '5', name: 'Other Clients', amount: 8750, previousAmount: 7800 },
-];
-
-const mockIncomeByType: IncomeCategory[] = [
-  { id: '1', name: 'Web Development', amount: 45000, previousAmount: 38000 },
-  { id: '2', name: 'Mobile Development', amount: 22500, previousAmount: 20000 },
-  { id: '3', name: 'UI/UX Design', amount: 12500, previousAmount: 14000 },
-  { id: '4', name: 'Consulting', amount: 7450, previousAmount: 4500 },
-];
-
-const mockIncomeByPlatform: IncomeCategory[] = [
-  { id: '1', name: 'Skillancer', amount: 32000, previousAmount: 28000 },
-  { id: '2', name: 'Upwork', amount: 28500, previousAmount: 25000 },
-  { id: '3', name: 'Direct Clients', amount: 18000, previousAmount: 16500 },
-  { id: '4', name: 'Fiverr', amount: 8950, previousAmount: 7000 },
-];
-
-const mockExpenses: ExpenseCategory[] = [
-  { id: '1', name: 'Software & Tools', amount: 2400, previousAmount: 2200, isDeductible: true },
-  { id: '2', name: 'Hardware', amount: 1800, previousAmount: 3500, isDeductible: true },
-  { id: '3', name: 'Cloud & Hosting', amount: 1200, previousAmount: 1100, isDeductible: true },
-  { id: '4', name: 'Professional Services', amount: 850, previousAmount: 600, isDeductible: true },
-  { id: '5', name: 'Marketing', amount: 650, previousAmount: 800, isDeductible: true },
-  { id: '6', name: 'Office Expenses', amount: 450, previousAmount: 400, isDeductible: true },
-  { id: '7', name: 'Travel', amount: 320, previousAmount: 500, isDeductible: true },
-  { id: '8', name: 'Education', amount: 280, previousAmount: 200, isDeductible: true },
-];
+// API Hook for fetching P&L data
+function useProfitLossData() {
+  return useQuery<{
+    incomeByClient: IncomeCategory[];
+    incomeByType: IncomeCategory[];
+    incomeByPlatform: IncomeCategory[];
+    expenses: ExpenseCategory[];
+  }>({
+    queryKey: ['cockpit', 'finances', 'profit-loss'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/cockpit/finances/profit-loss`);
+      if (!res.ok) throw new Error('Failed to fetch P&L data');
+      const json = await res.json();
+      return json.data ?? json;
+    },
+  });
+}
 
 function getIncomeData(
   view: 'client' | 'type' | 'platform',
@@ -86,14 +73,19 @@ function getIncomeData(
 }
 
 export function ProfitLossSummary({
-  incomeByClient = mockIncomeByClient,
-  incomeByType = mockIncomeByType,
-  incomeByPlatform = mockIncomeByPlatform,
-  expenses = mockExpenses,
+  incomeByClient: propIncomeByClient,
+  incomeByType: propIncomeByType,
+  incomeByPlatform: propIncomeByPlatform,
+  expenses: propExpenses,
   period = 'December 2024',
   // previousPeriod is part of props but not currently used
   className,
 }: Readonly<ProfitLossSummaryProps>) {
+  const { data: plData } = useProfitLossData();
+  const incomeByClient = propIncomeByClient ?? plData?.incomeByClient ?? [];
+  const incomeByType = propIncomeByType ?? plData?.incomeByType ?? [];
+  const incomeByPlatform = propIncomeByPlatform ?? plData?.incomeByPlatform ?? [];
+  const expenses = propExpenses ?? plData?.expenses ?? [];
   const [incomeView, setIncomeView] = useState<'client' | 'type' | 'platform'>('client');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['income', 'expenses'])
