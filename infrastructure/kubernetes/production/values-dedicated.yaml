@@ -1,0 +1,362 @@
+# =============================================================================
+# Skillancer Helm Values — Dedicated Server (Hetzner Bare Metal)
+# =============================================================================
+# Single-server deployment: K3s + PostgreSQL + Redis on one machine.
+# All services access DB/Redis via localhost or K3s ClusterIP.
+#
+# Hardware:
+#   Intel Core i7-8700 (6C/12T, 4.6GHz boost)
+#   64 GB DDR4 RAM
+#   2× NVMe M.2 1TB (OS+DB, WAL+Redis)
+#   1× SATA SSD 1.92TB (backups, uploads, logs)
+#
+# Usage:
+#   helm upgrade --install skillancer ./chart \
+#     -f values.yaml \
+#     -f values-dedicated.yaml \
+#     -n skillancer
+# =============================================================================
+
+global:
+  environment: production
+  domain: skillancer.com
+  imageRegistry: ghcr.io/artpromedia
+  imagePullSecrets:
+    - name: ghcr-secret
+  cloudProvider: dedicated
+
+# ============================================================
+# Web Application (single node — no topology spread needed)
+# ============================================================
+web:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 80
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Single node — topology spread not applicable
+  topologySpreadConstraints: []
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# ============================================================
+# API Gateway
+# ============================================================
+apiGateway:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 75
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 800m
+      memory: 512Mi
+
+  topologySpreadConstraints: []
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# ============================================================
+# Auth Service
+# ============================================================
+authService:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+# ============================================================
+# Market Service
+# ============================================================
+marketService:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 800m
+      memory: 512Mi
+
+# ============================================================
+# SkillPod Service
+# ============================================================
+skillpodService:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+
+  nodeSelector: {}
+  tolerations: []
+
+  resources:
+    requests:
+      cpu: 300m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1536Mi
+
+# ============================================================
+# Cockpit Service
+# ============================================================
+cockpitService:
+  replicaCount: 1
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+# ============================================================
+# Billing Service
+# ============================================================
+billingService:
+  replicaCount: 1
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+# ============================================================
+# Notification Service
+# ============================================================
+notificationService:
+  replicaCount: 1
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 400m
+      memory: 256Mi
+
+# ============================================================
+# Audit Service
+# ============================================================
+auditService:
+  replicaCount: 1
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 2
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+# ============================================================
+# ML Recommendation Service
+# ============================================================
+mlRecommendationService:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 300m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1536Mi
+  nodeSelector: {}
+
+# ============================================================
+# Database (localhost PostgreSQL — same machine)
+# ============================================================
+postgresql:
+  enabled: false
+
+externalDatabase:
+  host: 127.0.0.1
+  port: 5432
+  database: skillancer
+  existingSecret: skillancer-secrets
+  existingSecretPasswordKey: PG_PASSWORD
+
+# ============================================================
+# Redis (localhost Redis — same machine)
+# ============================================================
+redis:
+  enabled: false
+
+externalRedis:
+  host: 127.0.0.1
+  port: 6379
+  existingSecret: skillancer-secrets
+  existingSecretPasswordKey: REDIS_PASSWORD
+
+# ============================================================
+# Object Storage (Cloudflare R2)
+# ============================================================
+objectStorage:
+  endpoint: '' # https://<account_id>.r2.cloudflarestorage.com
+  region: auto
+  bucket: skillancer-production-uploads
+  existingSecret: skillancer-secrets
+  existingSecretAccessKeyKey: S3_ACCESS_KEY
+  existingSecretSecretKeyKey: S3_SECRET_KEY
+  forcePathStyle: false
+
+# ============================================================
+# Monitoring (lightweight — single node)
+# ============================================================
+prometheus:
+  enabled: false # Use node_exporter installed by provision.sh
+
+grafana:
+  enabled: false # Install separately if needed
+
+# ============================================================
+# Ingress (installed by provision.sh)
+# ============================================================
+ingress-nginx:
+  enabled: false
+
+cert-manager:
+  enabled: false # SSL handled by Cloudflare
+
+# ============================================================
+# Service Accounts
+# ============================================================
+serviceAccount:
+  create: true
+  annotations: {}
+
+# ============================================================
+# Network Policies (simplified for single node)
+# ============================================================
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow localhost (PostgreSQL + Redis on same machine)
+    - to:
+        - ipBlock:
+            cidr: 127.0.0.1/32
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+    # Allow K3s internal
+    - to:
+        - ipBlock:
+            cidr: 10.42.0.0/16
+        - ipBlock:
+            cidr: 10.43.0.0/16
+    # Allow external HTTPS (Stripe, Cloudflare R2, etc.)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+
+# ============================================================
+# Secrets (Doppler or manual)
+# ============================================================
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: doppler
+
+# ============================================================
+# Resource Budget Summary (single node — i7-8700 / 64GB)
+# ============================================================
+#
+# Component        CPU Req    CPU Lim    Mem Req     Mem Lim
+# ─────────────────────────────────────────────────────────────
+# web (×2)         400m       1000m      512Mi       1Gi
+# api-gateway (×2) 400m       1600m      512Mi       1Gi
+# auth-svc (×2)    200m       1000m      384Mi       768Mi
+# market-svc (×2)  400m       1600m      512Mi       1Gi
+# skillpod (×2)    600m       2000m      1Gi         3Gi
+# cockpit (×1)     100m       500m       192Mi       384Mi
+# billing (×1)     100m       500m       192Mi       384Mi
+# notification (×1)100m       400m       128Mi       256Mi
+# audit (×1)       50m        300m       128Mi       256Mi
+# ml-rec (×1)      300m       1000m      512Mi       1536Mi
+# cloudflared      50m        200m       64Mi        128Mi
+# ingress (×1)     100m       200m       128Mi       256Mi
+# K3s system       500m       —          1Gi         —
+# ─────────────────────────────────────────────────────────────
+# TOTAL REQUESTS   ~3.3 cores             ~5.3 Gi
+# HEADROOM         8.7 cores free         ~58.7 Gi free (- PG/Redis)
+#
+# PostgreSQL: ~16GB shared_buffers + filesystem cache
+# Redis: ~4GB maxmemory
+# Effective free: ~36GB for Linux page cache
