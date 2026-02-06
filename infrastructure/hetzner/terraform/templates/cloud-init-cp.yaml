@@ -37,6 +37,12 @@ write_files:
       etcd-expose-metrics: true
 
 runcmd:
+  # Install cloudflared (Cloudflare Tunnel connector)
+  - |
+    curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
+    dpkg -i /tmp/cloudflared.deb
+    rm /tmp/cloudflared.deb
+
   # Install K3s
   - curl -sfL https://get.k3s.io | K3S_TOKEN="${k3s_token}" sh -s - server
 

@@ -1,0 +1,103 @@
+# =============================================================================
+# Cloudflare Tunnel — K3s DaemonSet
+# =============================================================================
+# Deploys cloudflared as a DaemonSet in the K3s cluster.
+# Routes all external traffic through Cloudflare's global network.
+#
+# Usage:
+#   1. Get tunnel token from Terraform output:
+#      cd infrastructure/cloudflare/terraform && terraform output -raw tunnel_token
+#   2. Create secret:
+#      kubectl create secret generic cloudflared-token \
+#        -n cloudflare --from-literal=token=<TUNNEL_TOKEN>
+#   3. Apply:
+#      kubectl apply -f infrastructure/cloudflare/k8s/cloudflared.yaml
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudflare
+  labels:
+    app.kubernetes.io/managed-by: terraform
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cloudflared
+  namespace: cloudflare
+  labels:
+    app: cloudflared
+spec:
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:2024.8.3
+          args:
+            - tunnel
+            - --no-autoupdate
+            - run
+            - --token
+            - $(TUNNEL_TOKEN)
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflared-token
+                  key: token
+            - name: TUNNEL_METRICS
+              value: '0.0.0.0:9090'
+          ports:
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 9090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      # Run on all nodes for redundancy
+      tolerations:
+        - operator: Exists
+      priorityClassName: system-node-critical
+---
+# ServiceMonitor for Prometheus (optional — if you have Prometheus operator)
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudflared-metrics
+  namespace: cloudflare
+  labels:
+    app: cloudflared
+spec:
+  selector:
+    app: cloudflared
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  clusterIP: None

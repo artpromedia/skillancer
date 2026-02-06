@@ -104,12 +104,22 @@ export const storageEnvSchema = z.object({
     .string()
     .url()
     .optional()
-    .describe('Custom S3 endpoint for non-AWS providers (e.g., MinIO, Hetzner Object Storage)'),
+    .describe(
+      'Custom S3 endpoint for non-AWS providers (e.g., Cloudflare R2, MinIO, Hetzner Object Storage)'
+    ),
   S3_FORCE_PATH_STYLE: z
     .string()
     .transform((v) => v === 'true')
     .default('false')
-    .describe('Force path-style S3 URLs (required for MinIO/Hetzner)'),
+    .describe('Force path-style S3 URLs (required for MinIO/Hetzner, not for R2)'),
+  CLOUDFLARE_ACCOUNT_ID: z
+    .string()
+    .optional()
+    .describe('Cloudflare account ID (required for R2 storage)'),
+  CDN_DOMAIN: z
+    .string()
+    .optional()
+    .describe('CDN domain for public asset URLs (e.g., cdn.skillancer.com)'),
 });
 
 /** @deprecated Use storageEnvSchema instead */

@@ -1,0 +1,34 @@
+# =============================================================================
+# Cloudflare Terraform Variables — Example
+# =============================================================================
+# Copy to terraform.tfvars and fill in real values:
+#   cp terraform.tfvars.example terraform.tfvars
+# =============================================================================
+
+# --- Required ---
+
+# Get from: https://dash.cloudflare.com/profile/api-tokens
+# Required permissions: Zone:DNS:Edit, Zone:Zone Settings:Edit,
+#   Zone:Firewall Services:Edit, Account:Cloudflare Tunnel:Edit,
+#   Account:R2:Edit
+cloudflare_api_token = "your-cloudflare-api-token"
+
+# Get from: https://dash.cloudflare.com → sidebar → Account ID
+cloudflare_account_id = "your-account-id"
+
+# Your domain (must already be added to Cloudflare)
+domain = "skillancer.com"
+
+# --- Optional ---
+
+environment = "production"
+
+# Hetzner LB IP (only needed if enable_tunnel = false)
+# hetzner_origin_ip = "1.2.3.4"
+
+# Features (all default to true)
+enable_tunnel = true
+enable_r2     = true
+enable_waf    = true
+
+notification_email = "devops@skillancer.com"
