@@ -1,0 +1,96 @@
+#cloud-config
+# =============================================================================
+# PostgreSQL Database Server — Cloud-Init
+# =============================================================================
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - postgresql-16
+  - postgresql-client-16
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+
+write_files:
+  - path: /etc/postgresql/16/main/conf.d/skillancer.conf
+    content: |
+      # Connection settings
+      listen_addresses = '0.0.0.0'
+      max_connections = 200
+
+      # Memory settings (tuned for 8GB server)
+      shared_buffers = 2GB
+      effective_cache_size = 6GB
+      work_mem = 16MB
+      maintenance_work_mem = 512MB
+
+      # WAL settings
+      wal_buffers = 64MB
+      max_wal_size = 4GB
+      min_wal_size = 1GB
+      checkpoint_completion_target = 0.9
+
+      # Query planner
+      random_page_cost = 1.1
+      effective_io_concurrency = 200
+      default_statistics_target = 100
+
+      # Logging
+      log_min_duration_statement = 1000
+      log_statement = 'ddl'
+      log_line_prefix = '%m [%p] %q%u@%d '
+
+      # Autovacuum
+      autovacuum_max_workers = 4
+      autovacuum_naptime = 30s
+
+      # SSL
+      ssl = on
+      ssl_cert_file = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
+      ssl_key_file = '/etc/ssl/private/ssl-cert-snakeoil.key'
+
+  - path: /etc/postgresql/16/main/pg_hba.conf
+    content: |
+      # TYPE  DATABASE  USER            ADDRESS         METHOD
+      local   all       postgres                        peer
+      local   all       all                             scram-sha-256
+      host    all       all             10.0.0.0/16     scram-sha-256
+      host    all       all             127.0.0.1/32    scram-sha-256
+      host    all       all             ::1/128         scram-sha-256
+
+runcmd:
+  # Mount data volume if attached
+  - |
+    if [ -b /dev/sdb ]; then
+      mkdir -p /mnt/data
+      if ! blkid /dev/sdb; then
+        mkfs.ext4 /dev/sdb
+      fi
+      mount /dev/sdb /mnt/data
+      echo '/dev/sdb /mnt/data ext4 defaults 0 2' >> /etc/fstab
+      
+      # Move PostgreSQL data to mounted volume
+      systemctl stop postgresql
+      rsync -av /var/lib/postgresql/ /mnt/data/postgresql/
+      mv /var/lib/postgresql /var/lib/postgresql.bak
+      ln -s /mnt/data/postgresql /var/lib/postgresql
+      chown -R postgres:postgres /mnt/data/postgresql
+      systemctl start postgresql
+    fi
+
+  # Create database and user
+  - |
+    sudo -u postgres psql -c "CREATE USER ${db_user} WITH PASSWORD '${db_password}' CREATEDB;"
+    sudo -u postgres psql -c "CREATE DATABASE ${db_name} OWNER ${db_user};"
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${db_name} TO ${db_user};"
+    sudo -u postgres psql -d ${db_name} -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
+    sudo -u postgres psql -d ${db_name} -c 'CREATE EXTENSION IF NOT EXISTS "pg_trgm";'
+
+  # Restart PostgreSQL with new config
+  - systemctl restart postgresql
+
+  # Enable automatic security updates
+  - systemctl enable unattended-upgrades
+  - systemctl start unattended-upgrades

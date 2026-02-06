@@ -1,0 +1,57 @@
+#cloud-config
+# =============================================================================
+# Redis Server — Cloud-Init
+# =============================================================================
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - redis-server
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+
+write_files:
+  - path: /etc/redis/redis.conf
+    content: |
+      # Network
+      bind 0.0.0.0
+      port 6379
+      protected-mode yes
+      requirepass ${redis_password}
+
+      # Memory (tuned for 4GB server)
+      maxmemory 3gb
+      maxmemory-policy allkeys-lru
+
+      # Persistence (AOF + RDB)
+      save 900 1
+      save 300 10
+      save 60 10000
+      appendonly yes
+      appendfilename "appendonly.aof"
+      appendfsync everysec
+
+      # Performance
+      tcp-backlog 511
+      timeout 300
+      tcp-keepalive 300
+
+      # Logging
+      loglevel notice
+      logfile /var/log/redis/redis-server.log
+
+      # Security
+      rename-command FLUSHDB ""
+      rename-command FLUSHALL ""
+      rename-command DEBUG ""
+      rename-command CONFIG "SKILLANCER_CONFIG"
+
+runcmd:
+  - systemctl restart redis-server
+  - systemctl enable redis-server
+
+  # Enable automatic security updates
+  - systemctl enable unattended-upgrades
+  - systemctl start unattended-upgrades

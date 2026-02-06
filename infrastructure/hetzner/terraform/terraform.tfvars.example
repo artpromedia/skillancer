@@ -1,0 +1,24 @@
+# =============================================================================
+# Terraform Variables — Hetzner Production
+# =============================================================================
+# Copy terraform.tfvars.example to terraform.tfvars and fill in values.
+# =============================================================================
+
+hcloud_token = "your-hetzner-api-token-here"
+
+environment = "production"
+location    = "fsn1"         # fsn1 (Falkenstein), nbg1 (Nuremberg), hel1 (Helsinki)
+domain      = "skillancer.com"
+
+# SSH key for server access
+ssh_public_key_path = "~/.ssh/id_ed25519.pub"
+
+# K3s cluster sizing
+control_plane_type = "cx31"  # 4 vCPU, 8 GB RAM  (~€12.49/mo)
+worker_type        = "cx31"  # 4 vCPU, 8 GB RAM  (~€12.49/mo)
+worker_count       = 3
+
+# Database
+enable_self_hosted_db = true
+db_server_type        = "cx31"  # 4 vCPU, 8 GB RAM
+redis_server_type     = "cx21"  # 2 vCPU, 4 GB RAM (~€5.39/mo)

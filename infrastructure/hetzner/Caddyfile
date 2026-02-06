@@ -1,0 +1,54 @@
+# Caddyfile - Automatic HTTPS reverse proxy
+# Used with docker-compose.hetzner.yml for single-server deployments
+
+{
+	email devops@skillancer.com
+}
+
+# API
+api.skillancer.com {
+	reverse_proxy api-gateway:4000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# Rate limiting
+	@api {
+		path /api/*
+	}
+
+	log {
+		output file /var/log/caddy/api-access.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+}
+
+# Web App (if served from same server)
+skillancer.com, www.skillancer.com {
+	reverse_proxy web:3000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	log {
+		output file /var/log/caddy/web-access.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+}
+
+# MinIO Console (internal only, optional)
+# s3.skillancer.com {
+# 	reverse_proxy minio:9001
+# }

@@ -1,0 +1,459 @@
+# =============================================================================
+# Hetzner K3s Deployment Pipeline
+# =============================================================================
+# Deploys Skillancer services to K3s on Hetzner Cloud.
+# Flow: Push to main → Build images → Deploy staging → Manual approval → Production
+# =============================================================================
+
+name: Deploy (Hetzner)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'packages/**'
+      - 'Dockerfile'
+      - 'docker-compose*.yml'
+      - '.github/workflows/deploy-hetzner.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      services:
+        description: 'Services to deploy (comma-separated or "all")'
+        required: false
+        default: 'all'
+      skip_staging:
+        description: 'Skip staging deployment'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-hetzner-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_REGISTRY: ghcr.io/artpromedia
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '8.15.6'
+
+jobs:
+  # ===========================================================================
+  # Prepare
+  # ===========================================================================
+  prepare:
+    name: 📋 Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      short_sha: ${{ steps.version.outputs.short_sha }}
+      services: ${{ steps.services.outputs.list }}
+      deploy_staging: ${{ steps.determine.outputs.deploy_staging }}
+      deploy_production: ${{ steps.determine.outputs.deploy_production }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Version
+        id: version
+        run: |
+          if git describe --tags --exact-match 2>/dev/null; then
+            VERSION=$(git describe --tags --exact-match)
+          else
+            VERSION="v0.0.0-$(git rev-list --count HEAD)-g$(git rev-parse --short HEAD)"
+          fi
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Determine Services
+        id: services
+        run: |
+          INPUT_SERVICES="${{ github.event.inputs.services }}"
+          if [[ "$INPUT_SERVICES" == "all" ]] || [[ -z "$INPUT_SERVICES" ]]; then
+            SERVICES='["api-gateway","auth-svc","market-svc","skillpod-svc","cockpit-svc","billing-svc","notification-svc","audit-svc"]'
+          else
+            SERVICES=$(echo "$INPUT_SERVICES" | jq -R 'split(",") | map(gsub(" "; ""))')
+          fi
+          echo "list=$SERVICES" >> $GITHUB_OUTPUT
+
+      - name: Determine Targets
+        id: determine
+        run: |
+          INPUT_ENV="${{ github.event.inputs.environment }}"
+          SKIP="${{ github.event.inputs.skip_staging }}"
+          if [ "$INPUT_ENV" == "production" ] && [ "$SKIP" == "true" ]; then
+            echo "deploy_staging=false" >> $GITHUB_OUTPUT
+            echo "deploy_production=true" >> $GITHUB_OUTPUT
+          elif [ "$INPUT_ENV" == "production" ]; then
+            echo "deploy_staging=true" >> $GITHUB_OUTPUT
+            echo "deploy_production=true" >> $GITHUB_OUTPUT
+          else
+            echo "deploy_staging=true" >> $GITHUB_OUTPUT
+            echo "deploy_production=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ===========================================================================
+  # Build & Push to GHCR
+  # ===========================================================================
+  build-images:
+    name: 🐳 Build ${{ matrix.service }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.prepare.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_REGISTRY }}/${{ matrix.service }}
+          tags: |
+            type=raw,value=${{ needs.prepare.outputs.version }}
+            type=raw,value=${{ needs.prepare.outputs.short_sha }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-
+
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          build-args: |
+            VERSION=${{ needs.prepare.outputs.version }}
+          platforms: linux/amd64
+
+      - name: Scan Image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_REGISTRY }}/${{ matrix.service }}:${{ needs.prepare.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Upload Scan Results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-${{ matrix.service }}.sarif'
+          category: 'container-${{ matrix.service }}'
+
+  # ===========================================================================
+  # Deploy to Staging (Hetzner K3s)
+  # ===========================================================================
+  deploy-staging:
+    name: 🚀 Deploy Staging
+    needs: [prepare, build-images]
+    if: needs.prepare.outputs.deploy_staging == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://api-staging.skillancer.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.29.0'
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.HETZNER_STAGING_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Create/Update Namespace & Secrets
+        run: |
+          kubectl create namespace skillancer --dry-run=client -o yaml | kubectl apply -f -
+          # Secrets are managed via Doppler operator or manual kubectl create secret
+
+      - name: Deploy Services
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          SERVICES='${{ needs.prepare.outputs.services }}'
+          NAMESPACE="skillancer"
+
+          for service in $(echo "$SERVICES" | jq -r '.[]'); do
+            echo "========================================="
+            echo "📦 Deploying $service (staging)..."
+            echo "========================================="
+            IMAGE="${{ env.IMAGE_REGISTRY }}/$service:$VERSION"
+
+            if kubectl get deployment "$service" -n "$NAMESPACE" &>/dev/null; then
+              kubectl set image deployment/"$service" \
+                "$service=$IMAGE" -n "$NAMESPACE"
+              kubectl annotate deployment/"$service" -n "$NAMESPACE" \
+                "kubernetes.io/change-cause=v$VERSION" --overwrite
+            else
+              echo "⚠️ Deployment $service not found, skipping..."
+              continue
+            fi
+
+            echo "Waiting for rollout..."
+            if kubectl rollout status deployment/"$service" \
+              -n "$NAMESPACE" --timeout=300s; then
+              echo "✅ $service is ready"
+            else
+              echo "❌ $service rollout failed"
+              kubectl rollout undo deployment/"$service" -n "$NAMESPACE" || true
+              exit 1
+            fi
+          done
+
+      - name: Health Check
+        run: |
+          NAMESPACE="skillancer"
+          echo "🏥 Running health checks..."
+          SERVICES='${{ needs.prepare.outputs.services }}'
+          for service in $(echo "$SERVICES" | jq -r '.[]'); do
+            if kubectl get deployment "$service" -n "$NAMESPACE" &>/dev/null; then
+              READY=$(kubectl get deployment "$service" -n "$NAMESPACE" \
+                -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+              DESIRED=$(kubectl get deployment "$service" -n "$NAMESPACE" \
+                -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
+              if [ "$READY" == "$DESIRED" ] && [ "$DESIRED" != "0" ]; then
+                echo "✅ $service: $READY/$DESIRED ready"
+              else
+                echo "❌ $service: $READY/$DESIRED ready"
+              fi
+            fi
+          done
+
+      - name: Notify Slack (Success)
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ Staging deployment complete",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "✅ *Staging deployed*\nVersion: `${{ needs.prepare.outputs.version }}`\nBy: ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ===========================================================================
+  # Deploy to Production (Hetzner K3s)
+  # ===========================================================================
+  deploy-production:
+    name: 🏭 Deploy Production
+    needs: [prepare, build-images, deploy-staging]
+    if: |
+      always() &&
+      needs.prepare.outputs.deploy_production == 'true' &&
+      (needs.deploy-staging.result == 'success' || needs.deploy-staging.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://api.skillancer.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.29.0'
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.HETZNER_PROD_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Save Current State (for rollback)
+        id: current
+        run: |
+          NAMESPACE="skillancer"
+          SERVICES='${{ needs.prepare.outputs.services }}'
+          ROLLBACK="{}"
+          for service in $(echo "$SERVICES" | jq -r '.[]'); do
+            IMG=$(kubectl get deployment "$service" -n "$NAMESPACE" \
+              -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
+            if [ -n "$IMG" ]; then
+              ROLLBACK=$(echo "$ROLLBACK" | jq --arg svc "$service" --arg img "$IMG" '. + {($svc): $img}')
+            fi
+          done
+          echo "rollback_images=$ROLLBACK" >> $GITHUB_OUTPUT
+
+      - name: Deploy Services (Rolling Update)
+        id: deploy
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          SERVICES='${{ needs.prepare.outputs.services }}'
+          NAMESPACE="skillancer"
+
+          for service in $(echo "$SERVICES" | jq -r '.[]'); do
+            echo "========================================="
+            echo "📦 Deploying $service (production)..."
+            echo "========================================="
+            IMAGE="${{ env.IMAGE_REGISTRY }}/$service:$VERSION"
+
+            if kubectl get deployment "$service" -n "$NAMESPACE" &>/dev/null; then
+              # Set deployment strategy: ensure zero downtime
+              kubectl patch deployment "$service" -n "$NAMESPACE" \
+                -p '{"spec":{"strategy":{"type":"RollingUpdate","rollingUpdate":{"maxSurge":"50%","maxUnavailable":0}}}}' \
+                || true
+
+              kubectl set image deployment/"$service" \
+                "$service=$IMAGE" -n "$NAMESPACE"
+              kubectl annotate deployment/"$service" -n "$NAMESPACE" \
+                "kubernetes.io/change-cause=Production $VERSION by ${{ github.actor }}" --overwrite
+            else
+              echo "⚠️ Deployment $service not found, skipping..."
+              continue
+            fi
+
+            echo "Waiting for rollout..."
+            if ! kubectl rollout status deployment/"$service" \
+              -n "$NAMESPACE" --timeout=600s; then
+              echo "❌ $service rollout failed!"
+              exit 1
+            fi
+            echo "✅ $service deployed"
+          done
+
+      - name: Health Check
+        run: |
+          NAMESPACE="skillancer"
+          MAX_RETRIES=5
+          RETRY_DELAY=15
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Health check attempt $i/$MAX_RETRIES..."
+            ALL_HEALTHY=true
+            SERVICES='${{ needs.prepare.outputs.services }}'
+            for service in $(echo "$SERVICES" | jq -r '.[]'); do
+              if kubectl get deployment "$service" -n "$NAMESPACE" &>/dev/null; then
+                READY=$(kubectl get deployment "$service" -n "$NAMESPACE" \
+                  -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+                DESIRED=$(kubectl get deployment "$service" -n "$NAMESPACE" \
+                  -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
+                if [ "$READY" != "$DESIRED" ] || [ "$DESIRED" == "0" ]; then
+                  ALL_HEALTHY=false
+                fi
+              fi
+            done
+            if [ "$ALL_HEALTHY" == "true" ]; then
+              echo "✅ All services healthy!"
+              exit 0
+            fi
+            [ $i -lt $MAX_RETRIES ] && sleep $RETRY_DELAY
+          done
+          echo "❌ Health checks failed"
+          exit 1
+
+      - name: Tag Release
+        if: success()
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a "${{ needs.prepare.outputs.version }}" \
+            -m "Production deployment ${{ needs.prepare.outputs.version }}" || true
+          git push origin "${{ needs.prepare.outputs.version }}" || true
+
+  # ===========================================================================
+  # Rollback on Failure
+  # ===========================================================================
+  rollback:
+    name: 🔄 Rollback
+    needs: [prepare, deploy-production]
+    if: failure() && needs.deploy-production.outputs.rollback_images != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.HETZNER_PROD_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Rollback Services
+        run: |
+          NAMESPACE="skillancer"
+          ROLLBACK='${{ needs.deploy-production.outputs.rollback_images }}'
+          echo "🔄 Rolling back..."
+          for service in $(echo "$ROLLBACK" | jq -r 'keys[]'); do
+            PREV_IMG=$(echo "$ROLLBACK" | jq -r --arg svc "$service" '.[$svc]')
+            if [ -n "$PREV_IMG" ] && [ "$PREV_IMG" != "null" ]; then
+              echo "Rolling back $service → $PREV_IMG"
+              kubectl set image deployment/"$service" \
+                "$service=$PREV_IMG" -n "$NAMESPACE"
+              kubectl rollout status deployment/"$service" \
+                -n "$NAMESPACE" --timeout=300s || true
+            fi
+          done
+
+      - name: Notify Slack (Rollback)
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "🔄 Production ROLLED BACK for ${{ needs.prepare.outputs.version }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ===========================================================================
+  # Summary
+  # ===========================================================================
+  summary:
+    name: 📊 Summary
+    needs: [prepare, build-images, deploy-staging, deploy-production]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "## 📊 Deployment Summary (Hetzner)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Prepare | ${{ needs.prepare.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build-images.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Staging | ${{ needs.deploy-staging.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Production | ${{ needs.deploy-production.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ needs.prepare.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** \`${{ env.IMAGE_REGISTRY }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

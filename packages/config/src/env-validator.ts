@@ -89,17 +89,31 @@ export const emailEnvSchema = z.object({
 });
 
 /**
- * AWS configuration schema
+ * Object Storage configuration schema (S3-compatible)
+ * Works with AWS S3, Hetzner Object Storage, MinIO, and other S3-compatible providers
  */
-export const awsEnvSchema = z.object({
-  AWS_REGION: z.string().default('us-east-1').describe('AWS region'),
-  AWS_ACCESS_KEY_ID: z.string().optional().describe('AWS access key (optional if using IAM roles)'),
+export const storageEnvSchema = z.object({
+  AWS_REGION: z.string().default('us-east-1').describe('S3 region (or provider region)'),
+  AWS_ACCESS_KEY_ID: z.string().optional().describe('S3 access key (optional if using IAM roles)'),
   AWS_SECRET_ACCESS_KEY: z
     .string()
     .optional()
-    .describe('AWS secret key (optional if using IAM roles)'),
+    .describe('S3 secret key (optional if using IAM roles)'),
   S3_BUCKET: z.string().describe('S3 bucket for file uploads'),
+  S3_ENDPOINT: z
+    .string()
+    .url()
+    .optional()
+    .describe('Custom S3 endpoint for non-AWS providers (e.g., MinIO, Hetzner Object Storage)'),
+  S3_FORCE_PATH_STYLE: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('false')
+    .describe('Force path-style S3 URLs (required for MinIO/Hetzner)'),
 });
+
+/** @deprecated Use storageEnvSchema instead */
+export const awsEnvSchema = storageEnvSchema;
 
 /**
  * Monitoring configuration schema
@@ -165,7 +179,7 @@ export const productionEnvSchema = appEnvSchema
   .merge(oauthEnvSchema.partial())
   .merge(paymentEnvSchema)
   .merge(emailEnvSchema)
-  .merge(awsEnvSchema)
+  .merge(storageEnvSchema)
   .merge(monitoringEnvSchema)
   .merge(securityEnvSchema);
 
@@ -283,8 +297,10 @@ export function generateEnvDocs(schema: z.ZodTypeAny): EnvDocEntry[] {
       const isOptional = zodValue.isOptional();
 
       let defaultValue: string | undefined;
-      if ('_def' in zodValue && 'defaultValue' in (zodValue._def as any)) {
-        defaultValue = String((zodValue._def as any).defaultValue());
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const def = zodValue._def as Record<string, unknown>;
+      if ('_def' in zodValue && 'defaultValue' in def) {
+        defaultValue = String((def.defaultValue as () => unknown)());
       }
 
       docs.push({
@@ -374,6 +390,7 @@ export default {
   oauthEnvSchema,
   paymentEnvSchema,
   emailEnvSchema,
+  storageEnvSchema,
   awsEnvSchema,
   monitoringEnvSchema,
   appEnvSchema,

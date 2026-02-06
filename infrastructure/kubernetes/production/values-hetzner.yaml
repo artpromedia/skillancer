@@ -1,0 +1,251 @@
+# =============================================================================
+# Skillancer Helm Values - Production (Hetzner K3s)
+# =============================================================================
+# This is the Hetzner-specific override for the K3s cluster.
+# Uses self-hosted PostgreSQL/Redis on private network instead of AWS managed services.
+#
+# Usage:
+#   helm upgrade --install skillancer ./chart \
+#     -f values.yaml \
+#     -f values-hetzner.yaml \
+#     -n skillancer
+# =============================================================================
+
+# Global overrides for Hetzner
+global:
+  environment: production
+  domain: skillancer.com
+  imageRegistry: ghcr.io/artpromedia
+  imagePullSecrets:
+    - name: ghcr-secret
+  # Hetzner-specific: no cloud provider integration
+  cloudProvider: hetzner
+
+# ============================================================
+# Web Application (adjusted for Hetzner capacity)
+# ============================================================
+web:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 75
+
+  # Remove AWS zone-based topology spread; use hostname instead
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfied: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app: web
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# ============================================================
+# API Gateway (adjusted for Hetzner capacity)
+# ============================================================
+apiGateway:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfied: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app: api-gateway
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+# ============================================================
+# Auth Service
+# ============================================================
+authService:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+
+# ============================================================
+# SkillPod Service (remove AWS-specific node selectors)
+# ============================================================
+skillpodService:
+  replicaCount: 2
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 15
+
+  # Remove EKS-specific node selectors; use standard K3s labels
+  nodeSelector: {}
+  tolerations: []
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1500m
+      memory: 3Gi
+
+# ============================================================
+# Other Services (scaled for Hetzner)
+# ============================================================
+cockpitService:
+  replicaCount: 2
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 6
+
+billingService:
+  replicaCount: 2
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 6
+
+notificationService:
+  replicaCount: 2
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 6
+
+mlRecommendationService:
+  replicaCount: 1
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 4
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1500m
+      memory: 2Gi
+  nodeSelector: {}
+
+# ============================================================
+# Database (Self-hosted PostgreSQL on Hetzner VM)
+# ============================================================
+postgresql:
+  enabled: false
+
+externalDatabase:
+  # Self-hosted PostgreSQL on private network (10.0.2.10)
+  host: 10.0.2.10
+  port: 5432
+  database: skillancer
+  existingSecret: db-credentials
+  existingSecretPasswordKey: password
+
+# ============================================================
+# Redis (Self-hosted Redis on Hetzner VM)
+# ============================================================
+redis:
+  enabled: false
+
+externalRedis:
+  # Self-hosted Redis on private network (10.0.2.20)
+  host: 10.0.2.20
+  port: 6379
+  existingSecret: redis-credentials
+  existingSecretPasswordKey: password
+
+# ============================================================
+# S3-Compatible Object Storage
+# ============================================================
+# Hetzner Object Storage or self-hosted MinIO
+objectStorage:
+  # Hetzner Object Storage (S3-compatible)
+  endpoint: https://fsn1.your-objectstorage.com
+  region: fsn1
+  bucket: skillancer-uploads
+  existingSecret: s3-credentials
+  existingSecretAccessKeyKey: access-key
+  existingSecretSecretKeyKey: secret-key
+  forcePathStyle: true
+
+# ============================================================
+# Monitoring (already running via cloud-init on K3s)
+# ============================================================
+prometheus:
+  enabled: false # Already installed via kube-prometheus-stack in cloud-init
+
+grafana:
+  enabled: false # Already installed via kube-prometheus-stack in cloud-init
+  # Access via: metrics.skillancer.com (ingress configured in cloud-init)
+
+# ============================================================
+# Ingress Controller (already running via cloud-init)
+# ============================================================
+ingress-nginx:
+  enabled: false # Already installed in K3s via cloud-init
+
+# ============================================================
+# Cert Manager (already running via cloud-init)
+# ============================================================
+cert-manager:
+  enabled: false # Already installed in K3s via cloud-init
+
+# ============================================================
+# Service Accounts (no cloud IAM integration)
+# ============================================================
+serviceAccount:
+  create: true
+  annotations: {}
+  # No eks.amazonaws.com/role-arn - not needed on Hetzner
+
+# ============================================================
+# Network Policies
+# ============================================================
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow database (private network)
+    - to:
+        - ipBlock:
+            cidr: 10.0.2.0/24 # Database subnet
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+    # Allow external HTTPS
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+
+# ============================================================
+# Secrets (Doppler - cloud-agnostic, works the same)
+# ============================================================
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: doppler
