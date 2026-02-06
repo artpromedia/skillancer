@@ -35,9 +35,11 @@ set -euo pipefail
 # =============================================================================
 
 # -- Disk Devices (verify with `lsblk` after Hetzner rescue install) --
-NVME_1="/dev/nvme0n1"   # NVMe 1TB — OS + PostgreSQL data
-NVME_2="/dev/nvme1n1"   # NVMe 1TB — WAL + Redis
-SATA_SSD="/dev/sda"     # SATA 1.92TB — Backups, uploads, logs
+# installimage put the OS on nvme1n1 (LVM: root + pgdata + swap)
+# nvme0n1 is the free NVMe for WAL, Redis, K3s data
+NVME_OS="/dev/nvme1n1"    # NVMe 1TB — OS + PostgreSQL data (installimage)
+NVME_2="/dev/nvme0n1"     # NVMe 1TB — WAL + Redis + K3s
+SATA_SSD="/dev/sda"       # SATA 1.92TB — Backups, uploads, logs
 
 # -- PostgreSQL --
 PG_VERSION="16"
@@ -396,7 +398,8 @@ log_temp_files = 0
 log_autovacuum_min_duration = 1000
 
 # --- Data Integrity ---
-data_checksums = on
+# data_checksums requires cluster init with --data-checksums; skip for existing clusters
+# data_checksums = on
 fsync = on
 
 # --- Full-Text Search ---
@@ -498,7 +501,7 @@ io-threads-do-reads yes
 
 # Logging
 loglevel notice
-logfile /var/log/skillancer/redis.log
+logfile /var/log/redis/redis-server.log
 
 # Snapshotting
 save 900 1
@@ -516,6 +519,17 @@ rename-command DEBUG ""
 REDISCONF
 
 chown redis:redis /var/lib/redis
+
+# Redis 8+ uses Type=notify which can conflict; override to simple mode
+mkdir -p /etc/systemd/system/redis-server.service.d
+cat > /etc/systemd/system/redis-server.service.d/override.conf << 'ROVERRIDE'
+[Service]
+Type=simple
+ExecStart=
+ExecStart=/usr/bin/redis-server /etc/redis/redis.conf --daemonize no
+ReadWriteDirectories=-/var/log/skillancer
+ROVERRIDE
+systemctl daemon-reload
 systemctl start redis-server
 systemctl enable redis-server
 
