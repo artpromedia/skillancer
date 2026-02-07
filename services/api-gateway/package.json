@@ -32,6 +32,7 @@
     "@skillancer/metrics": "workspace:*",
     "@skillancer/types": "workspace:*",
     "@skillancer/utils": "workspace:*",
+    "ioredis": "^5.3.2",
     "fastify": "^4.26.0",
     "@fastify/cors": "^9.0.0",
     "@fastify/helmet": "^11.1.0",

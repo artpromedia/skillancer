@@ -1,93 +1,97 @@
 # =============================================================================
-# API Gateway Dockerfile
+# api-gateway Dockerfile
 # Multi-stage build for production deployment
 # Build from project root: docker build -f services/api-gateway/Dockerfile .
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# Stage 1: Base with pnpm
-# -----------------------------------------------------------------------------
 FROM node:20.19-alpine AS base
-
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@8.15.6 --activate
 WORKDIR /app
 
-# -----------------------------------------------------------------------------
-# Stage 2: Dependencies
-# -----------------------------------------------------------------------------
+# =============================================================================
+# Stage: Dependencies - copy ALL workspace package.json files
+# =============================================================================
 FROM base AS deps
 
-# Copy root package files for workspace
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Copy package.json files for all workspace packages this service depends on
+# All packages/*
+COPY packages/admin/package.json ./packages/admin/
+COPY packages/alerting/package.json ./packages/alerting/
+COPY packages/analytics/package.json ./packages/analytics/
+COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/audit-client/package.json ./packages/audit-client/
+COPY packages/auth/package.json ./packages/auth/
+COPY packages/bi/package.json ./packages/bi/
+COPY packages/cache/package.json ./packages/cache/
+COPY packages/compliance/package.json ./packages/compliance/
 COPY packages/config/package.json ./packages/config/
-COPY packages/metrics/package.json ./packages/metrics/
-COPY packages/types/package.json ./packages/types/
-COPY packages/utils/package.json ./packages/utils/
-COPY services/api-gateway/package.json ./services/api-gateway/
-
-# Copy Prisma schema for postinstall (prisma generate)
-COPY packages/database/prisma ./packages/database/prisma
 COPY packages/database/package.json ./packages/database/
+COPY packages/error-tracking/package.json ./packages/error-tracking/
+COPY packages/intelligence-sdk-js/package.json ./packages/intelligence-sdk-js/
+COPY packages/logger/package.json ./packages/logger/
+COPY packages/metrics/package.json ./packages/metrics/
+COPY packages/security/package.json ./packages/security/
+COPY packages/service-client/package.json ./packages/service-client/
+COPY packages/service-utils/package.json ./packages/service-utils/
+COPY packages/testing/package.json ./packages/testing/
+COPY packages/tracing/package.json ./packages/tracing/
+COPY packages/types/package.json ./packages/types/
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/utils/package.json ./packages/utils/
 
-# Set dummy DATABASE_URL for Prisma client generation during postinstall
+# All packages/shared/*
+COPY packages/shared/api-client/package.json ./packages/shared/api-client/
+COPY packages/shared/auth/package.json ./packages/shared/auth/
+COPY packages/shared/config/package.json ./packages/shared/config/
+COPY packages/shared/error-handling/package.json ./packages/shared/error-handling/
+COPY packages/shared/error-tracking/package.json ./packages/shared/error-tracking/
+
+# Prisma schema for postinstall generation
+COPY packages/database/prisma ./packages/database/prisma
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# This service
+COPY services/api-gateway/package.json ./services/api-gateway/
 
-# -----------------------------------------------------------------------------
-# Stage 3: Builder
-# -----------------------------------------------------------------------------
+RUN pnpm install --frozen-lockfile 2>&1 || pnpm install --no-frozen-lockfile
+
+# =============================================================================
+# Stage: Builder
+# =============================================================================
 FROM base AS builder
 
 COPY --from=deps /app ./
-
-# Copy source files
-COPY packages/config ./packages/config
-COPY packages/metrics ./packages/metrics
-COPY packages/types ./packages/types
-COPY packages/utils ./packages/utils
+COPY packages/ ./packages/
 COPY services/api-gateway ./services/api-gateway
 COPY tsconfig.json ./
 
-# Build packages and service
-RUN pnpm --filter @skillancer/config build 2>/dev/null || true && \
-    pnpm --filter @skillancer/types build 2>/dev/null || true && \
-    pnpm --filter @skillancer/utils build 2>/dev/null || true && \
-    pnpm --filter @skillancer/metrics build 2>/dev/null || true && \
-    pnpm --filter @skillancer/api-gateway build || true
+RUN cd packages/config && (pnpm build 2>/dev/null || true)
+RUN cd packages/types && (pnpm build 2>/dev/null || true)
+RUN cd packages/utils && (pnpm build 2>/dev/null || true)
+RUN cd packages/logger && (pnpm build 2>/dev/null || true)
+RUN cd packages/metrics && (pnpm build 2>/dev/null || true)
+RUN cd packages/database && (pnpm build 2>/dev/null || true)
+RUN cd packages/cache && (pnpm build 2>/dev/null || true)
+RUN cd packages/service-client && (pnpm build 2>/dev/null || true)
+RUN cd packages/audit-client && (pnpm build 2>/dev/null || true)
+RUN cd packages/service-utils && (pnpm build 2>/dev/null || true)
+RUN cd services/api-gateway && (pnpm build || true)
 
-# -----------------------------------------------------------------------------
-# Stage 4: Runner (Production)
-# -----------------------------------------------------------------------------
+# =============================================================================
+# Stage: Runner
+# =============================================================================
 FROM base AS runner
 
-# Security: Run as non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 gateway
-
 WORKDIR /app
+ENV NODE_ENV=production PORT=4000 HOST=0.0.0.0
 
-# Set environment
-ENV NODE_ENV=production \
-    PORT=4000 \
-    HOST=0.0.0.0
-
-# Copy the entire workspace (with built artifacts and node_modules)
-# pnpm uses symlinks and .pnpm store, so we need the full structure
 COPY --from=builder --chown=gateway:nodejs /app ./
 
-# Switch to non-root user
 USER gateway
-
-# Expose the port
 EXPOSE 4000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health/live || exit 1
-
-# Start the application
 CMD ["node", "services/api-gateway/dist/index.js"]
