@@ -5,7 +5,7 @@
   "description": "Skillancer Market - Hybrid talent marketplace (Next.js)",
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
