@@ -48,7 +48,7 @@ WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web-skillpod/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web-skillpod/.next/static ./apps/web-skillpod/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web-skillpod/.next/static ./.next/static
 
 USER nextjs
 EXPOSE 3000
@@ -56,4 +56,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
-CMD ["node", "apps/web-skillpod/server.js"]
+CMD ["node", "server.js"]

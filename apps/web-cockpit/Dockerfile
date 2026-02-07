@@ -52,7 +52,7 @@ ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 
 COPY --from=builder /app/apps/web-cockpit/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web-cockpit/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web-cockpit/.next/static ./apps/web-cockpit/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web-cockpit/.next/static ./.next/static
 
 USER nextjs
 EXPOSE 3000
@@ -60,4 +60,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
-CMD ["node", "apps/web-cockpit/server.js"]
+CMD ["node", "server.js"]

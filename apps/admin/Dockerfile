@@ -52,7 +52,7 @@ ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 
 COPY --from=builder /app/apps/admin/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/.next/static ./apps/admin/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/.next/static ./.next/static
 
 USER nextjs
 EXPOSE 3000
@@ -60,4 +60,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
-CMD ["node", "apps/admin/server.js"]
+CMD ["node", "server.js"]

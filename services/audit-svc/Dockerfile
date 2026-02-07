@@ -38,11 +38,10 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 skillancer
 WORKDIR /app
 ENV NODE_ENV=production PORT=3012 HOST=0.0.0.0
-COPY --from=builder --chown=skillancer:nodejs /app/services/audit-svc/dist ./dist
-COPY --from=builder --chown=skillancer:nodejs /app/services/audit-svc/package.json ./
-COPY --from=deps --chown=skillancer:nodejs /app/node_modules ./node_modules
+# Copy the full workspace (preserves pnpm symlinks for workspace packages)
+COPY --from=builder --chown=skillancer:nodejs /app ./
 USER skillancer
 EXPOSE 3012
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3012/health || exit 1
-CMD ["node", "dist/index.js"]
+CMD ["node", "services/audit-svc/dist/index.js"]

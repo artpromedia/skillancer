@@ -69,9 +69,8 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0
 
 # Copy production files
-COPY --from=builder --chown=skillancer:nodejs /app/services/notification-svc/dist ./dist
-COPY --from=builder --chown=skillancer:nodejs /app/services/notification-svc/package.json ./
-COPY --from=deps --chown=skillancer:nodejs /app/node_modules ./node_modules
+# Copy the full workspace (preserves pnpm symlinks for workspace packages)
+COPY --from=builder --chown=skillancer:nodejs /app ./
 
 USER skillancer
 
@@ -80,4 +79,4 @@ EXPOSE 4006
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:4006/health || exit 1
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "services/notification-svc/dist/index.js"]
