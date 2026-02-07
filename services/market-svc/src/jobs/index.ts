@@ -22,6 +22,5 @@ export {
 } from './verification-jobs.js';
 
 // Sprint M9: Healthcare Vertical Module
-export { credentialMonitoringJob } from './credential-monitoring.job';
-export { trainingReminderJob } from './training-reminder.job';
-
+export { credentialMonitoringJob } from './credential-monitoring.job.js';
+export { trainingReminderJob } from './training-reminder.job.js';

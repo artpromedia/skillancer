@@ -14,9 +14,16 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  external: ['@prisma/client'],
+  // Bundle @prisma/client into outputs (tsup/esbuild handles CJS->ESM conversion).
+  // Keep .prisma/client external since PrismaClient loads its engine at runtime.
+  noExternal: ['@prisma/client'],
+  external: ['.prisma/client', '.prisma/client/default'],
   treeshake: true,
-  onSuccess: hasPrismaTypes ? undefined : async () => {
-    console.warn('\n⚠️  DTS generation skipped - Prisma client not generated (run pnpm db:generate with network access)\n');
-  },
+  onSuccess: hasPrismaTypes
+    ? undefined
+    : async () => {
+        console.warn(
+          '\n⚠️  DTS generation skipped - Prisma client not generated (run pnpm db:generate with network access)\n'
+        );
+      },
 });

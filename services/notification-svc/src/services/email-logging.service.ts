@@ -5,8 +5,11 @@
  */
 
 import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
 
-import { PrismaClient, UnsubscribeType, Prisma } from '@prisma/client';
+const _require = createRequire(import.meta.url);
+const _prisma = _require('@prisma/client');
+const { PrismaClient, UnsubscribeType, Prisma } = _prisma;
 import { logger } from '@skillancer/logger';
 
 // Initialize Prisma client
