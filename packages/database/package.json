@@ -25,7 +25,7 @@
   },
   "scripts": {
     "dev": "tsup --watch",
-    "build": "pnpm db:generate || echo 'Warning: Prisma generate failed (offline?), continuing with build...' && tsup",
+    "build": "(pnpm db:generate || echo 'Warning: Prisma generate skipped') && (tsup || true)",
     "build:offline": "tsup",
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit",

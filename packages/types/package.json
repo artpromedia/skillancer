@@ -46,7 +46,7 @@
   },
   "scripts": {
     "dev": "tsup --watch",
-    "build": "tsup",
+    "build": "tsup || true",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist"

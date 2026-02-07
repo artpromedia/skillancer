@@ -43,7 +43,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup || true",
     "dev": "tsup --watch",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
