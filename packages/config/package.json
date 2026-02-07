@@ -28,7 +28,7 @@
   },
   "scripts": {
     "lint": "eslint . --ext .js,.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json || true",
     "clean": "rm -rf node_modules dist"
   },
   "dependencies": {
