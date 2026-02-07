@@ -26,7 +26,7 @@ import {
   type TransactionFilters,
   type FinancialInsight,
   type ReportParams,
-} from '../lib/api/services/finances';
+} from '../../lib/api/services/finances';
 
 import type { ApiResponse, PaginatedResponse } from '@skillancer/shared-api-client';
 

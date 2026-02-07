@@ -22,7 +22,7 @@ import {
   type ExpenseSummary,
   type ExpenseReport,
   type ExpenseReceipt,
-} from '../lib/api/services/expenses';
+} from '../../lib/api/services/expenses';
 
 import type { ApiResponse, PaginatedResponse } from '@skillancer/shared-api-client';
 

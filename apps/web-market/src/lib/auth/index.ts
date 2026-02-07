@@ -10,7 +10,7 @@ export {
   isAuthenticated as isAuthenticatedServer,
   getAuthUserId,
   type AuthSession,
-} from '../auth';
+} from '../server-auth';
 
 // Client-side auth service
 export {

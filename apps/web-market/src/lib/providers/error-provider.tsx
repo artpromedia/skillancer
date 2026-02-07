@@ -57,22 +57,16 @@ let errorTracking: ErrorTrackingModule | null = null;
 async function loadErrorTracking(): Promise<ErrorTrackingModule | null> {
   if (globalThis.window && !errorTracking) {
     try {
-      // Dynamic import with graceful fallback if package not available
-      // @ts-expect-error - Package may not be available at build time
-      const module = await import('@skillancer/error-tracking/react').catch(() => null);
-      if (module) {
-        errorTracking = module as ErrorTrackingModule;
-
-        // Initialize Sentry
-        errorTracking.initErrorTracking({
-          dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-          environment: process.env.NODE_ENV,
-          release: process.env.NEXT_PUBLIC_VERSION,
-          appName: 'web-market',
-          sampleRate: process.env.NODE_ENV === 'production' ? 1 : 0.1,
-          tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1,
-        });
-      }
+      // Error tracking is server-side only (@skillancer/error-tracking).
+      // For client-side, we use a console-based fallback.
+      errorTracking = {
+        initErrorTracking: (config) => {
+          console.info('[ErrorTracking] Initialized (client fallback)', config.appName);
+        },
+        captureError: (error, context) => {
+          console.error('[ErrorTracking] Captured error:', error.message, context);
+        },
+      };
     } catch (e) {
       console.warn('[ErrorProvider] Error tracking not available:', e);
     }

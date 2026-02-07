@@ -23,7 +23,7 @@ import {
   type ClientSummary,
   type ClientDocument,
   type ClientContact,
-} from '../lib/api/services/clients';
+} from '../../lib/api/services/clients';
 
 import type { ApiResponse, PaginatedResponse } from '@skillancer/shared-api-client';
 
