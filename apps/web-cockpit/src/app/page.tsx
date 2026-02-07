@@ -9,7 +9,7 @@
 
 import { redirect } from 'next/navigation';
 
-import { getAuthSession } from '@/lib/auth';
+import { getAuthSession } from '@/lib/server-auth';
 
 import { CockpitDashboard } from './components/cockpit-dashboard';
 

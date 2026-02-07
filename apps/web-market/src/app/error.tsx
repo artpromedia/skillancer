@@ -18,24 +18,14 @@ export default function ErrorBoundaryPage({ error, reset }: ErrorProps) {
     // Log the error to console in development
     console.error('[Error Page] Application error:', error);
 
-    // Report to error tracking service
+    // Report to error tracking service (logged to console for now)
     if (globalThis.window) {
-      // @ts-expect-error - Package may not be available at build time
-      import('@skillancer/error-tracking/react')
-        .then(
-          (tracking: {
-            captureError: (error: Error, context: Record<string, unknown>) => void;
-          }) => {
-            tracking.captureError(error, {
-              component: 'ErrorPage',
-              action: 'render',
-              extra: { digest: error.digest },
-            });
-          }
-        )
-        .catch(() => {
-          // Error tracking not available
-        });
+      console.error('[Error Tracking]', {
+        component: 'ErrorPage',
+        action: 'render',
+        message: error.message,
+        digest: error.digest,
+      });
     }
   }, [error]);
 

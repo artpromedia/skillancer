@@ -12,6 +12,7 @@ COPY packages/types/package.json ./packages/types/
 COPY packages/utils/package.json ./packages/utils/
 COPY packages/api-client/package.json ./packages/api-client/
 COPY packages/config/package.json ./packages/config/
+COPY packages/shared/api-client/package.json ./packages/shared/api-client/
 COPY apps/admin/package.json ./apps/admin/
 
 RUN pnpm install --frozen-lockfile
@@ -29,6 +30,7 @@ COPY packages/types ./packages/types
 COPY packages/utils ./packages/utils
 COPY packages/ui ./packages/ui
 COPY packages/api-client ./packages/api-client
+COPY packages/shared/api-client ./packages/shared/api-client
 COPY apps/admin ./apps/admin
 COPY tsconfig.json ./
 
@@ -36,7 +38,8 @@ RUN pnpm --filter @skillancer/config build 2>/dev/null || true && \
     pnpm --filter @skillancer/types build 2>/dev/null || true && \
     pnpm --filter @skillancer/utils build 2>/dev/null || true && \
     pnpm --filter @skillancer/ui build 2>/dev/null || true && \
-    pnpm --filter @skillancer/api-client build 2>/dev/null || true
+    pnpm --filter @skillancer/api-client build 2>/dev/null || true && \
+    pnpm --filter @skillancer/shared-api-client build 2>/dev/null || true
 
 RUN pnpm --filter @skillancer/admin-app build
 

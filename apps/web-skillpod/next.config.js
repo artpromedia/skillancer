@@ -12,9 +12,6 @@ const nextConfig = {
     // TODO: Fix type errors and remove this
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 };
 
 module.exports = nextConfig;
