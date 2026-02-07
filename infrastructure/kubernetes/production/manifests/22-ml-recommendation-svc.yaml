@@ -37,7 +37,7 @@ spec:
               value: 'false'
             # Override DATABASE_URL with asyncpg driver scheme
             - name: DATABASE_URL
-              value: 'postgresql+asyncpg://skillancer_admin:$(PG_PASSWORD)@host.k3s.internal:5432/skillancer'
+              value: 'postgresql+asyncpg://skillancer_admin:$(PG_PASSWORD)@10.42.0.1:5432/skillancer'
             - name: REDIS_URL
               valueFrom:
                 secretKeyRef:
