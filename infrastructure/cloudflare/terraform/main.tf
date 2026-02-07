@@ -119,7 +119,7 @@ resource "cloudflare_zone_settings_override" "tls" {
   zone_id = local.zone_id
 
   settings {
-    ssl                      = "full_strict"
+    ssl                      = "strict"
     always_use_https         = "on"
     min_tls_version          = "1.2"
     tls_1_3                  = "on"
@@ -133,11 +133,6 @@ resource "cloudflare_zone_settings_override" "tls" {
     privacy_pass             = "on"
     early_hints              = "on"
     brotli                   = "on"
-    minify {
-      css  = "on"
-      js   = "on"
-      html = "on"
-    }
     security_header {
       enabled            = true
       preload            = true
@@ -156,17 +151,17 @@ resource "random_id" "tunnel_secret" {
   byte_length = 64
 }
 
-resource "cloudflare_tunnel" "skillancer" {
+resource "cloudflare_zero_trust_tunnel_cloudflared" "skillancer" {
   count      = var.enable_tunnel ? 1 : 0
   account_id = var.cloudflare_account_id
   name       = "skillancer-${var.environment}"
   secret     = random_id.tunnel_secret.b64_std
 }
 
-resource "cloudflare_tunnel_config" "skillancer" {
+resource "cloudflare_zero_trust_tunnel_cloudflared_config" "skillancer" {
   count      = var.enable_tunnel ? 1 : 0
   account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_tunnel.skillancer[0].id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id
 
   config {
     # API Gateway
@@ -241,30 +236,32 @@ resource "cloudflare_tunnel_config" "skillancer" {
 # --- Tunnel DNS (proxied through Cloudflare Tunnel) ---
 
 resource "cloudflare_record" "root" {
-  zone_id = local.zone_id
-  name    = "@"
-  type    = var.enable_tunnel ? "CNAME" : "A"
-  value   = var.enable_tunnel ? "${cloudflare_tunnel.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
-  proxied = true
-  ttl     = 1 # Auto
-  comment = "Skillancer web app"
+  zone_id         = local.zone_id
+  name            = "@"
+  type            = var.enable_tunnel ? "CNAME" : "A"
+  content         = var.enable_tunnel ? "${cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
+  proxied         = true
+  ttl             = 1 # Auto
+  allow_overwrite = true
+  comment         = "Skillancer web app"
 }
 
 resource "cloudflare_record" "www" {
-  zone_id = local.zone_id
-  name    = "www"
-  type    = "CNAME"
-  value   = var.domain
-  proxied = true
-  ttl     = 1
-  comment = "www redirect"
+  zone_id         = local.zone_id
+  name            = "www"
+  type            = "CNAME"
+  content         = var.domain
+  proxied         = true
+  ttl             = 1
+  allow_overwrite = true
+  comment         = "www redirect"
 }
 
 resource "cloudflare_record" "api" {
   zone_id = local.zone_id
   name    = "api"
   type    = var.enable_tunnel ? "CNAME" : "A"
-  value   = var.enable_tunnel ? "${cloudflare_tunnel.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
+  content = var.enable_tunnel ? "${cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
   proxied = true
   ttl     = 1
   comment = "API gateway"
@@ -274,7 +271,7 @@ resource "cloudflare_record" "market" {
   zone_id = local.zone_id
   name    = "market"
   type    = var.enable_tunnel ? "CNAME" : "A"
-  value   = var.enable_tunnel ? "${cloudflare_tunnel.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
+  content = var.enable_tunnel ? "${cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
   proxied = true
   ttl     = 1
   comment = "Marketplace"
@@ -284,7 +281,7 @@ resource "cloudflare_record" "cockpit" {
   zone_id = local.zone_id
   name    = "cockpit"
   type    = var.enable_tunnel ? "CNAME" : "A"
-  value   = var.enable_tunnel ? "${cloudflare_tunnel.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
+  content = var.enable_tunnel ? "${cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
   proxied = true
   ttl     = 1
   comment = "Cockpit dashboard"
@@ -294,7 +291,7 @@ resource "cloudflare_record" "pod" {
   zone_id = local.zone_id
   name    = "pod"
   type    = var.enable_tunnel ? "CNAME" : "A"
-  value   = var.enable_tunnel ? "${cloudflare_tunnel.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
+  content = var.enable_tunnel ? "${cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
   proxied = true
   ttl     = 1
   comment = "SkillPod"
@@ -304,7 +301,7 @@ resource "cloudflare_record" "admin" {
   zone_id = local.zone_id
   name    = "admin"
   type    = var.enable_tunnel ? "CNAME" : "A"
-  value   = var.enable_tunnel ? "${cloudflare_tunnel.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
+  content = var.enable_tunnel ? "${cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
   proxied = true
   ttl     = 1
   comment = "Admin panel"
@@ -314,7 +311,7 @@ resource "cloudflare_record" "metrics" {
   zone_id = local.zone_id
   name    = "metrics"
   type    = var.enable_tunnel ? "CNAME" : "A"
-  value   = var.enable_tunnel ? "${cloudflare_tunnel.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
+  content = var.enable_tunnel ? "${cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id}.cfargotunnel.com" : var.hetzner_origin_ip
   proxied = true
   ttl     = 1
   comment = "Grafana metrics (Zero Trust protected)"
@@ -326,7 +323,7 @@ resource "cloudflare_record" "mx1" {
   zone_id  = local.zone_id
   name     = "@"
   type     = "MX"
-  value    = "mx1.${var.domain}"
+  content  = "mx1.${var.domain}"
   priority = 10
   ttl      = 3600
   comment  = "Primary MX"
@@ -336,7 +333,7 @@ resource "cloudflare_record" "spf" {
   zone_id = local.zone_id
   name    = "@"
   type    = "TXT"
-  value   = "v=spf1 include:_spf.google.com include:amazonses.com ~all"
+  content = "v=spf1 include:_spf.google.com include:amazonses.com ~all"
   ttl     = 3600
   comment = "SPF record"
 }
@@ -345,7 +342,7 @@ resource "cloudflare_record" "dmarc" {
   zone_id = local.zone_id
   name    = "_dmarc"
   type    = "TXT"
-  value   = "v=DMARC1; p=quarantine; rua=mailto:dmarc@${var.domain}; ruf=mailto:dmarc@${var.domain}; fo=1"
+  content = "v=DMARC1; p=quarantine; rua=mailto:dmarc@${var.domain}; ruf=mailto:dmarc@${var.domain}; fo=1"
   ttl     = 3600
   comment = "DMARC policy"
 }
@@ -381,7 +378,7 @@ resource "cloudflare_record" "cdn_assets" {
   zone_id = local.zone_id
   name    = "cdn"
   type    = "CNAME"
-  value   = "public.r2.dev"
+  content = "public.r2.dev"
   proxied = true
   ttl     = 1
   comment = "CDN assets via R2"
@@ -403,8 +400,7 @@ resource "cloudflare_ruleset" "waf_managed" {
   rules {
     action = "execute"
     action_parameters {
-      id      = "efb7b8c949ac4650a09736fc376e9aee" # Cloudflare Managed Ruleset
-      version = "latest"
+      id = "efb7b8c949ac4650a09736fc376e9aee" # Cloudflare Managed Ruleset
     }
     expression  = "true"
     description = "Execute Cloudflare Managed Ruleset"
@@ -415,8 +411,7 @@ resource "cloudflare_ruleset" "waf_managed" {
   rules {
     action = "execute"
     action_parameters {
-      id      = "4814384a9e5d4991b9815dcfc25d2f1f" # OWASP Core Ruleset
-      version = "latest"
+      id = "4814384a9e5d4991b9815dcfc25d2f1f" # OWASP Core Ruleset
     }
     expression  = "true"
     description = "Execute OWASP Core Ruleset"
@@ -489,31 +484,17 @@ resource "cloudflare_ruleset" "rate_limiting" {
     enabled     = true
   }
 
-  # Auth endpoint strict rate limit
+  # Auth endpoints strict rate limit (login, register, reset)
   rules {
     action = "block"
     ratelimit {
       characteristics     = ["cf.colo.id", "ip.src"]
-      period               = 300
-      requests_per_period  = 10
-      mitigation_timeout   = 600
+      period               = 60
+      requests_per_period  = 5
+      mitigation_timeout   = 60
     }
     expression  = "(http.host eq \"api.${var.domain}\" and starts_with(http.request.uri.path, \"/auth/\"))"
-    description = "Auth rate limit: 10 req/5min per IP"
-    enabled     = true
-  }
-
-  # Signup rate limit
-  rules {
-    action = "block"
-    ratelimit {
-      characteristics     = ["cf.colo.id", "ip.src"]
-      period               = 3600
-      requests_per_period  = 5
-      mitigation_timeout   = 3600
-    }
-    expression  = "(http.host eq \"api.${var.domain}\" and http.request.uri.path eq \"/auth/register\" and http.request.method eq \"POST\")"
-    description = "Signup rate limit: 5/hour per IP"
+    description = "Auth rate limit: 5 req/min per IP"
     enabled     = true
   }
 }
@@ -590,32 +571,12 @@ resource "cloudflare_ruleset" "cache" {
 }
 
 # =============================================================================
-# Redirect Rules
+# Redirect Rules (managed via Cloudflare Dashboard)
 # =============================================================================
-
-resource "cloudflare_ruleset" "redirects" {
-  zone_id = local.zone_id
-  name    = "Skillancer Redirects"
-  kind    = "zone"
-  phase   = "http_request_dynamic_redirect"
-
-  # www → apex redirect
-  rules {
-    action = "redirect"
-    action_parameters {
-      from_value {
-        status_code = 301
-        target_url {
-          expression = "concat(\"https://${var.domain}\", http.request.uri.path)"
-        }
-        preserve_query_string = true
-      }
-    }
-    expression  = "(http.host eq \"www.${var.domain}\")"
-    description = "Redirect www to apex"
-    enabled     = true
-  }
-}
+# NOTE: www → apex 301 redirect is configured manually in the dashboard
+# under Rules → Redirect Rules, because the http_request_dynamic_redirect
+# phase requires a token permission not available in custom API tokens.
+# Rule: (http.host eq "www.skillancer.com") → 301 → https://skillancer.com{path}
 
 # =============================================================================
 # Outputs
@@ -628,18 +589,18 @@ output "zone_id" {
 
 output "tunnel_id" {
   description = "Cloudflare Tunnel ID"
-  value       = var.enable_tunnel ? cloudflare_tunnel.skillancer[0].id : "N/A"
+  value       = var.enable_tunnel ? cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id : "N/A"
 }
 
 output "tunnel_token" {
   description = "Cloudflare Tunnel token (use to install cloudflared on origin)"
-  value       = var.enable_tunnel ? cloudflare_tunnel.skillancer[0].tunnel_token : "N/A"
+  value       = var.enable_tunnel ? cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].tunnel_token : "N/A"
   sensitive   = true
 }
 
 output "tunnel_cname" {
   description = "CNAME target for Tunnel DNS records"
-  value       = var.enable_tunnel ? "${cloudflare_tunnel.skillancer[0].id}.cfargotunnel.com" : "N/A"
+  value       = var.enable_tunnel ? "${cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id}.cfargotunnel.com" : "N/A"
 }
 
 output "r2_uploads_bucket" {
