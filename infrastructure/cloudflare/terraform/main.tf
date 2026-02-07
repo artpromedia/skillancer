@@ -164,10 +164,10 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "skillancer" {
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.skillancer[0].id
 
   config {
-    # API Gateway
+    # API Gateway (NodePort 30040)
     ingress_rule {
       hostname = "api.${var.domain}"
-      service  = "http://localhost:4000"
+      service  = "http://localhost:30040"
       origin_request {
         no_tls_verify  = false
         http2_origin   = true
@@ -175,39 +175,39 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "skillancer" {
       }
     }
 
-    # Web Application
+    # Web Application (NodePort 30000)
     ingress_rule {
       hostname = var.domain
-      service  = "http://localhost:3000"
+      service  = "http://localhost:30000"
     }
 
     ingress_rule {
       hostname = "www.${var.domain}"
-      service  = "http://localhost:3000"
+      service  = "http://localhost:30000"
     }
 
-    # Web Market
+    # Web Market (same as web app — NodePort 30000)
     ingress_rule {
       hostname = "market.${var.domain}"
-      service  = "http://localhost:3100"
+      service  = "http://localhost:30000"
     }
 
-    # Web Cockpit
+    # Web Cockpit (NodePort 30200)
     ingress_rule {
       hostname = "cockpit.${var.domain}"
-      service  = "http://localhost:3200"
+      service  = "http://localhost:30200"
     }
 
-    # Web SkillPod
+    # Web SkillPod (NodePort 30300)
     ingress_rule {
       hostname = "pod.${var.domain}"
-      service  = "http://localhost:3300"
+      service  = "http://localhost:30300"
     }
 
-    # Admin panel
+    # Admin panel (NodePort 30400)
     ingress_rule {
       hostname = "admin.${var.domain}"
-      service  = "http://localhost:3400"
+      service  = "http://localhost:30400"
     }
 
     # Grafana metrics

@@ -1,0 +1,66 @@
+# =============================================================================
+# Web Cockpit — cockpit.skillancer.com
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-cockpit
+  namespace: skillancer
+  labels:
+    app: web-cockpit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-cockpit
+  template:
+    metadata:
+      labels:
+        app: web-cockpit
+    spec:
+      containers:
+        - name: web-cockpit
+          image: skillancer/web-cockpit:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: skillancer-config
+            - secretRef:
+                name: skillancer-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-cockpit
+  namespace: skillancer
+spec:
+  type: NodePort
+  selector:
+    app: web-cockpit
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30200

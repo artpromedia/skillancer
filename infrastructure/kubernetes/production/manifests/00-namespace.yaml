@@ -1,0 +1,23 @@
+# =============================================================================
+# Skillancer K3s Deployment — Dedicated Server
+# =============================================================================
+# Namespace, secrets, and all service deployments for the Hetzner bare metal
+# server. cloudflared runs outside K3s as a systemd service, routing traffic
+# to NodePort services on localhost.
+#
+# Port mapping (cloudflared → K3s NodePort):
+#   skillancer.com     → localhost:3000  → web-market
+#   api.skillancer.com → localhost:4000  → api-gateway
+#   market.skillancer.com → localhost:3100 → web-market (alias)
+#   cockpit.skillancer.com → localhost:3200 → web-cockpit
+#   pod.skillancer.com → localhost:3300 → web-skillpod
+#   admin.skillancer.com → localhost:3400 → admin
+#   metrics.skillancer.com → localhost:3001 → grafana/prometheus
+# =============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: skillancer
+  labels:
+    app.kubernetes.io/part-of: skillancer

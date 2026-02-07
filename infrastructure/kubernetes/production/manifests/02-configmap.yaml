@@ -1,0 +1,21 @@
+# =============================================================================
+# ConfigMap — Shared environment variables
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skillancer-config
+  namespace: skillancer
+data:
+  NODE_ENV: 'production'
+  LOG_LEVEL: 'info'
+  DOMAIN: 'skillancer.com'
+  API_URL: 'https://api.skillancer.com'
+  NEXT_PUBLIC_API_URL: 'https://api.skillancer.com'
+  NEXT_PUBLIC_WS_URL: 'wss://api.skillancer.com'
+  NEXT_PUBLIC_MARKET_URL: 'https://market.skillancer.com'
+  NEXT_PUBLIC_COCKPIT_URL: 'https://cockpit.skillancer.com'
+  NEXT_PUBLIC_POD_URL: 'https://pod.skillancer.com'
+  NEXT_PUBLIC_ADMIN_URL: 'https://admin.skillancer.com'
+  CORS_ORIGINS: 'https://skillancer.com,https://market.skillancer.com,https://cockpit.skillancer.com,https://pod.skillancer.com,https://admin.skillancer.com'
