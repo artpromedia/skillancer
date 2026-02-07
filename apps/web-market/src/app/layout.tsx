@@ -10,6 +10,9 @@ import type { Metadata, Viewport } from 'next';
 
 import '@/styles/globals.css';
 
+// Force dynamic rendering for all pages (no static prerendering)
+export const dynamic = 'force-dynamic';
+
 // CSS variable for font - using system fonts for offline builds
 // In production, this would be Inter from Google Fonts
 const fontClassName = 'font-system';

@@ -371,3 +371,6 @@ function LevelCard({
     </div>
   );
 }
+
+// Alias for backwards compatibility
+export { VerificationBenefitsDisplay as VerificationBenefits };
