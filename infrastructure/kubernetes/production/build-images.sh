@@ -55,6 +55,14 @@ for app in "${FRONTEND_APPS[@]}"; do
   echo "✅ skillancer/$app:latest built"
 done
 
+# Python ML service (built with its own directory as context)
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔨 Building: skillancer/ml-recommendation-svc (Python)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+docker build -t "skillancer/ml-recommendation-svc:latest" services/ml-recommendation-svc/ 2>&1 | tail -5
+echo "✅ skillancer/ml-recommendation-svc:latest built"
+
 echo ""
 echo "============================================"
 echo "✅ All images built!"

@@ -1,0 +1,102 @@
+# =============================================================================
+# ML Recommendation Service — Internal AI/ML engine
+# Python service (FastAPI + PyTorch + scikit-learn)
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-recommendation-svc
+  namespace: skillancer
+  labels:
+    app: ml-recommendation-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-recommendation-svc
+  template:
+    metadata:
+      labels:
+        app: ml-recommendation-svc
+    spec:
+      containers:
+        - name: ml-recommendation-svc
+          image: skillancer/ml-recommendation-svc:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: '8080'
+            - name: HOST
+              value: '0.0.0.0'
+            - name: APP_NAME
+              value: 'ml-recommendation-svc'
+            - name: DEBUG
+              value: 'false'
+            # Override DATABASE_URL with asyncpg driver scheme
+            - name: DATABASE_URL
+              value: 'postgresql+asyncpg://skillancer_admin:$(PG_PASSWORD)@host.k3s.internal:5432/skillancer'
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillancer-secrets
+                  key: REDIS_URL
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillancer-secrets
+                  key: PG_PASSWORD
+            # AI/LLM keys
+            - name: AI_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skillancer-secrets
+                  key: OPENAI_API_KEY
+                  optional: true
+          envFrom:
+            - configMapRef:
+                name: skillancer-config
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 3Gi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 8080
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-recommendation-svc
+  namespace: skillancer
+spec:
+  type: ClusterIP
+  selector:
+    app: ml-recommendation-svc
+  ports:
+    - port: 8080
+      targetPort: 8080

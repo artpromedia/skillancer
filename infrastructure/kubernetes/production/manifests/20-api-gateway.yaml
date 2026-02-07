@@ -44,6 +44,8 @@ spec:
               value: 'http://notification-svc.skillancer.svc.cluster.local:4006'
             - name: AUDIT_SERVICE_URL
               value: 'http://audit-svc.skillancer.svc.cluster.local:3012'
+            - name: ML_RECOMMENDATION_SERVICE_URL
+              value: 'http://ml-recommendation-svc.skillancer.svc.cluster.local:8080'
           envFrom:
             - configMapRef:
                 name: skillancer-config

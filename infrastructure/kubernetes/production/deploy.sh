@@ -156,6 +156,13 @@ for app_entry in "${FRONTEND_APPS[@]}"; do
   log "$app_name built ✓"
 done
 
+# Python ML service (built with its own directory as context)
+log "Building ml-recommendation-svc (Python)..."
+ssh "$SERVER" "cd $DEPLOY_DIR && docker build -t skillancer/ml-recommendation-svc:latest services/ml-recommendation-svc/" || {
+  warn "Failed to build ml-recommendation-svc — skipping"
+}
+log "ml-recommendation-svc built ✓"
+
 # Import images into K3s containerd
 log "Importing images into K3s..."
 for svc in "${BACKEND_SERVICES[@]}"; do
@@ -165,6 +172,7 @@ for app_entry in "${FRONTEND_APPS[@]}"; do
   app_name="${app_entry%%:*}"
   ssh "$SERVER" "docker save skillancer/$app_name:latest | k3s ctr images import -" 2>/dev/null || true
 done
+ssh "$SERVER" "docker save skillancer/ml-recommendation-svc:latest | k3s ctr images import -" 2>/dev/null || true
 
 log "All images built and imported ✓"
 
@@ -231,6 +239,7 @@ ssh "$SERVER" "kubectl -n skillancer create secret generic skillancer-secrets \
   --from-literal=STRIPE_SECRET_KEY='placeholder' \
   --from-literal=STRIPE_WEBHOOK_SECRET='placeholder' \
   --from-literal=STRIPE_PUBLISHABLE_KEY='placeholder' \
+  --from-literal=OPENAI_API_KEY='placeholder' \
   --dry-run=client -o yaml | kubectl apply -f -"
 
 log "Secrets created ✓"
