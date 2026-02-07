@@ -1568,6 +1568,9 @@ importers:
       fastify-plugin:
         specifier: ^4.5.1
         version: 4.5.1
+      ioredis:
+        specifier: ^5.3.2
+        version: 5.9.1
       pino-pretty:
         specifier: ^10.3.0
         version: 10.3.1
@@ -2545,12 +2548,21 @@ importers:
       '@prisma/client':
         specifier: ^5.8.0
         version: 5.22.0(prisma@5.22.0)
+      '@skillancer/audit-client':
+        specifier: workspace:*
+        version: link:../../packages/audit-client
       '@skillancer/cache':
         specifier: workspace:*
         version: link:../../packages/cache
       '@skillancer/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@skillancer/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
+      '@skillancer/metrics':
+        specifier: workspace:*
+        version: link:../../packages/metrics
       '@skillancer/types':
         specifier: workspace:*
         version: link:../../packages/types
