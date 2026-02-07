@@ -12,6 +12,7 @@
     "clean": "rm -rf .next dist node_modules"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.0.0",
     "jose": "^5.2.0",
     "lucide-react": "^0.330.0",
     "next": "^16.1.1",

@@ -24,7 +24,7 @@ import {
   type TimeReportParams,
   type WeeklyReport,
   type DailyReport,
-} from '../lib/api/services/time-tracking';
+} from '../../lib/api/services/time-tracking';
 
 import type { ApiResponse, PaginatedResponse } from '@skillancer/shared-api-client';
 

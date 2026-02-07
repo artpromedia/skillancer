@@ -311,6 +311,9 @@ importers:
 
   apps/web-skillpod:
     dependencies:
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.16(react@18.3.1)
       jose:
         specifier: ^5.2.0
         version: 5.10.0
@@ -1103,6 +1106,21 @@ importers:
       '@types/react':
         specifier: ^18.2.46
         version: 18.3.27
+      tsup:
+        specifier: ^8.0.1
+        version: 8.5.1(postcss@8.5.6)(typescript@5.5.4)
+      typescript:
+        specifier: ~5.5.0
+        version: 5.5.4
+
+  packages/shared/config:
+    devDependencies:
+      '@skillancer/config':
+        specifier: workspace:*
+        version: link:../../config
+      '@types/node':
+        specifier: ^20.10.6
+        version: 20.19.28
       tsup:
         specifier: ^8.0.1
         version: 8.5.1(postcss@8.5.6)(typescript@5.5.4)

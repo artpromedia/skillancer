@@ -23,7 +23,7 @@ import {
   type ProjectMilestone,
   type CreateTaskInput,
   type UpdateTaskInput,
-} from '../lib/api/services/projects';
+} from '../../lib/api/services/projects';
 
 import type { ApiResponse, PaginatedResponse } from '@skillancer/shared-api-client';
 
