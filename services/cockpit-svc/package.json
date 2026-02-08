@@ -27,6 +27,7 @@
     "@skillancer/types": "workspace:*",
     "@skillancer/utils": "workspace:*",
     "bullmq": "^5.0.0",
+    "express": "^4.21.0",
     "fastify": "^4.26.0",
     "google-auth-library": "^9.0.0",
     "googleapis": "^169.0.0",

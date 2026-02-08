@@ -55,6 +55,7 @@ ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 COPY services/auth-svc/package.json ./services/auth-svc/
 
 RUN pnpm install --frozen-lockfile 2>&1 || pnpm install --no-frozen-lockfile
+RUN cd packages/database && npx prisma generate
 
 # =============================================================================
 # Stage: Builder

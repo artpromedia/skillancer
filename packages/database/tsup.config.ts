@@ -14,10 +14,9 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  // Bundle @prisma/client into outputs (tsup/esbuild handles CJS->ESM conversion).
-  // Keep .prisma/client external since PrismaClient loads its engine at runtime.
-  noExternal: ['@prisma/client'],
-  external: ['.prisma/client', '.prisma/client/default'],
+  // Keep @prisma/client external — Node.js CJS interop handles ESM imports from CJS.
+  // Bundling it causes "Dynamic require of .prisma/client/default is not supported".
+  external: ['@prisma/client', '.prisma/client', '.prisma/client/default'],
   treeshake: true,
   onSuccess: hasPrismaTypes
     ? undefined

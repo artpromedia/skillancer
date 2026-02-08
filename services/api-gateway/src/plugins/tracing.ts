@@ -63,13 +63,14 @@ function initializeTracing(): NodeSDK | null {
   return nodeSdk;
 }
 
-function tracingPluginImpl(app: FastifyInstance): void {
+async function tracingPluginImpl(app: FastifyInstance): Promise<void> {
   const config = getConfig();
 
   // Initialize SDK if not already done
   sdk ??= initializeTracing();
 
   if (!sdk) {
+    // No OTLP endpoint configured — skip tracing entirely
     return;
   }
 
@@ -169,7 +170,7 @@ function tracingPluginImpl(app: FastifyInstance): void {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const tracingPlugin = fp(tracingPluginImpl as any, {
+export const tracingPlugin = fp(tracingPluginImpl, {
   name: 'tracing-plugin',
 });
 

@@ -55,6 +55,7 @@ ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 COPY services/cockpit-svc/package.json ./services/cockpit-svc/
 
 RUN pnpm install --frozen-lockfile 2>&1 || pnpm install --no-frozen-lockfile
+RUN cd packages/database && npx prisma generate
 
 # =============================================================================
 # Stage: Builder

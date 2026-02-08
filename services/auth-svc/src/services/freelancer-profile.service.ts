@@ -7,7 +7,6 @@
 import { CacheService } from '@skillancer/cache';
 import {
   prisma,
-  FreelancerAvailability,
   type JobType,
   type FreelancerProfile,
   type UserProfile,
@@ -19,6 +18,16 @@ import { getConfig } from '../config/index.js';
 import { NotFoundError } from '../errors/index.js';
 
 import type { Redis } from 'ioredis';
+
+// FreelancerAvailability was removed from Prisma schema — define locally
+const FreelancerAvailability = {
+  AVAILABLE: 'AVAILABLE',
+  PARTIALLY: 'PARTIALLY',
+  BUSY: 'BUSY',
+  NOT_AVAILABLE: 'NOT_AVAILABLE',
+  ON_VACATION: 'ON_VACATION',
+} as const;
+type FreelancerAvailability = (typeof FreelancerAvailability)[keyof typeof FreelancerAvailability];
 
 // =============================================================================
 // TYPES
