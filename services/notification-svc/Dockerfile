@@ -5,6 +5,7 @@
 # =============================================================================
 
 FROM node:20.19-alpine AS base
+RUN apk add --no-cache openssl
 RUN corepack enable && corepack prepare pnpm@8.15.6 --activate
 WORKDIR /app
 
