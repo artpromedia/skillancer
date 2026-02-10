@@ -8,9 +8,9 @@
 
 import { structlog } from '@skillancer/logger';
 
-import { credentialingService } from '../healthcare/credentialing-service';
-import { exclusionScreeningService } from '../healthcare/exclusion-screening';
-import { licenseVerificationService } from '../healthcare/license-verification';
+import { credentialingService } from '../healthcare/credentialing-service.js';
+import { exclusionScreeningService } from '../healthcare/exclusion-screening.js';
+import { licenseVerificationService } from '../healthcare/license-verification.js';
 
 const logger = structlog.get('credential-monitoring-job');
 
@@ -280,4 +280,3 @@ export const credentialMonitoringJob = {
   schedule: JOB_CONFIG.schedule,
   run: runCredentialMonitoringJob,
 };
-

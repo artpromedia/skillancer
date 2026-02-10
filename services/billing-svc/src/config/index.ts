@@ -98,14 +98,8 @@ export function loadConfig(): Config {
     },
     databaseUrl: process.env.DATABASE_URL,
     redis: (() => {
-      // Support both individual REDIS_HOST/PORT/PASSWORD and REDIS_URL
-      if (process.env.REDIS_HOST) {
-        return {
-          host: process.env.REDIS_HOST,
-          port: process.env.REDIS_PORT,
-          password: process.env.REDIS_PASSWORD,
-        };
-      }
+      // Prioritize REDIS_URL over individual REDIS_HOST/PORT/PASSWORD
+      // (deployment configs like Docker/K8s set REDIS_URL)
       if (process.env.REDIS_URL) {
         try {
           const url = new URL(process.env.REDIS_URL);
@@ -115,8 +109,15 @@ export function loadConfig(): Config {
             password: url.password || process.env.REDIS_PASSWORD,
           };
         } catch {
-          return { host: undefined, port: undefined, password: process.env.REDIS_PASSWORD };
+          // Fall through to REDIS_HOST if URL is malformed
         }
+      }
+      if (process.env.REDIS_HOST) {
+        return {
+          host: process.env.REDIS_HOST,
+          port: process.env.REDIS_PORT,
+          password: process.env.REDIS_PASSWORD,
+        };
       }
       return { host: undefined, port: undefined, password: process.env.REDIS_PASSWORD };
     })(),

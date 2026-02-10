@@ -87,6 +87,19 @@ RUN cd services/cockpit-svc && (pnpm build || true)
 # =============================================================================
 FROM base AS runner
 
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    font-noto-emoji
+
+# Tell Puppeteer to use the installed chromium instead of downloading its own
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 cockpit
 WORKDIR /app

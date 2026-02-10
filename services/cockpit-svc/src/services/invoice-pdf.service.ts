@@ -3,7 +3,6 @@
  * Invoice PDF Service - PDF generation for invoices
  */
 
-import puppeteer from 'puppeteer';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -547,8 +546,23 @@ export class InvoicePdfService {
    * Convert HTML to PDF using Puppeteer
    */
   private async htmlToPdf(html: string): Promise<Buffer> {
-    const browser = await puppeteer.launch({
+    let puppeteer: typeof import('puppeteer');
+    try {
+      puppeteer = await import('puppeteer');
+    } catch {
+      this.logger.error(
+        'puppeteer is not installed. Install it with: pnpm add puppeteer'
+      );
+      throw new Error(
+        'PDF generation unavailable: puppeteer package is not installed. ' +
+        'Run "pnpm add puppeteer" in services/cockpit-svc and ensure Chromium ' +
+        'dependencies are available in the container.'
+      );
+    }
+
+    const browser = await puppeteer.default.launch({
       headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',

@@ -84,23 +84,19 @@ let redisConnection: Redis | null = null;
 export function initializeEscrowJobs(): void {
   if (escrowQueue) return;
 
-  // Create Redis connection
-  const redisOptions: {
-    host: string;
-    port: number;
-    password?: string;
-    maxRetriesPerRequest: null;
-  } = {
-    host: config.redis.host,
-    port: config.redis.port,
-    maxRetriesPerRequest: null,
-  };
-
-  if (config.redis.password) {
-    redisOptions.password = config.redis.password;
+  // Create Redis connection - prefer REDIS_URL for K8s/Docker environments
+  if (process.env.REDIS_URL) {
+    redisConnection = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: null,
+    });
+  } else {
+    redisConnection = new Redis({
+      host: config.redis.host,
+      port: config.redis.port,
+      password: config.redis.password,
+      maxRetriesPerRequest: null,
+    });
   }
-
-  redisConnection = new Redis(redisOptions);
 
   // Create queue
   escrowQueue = new Queue(QUEUE_NAME, {

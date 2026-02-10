@@ -201,7 +201,7 @@ async function logUnsubscribe(
 // ROUTES
 // =============================================================================
 
-export function unsubscribeRoutes(fastify: FastifyInstance): void {
+export async function unsubscribeRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * GET /unsubscribe - Render unsubscribe page (public, no auth required)
    * This is the link users click from emails

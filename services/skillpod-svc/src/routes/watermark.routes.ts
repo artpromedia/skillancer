@@ -224,7 +224,7 @@ export function watermarkRoutes(repository: WatermarkRepository) {
   const detectorService = createWatermarkDetectorService(repository);
   const kasmService = createKasmWatermarkService(repository);
 
-  return function routes(fastify: FastifyInstance): void {
+  return async function routes(fastify: FastifyInstance): Promise<void> {
     // =========================================================================
     // CONFIGURATION MANAGEMENT
     // =========================================================================

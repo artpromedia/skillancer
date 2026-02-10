@@ -72,7 +72,7 @@ const NOTIFICATION_CATEGORIES = [
 // Routes
 // ============================================================================
 
-export function preferencesRoutes(fastify: FastifyInstance): void {
+export async function preferencesRoutes(fastify: FastifyInstance): Promise<void> {
   /**
    * GET /preferences - Get user notification preferences
    */

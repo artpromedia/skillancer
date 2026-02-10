@@ -74,21 +74,19 @@ let redisConnection: Redis | null = null;
 export function initializeBillingJobs(): void {
   if (billingQueue) return;
 
-  // Create Redis connection
-  const redisOptions: {
-    host: string;
-    port: number;
-    password?: string;
-    maxRetriesPerRequest: null;
-  } = {
-    host: config.redis.host,
-    port: config.redis.port,
-    maxRetriesPerRequest: null,
-  };
-  if (config.redis.password) {
-    redisOptions.password = config.redis.password;
+  // Create Redis connection - prefer REDIS_URL for K8s/Docker environments
+  if (process.env.REDIS_URL) {
+    redisConnection = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: null,
+    });
+  } else {
+    redisConnection = new Redis({
+      host: config.redis.host,
+      port: config.redis.port,
+      password: config.redis.password,
+      maxRetriesPerRequest: null,
+    });
   }
-  redisConnection = new Redis(redisOptions);
 
   // Create queue
   billingQueue = new Queue(QUEUE_NAME, {
@@ -139,7 +137,10 @@ export function initializeBillingJobs(): void {
   });
 
   billingWorker.on('failed', (job, error) => {
-    logger.error({ jobName: job?.name, jobId: job?.id, error: error.message }, 'Billing job failed');
+    logger.error(
+      { jobName: job?.name, jobId: job?.id, error: error.message },
+      'Billing job failed'
+    );
   });
 
   logger.info({ queue: QUEUE_NAME }, 'Billing jobs queue and worker initialized');
@@ -205,7 +206,10 @@ export async function schedulePaymentRetry(
     }
   );
 
-  logger.info({ subscriptionId, invoiceId, attemptNumber, retryInDays: retryDays }, 'Scheduled payment retry');
+  logger.info(
+    { subscriptionId, invoiceId, attemptNumber, retryInDays: retryDays },
+    'Scheduled payment retry'
+  );
 }
 
 /**
@@ -237,7 +241,10 @@ export async function scheduleUsageAggregation(
     }
   );
 
-  logger.info({ subscriptionId, scheduledTime: scheduledTime.toISOString() }, 'Scheduled usage aggregation');
+  logger.info(
+    { subscriptionId, scheduledTime: scheduledTime.toISOString() },
+    'Scheduled usage aggregation'
+  );
 }
 
 /**
@@ -388,7 +395,10 @@ async function processPaymentRetry(data: PaymentRetryJobData): Promise<void> {
 
     // If voided or uncollectible, don't retry
     if (invoice.status === 'void' || invoice.status === 'uncollectible') {
-      logger.info({ invoiceId, status: invoice.status }, 'Invoice voided/uncollectible, skipping retry');
+      logger.info(
+        { invoiceId, status: invoice.status },
+        'Invoice voided/uncollectible, skipping retry'
+      );
       return;
     }
 
@@ -396,7 +406,10 @@ async function processPaymentRetry(data: PaymentRetryJobData): Promise<void> {
     await stripeService.payInvoice(invoiceId);
     logger.info({ invoiceId }, 'Successfully paid invoice');
   } catch (error) {
-    logger.error({ invoiceId, error: error instanceof Error ? error.message : 'Unknown error' }, 'Failed to pay invoice');
+    logger.error(
+      { invoiceId, error: error instanceof Error ? error.message : 'Unknown error' },
+      'Failed to pay invoice'
+    );
 
     // Schedule next retry if available
     const nextAttempt = attemptNumber + 1;
@@ -435,7 +448,10 @@ async function processUsageAggregation(data: UsageAggregationJobData): Promise<v
 
     // Check for overage
     if (usage.overageMinutes > 0) {
-      logger.info({ subscriptionId, overageMinutes: usage.overageMinutes }, 'Subscription has overage minutes');
+      logger.info(
+        { subscriptionId, overageMinutes: usage.overageMinutes },
+        'Subscription has overage minutes'
+      );
 
       // Calculate overage cost
       const overageCost = calculateOverageCost(
@@ -446,7 +462,10 @@ async function processUsageAggregation(data: UsageAggregationJobData): Promise<v
       if (overageCost > 0) {
         // Create usage record for billing
         // The actual overage charge will be handled by Stripe's metered billing
-        logger.info({ subscriptionId, overageCost: `$${(overageCost / 100).toFixed(2)}` }, 'Overage cost calculated');
+        logger.info(
+          { subscriptionId, overageCost: `$${(overageCost / 100).toFixed(2)}` },
+          'Overage cost calculated'
+        );
 
         // Send overage notification
         await sendOverageNotification(
@@ -460,7 +479,10 @@ async function processUsageAggregation(data: UsageAggregationJobData): Promise<v
 
     logger.info({ subscriptionId }, 'Usage aggregation completed');
   } catch (error) {
-    logger.error({ subscriptionId, error: error instanceof Error ? error.message : 'Unknown error' }, 'Failed usage aggregation');
+    logger.error(
+      { subscriptionId, error: error instanceof Error ? error.message : 'Unknown error' },
+      'Failed usage aggregation'
+    );
     throw error; // Will trigger retry
   }
 }
@@ -554,7 +576,10 @@ async function sendOverageNotification(
   overageMinutes: number,
   overageCost: number
 ): Promise<void> {
-  logger.info({ userId, subscriptionId, overageMinutes, overageCost: `$${(overageCost / 100).toFixed(2)}` }, 'Sending overage notification');
+  logger.info(
+    { userId, subscriptionId, overageMinutes, overageCost: `$${(overageCost / 100).toFixed(2)}` },
+    'Sending overage notification'
+  );
 
   await billingNotifications.notifyPaymentReceived(
     { userId },
@@ -572,7 +597,10 @@ async function sendTrialEndingSoonNotification(
   trialEndsAt: Date,
   hasPaymentMethod: boolean
 ): Promise<void> {
-  logger.info({ email, plan, trialEndsAt: trialEndsAt.toISOString(), hasPaymentMethod }, 'Sending trial ending soon notification');
+  logger.info(
+    { email, plan, trialEndsAt: trialEndsAt.toISOString(), hasPaymentMethod },
+    'Sending trial ending soon notification'
+  );
 
   // Get user ID from email
   const user = await prisma.user.findFirst({
@@ -600,7 +628,10 @@ async function sendSubscriptionExpiringNotification(
   subscriptionId: string,
   expiresAt: Date
 ): Promise<void> {
-  logger.info({ userId, subscriptionId, expiresAt: expiresAt.toISOString() }, 'Sending subscription expiring notification');
+  logger.info(
+    { userId, subscriptionId, expiresAt: expiresAt.toISOString() },
+    'Sending subscription expiring notification'
+  );
 
   await billingNotifications.notifyPaymentFailed(
     { userId },

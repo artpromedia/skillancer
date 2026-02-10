@@ -40,6 +40,7 @@ async function buildApp() {
   const config = getConfig();
 
   const fastify = Fastify({
+    pluginTimeout: 60000,
     logger: {
       level: config.logLevel,
       transport:

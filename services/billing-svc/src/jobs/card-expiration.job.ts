@@ -65,16 +65,22 @@ let redisConnection: Redis | null = null;
  */
 function getRedisConnection(): Redis {
   if (!redisConnection) {
-    const cfg = getConfig();
-    const options: RedisOptions = {
-      host: cfg.redis.host,
-      port: cfg.redis.port,
-      maxRetriesPerRequest: null,
-    };
-    if (cfg.redis.password) {
-      options.password = cfg.redis.password;
+    if (process.env.REDIS_URL) {
+      redisConnection = new Redis(process.env.REDIS_URL, {
+        maxRetriesPerRequest: null,
+      });
+    } else {
+      const cfg = getConfig();
+      const options: RedisOptions = {
+        host: cfg.redis.host,
+        port: cfg.redis.port,
+        maxRetriesPerRequest: null,
+      };
+      if (cfg.redis.password) {
+        options.password = cfg.redis.password;
+      }
+      redisConnection = new Redis(options);
     }
-    redisConnection = new Redis(options);
   }
   return redisConnection;
 }
@@ -330,10 +336,7 @@ export async function sendCardExpiredNotification(card: ExpiringCard): Promise<v
 /**
  * Calculate days until card expires
  */
-function calculateDaysUntilExpiry(
-  expMonth: number | null,
-  expYear: number | null
-): number {
+function calculateDaysUntilExpiry(expMonth: number | null, expYear: number | null): number {
   if (!expMonth || !expYear) {
     return 0;
   }

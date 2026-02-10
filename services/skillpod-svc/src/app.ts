@@ -86,7 +86,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Create Fastify instance
   const app = Fastify({
-    pluginTimeout: 60000,
+    pluginTimeout: 120000,
     logger: options.logger ?? {
       level: config.logging.level,
       transport: config.logging.pretty
@@ -278,14 +278,14 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       policyExceptionRoutes(api, prisma);
 
       // Kill switch routes
-      api.register(killSwitchRoutes(killSwitchService));
+      await api.register(killSwitchRoutes(killSwitchService));
 
       // Session recording routes
-      api.register(recordingRoutes(recordingService));
+      await api.register(recordingRoutes(recordingService));
 
       // Watermark routes
       const watermarkRepository = createWatermarkRepository(prisma);
-      api.register(watermarkRoutes(watermarkRepository));
+      await api.register(watermarkRoutes(watermarkRepository));
 
       // Learning recommendation routes
       recommendationRoutes(api, {
