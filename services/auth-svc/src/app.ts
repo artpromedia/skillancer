@@ -44,6 +44,7 @@ import { initializeClientProfileService } from './services/client-profile.servic
 import { initializeEducationService } from './services/education.service.js';
 import { initializeFreelancerProfileService } from './services/freelancer-profile.service.js';
 import { initializeMfaService } from './services/mfa.service.js';
+import { initializeMfaRecoveryService } from './services/mfa-recovery.service.js';
 import { initializeOAuthService } from './services/oauth.service.js';
 import { initializePortfolioService } from './services/portfolio.service.js';
 import { initializeProfileCompletionService } from './services/profile-completion.service.js';
@@ -179,6 +180,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   initializeAuthService(redis);
   initializeOAuthService(redis);
   initializeMfaService(redis);
+  initializeMfaRecoveryService(redis);
   initializeStepUpService(redis);
   initializeTrustedDevicesService(redis);
   initializeProfileService(redis);

@@ -227,7 +227,7 @@ class AuthService {
     }
 
     try {
-      final result = await _refreshCallback!(refreshToken);
+      final result = await _refreshCallback(refreshToken);
       if (result != null && result.containsKey('token')) {
         final newToken = result['token'] as String;
         final newRefreshToken = result['refreshToken'] as String?;

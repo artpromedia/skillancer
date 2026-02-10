@@ -7,12 +7,12 @@
 
 import { prisma } from '@skillancer/database';
 import { logger } from '@skillancer/logger';
-import { PlatformRegistry } from '../integrations/platform-connector';
-import { getWorkHistoryVerifier } from '../verification/work-history-verifier';
-import { getEarningsVerifier } from '../verification/earnings-verifier';
-import { getReviewVerifier } from '../verification/review-verifier';
-import { getPortableCredentialService } from '../credentials/portable-credential';
-import { getReputationScoreService } from '../profile/reputation-score';
+import { getConnector } from '../integrations/platform-connector.js';
+import { getWorkHistoryVerifier } from '../verification/work-history-verifier.js';
+import { getEarningsVerifier } from '../verification/earnings-verifier.js';
+import { getReviewVerifier } from '../verification/review-verifier.js';
+import { getPortableCredentialService } from '../credentials/portable-credential.js';
+import { getReputationScoreService } from '../profile/reputation-score.js';
 
 // Types
 interface JobResult {
@@ -47,8 +47,10 @@ const jobProcessors: Record<string, JobProcessor> = {
       return { success: false, error: 'Platform not connected' };
     }
 
-    const connector = PlatformRegistry.get(platformId);
-    if (!connector) {
+    let connector;
+    try {
+      connector = getConnector(platformId);
+    } catch {
       return { success: false, error: 'Platform connector not found' };
     }
 
@@ -801,4 +803,3 @@ export async function checkExpiringCredentials(): Promise<void> {
   // In production, this would trigger notification emails
   logger.info('Found expiring credentials', { count: expiringCredentials.length });
 }
-

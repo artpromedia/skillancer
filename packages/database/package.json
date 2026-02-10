@@ -4,22 +4,21 @@
   "private": true,
   "description": "Prisma schema and database utilities for Skillancer",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
     "./client": {
       "types": "./dist/client.d.ts",
-      "import": "./dist/client.mjs",
+      "import": "./dist/client.js",
       "require": "./dist/client.js"
     },
     "./extensions": {
       "types": "./dist/extensions/index.d.ts",
-      "import": "./dist/extensions/index.mjs",
+      "import": "./dist/extensions/index.js",
       "require": "./dist/extensions/index.js"
     }
   },

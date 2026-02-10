@@ -86,6 +86,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Create Fastify instance
   const app = Fastify({
+    pluginTimeout: 60000,
     logger: options.logger ?? {
       level: config.logging.level,
       transport: config.logging.pretty

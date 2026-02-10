@@ -159,7 +159,7 @@ async function getPublicEducationHandler(
 
 export async function educationRoutes(fastify: FastifyInstance): Promise<void> {
   // Authenticated routes
-  await fastify.register((authenticatedRoutes) => {
+  await fastify.register(async (authenticatedRoutes) => {
     authenticatedRoutes.addHook('preHandler', authMiddleware);
     authenticatedRoutes.addHook('preHandler', profileRateLimitHook);
 

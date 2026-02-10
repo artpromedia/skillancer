@@ -110,7 +110,7 @@ async function getProfileCompletionSuggestionsHandler(
 // ROUTE REGISTRATION
 // =============================================================================
 
-export function profileCompletionRoutes(fastify: FastifyInstance): void {
+export async function profileCompletionRoutes(fastify: FastifyInstance): Promise<void> {
   // All routes require authentication
   fastify.addHook('preHandler', authMiddleware);
   fastify.addHook('preHandler', profileRateLimitHook);

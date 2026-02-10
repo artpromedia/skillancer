@@ -83,11 +83,11 @@ const contactVerificationRoutes: FastifyPluginAsync = async (fastify) => {
   // ===========================================================================
 
   /**
-   * GET /verification/status
-   * Get current user's verification status
+   * GET /verification/contact-status
+   * Get current user's contact verification status (email/phone)
    */
   fastify.get(
-    '/status',
+    '/contact-status',
     {
       preHandler: [authMiddleware],
     },

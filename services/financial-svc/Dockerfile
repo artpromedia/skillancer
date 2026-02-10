@@ -48,6 +48,8 @@ COPY packages/database ./packages/database
 COPY services/financial-svc ./services/financial-svc
 COPY tsconfig.json ./
 
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+
 # Build packages and service
 RUN pnpm --filter @skillancer/config build && \
     pnpm --filter @skillancer/database build && \

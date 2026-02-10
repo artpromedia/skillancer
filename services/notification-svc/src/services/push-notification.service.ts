@@ -79,7 +79,7 @@ export interface PushSendResult {
 // ============================================================================
 
 class PushNotificationServiceImpl {
-  private readonly config = getConfig();
+  private get config() { return getConfig(); }
 
   /**
    * Check if push notifications are enabled

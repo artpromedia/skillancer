@@ -183,7 +183,7 @@ async function getPublicWorkHistoryHandler(
 
 export async function workHistoryRoutes(fastify: FastifyInstance): Promise<void> {
   // Authenticated routes
-  await fastify.register((authenticatedRoutes) => {
+  await fastify.register(async (authenticatedRoutes) => {
     authenticatedRoutes.addHook('preHandler', authMiddleware);
     authenticatedRoutes.addHook('preHandler', profileRateLimitHook);
 

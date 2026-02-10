@@ -1,0 +1,10 @@
+#!/bin/bash
+# Update Firebase secrets in K8s
+kubectl -n skillancer patch secret skillancer-secrets --type='merge' -p "{
+  \"stringData\": {
+    \"FIREBASE_PROJECT_ID\": \"skillancer\",
+    \"FIREBASE_CLIENT_EMAIL\": \"firebase-adminsdk-iw5qy@skillancer.iam.gserviceaccount.com\",
+    \"FIREBASE_PRIVATE_KEY\": \"-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCfU7OPctn0Es1h\nkSTCAIItUjLYjG8ptF/Ai9uDCmfgKCzYU5JGXBr8NUdVYB5mdCbxXbtM/IQqf9Xi\nyms9l29mSF4aBiaF2jkk9Osdk1/lBb6RoYQL5teEeZmmG4hcUqtNKYbI6LJOkKTz\ndJaeSmMLzdofB0dOpxaxiVaE0udj2sGmKgqGpSigxQQ+2yx81udbCNWFiubhJ4nY\n4CjT5RfbriXfspvlesKjuW78XwfcE9lEX4VE4s8uBmUg016eYIUM5QtYZfAz4s4i\n01BUFiF3d2G/jbBVABcNVLknm6XVbj+i7xBMvvuWXWSqRMCSnAvjGTOheOyfsIfQ\n167iBF49AgMBAAECggEAA3+704Rm73KDQqeEmmMW+MZTmghZf523tZuMrk/J8LUJ\nKRYKwhNPP2cvIhuah075NPdFP/9SqrlEefbOjJt5BZLEyEcGzQ06EIr1Z+Ce7EFo\nSjv1EarX5E+kVW7I25gwLWFiVaKwmcOY78TJcv/4tV9nsSNAiGRofe0hcojMLpfs\nJlZhUT8wurzVwVuUELrhCVD3CYDItNL4k7aZPRhQQAXrAtYJR4JFk77+MrTacxB+\nKxilffExGXXsiyvbGKQF61i2PKHS/nwMF+xsCQVRg+6mEadHDAJY2VYNatJqhdtz\nPPhNObRr7AmXvHwBtpHL7PdqX9BUI9D2LtNbeX8HOQKBgQDLuec08NHeuv3NLUII\n4PQ9s7RbP7qrqsnyQZVliNtyxUHM/+zk79hsfUxKa81e5LUZlHYM0RUu2LXYNHSw\nsPHB+Ka8/n7Kl9c3P+oUmZ40wD+nJrOCNjswWc6kHOmv+M0BcbT4arEDKm4LkcrH\nCxO/RL19Ubm5VHb9Wsw5KkYpGQKBgQDINVxJZplwxmrEqe3odOWu/91f/39aGR5r\n2LeVaZ9C7qOopfS9qoTtmoTPPYnwfB29fg1ieDehMgwz+J3Gm4vsDpKaEBNqCOUF\nqQ5Tnh/IkDwhh8Jxe2n9ewXhqNoCQ58i0IC3ss3H9Y8/0wTyADc8V1PH4UDU6GZR\n5EXWPQ5uxQKBgDcJhQ3HVVtPtws8A8/0PeeBaeMQ53RDEoWQ9DRW8boi0jD4nt4G\ncbh1bSvZzcSqEsbTVcUGoythvlanbTLiyp01eI4sTsKanLi/WpSwH45utYOJsAso\nbXsVd/7cFMHGfFO8jUBjSmjpiIs1msuFEZOllW+KqZsI15CAfBWhdwzZAoGBAL7E\n0aYDRGwINI4mWVJpqL3igh9KBiBk1O7wdqXBGgcd+wXk9FqRk84PsUMDoV9r9K6t\n4LUWVfOcC7Kt0DEB4AbTL+/rJ4Se6xNErikQ/7oNba6JfMbDURA+XDFUwj7sDkOP\nJ0di8d/55UBso0aw2/D8SRGpWixFMdIQUFc+oHT9AoGAeojYQiJfVmhAHwAcwNOs\ntSDbIxmOhbDtRuiskQcWfTWLpga1Zn6mL++lsKBpWgiJeMlkgLrUy2Q++a5as7Q2\n5OJ7VoPVFM+/AKRxeFWaM4e7pPmfpdL8INpR+rYCIQOjvHz+b4AQwdGmqTgR3SK5\nVe9cZIX/+hWYOa5cCP2Qras=\n-----END PRIVATE KEY-----\n\"
+  }
+}"
+echo "Firebase secrets updated successfully"

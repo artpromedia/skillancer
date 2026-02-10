@@ -238,7 +238,7 @@ const maskPhiSchema = z.object({
 // ROUTE PLUGIN
 // =============================================================================
 
-export function hipaaRoutes(fastify: FastifyInstance): void {
+export async function hipaaRoutes(fastify: FastifyInstance): Promise<void> {
   // Apply authentication to all routes
   fastify.addHook('preHandler', authMiddleware);
 
@@ -255,7 +255,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Enable HIPAA compliance for a tenant',
         tags: ['HIPAA'],
-        body: enableHipaaSchema,
         response: {
           200: {
             type: 'object',
@@ -345,7 +344,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
           },
           required: ['tenantId'],
         },
-        body: updateSettingsSchema,
       },
     },
     async (request, reply) => {
@@ -398,7 +396,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Request a Business Associate Agreement',
         tags: ['HIPAA'],
-        body: requestBaaSchema,
       },
       preHandler: [rateLimitMiddleware('mfa')],
     },
@@ -430,7 +427,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Complete BAA signing (admin only)',
         tags: ['HIPAA'],
-        body: completeBaaSchema,
       },
     },
     async (request, reply) => {
@@ -464,7 +460,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Check if user can access PHI',
         tags: ['HIPAA'],
-        body: checkPhiAccessSchema,
       },
     },
     async (request, reply) => {
@@ -590,7 +585,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Start a HIPAA training session',
         tags: ['HIPAA'],
-        body: startTrainingSchema,
       },
     },
     async (request, reply) => {
@@ -618,7 +612,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Record training completion',
         tags: ['HIPAA'],
-        body: completeTrainingSchema,
       },
     },
     async (request, reply) => {
@@ -661,7 +654,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Report a potential breach incident',
         tags: ['HIPAA'],
-        body: reportBreachSchema,
       },
       preHandler: [rateLimitMiddleware('mfa')],
     },
@@ -775,7 +767,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
           },
           required: ['incidentId'],
         },
-        body: updateBreachStatusSchema,
       },
     },
     async (request, reply) => {
@@ -871,7 +862,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
           },
           required: ['incidentId'],
         },
-        body: notifyAffectedSchema,
       },
     },
     async (request, reply) => {
@@ -904,7 +894,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
           },
           required: ['incidentId'],
         },
-        body: investigationFindingsSchema,
       },
     },
     async (request, reply) => {
@@ -964,7 +953,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Encrypt PHI data',
         tags: ['HIPAA'],
-        body: encryptPhiSchema,
       },
     },
     async (request, reply) => {
@@ -990,7 +978,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Decrypt PHI data',
         tags: ['HIPAA'],
-        body: decryptPhiSchema,
       },
     },
     async (request, reply) => {
@@ -1032,7 +1019,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Tokenize PHI value',
         tags: ['HIPAA'],
-        body: tokenizePhiSchema,
       },
     },
     async (request, reply) => {
@@ -1060,7 +1046,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Detokenize PHI value',
         tags: ['HIPAA'],
-        body: detokenizePhiSchema,
       },
     },
     async (request, reply) => {
@@ -1100,7 +1085,6 @@ export function hipaaRoutes(fastify: FastifyInstance): void {
       schema: {
         description: 'Mask PHI value for display',
         tags: ['HIPAA'],
-        body: maskPhiSchema,
       },
     },
     async (request, reply) => {

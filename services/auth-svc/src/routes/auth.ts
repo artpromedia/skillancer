@@ -77,32 +77,26 @@ async function registerHandler(
 
   const { user, verificationToken } = await authService.register(data);
 
-  // Send verification email via notification service
-  try {
-    await getNotificationClient().sendEmailVerification(
-      user.id,
-      user.email,
-      verificationToken
-    );
-    request.log.info({ userId: user.id }, 'Verification email sent');
-  } catch (error) {
-    // Log error but don't fail registration
-    request.log.error(
-      { userId: user.id, error: error instanceof Error ? error.message : 'Unknown error' },
-      'Failed to send verification email'
-    );
-  }
+  // Send verification email via notification service (fire-and-forget, don't block registration)
+  getNotificationClient()
+    .sendEmailVerification(user.id, user.email, verificationToken)
+    .then(() => {
+      request.log.info({ userId: user.id }, 'Verification email sent');
+    })
+    .catch((error: unknown) => {
+      // Log error but don't fail registration
+      request.log.error(
+        { userId: user.id, error: error instanceof Error ? error.message : 'Unknown error' },
+        'Failed to send verification email'
+      );
+    });
 
-  // Send welcome email
-  try {
-    await getNotificationClient().sendWelcomeEmail(
-      user.id,
-      user.email,
-      user.firstName
-    );
-  } catch {
-    // Welcome email is non-critical
-  }
+  // Send welcome email (fire-and-forget)
+  getNotificationClient()
+    .sendWelcomeEmail(user.id, user.email, user.firstName)
+    .catch(() => {
+      // Welcome email is non-critical
+    });
 
   void reply.status(201).send({
     success: true,

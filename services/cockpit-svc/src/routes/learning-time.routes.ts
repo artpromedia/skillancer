@@ -7,9 +7,9 @@ import { PrismaClient, LearningGoalType, GoalPeriodType, GoalStatus } from '@ski
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 
-import { LearningGoalRepository } from '../repositories/learning-goal.repository';
-import { LearningTimeEntryRepository } from '../repositories/learning-time-entry.repository';
-import { SkillLearningProgressRepository } from '../repositories/skill-learning-progress.repository';
+import { LearningGoalRepository } from '../repositories/learning-goal.repository.js';
+import { LearningTimeEntryRepository } from '../repositories/learning-time-entry.repository.js';
+import { SkillLearningProgressRepository } from '../repositories/skill-learning-progress.repository.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -240,4 +240,3 @@ router.get('/skills', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 export default router;
-

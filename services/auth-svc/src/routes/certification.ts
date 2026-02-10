@@ -247,7 +247,7 @@ async function unverifyCertificationHandler(
 
 export async function certificationRoutes(fastify: FastifyInstance): Promise<void> {
   // Authenticated routes
-  await fastify.register((authenticatedRoutes) => {
+  await fastify.register(async (authenticatedRoutes) => {
     authenticatedRoutes.addHook('preHandler', authMiddleware);
     authenticatedRoutes.addHook('preHandler', profileRateLimitHook);
 
@@ -262,7 +262,7 @@ export async function certificationRoutes(fastify: FastifyInstance): Promise<voi
   });
 
   // Admin routes
-  await fastify.register((adminRoutes) => {
+  await fastify.register(async (adminRoutes) => {
     adminRoutes.addHook('preHandler', authMiddleware);
     adminRoutes.addHook('preHandler', adminMiddleware);
 

@@ -140,16 +140,13 @@ export function buildRedisUrl(config: RedisConfig): string {
  * const redis = createRedisClientFromUrl('redis://localhost:6379/0');
  * ```
  */
-export function createRedisClientFromUrl(
-  url: string,
-  options?: Partial<RedisOptions>
-): Redis {
+export function createRedisClientFromUrl(url: string, options?: Partial<RedisOptions>): Redis {
   const client = new Redis(url, {
     maxRetriesPerRequest: 3,
     connectTimeout: 10000,
     commandTimeout: 5000,
     enableReadyCheck: true,
-    lazyConnect: false,
+    lazyConnect: true,
     retryStrategy: (times: number) => {
       if (times > 10) return null;
       return Math.min(times * 1000, 30000);
@@ -159,6 +156,11 @@ export function createRedisClientFromUrl(
 
   client.on('error', (error) => {
     console.error('[Redis] Connection error:', error.message);
+  });
+
+  // Connect after error handler is registered to prevent unhandled error events
+  client.connect().catch((err) => {
+    console.error('[Redis] Initial connection failed:', err.message);
   });
 
   return client;

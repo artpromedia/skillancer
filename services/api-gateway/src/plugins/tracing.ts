@@ -57,8 +57,13 @@ function initializeTracing(): NodeSDK | null {
     ],
   });
 
-  nodeSdk.start();
-  console.log('[Tracing] OpenTelemetry initialized with OTLP exporter');
+  try {
+    nodeSdk.start();
+    console.log('[Tracing] OpenTelemetry initialized with OTLP exporter');
+  } catch (error) {
+    console.warn('[Tracing] Failed to start OpenTelemetry SDK, continuing without tracing:', error);
+    return null;
+  }
 
   return nodeSdk;
 }

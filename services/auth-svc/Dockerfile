@@ -68,6 +68,8 @@ COPY packages/ ./packages/
 COPY services/auth-svc ./services/auth-svc
 COPY tsconfig.json ./
 
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+
 RUN cd packages/config && (pnpm build 2>/dev/null || true)
 RUN cd packages/types && (pnpm build 2>/dev/null || true)
 RUN cd packages/utils && (pnpm build 2>/dev/null || true)

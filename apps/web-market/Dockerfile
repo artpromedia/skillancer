@@ -72,6 +72,17 @@ RUN cd packages/ui && (pnpm build 2>/dev/null || true)
 RUN cd packages/api-client && (pnpm build 2>/dev/null || true)
 RUN cd packages/auth && (pnpm build 2>/dev/null || true)
 RUN cd packages/shared/api-client && (pnpm build 2>/dev/null || true)
+
+# Firebase client-side config (inlined at build time by Next.js)
+ENV NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSyAgykz7phejxvyhbvPDrtZBDV325hq8O2E"
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="skillancer.firebaseapp.com"
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID="skillancer"
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="skillancer.firebasestorage.app"
+ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="773387043020"
+ENV NEXT_PUBLIC_FIREBASE_APP_ID="1:773387043020:web:86315babe632dd9423c269"
+ENV NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-K5W6J7DN7E"
+ENV NEXT_PUBLIC_FIREBASE_VAPID_KEY="BIb86-S6IK_6bEJEoRmJOSHHQwSCOMG6QZA3GVh2KXrAGj9wOI1fSI1YQVOMNx0KGHaC6L5NWjLDTz18aUtPKVg"
+
 RUN cd apps/web-market && (pnpm build || true)
 
 # =============================================================================

@@ -266,7 +266,7 @@ async function getPublicPortfolioHandler(
 
 export async function portfolioRoutes(fastify: FastifyInstance): Promise<void> {
   // Authenticated routes
-  await fastify.register((authenticatedRoutes) => {
+  await fastify.register(async (authenticatedRoutes) => {
     authenticatedRoutes.addHook('preHandler', authMiddleware);
     authenticatedRoutes.addHook('preHandler', profileRateLimitHook);
 

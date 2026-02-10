@@ -51,9 +51,9 @@ export function getServiceRoutes(): ServiceRoute[] {
   return [
     {
       prefix: '/api/auth',
-      upstream: config.services.auth,
-      stripPrefix: false,
-      timeout: 10000,
+      upstream: `${config.services.auth}/auth`,
+      stripPrefix: true,
+      timeout: 30000,
       retries: 1,
       auth: 'none',
       serviceName: 'auth',
@@ -120,7 +120,8 @@ export function getServiceRoutes(): ServiceRoute[] {
       retries: 2,
       auth: 'required',
       serviceName: 'executive',
-      description: 'Executive Suite - high-value client engagements, dedicated workspaces, integration hub',
+      description:
+        'Executive Suite - high-value client engagements, dedicated workspaces, integration hub',
     },
     {
       prefix: '/api/financial',
@@ -131,7 +132,8 @@ export function getServiceRoutes(): ServiceRoute[] {
       auth: 'required',
       serviceName: 'financial',
       rateLimit: { max: 30, timeWindow: '1 minute' },
-      description: 'Financial Services - Skillancer Cards, invoice financing, tax vault, business banking',
+      description:
+        'Financial Services - Skillancer Cards, invoice financing, tax vault, business banking',
     },
     {
       prefix: '/api/talent-graph',
@@ -151,7 +153,8 @@ export function getServiceRoutes(): ServiceRoute[] {
       retries: 1,
       auth: 'required',
       serviceName: 'intelligence',
-      description: 'Outcome Intelligence - engagement outcomes, success predictions, risk alerts, benchmarks',
+      description:
+        'Outcome Intelligence - engagement outcomes, success predictions, risk alerts, benchmarks',
     },
     {
       prefix: '/api/copilot',
@@ -162,7 +165,8 @@ export function getServiceRoutes(): ServiceRoute[] {
       auth: 'required',
       serviceName: 'copilot',
       rateLimit: { max: 50, timeWindow: '1 minute' },
-      description: 'AI Copilot - proposal drafts, rate suggestions, profile optimization, market insights',
+      description:
+        'AI Copilot - proposal drafts, rate suggestions, profile optimization, market insights',
     },
   ];
 }

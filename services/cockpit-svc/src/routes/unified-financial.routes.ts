@@ -12,9 +12,9 @@ import {
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 
-import { UnifiedTransactionRepository } from '../repositories/unified-transaction.repository';
-import { ReportGeneratorService } from '../services/report-generator.service';
-import { UnifiedFinancialService } from '../services/unified-financial.service';
+import { UnifiedTransactionRepository } from '../repositories/unified-transaction.repository.js';
+import { ReportGeneratorService } from '../services/report-generator.service.js';
+import { UnifiedFinancialService } from '../services/unified-financial.service.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -198,4 +198,3 @@ router.get('/monthly-trend', async (req: Request, res: Response, next: NextFunct
 });
 
 export default router;
-

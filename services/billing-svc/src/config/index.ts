@@ -97,11 +97,29 @@ export function loadConfig(): Config {
       corsOrigins: process.env.CORS_ORIGINS?.split(','),
     },
     databaseUrl: process.env.DATABASE_URL,
-    redis: {
-      host: process.env.REDIS_HOST,
-      port: process.env.REDIS_PORT,
-      password: process.env.REDIS_PASSWORD,
-    },
+    redis: (() => {
+      // Support both individual REDIS_HOST/PORT/PASSWORD and REDIS_URL
+      if (process.env.REDIS_HOST) {
+        return {
+          host: process.env.REDIS_HOST,
+          port: process.env.REDIS_PORT,
+          password: process.env.REDIS_PASSWORD,
+        };
+      }
+      if (process.env.REDIS_URL) {
+        try {
+          const url = new URL(process.env.REDIS_URL);
+          return {
+            host: url.hostname,
+            port: url.port || '6379',
+            password: url.password || process.env.REDIS_PASSWORD,
+          };
+        } catch {
+          return { host: undefined, port: undefined, password: process.env.REDIS_PASSWORD };
+        }
+      }
+      return { host: undefined, port: undefined, password: process.env.REDIS_PASSWORD };
+    })(),
 
     stripe: {
       secretKey: process.env.STRIPE_SECRET_KEY,

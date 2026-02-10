@@ -8,14 +8,14 @@ const hasPrismaTypes = existsSync(prismaClientPath);
 
 export default defineConfig({
   entry: ['src/index.ts', 'src/client.ts', 'src/extensions/index.ts'],
-  format: ['cjs', 'esm'],
+  // CJS only — @prisma/client v5 is CJS-only and cannot be re-exported via ESM
+  // named exports in Node.js. Services with "type": "module" can still import CJS.
+  format: ['cjs'],
   // Only generate DTS if Prisma types are available
   dts: hasPrismaTypes,
   splitting: false,
   sourcemap: true,
   clean: true,
-  // Keep @prisma/client external — Node.js CJS interop handles ESM imports from CJS.
-  // Bundling it causes "Dynamic require of .prisma/client/default is not supported".
   external: ['@prisma/client', '.prisma/client', '.prisma/client/default'],
   treeshake: true,
   onSuccess: hasPrismaTypes

@@ -85,6 +85,29 @@ function hasSqlInjection(input: string): boolean {
   );
 }
 
+/** Extract all string values from an object recursively (skipping keys like 'password') */
+function extractStringValues(
+  obj: Record<string, unknown>,
+  skipKeys = new Set(['password', 'token', 'secret'])
+): string[] {
+  const values: string[] = [];
+  for (const [key, value] of Object.entries(obj)) {
+    if (skipKeys.has(key)) continue;
+    if (typeof value === 'string') {
+      values.push(value);
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === 'string') values.push(item);
+        else if (item && typeof item === 'object')
+          values.push(...extractStringValues(item as Record<string, unknown>, skipKeys));
+      }
+    } else if (value && typeof value === 'object') {
+      values.push(...extractStringValues(value as Record<string, unknown>, skipKeys));
+    }
+  }
+  return values;
+}
+
 interface SecurityPluginOptions {
   /**
    * Enable security headers
@@ -122,13 +145,16 @@ interface SecurityPluginOptions {
   auditLogging?: boolean;
 }
 
-function securityPluginImpl(app: FastifyInstance, options: SecurityPluginOptions = {}): void {
+async function securityPluginImpl(
+  app: FastifyInstance,
+  options: SecurityPluginOptions = {}
+): Promise<void> {
   const {
     headers = true,
     validation = true,
     sizeLimits = true,
     maxBodySize = 1024 * 1024, // 1MB
-    skipValidation = ['/health', '/ready', '/metrics'],
+    skipValidation = ['/health', '/ready', '/metrics', '/api/auth'],
     auditLogging = true,
   } = options;
 
@@ -150,29 +176,31 @@ function securityPluginImpl(app: FastifyInstance, options: SecurityPluginOptions
         return;
       }
 
-      // Validate request body
+      // Validate request body - check individual string values, not serialized JSON
       if (request.body && typeof request.body === 'object') {
-        const bodyString = JSON.stringify(request.body);
+        const stringValues = extractStringValues(request.body as Record<string, unknown>);
 
-        if (hasSqlInjection(bodyString)) {
-          request.log.warn(
-            { type: 'sql_injection_attempt', ip: request.ip },
-            'SQL injection attempt detected'
-          );
-          return reply.status(400).send({ error: 'Invalid request content' });
-        }
+        for (const value of stringValues) {
+          if (hasSqlInjection(value)) {
+            request.log.warn(
+              { type: 'sql_injection_attempt', ip: request.ip },
+              'SQL injection attempt detected'
+            );
+            return reply.status(400).send({ error: 'Invalid request content' });
+          }
 
-        if (INJECTION_PATTERNS.noSqlInjection.test(bodyString)) {
-          request.log.warn(
-            { type: 'nosql_injection_attempt', ip: request.ip },
-            'NoSQL injection attempt detected'
-          );
-          return reply.status(400).send({ error: 'Invalid request content' });
-        }
+          if (INJECTION_PATTERNS.noSqlInjection.test(value)) {
+            request.log.warn(
+              { type: 'nosql_injection_attempt', ip: request.ip },
+              'NoSQL injection attempt detected'
+            );
+            return reply.status(400).send({ error: 'Invalid request content' });
+          }
 
-        if (INJECTION_PATTERNS.xssPatterns.test(bodyString)) {
-          request.log.warn({ type: 'xss_attempt', ip: request.ip }, 'XSS attempt detected');
-          return reply.status(400).send({ error: 'Invalid request content' });
+          if (INJECTION_PATTERNS.xssPatterns.test(value)) {
+            request.log.warn({ type: 'xss_attempt', ip: request.ip }, 'XSS attempt detected');
+            return reply.status(400).send({ error: 'Invalid request content' });
+          }
         }
       }
 
