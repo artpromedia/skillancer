@@ -401,6 +401,9 @@ model UserProfile {
   showRate     Boolean @default(true) @map("show_rate")
   showLocation Boolean @default(true) @map("show_location")
 
+  // Skills
+  skills String[] @db.VarChar(100)
+
   // Completeness tracking
   completenessScore Int @default(0) @map("completeness_score")
 
@@ -13937,7 +13940,7 @@ model WorkRelationship {
 
   strength         String?               // STRONG, MODERATE, WEAK
   collaborationScore Int?                @map("collaboration_score")
-  endorsement      Int                   @default(0)
+  endorsement      String?               @db.Text
   skills           String[]
   notes            String?               @db.Text
 

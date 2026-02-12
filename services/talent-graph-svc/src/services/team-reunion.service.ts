@@ -459,7 +459,7 @@ export class TeamReunionService {
       startDate: Date;
       endDate?: Date | null;
     };
-    return (relationships as RelationshipWithUsers[]).map((rel) => {
+    return (relationships as unknown as RelationshipWithUsers[]).map((rel) => {
       const colleague = rel.userId === userId ? rel.relatedUser : rel.user;
       return {
         userId: colleague.id,
