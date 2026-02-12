@@ -50,6 +50,16 @@ const configSchema = z.object({
       privateKey: z.string().optional(),
       callbackUrl: z.string().optional(),
     }),
+    facebook: z.object({
+      appId: z.string().optional(),
+      appSecret: z.string().optional(),
+      callbackUrl: z.string().optional(),
+    }),
+    linkedin: z.object({
+      clientId: z.string().optional(),
+      clientSecret: z.string().optional(),
+      callbackUrl: z.string().optional(),
+    }),
   }),
 
   // URLs
@@ -215,6 +225,20 @@ export function getConfig(): Config {
         callbackUrl:
           env['APPLE_CALLBACK_URL'] ??
           `${env['API_URL'] ?? 'http://localhost:4001'}/auth/oauth/apple/callback`,
+      },
+      facebook: {
+        appId: env['FACEBOOK_APP_ID'],
+        appSecret: env['FACEBOOK_APP_SECRET'],
+        callbackUrl:
+          env['FACEBOOK_CALLBACK_URL'] ??
+          `${env['API_URL'] ?? 'http://localhost:4001'}/auth/oauth/facebook/callback`,
+      },
+      linkedin: {
+        clientId: env['LINKEDIN_CLIENT_ID'],
+        clientSecret: env['LINKEDIN_CLIENT_SECRET'],
+        callbackUrl:
+          env['LINKEDIN_CALLBACK_URL'] ??
+          `${env['API_URL'] ?? 'http://localhost:4001'}/auth/oauth/linkedin/callback`,
       },
     },
 

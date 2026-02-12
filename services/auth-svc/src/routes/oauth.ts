@@ -249,6 +249,128 @@ async function appleCallbackHandler(
   }
 }
 
+/**
+ * GET /auth/oauth/facebook - Initiate Facebook OAuth
+ */
+async function facebookInitHandler(
+  request: FastifyRequest<{ Querystring: { redirect_url?: string } }>,
+  reply: FastifyReply
+): Promise<void> {
+  const oauthService = getOAuthService();
+
+  const { url } = await oauthService.getFacebookAuthUrl(request.query.redirect_url);
+
+  void reply.redirect(url);
+}
+
+/**
+ * GET /auth/oauth/facebook/callback - Facebook OAuth callback
+ */
+async function facebookCallbackHandler(
+  request: FastifyRequest<{ Querystring: OAuthCallbackQuery }>,
+  reply: FastifyReply
+): Promise<void> {
+  const query = oauthCallbackQuerySchema.parse(request.query);
+
+  // Handle OAuth errors
+  if (query.error) {
+    request.log.warn(
+      { error: query.error, description: query.error_description },
+      'Facebook OAuth error'
+    );
+    void reply.redirect(getErrorRedirectUrl(query.error, query.error_description));
+    return;
+  }
+
+  if (!query.code || !query.state) {
+    void reply.redirect(getErrorRedirectUrl('invalid_request', 'Missing code or state'));
+    return;
+  }
+
+  try {
+    const oauthService = getOAuthService();
+    const deviceInfo = getDeviceInfo(request);
+
+    const result = await oauthService.handleFacebookCallback(query.code, query.state, deviceInfo);
+
+    request.log.info(
+      { userId: result.user.id, isNewUser: result.isNewUser },
+      'Facebook OAuth successful'
+    );
+
+    void reply.redirect(getSuccessRedirectUrl(result.tokens));
+  } catch (error) {
+    request.log.error({ error }, 'Facebook OAuth callback failed');
+
+    if (error instanceof OAuthError) {
+      void reply.redirect(getErrorRedirectUrl('oauth_error', error.message));
+    } else {
+      void reply.redirect(getErrorRedirectUrl('server_error', 'Authentication failed'));
+    }
+  }
+}
+
+/**
+ * GET /auth/oauth/linkedin - Initiate LinkedIn OAuth
+ */
+async function linkedinInitHandler(
+  request: FastifyRequest<{ Querystring: { redirect_url?: string } }>,
+  reply: FastifyReply
+): Promise<void> {
+  const oauthService = getOAuthService();
+
+  const { url } = await oauthService.getLinkedInAuthUrl(request.query.redirect_url);
+
+  void reply.redirect(url);
+}
+
+/**
+ * GET /auth/oauth/linkedin/callback - LinkedIn OAuth callback
+ */
+async function linkedinCallbackHandler(
+  request: FastifyRequest<{ Querystring: OAuthCallbackQuery }>,
+  reply: FastifyReply
+): Promise<void> {
+  const query = oauthCallbackQuerySchema.parse(request.query);
+
+  // Handle OAuth errors
+  if (query.error) {
+    request.log.warn(
+      { error: query.error, description: query.error_description },
+      'LinkedIn OAuth error'
+    );
+    void reply.redirect(getErrorRedirectUrl(query.error, query.error_description));
+    return;
+  }
+
+  if (!query.code || !query.state) {
+    void reply.redirect(getErrorRedirectUrl('invalid_request', 'Missing code or state'));
+    return;
+  }
+
+  try {
+    const oauthService = getOAuthService();
+    const deviceInfo = getDeviceInfo(request);
+
+    const result = await oauthService.handleLinkedInCallback(query.code, query.state, deviceInfo);
+
+    request.log.info(
+      { userId: result.user.id, isNewUser: result.isNewUser },
+      'LinkedIn OAuth successful'
+    );
+
+    void reply.redirect(getSuccessRedirectUrl(result.tokens));
+  } catch (error) {
+    request.log.error({ error }, 'LinkedIn OAuth callback failed');
+
+    if (error instanceof OAuthError) {
+      void reply.redirect(getErrorRedirectUrl('oauth_error', error.message));
+    } else {
+      void reply.redirect(getErrorRedirectUrl('server_error', 'Authentication failed'));
+    }
+  }
+}
+
 // =============================================================================
 // ROUTE REGISTRATION
 // =============================================================================
@@ -407,5 +529,105 @@ export async function oauthRoutes(fastify: FastifyInstance): Promise<void> {
       },
     },
     appleCallbackHandler
+  );
+
+  // Facebook OAuth
+  fastify.get(
+    '/oauth/facebook',
+    {
+      schema: {
+        description: 'Initiate Facebook OAuth flow',
+        tags: ['oauth'],
+        querystring: {
+          type: 'object',
+          properties: {
+            redirect_url: { type: 'string' },
+          },
+        },
+        response: {
+          302: {
+            description: 'Redirect to Facebook OAuth',
+            type: 'null',
+          },
+        },
+      },
+    },
+    facebookInitHandler
+  );
+
+  fastify.get(
+    '/oauth/facebook/callback',
+    {
+      schema: {
+        description: 'Facebook OAuth callback',
+        tags: ['oauth'],
+        querystring: {
+          type: 'object',
+          properties: {
+            code: { type: 'string' },
+            state: { type: 'string' },
+            error: { type: 'string' },
+            error_description: { type: 'string' },
+          },
+        },
+        response: {
+          302: {
+            description: 'Redirect to app with tokens or error',
+            type: 'null',
+          },
+        },
+      },
+    },
+    facebookCallbackHandler
+  );
+
+  // LinkedIn OAuth
+  fastify.get(
+    '/oauth/linkedin',
+    {
+      schema: {
+        description: 'Initiate LinkedIn OAuth flow',
+        tags: ['oauth'],
+        querystring: {
+          type: 'object',
+          properties: {
+            redirect_url: { type: 'string' },
+          },
+        },
+        response: {
+          302: {
+            description: 'Redirect to LinkedIn OAuth',
+            type: 'null',
+          },
+        },
+      },
+    },
+    linkedinInitHandler
+  );
+
+  fastify.get(
+    '/oauth/linkedin/callback',
+    {
+      schema: {
+        description: 'LinkedIn OAuth callback',
+        tags: ['oauth'],
+        querystring: {
+          type: 'object',
+          properties: {
+            code: { type: 'string' },
+            state: { type: 'string' },
+            error: { type: 'string' },
+            error_description: { type: 'string' },
+          },
+        },
+        response: {
+          302: {
+            description: 'Redirect to app with tokens or error',
+            type: 'null',
+          },
+        },
+      },
+    },
+    linkedinCallbackHandler
   );
 }

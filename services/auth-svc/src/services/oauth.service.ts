@@ -50,7 +50,7 @@ interface AppleIdToken {
   nonce_supported?: boolean;
 }
 
-type OAuthProvider = 'google' | 'microsoft' | 'apple';
+type OAuthProvider = 'google' | 'microsoft' | 'apple' | 'facebook' | 'linkedin';
 
 // =============================================================================
 // CACHE KEYS
@@ -451,6 +451,230 @@ export class OAuthService {
   }
 
   // ===========================================================================
+  // FACEBOOK OAUTH
+  // ===========================================================================
+
+  /**
+   * Generate Facebook OAuth authorization URL
+   *
+   * @param redirectUrl - Optional custom redirect URL
+   * @returns Auth URL and state token
+   * @throws OAuthNotConfiguredError if Facebook OAuth not configured
+   */
+  async getFacebookAuthUrl(redirectUrl?: string): Promise<{ url: string; state: string }> {
+    const { facebook } = this.config.oauth;
+
+    if (!facebook.appId || !facebook.appSecret || !facebook.callbackUrl) {
+      throw new OAuthNotConfiguredError('facebook');
+    }
+
+    const state = await this.generateState('facebook', redirectUrl);
+
+    const params = new URLSearchParams({
+      client_id: facebook.appId,
+      redirect_uri: facebook.callbackUrl,
+      response_type: 'code',
+      scope: 'email,public_profile',
+      state,
+    });
+
+    return {
+      url: `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`,
+      state,
+    };
+  }
+
+  /**
+   * Handle Facebook OAuth callback
+   *
+   * @param code - Authorization code from Facebook
+   * @param state - State token for CSRF protection
+   * @param deviceInfo - Device information
+   * @returns OAuth result with user and tokens
+   * @throws OAuthError if authentication fails
+   */
+  async handleFacebookCallback(
+    code: string,
+    state: string,
+    deviceInfo: DeviceInfo
+  ): Promise<OAuthResult> {
+    const { facebook } = this.config.oauth;
+
+    if (!facebook.appId || !facebook.appSecret || !facebook.callbackUrl) {
+      throw new OAuthNotConfiguredError('facebook');
+    }
+
+    // Verify state
+    await this.verifyState(state, 'facebook');
+
+    // Exchange code for access token
+    const tokenParams = new URLSearchParams({
+      client_id: facebook.appId,
+      client_secret: facebook.appSecret,
+      redirect_uri: facebook.callbackUrl,
+      code,
+    });
+
+    const tokenResponse = await fetch(
+      `https://graph.facebook.com/v19.0/oauth/access_token?${tokenParams.toString()}`
+    );
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      throw new OAuthError('facebook', `Failed to exchange code: ${error}`);
+    }
+
+    const tokenData = (await tokenResponse.json()) as { access_token: string };
+
+    // Get user info from Facebook Graph API
+    const userResponse = await fetch(
+      `https://graph.facebook.com/v19.0/me?fields=id,email,first_name,last_name,name,picture.type(large)&access_token=${tokenData.access_token}`
+    );
+
+    if (!userResponse.ok) {
+      throw new OAuthError('facebook', 'Failed to get user info');
+    }
+
+    const fbUser = (await userResponse.json()) as {
+      id: string;
+      email?: string;
+      first_name?: string;
+      last_name?: string;
+      name: string;
+      picture?: { data?: { url?: string } };
+    };
+
+    if (!fbUser.email) {
+      throw new OAuthError('facebook', 'Email permission is required. Please grant email access.');
+    }
+
+    const userInfo: OAuthUserInfo = {
+      id: fbUser.id,
+      email: fbUser.email,
+      firstName: fbUser.first_name ?? fbUser.name.split(' ')[0] ?? '',
+      lastName: fbUser.last_name ?? fbUser.name.split(' ').slice(1).join(' ') ?? '',
+      displayName: fbUser.name,
+      avatarUrl: fbUser.picture?.data?.url,
+    };
+
+    return this.findOrCreateUser('facebook', userInfo, deviceInfo);
+  }
+
+  // ===========================================================================
+  // LINKEDIN OAUTH
+  // ===========================================================================
+
+  /**
+   * Generate LinkedIn OAuth authorization URL
+   *
+   * Uses LinkedIn's OpenID Connect flow (v2)
+   *
+   * @param redirectUrl - Optional custom redirect URL
+   * @returns Auth URL and state token
+   * @throws OAuthNotConfiguredError if LinkedIn OAuth not configured
+   */
+  async getLinkedInAuthUrl(redirectUrl?: string): Promise<{ url: string; state: string }> {
+    const { linkedin } = this.config.oauth;
+
+    if (!linkedin.clientId || !linkedin.clientSecret || !linkedin.callbackUrl) {
+      throw new OAuthNotConfiguredError('linkedin');
+    }
+
+    const state = await this.generateState('linkedin', redirectUrl);
+
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: linkedin.clientId,
+      redirect_uri: linkedin.callbackUrl,
+      scope: 'openid profile email',
+      state,
+    });
+
+    return {
+      url: `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`,
+      state,
+    };
+  }
+
+  /**
+   * Handle LinkedIn OAuth callback
+   *
+   * @param code - Authorization code from LinkedIn
+   * @param state - State token for CSRF protection
+   * @param deviceInfo - Device information
+   * @returns OAuth result with user and tokens
+   * @throws OAuthError if authentication fails
+   */
+  async handleLinkedInCallback(
+    code: string,
+    state: string,
+    deviceInfo: DeviceInfo
+  ): Promise<OAuthResult> {
+    const { linkedin } = this.config.oauth;
+
+    if (!linkedin.clientId || !linkedin.clientSecret || !linkedin.callbackUrl) {
+      throw new OAuthNotConfiguredError('linkedin');
+    }
+
+    // Verify state
+    await this.verifyState(state, 'linkedin');
+
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        client_id: linkedin.clientId,
+        client_secret: linkedin.clientSecret,
+        redirect_uri: linkedin.callbackUrl,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      throw new OAuthError('linkedin', `Failed to exchange code: ${error}`);
+    }
+
+    const tokenData = (await tokenResponse.json()) as { access_token: string };
+
+    // Get user info from LinkedIn UserInfo endpoint (OpenID Connect)
+    const userResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+
+    if (!userResponse.ok) {
+      throw new OAuthError('linkedin', 'Failed to get user info');
+    }
+
+    const liUser = (await userResponse.json()) as {
+      sub: string;
+      email?: string;
+      email_verified?: boolean;
+      given_name?: string;
+      family_name?: string;
+      name?: string;
+      picture?: string;
+    };
+
+    if (!liUser.email) {
+      throw new OAuthError('linkedin', 'Email permission is required. Please grant email access.');
+    }
+
+    const userInfo: OAuthUserInfo = {
+      id: liUser.sub,
+      email: liUser.email,
+      firstName: liUser.given_name ?? liUser.name?.split(' ')[0] ?? '',
+      lastName: liUser.family_name ?? liUser.name?.split(' ').slice(1).join(' ') ?? '',
+      displayName: liUser.name,
+      avatarUrl: liUser.picture,
+    };
+
+    return this.findOrCreateUser('linkedin', userInfo, deviceInfo);
+  }
+
+  // ===========================================================================
   // PRIVATE HELPERS
   // ===========================================================================
 
@@ -495,8 +719,10 @@ export class OAuthService {
   /**
    * Get the OAuthProvider enum value from a string
    */
-  private getOAuthProviderEnum(provider: OAuthProvider): 'GOOGLE' | 'MICROSOFT' | 'APPLE' {
-    return provider.toUpperCase() as 'GOOGLE' | 'MICROSOFT' | 'APPLE';
+  private getOAuthProviderEnum(
+    provider: OAuthProvider
+  ): 'GOOGLE' | 'MICROSOFT' | 'APPLE' | 'FACEBOOK' | 'LINKEDIN' {
+    return provider.toUpperCase() as 'GOOGLE' | 'MICROSOFT' | 'APPLE' | 'FACEBOOK' | 'LINKEDIN';
   }
 
   /**

@@ -286,7 +286,7 @@ export type AppleCallbackBody = z.infer<typeof appleCallbackBodySchema>;
  * OAuth state schema (stored in Redis)
  */
 export const oauthStateSchema = z.object({
-  provider: z.enum(['google', 'microsoft', 'apple']),
+  provider: z.enum(['google', 'microsoft', 'apple', 'facebook', 'linkedin']),
   redirectUrl: z.string().optional(),
   createdAt: z.number(),
 });

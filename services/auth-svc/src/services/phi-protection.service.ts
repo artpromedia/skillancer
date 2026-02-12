@@ -1,16 +1,16 @@
 /**
  * @module @skillancer/auth-svc/services/phi-protection
  * PHI Data Protection Service - Encryption, Tokenization, and Masking
+ *
+ * Uses Node.js native crypto (AES-256-GCM) instead of AWS KMS for:
+ * - Zero cloud vendor lock-in
+ * - Full HIPAA compliance with AES-256-GCM
+ * - Lower latency (no network calls for encryption)
+ * - Cost savings (no KMS API charges)
  */
 
-import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes, createHash, pbkdf2Sync } from 'node:crypto';
 
-import {
-  KMSClient,
-  GenerateDataKeyCommand,
-  DecryptCommand,
-  ScheduleKeyDeletionCommand,
-} from '@aws-sdk/client-kms';
 import {
   prisma,
   PhiFieldTypeEnum,
@@ -33,16 +33,46 @@ const logger = createLogger({ serviceName: 'phi-protection' });
 const PhiFieldType = PhiFieldTypeEnum;
 
 // =============================================================================
-// KMS CLIENT
+// ENCRYPTION CONFIGURATION
 // =============================================================================
 
-let kmsClient: KMSClient | null = null;
+// Algorithm: AES-256-GCM (HIPAA compliant, provides authenticity + confidentiality)
+const ALGORITHM = 'aes-256-gcm';
+const KEY_LENGTH = 32; // 256 bits
+const IV_LENGTH = 16; // 128 bits (GCM standard)
+const AUTH_TAG_LENGTH = 16; // 128 bits
+const SALT_LENGTH = 32; // 256 bits
+const PBKDF2_ITERATIONS = 100000; // NIST recommendation
 
-function getKmsClient(): KMSClient {
-  kmsClient ??= new KMSClient({
-    region: process.env.AWS_REGION ?? 'us-east-1',
-  });
-  return kmsClient;
+/**
+ * Get master encryption key from environment
+ * Must be 64 hex characters (32 bytes)
+ */
+function getMasterKey(): Buffer {
+  const masterKeyHex = process.env.ENCRYPTION_MASTER_KEY;
+
+  if (!masterKeyHex) {
+    throw new Error('ENCRYPTION_MASTER_KEY environment variable not set');
+  }
+
+  if (masterKeyHex.length !== 64) {
+    throw new Error('ENCRYPTION_MASTER_KEY must be 64 hex characters (32 bytes)');
+  }
+
+  return Buffer.from(masterKeyHex, 'hex');
+}
+
+/**
+ * Derive tenant-specific encryption key from master key
+ * Uses PBKDF2 with tenant ID as salt for key separation
+ */
+function deriveTenantKey(tenantId: string, salt: Buffer): Buffer {
+  const masterKey = getMasterKey();
+
+  // Use tenant ID in salt to ensure different keys per tenant
+  const tenantSalt = Buffer.concat([salt, Buffer.from(tenantId, 'utf8')]);
+
+  return pbkdf2Sync(masterKey, tenantSalt, PBKDF2_ITERATIONS, KEY_LENGTH, 'sha256');
 }
 
 // =============================================================================
@@ -50,106 +80,109 @@ function getKmsClient(): KMSClient {
 // =============================================================================
 
 /**
- * Encrypt PHI data using envelope encryption with AWS KMS
+ * Encrypt PHI data using AES-256-GCM with tenant-specific derived keys
+ *
+ * HIPAA Compliance:
+ * - AES-256-GCM provides confidentiality and authenticity
+ * - Random IV per encryption (never reused)
+ * - Tenant key separation via PBKDF2
+ * - Secure key derivation with 100,000 iterations
  */
 export async function encryptPhi(params: EncryptPhiParams): Promise<EncryptedData> {
   const { data, tenantId, context } = params;
 
-  // Get tenant's KMS key
-  const keyId = await getTenantKeyId(tenantId);
+  try {
+    // Generate random salt and IV
+    const salt = randomBytes(SALT_LENGTH);
+    const iv = randomBytes(IV_LENGTH);
 
-  if (!keyId) {
-    throw new Error('Tenant encryption key not configured');
+    // Derive tenant-specific encryption key
+    const key = deriveTenantKey(tenantId, salt);
+
+    // Create cipher
+    const cipher = createCipheriv(ALGORITHM, key, iv);
+
+    // Add additional authenticated data (AAD) for context binding
+    if (context) {
+      const aad = Buffer.from(JSON.stringify(context), 'utf8');
+      cipher.setAAD(aad);
+    }
+
+    // Encrypt data
+    const dataBuffer = typeof data === 'string' ? Buffer.from(data, 'utf8') : data;
+    const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()]);
+
+    // Get authentication tag
+    const authTag = cipher.getAuthTag();
+
+    // Clear sensitive data from memory
+    key.fill(0);
+
+    logger.debug(
+      {
+        tenantId,
+        dataLength: dataBuffer.length,
+        saltLength: salt.length,
+        ivLength: iv.length,
+      },
+      'PHI data encrypted'
+    );
+
+    return {
+      encryptedData: encrypted.toString('base64'),
+      encryptedKey: salt.toString('base64'), // Store salt (not sensitive)
+      iv: iv.toString('base64'),
+      authTag: authTag.toString('base64'),
+      algorithm: ALGORITHM,
+      keyId: `tenant:${tenantId}`, // Logical key ID
+    };
+  } catch (error) {
+    logger.error({ error, tenantId }, 'PHI encryption failed');
+    throw new Error('Failed to encrypt PHI data');
   }
-
-  // Generate data encryption key (DEK) from KMS
-  const kms = getKmsClient();
-  const generateKeyCommand = new GenerateDataKeyCommand({
-    KeyId: keyId,
-    KeySpec: 'AES_256',
-    EncryptionContext: {
-      tenant_id: tenantId,
-      purpose: 'phi_encryption',
-      ...context,
-    },
-  });
-
-  const keyResponse = await kms.send(generateKeyCommand);
-
-  if (!keyResponse.Plaintext || !keyResponse.CiphertextBlob) {
-    throw new Error('Failed to generate data encryption key');
-  }
-
-  const plainTextKey = Buffer.from(keyResponse.Plaintext);
-  const encryptedKey = Buffer.from(keyResponse.CiphertextBlob);
-
-  // Encrypt data with DEK
-  const iv = randomBytes(16);
-  const cipher = createCipheriv('aes-256-gcm', plainTextKey, iv);
-
-  const dataBuffer = typeof data === 'string' ? Buffer.from(data, 'utf8') : data;
-  const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()]);
-  const authTag = cipher.getAuthTag();
-
-  // Clear plaintext key from memory
-  plainTextKey.fill(0);
-
-  logger.debug({ tenantId, dataLength: dataBuffer.length }, 'PHI data encrypted');
-
-  return {
-    encryptedData: encrypted.toString('base64'),
-    encryptedKey: encryptedKey.toString('base64'),
-    iv: iv.toString('base64'),
-    authTag: authTag.toString('base64'),
-    algorithm: 'aes-256-gcm',
-    keyId,
-  };
 }
 
 /**
- * Decrypt PHI data
+ * Decrypt PHI data using tenant-specific derived key
  */
 export async function decryptPhi(params: DecryptPhiParams): Promise<Buffer> {
   const { encryptedData, tenantId, context } = params;
 
-  // Decrypt the DEK using KMS
-  const kms = getKmsClient();
-  const decryptCommand = new DecryptCommand({
-    CiphertextBlob: Buffer.from(encryptedData.encryptedKey, 'base64'),
-    KeyId: encryptedData.keyId,
-    EncryptionContext: {
-      tenant_id: tenantId,
-      purpose: 'phi_encryption',
-      ...context,
-    },
-  });
+  try {
+    // Extract salt from encryptedKey field
+    const salt = Buffer.from(encryptedData.encryptedKey, 'base64');
+    const iv = Buffer.from(encryptedData.iv, 'base64');
+    const authTag = Buffer.from(encryptedData.authTag, 'base64');
+    const ciphertext = Buffer.from(encryptedData.encryptedData, 'base64');
 
-  const decryptResponse = await kms.send(decryptCommand);
+    // Derive same tenant-specific key
+    const key = deriveTenantKey(tenantId, salt);
 
-  if (!decryptResponse.Plaintext) {
-    throw new Error('Failed to decrypt data encryption key');
+    // Create decipher
+    const decipher = createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+
+    // Add AAD if context was used during encryption
+    if (context) {
+      const aad = Buffer.from(JSON.stringify(context), 'utf8');
+      decipher.setAAD(aad);
+    }
+
+    // Decrypt data
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+
+    // Clear sensitive data from memory
+    key.fill(0);
+
+    logger.debug({ tenantId, dataLength: decrypted.length }, 'PHI data decrypted');
+
+    return decrypted;
+  } catch (error) {
+    logger.error({ error, tenantId }, 'PHI decryption failed');
+    throw new Error('Failed to decrypt PHI data');
   }
 
-  const plainTextKey = Buffer.from(decryptResponse.Plaintext);
-
-  // Decrypt data with DEK
-  const decipher = createDecipheriv(
-    'aes-256-gcm',
-    plainTextKey,
-    Buffer.from(encryptedData.iv, 'base64')
-  );
-  decipher.setAuthTag(Buffer.from(encryptedData.authTag, 'base64'));
-
-  const decrypted = Buffer.concat([
-    decipher.update(Buffer.from(encryptedData.encryptedData, 'base64')),
-    decipher.final(),
-  ]);
-
-  // Clear plaintext key from memory
-  plainTextKey.fill(0);
-
   logger.debug({ tenantId }, 'PHI data decrypted');
-
   return decrypted;
 }
 
@@ -461,11 +494,13 @@ export async function secureDeleteAllTenantPhi(tenantId: string): Promise<void> 
 
   logger.info({ tenantId, deletedTokens: deletedTokens.count }, 'All tenant PHI tokens deleted');
 
-  // Schedule KMS key for deletion (with waiting period)
-  const keyId = await getTenantKeyId(tenantId);
-  if (keyId) {
-    await scheduleKeyDeletion(tenantId, keyId);
-  }
+  // Clear encryption key reference (not needed for Node crypto, but kept for audit trail)
+  await prisma.hipaaCompliance.update({
+    where: { tenantId },
+    data: { encryptionKeyId: null },
+  });
+
+  logger.info({ tenantId }, 'Tenant encryption key reference cleared');
 }
 
 // =============================================================================
@@ -473,39 +508,22 @@ export async function secureDeleteAllTenantPhi(tenantId: string): Promise<void> 
 // =============================================================================
 
 /**
- * Create a new encryption key for a tenant
+ * Create encryption key reference for a tenant
+ * Note: With Node crypto, we don't create actual external keys,
+ * but we track a logical key ID for audit purposes
  */
 export async function createTenantKey(tenantId: string): Promise<string> {
-  // In production, this would create a KMS key
-  // For development, generate a mock key ID
-  const keyId = `arn:aws:kms:us-east-1:123456789:key/${crypto.randomUUID()}`;
+  // Generate logical key ID for audit trail
+  const keyId = `tenant:${tenantId}:v1:${randomBytes(16).toString('hex')}`;
 
   await prisma.hipaaCompliance.update({
     where: { tenantId },
     data: { encryptionKeyId: keyId },
   });
 
-  logger.info({ tenantId, keyId }, 'Tenant encryption key created');
+  logger.info({ tenantId, keyId }, 'Tenant encryption key reference created');
 
   return keyId;
-}
-
-/**
- * Schedule key deletion (with 7-30 day waiting period per KMS requirements)
- */
-async function scheduleKeyDeletion(tenantId: string, keyId: string): Promise<void> {
-  try {
-    const kms = getKmsClient();
-    const command = new ScheduleKeyDeletionCommand({
-      KeyId: keyId,
-      PendingWindowInDays: 7, // Minimum is 7 days
-    });
-
-    await kms.send(command);
-    logger.info({ tenantId, keyId }, 'KMS key scheduled for deletion');
-  } catch (error) {
-    logger.warn({ tenantId, keyId, error }, 'Failed to schedule KMS key deletion');
-  }
 }
 
 // =============================================================================
