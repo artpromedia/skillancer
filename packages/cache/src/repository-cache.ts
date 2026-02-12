@@ -184,7 +184,7 @@ export class RepositoryCache<T> {
       const value = values[i];
       if (value) {
         try {
-          result.set(ids[i], this.deserialize<T>(value));
+          result.set(ids[i]!, this.deserialize<T>(value));
         } catch {
           // Skip invalid entries
         }

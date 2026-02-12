@@ -44,10 +44,10 @@ async function buildApp() {
   const redisUrl = process.env.REDIS_URL;
   if (redisUrl) {
     const redis = new Redis(redisUrl);
-    await fastify.register(rateLimitPlugin, { redis });
+    await fastify.register(rateLimitPlugin as any, { redis });
   } else {
     // Use in-memory rate limiting for development
-    await fastify.register(rateLimitPlugin, {});
+    await fastify.register(rateLimitPlugin as any, {});
   }
 
   fastify.decorateRequest('prisma', null);

@@ -318,7 +318,7 @@ async function rateLimitPluginImpl(
 // EXPORT
 // =============================================================================
 
-export const rateLimitPlugin = fp(rateLimitPluginImpl, {
+export const rateLimitPlugin = fp(rateLimitPluginImpl as any, {
   name: 'intelligence-rate-limit',
   dependencies: [],
 });
