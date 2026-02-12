@@ -271,7 +271,11 @@ function ProposalCard({
                   const skillName = typeof skill === 'string' ? skill : skill.name;
                   const skillKey = typeof skill === 'string' ? skill : skill.id;
                   return (
-                    <Badge key={skillKey ?? idx} className="bg-slate-100 text-slate-700" variant="secondary">
+                    <Badge
+                      key={skillKey ?? idx}
+                      className="bg-slate-100 text-slate-700"
+                      variant="secondary"
+                    >
                       <BadgeCheck className="mr-1 h-3 w-3 text-green-600" />
                       {skillName}
                     </Badge>

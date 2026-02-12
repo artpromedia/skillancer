@@ -209,7 +209,7 @@ export class SsoIntegrationService {
 
     // Generate new self-signed certificate (in production, use proper CA)
     // This is a placeholder - real implementation would use a proper certificate library
-    const { publicKey, privateKey } = await import('crypto').then((crypto) => 
+    const { publicKey, privateKey } = await import('crypto').then((crypto) =>
       crypto.generateKeyPairSync('rsa', {
         modulusLength: 2048,
         publicKeyEncoding: { type: 'spki', format: 'pem' },
@@ -255,10 +255,12 @@ export class SsoIntegrationService {
       displayName: config.displayName || `${config.provider} SSO`,
       enabled: config.enabled,
       samlConfig: config.samlConfig as SamlConfig | undefined,
-      oidcConfig: config.oidcConfig ? {
-        ...config.oidcConfig as OidcConfig,
-        clientSecret: '********', // Mask secret
-      } : undefined,
+      oidcConfig: config.oidcConfig
+        ? {
+            ...(config.oidcConfig as OidcConfig),
+            clientSecret: '********', // Mask secret
+          }
+        : undefined,
       jitProvisioning: config.jitProvisioning,
       defaultRole: config.defaultRole || 'USER',
       allowedDomains: config.allowedDomains || [],
@@ -590,9 +592,10 @@ export class SsoIntegrationService {
 
     return {
       success: errors.length === 0,
-      message: errors.length === 0
-        ? 'SAML configuration is valid. Ready for activation.'
-        : 'SAML configuration has errors',
+      message:
+        errors.length === 0
+          ? 'SAML configuration is valid. Ready for activation.'
+          : 'SAML configuration has errors',
       details: {
         validCertificate: !errors.some((e) => e.includes('Certificate')),
         validEndpoints: !errors.some((e) => e.includes('URL')),
@@ -614,7 +617,9 @@ export class SsoIntegrationService {
         errors.push(`JWKS endpoint error: ${jwksResponse.status}`);
       }
     } catch (e) {
-      errors.push(`Cannot reach JWKS endpoint: ${e instanceof Error ? e.message : 'Network error'}`);
+      errors.push(
+        `Cannot reach JWKS endpoint: ${e instanceof Error ? e.message : 'Network error'}`
+      );
     }
 
     // Test authorization endpoint
@@ -624,14 +629,17 @@ export class SsoIntegrationService {
         errors.push(`Authorization endpoint error: ${authResponse.status}`);
       }
     } catch (e) {
-      errors.push(`Cannot reach authorization endpoint: ${e instanceof Error ? e.message : 'Network error'}`);
+      errors.push(
+        `Cannot reach authorization endpoint: ${e instanceof Error ? e.message : 'Network error'}`
+      );
     }
 
     return {
       success: errors.length === 0,
-      message: errors.length === 0
-        ? 'OIDC configuration is valid. Ready for activation.'
-        : 'OIDC configuration has errors',
+      message:
+        errors.length === 0
+          ? 'OIDC configuration is valid. Ready for activation.'
+          : 'OIDC configuration has errors',
       details: {
         validEndpoints: errors.length === 0,
         errors: errors.length > 0 ? errors : undefined,
@@ -656,7 +664,9 @@ export class SsoIntegrationService {
     }
 
     if (config.status !== 'CONFIGURED') {
-      throw new Error(`Cannot activate SSO in ${config.status} status. Please configure and test first.`);
+      throw new Error(
+        `Cannot activate SSO in ${config.status} status. Please configure and test first.`
+      );
     }
 
     await this.prisma.skillpodSsoConfig.update({
@@ -758,7 +768,7 @@ export class SsoIntegrationService {
   private validateCertificate(certPem: string): void {
     try {
       const cert = new X509Certificate(certPem);
-      
+
       // Check expiration
       if (new Date(cert.validTo) < new Date()) {
         throw new Error('Certificate has expired');
@@ -812,4 +822,3 @@ export function getSsoIntegrationService(): SsoIntegrationService {
   }
   return ssoService;
 }
-

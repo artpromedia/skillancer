@@ -175,9 +175,7 @@ function OverviewTab({
         <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-500 dark:text-gray-400">Hours Logged</span>
-            <span className="text-2xl font-bold text-gray-900 dark:text-white">
-              {hoursLogged}h
-            </span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">{hoursLogged}h</span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
             <div
@@ -241,7 +239,9 @@ function OverviewTab({
                     key={task.id}
                     className="flex items-center gap-3 rounded-lg border border-gray-100 p-3 dark:border-gray-700"
                   >
-                    <Circle className={`h-4 w-4 ${getTaskPriorityColor(task.priority as TaskPriority)}`} />
+                    <Circle
+                      className={`h-4 w-4 ${getTaskPriorityColor(task.priority as TaskPriority)}`}
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
                         {task.title}
@@ -275,7 +275,9 @@ function OverviewTab({
               </div>
               {project.startDate && (
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">Start Date</dt>
+                  <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    Start Date
+                  </dt>
                   <dd className="mt-1 text-sm text-gray-900 dark:text-white">
                     {formatDate(project.startDate)}
                   </dd>
@@ -370,7 +372,9 @@ function TasksTab({ tasks }: Readonly<{ tasks: ProjectTask[] }>) {
               key={task.id}
               className="flex items-center gap-4 border-b border-gray-100 px-4 py-3 last:border-0 dark:border-gray-700"
             >
-              <Flag className={`h-4 w-4 flex-shrink-0 ${getTaskPriorityColor(task.priority as TaskPriority)}`} />
+              <Flag
+                className={`h-4 w-4 flex-shrink-0 ${getTaskPriorityColor(task.priority as TaskPriority)}`}
+              />
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-gray-900 dark:text-white">{task.title}</p>
                 {task.dueDate && (
@@ -410,7 +414,9 @@ function TasksTab({ tasks }: Readonly<{ tasks: ProjectTask[] }>) {
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {task.title}
                       </p>
-                      <Flag className={`h-3.5 w-3.5 ${getTaskPriorityColor(task.priority as TaskPriority)}`} />
+                      <Flag
+                        className={`h-3.5 w-3.5 ${getTaskPriorityColor(task.priority as TaskPriority)}`}
+                      />
                     </div>
                     <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
                       <span>
@@ -446,9 +452,7 @@ function TimeTab({ stats }: Readonly<{ stats?: ProjectStats }>) {
             </div>
             <div>
               <p className="text-sm text-gray-500">Total Hours</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">
-                {totalHours}h
-              </p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{totalHours}h</p>
             </div>
           </div>
         </div>
@@ -504,7 +508,11 @@ function TimeTab({ stats }: Readonly<{ stats?: ProjectStats }>) {
 export default function ProjectDetailPage({ params }: Readonly<{ params: { projectId: string } }>) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
 
-  const { data: projectResponse, isLoading: projectLoading, error: projectError } = useProject(params.projectId);
+  const {
+    data: projectResponse,
+    isLoading: projectLoading,
+    error: projectError,
+  } = useProject(params.projectId);
   const { data: statsResponse } = useProjectStats(params.projectId);
   const { data: tasksResponse } = useProjectTasks(params.projectId);
 
@@ -623,9 +631,7 @@ export default function ProjectDetailPage({ params }: Readonly<{ params: { proje
 
       {/* Content */}
       <div className="p-6">
-        {activeTab === 'overview' && (
-          <OverviewTab project={project} stats={stats} tasks={tasks} />
-        )}
+        {activeTab === 'overview' && <OverviewTab project={project} stats={stats} tasks={tasks} />}
         {activeTab === 'tasks' && <TasksTab tasks={tasks} />}
         {activeTab === 'time' && <TimeTab stats={stats} />}
         {activeTab === 'budget' && (

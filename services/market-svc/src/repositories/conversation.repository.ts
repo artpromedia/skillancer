@@ -559,4 +559,3 @@ export function createConversationRepository(prisma: PrismaClient): Conversation
     },
   };
 }
-

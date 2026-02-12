@@ -150,4 +150,3 @@ export const connectorRegistry = new ConnectorRegistry();
 export async function initializeConnectorRegistry(): Promise<void> {
   await connectorRegistry.initialize();
 }
-

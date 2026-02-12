@@ -3,11 +3,7 @@
  * HTTP client for making requests to downstream services
  */
 
-import {
-  getCircuitBreaker,
-  TimeoutError,
-  type CircuitBreakerOptions,
-} from './circuit-breaker.js';
+import { getCircuitBreaker, TimeoutError, type CircuitBreakerOptions } from './circuit-breaker.js';
 import { getConfig } from '../config/index.js';
 import { getServiceUrl } from '../config/routes.js';
 

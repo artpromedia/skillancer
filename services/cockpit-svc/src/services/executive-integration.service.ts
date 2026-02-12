@@ -115,9 +115,7 @@ class ExecutiveIntegrationService {
 
     const where: any = { clientTenantId };
     if (filters?.status) {
-      where.status = Array.isArray(filters.status)
-        ? { in: filters.status }
-        : filters.status;
+      where.status = Array.isArray(filters.status) ? { in: filters.status } : filters.status;
     }
 
     const engagements = await prisma.executiveEngagement.findMany({
@@ -143,10 +141,7 @@ class ExecutiveIntegrationService {
     });
 
     return engagements.map((eng) => {
-      const hoursThisMonth = eng.timeEntries.reduce(
-        (sum, e) => sum + Number(e.hours),
-        0
-      );
+      const hoursThisMonth = eng.timeEntries.reduce((sum, e) => sum + Number(e.hours), 0);
       const hoursApproved = eng.timeEntries
         .filter((e) => e.status === 'APPROVED' || e.status === 'INVOICED')
         .reduce((sum, e) => sum + Number(e.hours), 0);
@@ -334,7 +329,7 @@ class ExecutiveIntegrationService {
     });
 
     const hourlyRate = engagement.hourlyRate || engagement.overageRate || 0;
-    
+
     const billingEntries = entries.map((entry) => ({
       date: entry.date.toISOString(),
       hours: Number(entry.hours),
@@ -360,4 +355,3 @@ class ExecutiveIntegrationService {
 }
 
 export const executiveIntegrationService = new ExecutiveIntegrationService();
-

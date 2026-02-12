@@ -547,4 +547,3 @@ export function createLearningPathRepository(prisma: PrismaClient): LearningPath
     getStats,
   };
 }
-

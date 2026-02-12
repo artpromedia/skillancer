@@ -129,4 +129,3 @@ export class RequestBatchingService {
 
 export const requestBatchingService = new RequestBatchingService();
 export default RequestBatchingService;
-

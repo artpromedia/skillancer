@@ -40,10 +40,7 @@ const CURRENCY_MINOR_UNITS: Record<string, number> = {
  * formatCurrency(1234.56) // '$1,234.56'
  * formatCurrency(1234.56, { currency: 'EUR', locale: 'de-DE' }) // '1.234,56 €'
  */
-export function formatCurrency(
-  amount: number,
-  options: FormatCurrencyOptions = {}
-): string {
+export function formatCurrency(amount: number, options: FormatCurrencyOptions = {}): string {
   const {
     currency = 'USD',
     locale = 'en-US',
@@ -95,10 +92,7 @@ export function parseCurrency(value: string): number {
  * formatCompactCurrency(1234) // '$1.2K'
  * formatCompactCurrency(123) // '$123'
  */
-export function formatCompactCurrency(
-  amount: number,
-  currency: string = 'USD'
-): string {
+export function formatCompactCurrency(amount: number, currency: string = 'USD'): string {
   const absAmount = Math.abs(amount);
   const sign = amount < 0 ? '-' : '';
 
@@ -126,10 +120,7 @@ export function formatCompactCurrency(
  * toMinorUnits(12.34) // 1234 (cents)
  * toMinorUnits(100, 'JPY') // 100 (yen has no minor unit)
  */
-export function toMinorUnits(
-  amount: number,
-  currency: string = 'USD'
-): number {
+export function toMinorUnits(amount: number, currency: string = 'USD'): number {
   const multiplier = CURRENCY_MINOR_UNITS[currency.toUpperCase()] ?? 100;
   return Math.round(amount * multiplier);
 }
@@ -143,10 +134,7 @@ export function toMinorUnits(
  * toMajorUnits(1234) // 12.34 (dollars)
  * toMajorUnits(100, 'JPY') // 100 (yen has no minor unit)
  */
-export function toMajorUnits(
-  amount: number,
-  currency: string = 'USD'
-): number {
+export function toMajorUnits(amount: number, currency: string = 'USD'): number {
   const divisor = CURRENCY_MINOR_UNITS[currency.toUpperCase()] ?? 100;
   return amount / divisor;
 }
@@ -160,10 +148,7 @@ export function toMajorUnits(
  * getCurrencySymbol('USD') // '$'
  * getCurrencySymbol('EUR') // '€'
  */
-export function getCurrencySymbol(
-  currency: string,
-  locale: string = 'en-US'
-): string {
+export function getCurrencySymbol(currency: string, locale: string = 'en-US'): string {
   const formatted = new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

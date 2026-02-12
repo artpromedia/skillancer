@@ -515,4 +515,3 @@ interface MRRData {
 }
 
 export const stripeFinancialConnector = new StripeFinancialConnector();
-

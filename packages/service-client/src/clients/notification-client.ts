@@ -402,7 +402,11 @@ export class NotificationServiceClient extends BaseServiceClient {
   /**
    * Send welcome email to new user
    */
-  async sendWelcomeEmail(userId: string, email: string, name: string): Promise<{ messageId: string }> {
+  async sendWelcomeEmail(
+    userId: string,
+    email: string,
+    name: string
+  ): Promise<{ messageId: string }> {
     return this.post('emails/templates/welcome/send', {
       to: email,
       variables: { userId, name, loginUrl: `${process.env.APP_URL}/login` },
@@ -427,10 +431,7 @@ export class NotificationServiceClient extends BaseServiceClient {
   /**
    * Send password reset email
    */
-  async sendPasswordReset(
-    email: string,
-    resetToken: string
-  ): Promise<{ messageId: string }> {
+  async sendPasswordReset(email: string, resetToken: string): Promise<{ messageId: string }> {
     const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetToken}`;
     return this.post('emails/templates/password-reset/send', {
       to: email,

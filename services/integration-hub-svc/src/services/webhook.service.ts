@@ -116,7 +116,11 @@ class WebhookService {
 
     if (!connector.webhookEnabled || !connector.handleWebhook) {
       logger.error('Connector does not support webhooks', { connectorSlug });
-      return { success: false, error: `Connector ${connectorSlug} does not support webhooks`, eventType: 'error' };
+      return {
+        success: false,
+        error: `Connector ${connectorSlug} does not support webhooks`,
+        eventType: 'error',
+      };
     }
 
     // Extract signature from headers if not provided directly
@@ -154,7 +158,10 @@ class WebhookService {
     }
 
     // Process webhook through connector
-    const result = await connector.handleWebhook(payload as Record<string, unknown>, webhookSignature);
+    const result = await connector.handleWebhook(
+      payload as Record<string, unknown>,
+      webhookSignature
+    );
 
     // Mark as processed to prevent replays
     if (webhookId) {

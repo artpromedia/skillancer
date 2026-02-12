@@ -21,7 +21,6 @@ import type {
   ServiceMessageType,
 } from '../types/prisma-shim.js';
 
-
 /**
  * Service Order Repository
  *

@@ -306,9 +306,7 @@ describe('errors', () => {
     });
 
     it('should use custom error class', () => {
-      expect(() => assert(false, 'Not found', NotFoundError)).toThrow(
-        NotFoundError
-      );
+      expect(() => assert(false, 'Not found', NotFoundError)).toThrow(NotFoundError);
     });
   });
 
@@ -328,9 +326,7 @@ describe('errors', () => {
     });
 
     it('should use custom message', () => {
-      expect(() => assertDefined(null, 'Custom message')).toThrow(
-        'Custom message'
-      );
+      expect(() => assertDefined(null, 'Custom message')).toThrow('Custom message');
     });
   });
 });

@@ -232,4 +232,3 @@ export class ProviderError extends IntegrationError {
     this.name = 'ProviderError';
   }
 }
-

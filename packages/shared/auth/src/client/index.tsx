@@ -422,7 +422,11 @@ export function PermissionGuard({
   anyPermission,
 }: PermissionGuardProps): React.ReactElement | null {
   const { isLoading } = useAuth();
-  const { hasPermission: checkPerm, hasAllPermissions, hasAnyPermission: checkAny } = usePermissions();
+  const {
+    hasPermission: checkPerm,
+    hasAllPermissions,
+    hasAnyPermission: checkAny,
+  } = usePermissions();
 
   if (isLoading) {
     return <>{fallback}</>;

@@ -445,4 +445,3 @@ export class AWSSecurityConnector extends BaseConnector {
 
 export const createAWSSecurityConnector = (config: ConnectorConfig) =>
   new AWSSecurityConnector(config);
-

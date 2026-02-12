@@ -29,4 +29,3 @@ export {
   EmbedCode,
   LinkedInCertification,
 } from './credential-export';
-

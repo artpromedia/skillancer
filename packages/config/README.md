@@ -8,13 +8,13 @@ The package provides several TypeScript configurations for different project typ
 
 ### Available Configs
 
-| Config | Use Case |
-|--------|----------|
-| `tsconfig/base.json` | Base configuration with strict settings |
-| `tsconfig/nextjs.json` | Next.js applications |
-| `tsconfig/node.json` | Node.js backend services |
-| `tsconfig/react-library.json` | React component libraries |
-| `tsconfig/library.json` | Pure TypeScript libraries |
+| Config                        | Use Case                                |
+| ----------------------------- | --------------------------------------- |
+| `tsconfig/base.json`          | Base configuration with strict settings |
+| `tsconfig/nextjs.json`        | Next.js applications                    |
+| `tsconfig/node.json`          | Node.js backend services                |
+| `tsconfig/react-library.json` | React component libraries               |
+| `tsconfig/library.json`       | Pure TypeScript libraries               |
 
 ### Usage
 
@@ -115,11 +115,11 @@ All configs enforce strict TypeScript settings:
 
 ### Available Presets
 
-| Preset | Use Case |
-|--------|----------|
-| `eslint-preset.js` | Base configuration |
-| `eslint-next.js` | Next.js applications |
-| `eslint-node.js` | Node.js services |
+| Preset             | Use Case             |
+| ------------------ | -------------------- |
+| `eslint-preset.js` | Base configuration   |
+| `eslint-next.js`   | Next.js applications |
+| `eslint-node.js`   | Node.js services     |
 
 ### Usage
 

@@ -441,4 +441,3 @@ export class DatadogSecurityConnector extends BaseConnector {
 
 export const createDatadogSecurityConnector = (config: ConnectorConfig) =>
   new DatadogSecurityConnector(config);
-

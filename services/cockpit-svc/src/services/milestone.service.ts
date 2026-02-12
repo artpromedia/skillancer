@@ -275,4 +275,3 @@ export class MilestoneService {
     this.logger.info({ projectId, milestoneCount: orders.length }, 'Milestones reordered');
   }
 }
-

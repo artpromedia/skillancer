@@ -661,4 +661,3 @@ export interface ContractStatusMapping {
 export interface MilestoneStatusMapping {
   [key: string]: MilestoneStatus;
 }
-

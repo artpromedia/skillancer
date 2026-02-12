@@ -115,63 +115,60 @@ async function validationPluginImpl(
   }
 
   // Decorator to add validation schemas
-  app.decorate(
-    'withValidation',
-    function (schemas: ValidationSchemas) {
-      return {
-        preHandler: async function (request: FastifyRequest, reply: FastifyReply) {
-          const allErrors: ValidationError[] = [];
+  app.decorate('withValidation', function (schemas: ValidationSchemas) {
+    return {
+      preHandler: async function (request: FastifyRequest, reply: FastifyReply) {
+        const allErrors: ValidationError[] = [];
 
-          // Validate body
-          if (schemas.body && request.body !== undefined) {
-            const result = validateSchema(schemas.body, request.body, 'body');
-            if (!result.success) {
-              allErrors.push(...result.errors);
-            } else {
-              request.validatedBody = result.data;
-              request.body = result.data;
-            }
+        // Validate body
+        if (schemas.body && request.body !== undefined) {
+          const result = validateSchema(schemas.body, request.body, 'body');
+          if (!result.success) {
+            allErrors.push(...result.errors);
+          } else {
+            request.validatedBody = result.data;
+            request.body = result.data;
           }
+        }
 
-          // Validate querystring
-          if (schemas.querystring && request.query) {
-            const result = validateSchema(schemas.querystring, request.query, 'query');
-            if (!result.success) {
-              allErrors.push(...result.errors);
-            } else {
-              request.validatedQuery = result.data;
-              (request as unknown as { query: unknown }).query = result.data;
-            }
+        // Validate querystring
+        if (schemas.querystring && request.query) {
+          const result = validateSchema(schemas.querystring, request.query, 'query');
+          if (!result.success) {
+            allErrors.push(...result.errors);
+          } else {
+            request.validatedQuery = result.data;
+            (request as unknown as { query: unknown }).query = result.data;
           }
+        }
 
-          // Validate params
-          if (schemas.params && request.params) {
-            const result = validateSchema(schemas.params, request.params, 'params');
-            if (!result.success) {
-              allErrors.push(...result.errors);
-            } else {
-              request.validatedParams = result.data;
-              (request as unknown as { params: unknown }).params = result.data;
-            }
+        // Validate params
+        if (schemas.params && request.params) {
+          const result = validateSchema(schemas.params, request.params, 'params');
+          if (!result.success) {
+            allErrors.push(...result.errors);
+          } else {
+            request.validatedParams = result.data;
+            (request as unknown as { params: unknown }).params = result.data;
           }
+        }
 
-          // Validate headers
-          if (schemas.headers) {
-            const result = validateSchema(schemas.headers, request.headers, 'headers');
-            if (!result.success) {
-              allErrors.push(...result.errors);
-            }
+        // Validate headers
+        if (schemas.headers) {
+          const result = validateSchema(schemas.headers, request.headers, 'headers');
+          if (!result.success) {
+            allErrors.push(...result.errors);
           }
+        }
 
-          // Send error response if validation failed
-          if (allErrors.length > 0) {
-            const errorResponse = formatError(allErrors);
-            reply.status(errorResponse.statusCode).send(errorResponse);
-          }
-        },
-      };
-    }
-  );
+        // Send error response if validation failed
+        if (allErrors.length > 0) {
+          const errorResponse = formatError(allErrors);
+          reply.status(errorResponse.statusCode).send(errorResponse);
+        }
+      },
+    };
+  });
 }
 
 export const validationPlugin = fp(validationPluginImpl, {
@@ -206,7 +203,11 @@ export type IdParam = z.infer<typeof idParamSchema>;
  * Common slug parameter schema
  */
 export const slugParamSchema = z.object({
-  slug: z.string().min(1).max(255).regex(/^[a-z0-9-]+$/),
+  slug: z
+    .string()
+    .min(1)
+    .max(255)
+    .regex(/^[a-z0-9-]+$/),
 });
 
 export type SlugParam = z.infer<typeof slugParamSchema>;

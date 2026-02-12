@@ -1334,4 +1334,3 @@ export class TimeTrackingService {
 
   // Removed exportToJson - json not a valid export format
 }
-

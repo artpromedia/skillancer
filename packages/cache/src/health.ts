@@ -131,10 +131,7 @@ export async function checkRedisHealth(
  * @param timeout - Timeout in milliseconds
  * @returns True if healthy
  */
-export async function isRedisHealthy(
-  redis: Redis,
-  timeout = 2000
-): Promise<boolean> {
+export async function isRedisHealthy(redis: Redis, timeout = 2000): Promise<boolean> {
   try {
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Timeout')), timeout);
@@ -207,9 +204,7 @@ export async function waitForRedis(
 /**
  * Get connection status from Redis client
  */
-function getConnectionStatus(
-  redis: Redis
-): 'connected' | 'connecting' | 'disconnected' | 'error' {
+function getConnectionStatus(redis: Redis): 'connected' | 'connecting' | 'disconnected' | 'error' {
   const status = redis.status;
 
   switch (status) {
@@ -230,9 +225,7 @@ function getConnectionStatus(
 /**
  * Parse Redis INFO command output
  */
-function parseRedisInfo(
-  info: string
-): NonNullable<HealthStatus['details']> {
+function parseRedisInfo(info: string): NonNullable<HealthStatus['details']> {
   const lines = info.split('\r\n');
   const parsed: Record<string, string> = {};
 

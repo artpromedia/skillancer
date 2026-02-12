@@ -13,17 +13,21 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
   // === Outcome Routes ===
 
   // Record outcome (PROTECTED - requires authentication + rate limited)
-  fastify.post('/outcomes', {
-    preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.outcomeRecording],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const input = request.body as any;
-      const outcome = await outcomeService.recordOutcome(input);
-      return reply.status(201).send(outcome);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+  fastify.post(
+    '/outcomes',
+    {
+      preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.outcomeRecording],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const input = request.body as any;
+        const outcome = await outcomeService.recordOutcome(input);
+        return reply.status(201).send(outcome);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get outcome by ID
   fastify.get('/outcomes/:id', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -135,17 +139,21 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
   // === Prediction Routes ===
 
   // Generate prediction (PROTECTED - requires authentication + rate limited)
-  fastify.post('/predictions', {
-    preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.mlPredictions],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const input = request.body as any;
-      const prediction = await predictionService.predictSuccess(input);
-      return reply.status(201).send(prediction);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+  fastify.post(
+    '/predictions',
+    {
+      preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.mlPredictions],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const input = request.body as any;
+        const prediction = await predictionService.predictSuccess(input);
+        return reply.status(201).send(prediction);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get prediction for contract
   fastify.get(
@@ -222,17 +230,21 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
   // === Risk Alert Routes ===
 
   // Create alert (PROTECTED - requires authentication + rate limited)
-  fastify.post('/alerts', {
-    preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.riskAnalysis],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const input = request.body as any;
-      const alert = await riskAlertService.createAlert(input);
-      return reply.status(201).send(alert);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+  fastify.post(
+    '/alerts',
+    {
+      preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.riskAnalysis],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const input = request.body as any;
+        const alert = await riskAlertService.createAlert(input);
+        return reply.status(201).send(alert);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Get alert by ID
   fastify.get('/alerts/:id', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -269,41 +281,49 @@ export async function intelligenceRoutes(fastify: FastifyInstance) {
   );
 
   // Acknowledge alert (PROTECTED - requires authentication + rate limited)
-  fastify.post('/alerts/:id/acknowledge', {
-    preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.riskAnalysis],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        return reply.status(401).send({ error: 'Unauthorized' });
-      }
+  fastify.post(
+    '/alerts/:id/acknowledge',
+    {
+      preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.riskAnalysis],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = (request as any).user?.id;
+        if (!userId) {
+          return reply.status(401).send({ error: 'Unauthorized' });
+        }
 
-      const { id } = request.params as { id: string };
-      const alert = await riskAlertService.acknowledgeAlert(id, userId);
-      return reply.send(alert);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+        const { id } = request.params as { id: string };
+        const alert = await riskAlertService.acknowledgeAlert(id, userId);
+        return reply.send(alert);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Resolve alert (PROTECTED - requires authentication + rate limited)
-  fastify.post('/alerts/:id/resolve', {
-    preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.riskAnalysis],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        return reply.status(401).send({ error: 'Unauthorized' });
-      }
+  fastify.post(
+    '/alerts/:id/resolve',
+    {
+      preHandler: [fastify.authenticate, fastify.intelligenceRateLimit.riskAnalysis],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = (request as any).user?.id;
+        if (!userId) {
+          return reply.status(401).send({ error: 'Unauthorized' });
+        }
 
-      const { id } = request.params as { id: string };
-      const { resolution } = request.body as { resolution: string };
-      const alert = await riskAlertService.resolveAlert(id, userId, resolution);
-      return reply.send(alert);
-    } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+        const { id } = request.params as { id: string };
+        const { resolution } = request.body as { resolution: string };
+        const alert = await riskAlertService.resolveAlert(id, userId, resolution);
+        return reply.send(alert);
+      } catch (error: any) {
+        return reply.status(400).send({ error: error.message });
+      }
     }
-  });
+  );
 
   // Analyze and generate alerts (PROTECTED - requires authentication + rate limited)
   fastify.post(

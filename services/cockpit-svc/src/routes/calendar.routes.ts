@@ -718,4 +718,3 @@ export const calendarRoutes: FastifyPluginAsync<CalendarRoutesOptions> = async (
 };
 
 export default calendarRoutes;
-

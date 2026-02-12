@@ -179,15 +179,11 @@ export interface ContractListOptions {
   freelancerId?: string;
   userId?: string;
   jobId?: string;
-  status?:
-    | ContractStatusV2
-    | ContractStatusV2[];
+  status?: ContractStatusV2 | ContractStatusV2[];
   contractType?:
     | import('./prisma-shim.js').ContractTypeV2
     | import('./prisma-shim.js').ContractTypeV2[];
-  rateType?:
-    | import('./prisma-shim.js').RateTypeV2
-    | import('./prisma-shim.js').RateTypeV2[];
+  rateType?: import('./prisma-shim.js').RateTypeV2 | import('./prisma-shim.js').RateTypeV2[];
   startDateFrom?: Date;
   startDateTo?: Date;
   endDateFrom?: Date;
@@ -239,9 +235,7 @@ export interface UpdateMilestoneInput {
 /** Options for listing milestones */
 export interface MilestoneListOptions {
   contractId?: string;
-  status?:
-    | MilestoneStatusV2
-    | MilestoneStatusV2[];
+  status?: MilestoneStatusV2 | MilestoneStatusV2[];
   dueDateFrom?: Date;
   dueDateTo?: Date;
   page?: number;
@@ -313,9 +307,7 @@ export interface UpdateTimeEntryInput {
 export interface TimeEntryListOptions {
   contractId?: string;
   freelancerId?: string;
-  status?:
-    | TimeEntryStatusV2
-    | TimeEntryStatusV2[];
+  status?: TimeEntryStatusV2 | TimeEntryStatusV2[];
   dateFrom?: Date;
   dateTo?: Date;
   invoiced?: boolean;
@@ -361,9 +353,7 @@ export interface LogActivityInput {
 /** Options for listing activities */
 export interface ActivityListOptions {
   contractId: string;
-  activityType?:
-    | ContractActivityType
-    | ContractActivityType[];
+  activityType?: ContractActivityType | ContractActivityType[];
   actorUserId?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -411,9 +401,7 @@ export interface AmendmentChange {
 export interface AmendmentListOptions {
   contractId?: string;
   proposedById?: string;
-  status?:
-    | AmendmentStatus
-    | AmendmentStatus[];
+  status?: AmendmentStatus | AmendmentStatus[];
   page?: number;
   limit?: number;
 }

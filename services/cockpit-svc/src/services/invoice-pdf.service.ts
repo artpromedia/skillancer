@@ -18,7 +18,12 @@ import type {
   BusinessAddress,
   InvoiceWithDetails,
 } from '../types/invoice.types.js';
-import type { Invoice, InvoiceLineItem, InvoicePayment, InvoiceTemplate } from '../types/prisma-shim.js';
+import type {
+  Invoice,
+  InvoiceLineItem,
+  InvoicePayment,
+  InvoiceTemplate,
+} from '../types/prisma-shim.js';
 import type { PrismaClient, Client } from '../types/prisma-shim.js';
 import type { Logger } from '@skillancer/logger';
 
@@ -550,13 +555,11 @@ export class InvoicePdfService {
     try {
       puppeteer = await import('puppeteer');
     } catch {
-      this.logger.error(
-        'puppeteer is not installed. Install it with: pnpm add puppeteer'
-      );
+      this.logger.error('puppeteer is not installed. Install it with: pnpm add puppeteer');
       throw new Error(
         'PDF generation unavailable: puppeteer package is not installed. ' +
-        'Run "pnpm add puppeteer" in services/cockpit-svc and ensure Chromium ' +
-        'dependencies are available in the container.'
+          'Run "pnpm add puppeteer" in services/cockpit-svc and ensure Chromium ' +
+          'dependencies are available in the container.'
       );
     }
 

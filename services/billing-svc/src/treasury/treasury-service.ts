@@ -605,4 +605,3 @@ export function getTreasuryService(): TreasuryService {
   }
   return treasuryServiceInstance;
 }
-

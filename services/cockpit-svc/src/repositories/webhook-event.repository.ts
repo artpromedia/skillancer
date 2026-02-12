@@ -4,7 +4,11 @@
  */
 
 import type { CreateWebhookEventParams } from '../types/integration.types.js';
-import type { WebhookEvent, WebhookEventStatus, IntegrationProvider } from '../types/prisma-shim.js';
+import type {
+  WebhookEvent,
+  WebhookEventStatus,
+  IntegrationProvider,
+} from '../types/prisma-shim.js';
 import type { PrismaClient } from '../types/prisma-shim.js';
 
 export interface WebhookEventFilters {

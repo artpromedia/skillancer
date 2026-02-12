@@ -101,7 +101,9 @@ function getHrefForSuggestion(suggestion: string): string {
   return '/dashboard/profile';
 }
 
-function getCategoryForSuggestion(suggestion: string): 'identity' | 'skills' | 'portfolio' | 'social-proof' | 'completeness' | 'engagement' {
+function getCategoryForSuggestion(
+  suggestion: string
+): 'identity' | 'skills' | 'portfolio' | 'social-proof' | 'completeness' | 'engagement' {
   if (suggestion.includes('photo') || suggestion.includes('verification')) return 'identity';
   if (suggestion.includes('skills')) return 'skills';
   if (suggestion.includes('portfolio')) return 'portfolio';
@@ -111,16 +113,16 @@ function getCategoryForSuggestion(suggestion: string): 'identity' | 'skills' | '
 
 function getImpactForSuggestion(suggestion: string): string {
   const impacts: Record<string, string> = {
-    'photo': '+14x more profile views',
-    'title': '+20% more relevant job matches',
-    'bio': '+30% higher client engagement',
-    'skills': '+40% more job invitations',
-    'portfolio': '+50% higher hiring rate',
-    'work': '+25% more client trust',
-    'rate': '+15% faster hiring decisions',
-    'verification': '+2x earnings potential',
+    photo: '+14x more profile views',
+    title: '+20% more relevant job matches',
+    bio: '+30% higher client engagement',
+    skills: '+40% more job invitations',
+    portfolio: '+50% higher hiring rate',
+    work: '+25% more client trust',
+    rate: '+15% faster hiring decisions',
+    verification: '+2x earnings potential',
   };
-  const key = Object.keys(impacts).find(k => suggestion.includes(k));
+  const key = Object.keys(impacts).find((k) => suggestion.includes(k));
   return key ? impacts[key] : '+10% profile visibility';
 }
 

@@ -93,7 +93,8 @@ export const SOC2_CONTROLS: ControlCategory[] = [
         id: 'CC1.4',
         criteria: TrustServiceCriteria.SECURITY,
         name: 'COSO Principle 4',
-        description: 'The entity demonstrates commitment to attract and retain competent individuals',
+        description:
+          'The entity demonstrates commitment to attract and retain competent individuals',
         status: ControlStatus.IMPLEMENTED,
         skillancerFeatures: ['HR policies', 'Performance reviews', 'Training programs'],
         evidenceTypes: ['training_completion'],
@@ -105,7 +106,8 @@ export const SOC2_CONTROLS: ControlCategory[] = [
         id: 'CC1.5',
         criteria: TrustServiceCriteria.SECURITY,
         name: 'COSO Principle 5',
-        description: 'The entity holds individuals accountable for internal control responsibilities',
+        description:
+          'The entity holds individuals accountable for internal control responsibilities',
         status: ControlStatus.IMPLEMENTED,
         skillancerFeatures: ['Job descriptions', 'Performance metrics', 'Audit logging'],
         evidenceTypes: ['audit_log', 'access_review'],
@@ -137,7 +139,8 @@ export const SOC2_CONTROLS: ControlCategory[] = [
         id: 'CC2.2',
         criteria: TrustServiceCriteria.SECURITY,
         name: 'COSO Principle 14',
-        description: 'The entity internally communicates information necessary for internal control',
+        description:
+          'The entity internally communicates information necessary for internal control',
         status: ControlStatus.IMPLEMENTED,
         skillancerFeatures: ['Notification service', 'Slack integration', 'Email alerts'],
         evidenceTypes: ['audit_log'],
@@ -583,16 +586,19 @@ export class ControlMapper {
     const controls = Array.from(this.controls.values());
     const implemented = controls.filter((c) => c.status === ControlStatus.IMPLEMENTED).length;
     const partial = controls.filter((c) => c.status === ControlStatus.PARTIAL).length;
-    const notImplemented = controls.filter((c) => c.status === ControlStatus.NOT_IMPLEMENTED).length;
+    const notImplemented = controls.filter(
+      (c) => c.status === ControlStatus.NOT_IMPLEMENTED
+    ).length;
     const notApplicable = controls.filter((c) => c.status === ControlStatus.NOT_APPLICABLE).length;
 
     const applicableControls = controls.length - notApplicable;
-    const compliancePercentage = applicableControls > 0
-      ? Math.round(((implemented + partial * 0.5) / applicableControls) * 100)
-      : 0;
+    const compliancePercentage =
+      applicableControls > 0
+        ? Math.round(((implemented + partial * 0.5) / applicableControls) * 100)
+        : 0;
 
     const criticalGaps = controls.filter(
-      (c) => c.status === ControlStatus.NOT_IMPLEMENTED && c.gaps.length > 0,
+      (c) => c.status === ControlStatus.NOT_IMPLEMENTED && c.gaps.length > 0
     );
 
     const recommendations = this.generateRecommendations(controls);
@@ -615,23 +621,23 @@ export class ControlMapper {
     const notImplemented = controls.filter((c) => c.status === ControlStatus.NOT_IMPLEMENTED);
     if (notImplemented.length > 0) {
       recommendations.push(
-        `Prioritize implementation of ${notImplemented.length} controls that are not yet implemented`,
+        `Prioritize implementation of ${notImplemented.length} controls that are not yet implemented`
       );
     }
 
     const partial = controls.filter((c) => c.status === ControlStatus.PARTIAL);
     if (partial.length > 0) {
       recommendations.push(
-        `Complete implementation of ${partial.length} partially implemented controls`,
+        `Complete implementation of ${partial.length} partially implemented controls`
       );
     }
 
     const noRecentReview = controls.filter(
-      (c) => !c.lastReviewed || Date.now() - c.lastReviewed.getTime() > 90 * 24 * 60 * 60 * 1000,
+      (c) => !c.lastReviewed || Date.now() - c.lastReviewed.getTime() > 90 * 24 * 60 * 60 * 1000
     );
     if (noRecentReview.length > 0) {
       recommendations.push(
-        `Review ${noRecentReview.length} controls that haven't been reviewed in 90+ days`,
+        `Review ${noRecentReview.length} controls that haven't been reviewed in 90+ days`
       );
     }
 

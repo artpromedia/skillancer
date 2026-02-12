@@ -3,11 +3,7 @@
  * Custom error classes for Skillancer applications
  */
 
-import {
-  ErrorCode,
-  ErrorMessage,
-  type ErrorCodeValue,
-} from './constants.js';
+import { ErrorCode, ErrorMessage, type ErrorCodeValue } from './constants.js';
 
 // =============================================================================
 // INTERFACES
@@ -240,7 +236,10 @@ export class AuthenticationError extends ApiError {
   /**
    * Create error for expired token
    */
-  static tokenExpired(options?: { details?: ErrorDetails; requestId?: string }): AuthenticationError {
+  static tokenExpired(options?: {
+    details?: ErrorDetails;
+    requestId?: string;
+  }): AuthenticationError {
     return new AuthenticationError('Token expired', {
       code: ErrorCode.AUTH_TOKEN_EXPIRED,
       ...options,
@@ -250,7 +249,10 @@ export class AuthenticationError extends ApiError {
   /**
    * Create error for invalid token
    */
-  static tokenInvalid(options?: { details?: ErrorDetails; requestId?: string }): AuthenticationError {
+  static tokenInvalid(options?: {
+    details?: ErrorDetails;
+    requestId?: string;
+  }): AuthenticationError {
     return new AuthenticationError('Invalid token', {
       code: ErrorCode.AUTH_TOKEN_INVALID,
       ...options,
@@ -260,7 +262,10 @@ export class AuthenticationError extends ApiError {
   /**
    * Create error for missing token
    */
-  static tokenMissing(options?: { details?: ErrorDetails; requestId?: string }): AuthenticationError {
+  static tokenMissing(options?: {
+    details?: ErrorDetails;
+    requestId?: string;
+  }): AuthenticationError {
     return new AuthenticationError('Token missing', {
       code: ErrorCode.AUTH_TOKEN_MISSING,
       ...options,
@@ -270,7 +275,10 @@ export class AuthenticationError extends ApiError {
   /**
    * Create error for invalid credentials
    */
-  static invalidCredentials(options?: { details?: ErrorDetails; requestId?: string }): AuthenticationError {
+  static invalidCredentials(options?: {
+    details?: ErrorDetails;
+    requestId?: string;
+  }): AuthenticationError {
     return new AuthenticationError('Invalid credentials', {
       code: ErrorCode.AUTH_INVALID_CREDENTIALS,
       ...options,
@@ -416,10 +424,7 @@ export class ValidationError extends ApiError {
   /**
    * Create validation error for missing required field
    */
-  static missingField(
-    fieldName: string,
-    options?: { requestId?: string }
-  ): ValidationError {
+  static missingField(fieldName: string, options?: { requestId?: string }): ValidationError {
     return new ValidationError(`${fieldName} is required`, {
       code: ErrorCode.VAL_MISSING_FIELD,
       fields: [{ field: fieldName, message: `${fieldName} is required` }],
@@ -501,10 +506,7 @@ export class NotFoundError extends ApiError {
   /**
    * Create error for user not found
    */
-  static user(
-    userId: string,
-    options?: { requestId?: string }
-  ): NotFoundError {
+  static user(userId: string, options?: { requestId?: string }): NotFoundError {
     return new NotFoundError('User not found', {
       code: ErrorCode.NOT_FOUND_USER,
       details: { userId },

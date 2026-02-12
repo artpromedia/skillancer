@@ -86,7 +86,10 @@ Authorization: Bearer <your-jwt-token>
           type: 'object',
           properties: {
             communicationChannel: { type: 'string', enum: ['EMAIL', 'PHONE', 'SLACK'] },
-            responseTimeExpectation: { type: 'string', enum: ['IMMEDIATE', 'SAME_DAY', 'NEXT_DAY'] },
+            responseTimeExpectation: {
+              type: 'string',
+              enum: ['IMMEDIATE', 'SAME_DAY', 'NEXT_DAY'],
+            },
             timezone: { type: 'string' },
             language: { type: 'string' },
           },
@@ -97,7 +100,10 @@ Authorization: Bearer <your-jwt-token>
             id: { type: 'string', format: 'uuid' },
             profileId: { type: 'string', format: 'uuid' },
             type: { type: 'string', enum: ['ONBOARDING', 'SUPPORT', 'RENEWAL', 'EXPANSION'] },
-            status: { type: 'string', enum: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] },
+            status: {
+              type: 'string',
+              enum: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+            },
             scheduledAt: { type: 'string', format: 'date-time' },
             notes: { type: 'string' },
           },

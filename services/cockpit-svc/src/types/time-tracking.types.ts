@@ -487,4 +487,3 @@ export interface ReminderNotification {
   message: string;
   data?: Record<string, unknown>;
 }
-

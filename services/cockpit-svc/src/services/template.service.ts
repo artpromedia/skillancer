@@ -352,4 +352,3 @@ export class TemplateService {
     return Array.from(categories).sort((a, b) => a.localeCompare(b));
   }
 }
-

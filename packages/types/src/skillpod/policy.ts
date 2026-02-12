@@ -5,11 +5,7 @@
 
 import { z } from 'zod';
 
-import {
-  uuidSchema,
-  dateSchema,
-  timestampsSchema,
-} from '../common/base';
+import { uuidSchema, dateSchema, timestampsSchema } from '../common/base';
 
 // =============================================================================
 // Policy Enums
@@ -61,10 +57,10 @@ export type DataClassification = z.infer<typeof dataClassificationSchema>;
  * Policy enforcement mode
  */
 export const enforcementModeSchema = z.enum([
-  'AUDIT',      // Log only, don't enforce
-  'WARN',       // Warn user but allow
-  'ENFORCE',    // Block non-compliant actions
-  'STRICT',     // Terminate session on violation
+  'AUDIT', // Log only, don't enforce
+  'WARN', // Warn user but allow
+  'ENFORCE', // Block non-compliant actions
+  'STRICT', // Terminate session on violation
 ]);
 export type EnforcementMode = z.infer<typeof enforcementModeSchema>;
 
@@ -135,16 +131,20 @@ export const networkPolicySchema = z.object({
   internetAccess: z.boolean().default(true),
   allowedDomains: z.array(z.string()).optional(),
   blockedDomains: z.array(z.string()).optional(),
-  blockedCategories: z.array(z.enum([
-    'MALWARE',
-    'PHISHING',
-    'ADULT',
-    'GAMBLING',
-    'SOCIAL_MEDIA',
-    'STREAMING',
-    'GAMING',
-    'CRYPTO',
-  ])).optional(),
+  blockedCategories: z
+    .array(
+      z.enum([
+        'MALWARE',
+        'PHISHING',
+        'ADULT',
+        'GAMBLING',
+        'SOCIAL_MEDIA',
+        'STREAMING',
+        'GAMING',
+        'CRYPTO',
+      ])
+    )
+    .optional(),
   vpnRequired: z.boolean().default(false),
   proxyEnabled: z.boolean().default(false),
   proxyUrl: z.string().url().optional(),
@@ -171,19 +171,10 @@ export type PrintPolicy = z.infer<typeof printPolicySchema>;
  */
 export const devicePolicySchema = z.object({
   usbRedirectionEnabled: z.boolean().default(false),
-  allowedDeviceTypes: z.array(z.enum([
-    'KEYBOARD',
-    'MOUSE',
-    'STORAGE',
-    'AUDIO',
-    'VIDEO',
-    'SMART_CARD',
-    'PRINTER',
-  ])).optional(),
-  blockedDeviceTypes: z.array(z.enum([
-    'STORAGE',
-    'SMART_CARD',
-  ])).default(['STORAGE']),
+  allowedDeviceTypes: z
+    .array(z.enum(['KEYBOARD', 'MOUSE', 'STORAGE', 'AUDIO', 'VIDEO', 'SMART_CARD', 'PRINTER']))
+    .optional(),
+  blockedDeviceTypes: z.array(z.enum(['STORAGE', 'SMART_CARD'])).default(['STORAGE']),
   auditDevices: z.boolean().default(true),
 });
 export type DevicePolicy = z.infer<typeof devicePolicySchema>;
@@ -212,7 +203,9 @@ export const watermarkPolicySchema = z.object({
   displayIp: z.boolean().default(false),
   customText: z.string().max(200).optional(),
   opacity: z.number().min(0).max(1).default(0.3),
-  position: z.enum(['TOP_LEFT', 'TOP_RIGHT', 'CENTER', 'BOTTOM_LEFT', 'BOTTOM_RIGHT', 'TILED']).default('TILED'),
+  position: z
+    .enum(['TOP_LEFT', 'TOP_RIGHT', 'CENTER', 'BOTTOM_LEFT', 'BOTTOM_RIGHT', 'TILED'])
+    .default('TILED'),
 });
 export type WatermarkPolicy = z.infer<typeof watermarkPolicySchema>;
 
@@ -227,17 +220,17 @@ export const policySchema = z.object({
   id: uuidSchema,
   name: z.string().min(1).max(100),
   description: z.string().max(1000).optional(),
-  
+
   // Context
   tenantId: uuidSchema.optional(),
   createdByUserId: uuidSchema,
-  
+
   // Type and compliance
   type: policyTypeSchema,
   complianceFrameworks: z.array(complianceFrameworkSchema).optional(),
   dataClassification: dataClassificationSchema.default('INTERNAL'),
   enforcementMode: enforcementModeSchema.default('ENFORCE'),
-  
+
   // Policy rules
   screenshot: screenshotPolicySchema.optional(),
   activityTracking: activityTrackingPolicySchema.optional(),
@@ -248,21 +241,21 @@ export const policySchema = z.object({
   device: devicePolicySchema.optional(),
   session: sessionPolicySchema.optional(),
   watermark: watermarkPolicySchema.optional(),
-  
+
   // Status
   isActive: z.boolean().default(true),
   isDefault: z.boolean().default(false),
-  
+
   // Versioning
   version: z.number().int().positive().default(1),
   previousVersionId: uuidSchema.optional(),
-  
+
   // Application
   appliedToPods: z.array(uuidSchema).optional(),
   appliedToContracts: z.array(uuidSchema).optional(),
   appliedToUsers: z.array(uuidSchema).optional(),
   appliedToTenants: z.array(uuidSchema).optional(),
-  
+
   ...timestampsSchema.shape,
 });
 export type Policy = z.infer<typeof policySchema>;
@@ -339,7 +332,7 @@ export const policyViolationSchema = z.object({
   podId: uuidSchema,
   sessionId: uuidSchema.optional(),
   userId: uuidSchema,
-  
+
   // Violation details
   violationType: z.enum([
     'CLIPBOARD_VIOLATION',
@@ -353,19 +346,19 @@ export const policyViolationSchema = z.object({
   ]),
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
   description: z.string().max(1000),
-  
+
   // Context
   details: z.record(z.unknown()).optional(),
-  
+
   // Action taken
   actionTaken: z.enum(['LOGGED', 'WARNED', 'BLOCKED', 'SESSION_TERMINATED']),
-  
+
   // Resolution
   resolved: z.boolean().default(false),
   resolvedAt: dateSchema.optional(),
   resolvedByUserId: uuidSchema.optional(),
   resolutionNotes: z.string().max(1000).optional(),
-  
+
   ...timestampsSchema.shape,
 });
 export type PolicyViolation = z.infer<typeof policyViolationSchema>;

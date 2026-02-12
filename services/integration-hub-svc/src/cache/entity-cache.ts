@@ -241,4 +241,3 @@ export class EntityCache {
 
 // Singleton instance
 export const entityCache = new EntityCache();
-

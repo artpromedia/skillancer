@@ -306,4 +306,3 @@ export function registerQuestionRoutes(fastify: FastifyInstance, deps: QuestionR
     }
   );
 }
-

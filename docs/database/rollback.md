@@ -4,11 +4,11 @@ This document describes emergency rollback procedures for database migrations in
 
 ## Quick Reference
 
-| Scenario | Action | Command/Steps |
-|----------|--------|---------------|
-| Migration failed mid-way | Mark as rolled back | `pnpm db:migrate:resolve --rolled-back <name>` |
+| Scenario                 | Action                   | Command/Steps                                      |
+| ------------------------ | ------------------------ | -------------------------------------------------- |
+| Migration failed mid-way | Mark as rolled back      | `pnpm db:migrate:resolve --rolled-back <name>`     |
 | Need to undo a migration | Create reverse migration | See [Option 2](#option-2-create-reverse-migration) |
-| Catastrophic failure | Point-in-time recovery | See [Option 3](#option-3-point-in-time-recovery) |
+| Catastrophic failure     | Point-in-time recovery   | See [Option 3](#option-3-point-in-time-recovery)   |
 
 ## Emergency Contacts
 
@@ -25,6 +25,7 @@ Before performing any rollback in production:
 **Use when:** Migration failed partway through and needs to be marked as failed.
 
 ### Scenario
+
 The migration started but failed mid-execution, leaving the database in an inconsistent state.
 
 ### Steps
@@ -47,11 +48,13 @@ pnpm db:migrate:deploy
 ```
 
 ### When to Use
+
 - ✅ Migration failed with an error
 - ✅ Database is in known state
 - ✅ Can identify which changes were applied
 
 ### When NOT to Use
+
 - ❌ Migration completed successfully
 - ❌ Unknown database state
 - ❌ Data corruption detected
@@ -63,6 +66,7 @@ pnpm db:migrate:deploy
 **Use when:** A migration completed successfully but needs to be undone.
 
 ### Scenario
+
 A deployed migration is causing issues in production and needs to be reversed.
 
 ### Steps
@@ -77,6 +81,7 @@ pnpm db:migrate:create --name revert_20251208120000_add_column
 ### Example: Reversing Common Operations
 
 #### Revert ADD COLUMN
+
 ```sql
 -- Original migration added a column
 -- Reverse: DROP COLUMN
@@ -85,6 +90,7 @@ ALTER TABLE "users" DROP COLUMN "new_column";
 ```
 
 #### Revert DROP COLUMN (requires backup)
+
 ```sql
 -- ⚠️ Data may be lost! Restore from backup if needed.
 
@@ -99,6 +105,7 @@ WHERE u.id = b.id;
 ```
 
 #### Revert CREATE TABLE
+
 ```sql
 -- Original migration created a table
 -- Reverse: DROP TABLE
@@ -107,6 +114,7 @@ DROP TABLE IF EXISTS "new_table" CASCADE;
 ```
 
 #### Revert DROP TABLE (requires backup)
+
 ```sql
 -- ⚠️ Must restore from backup!
 -- 1. Restore table structure and data from RDS snapshot
@@ -114,6 +122,7 @@ DROP TABLE IF EXISTS "new_table" CASCADE;
 ```
 
 #### Revert ADD INDEX
+
 ```sql
 -- Original migration added an index
 -- Reverse: DROP INDEX
@@ -142,11 +151,13 @@ pnpm db:migrate:deploy
 **Use when:** Catastrophic failure requiring database restoration.
 
 ### Scenario
+
 - Data corruption detected
 - Multiple migrations need to be undone
 - Unknown database state
 
 ### Prerequisites
+
 - AWS RDS automated backups enabled
 - Recent snapshot available
 
@@ -226,6 +237,7 @@ aws rds delete-db-instance \
 **Use when:** Need precise control over rollback operations.
 
 ### Scenario
+
 - Complex rollback with data preservation
 - Partial rollback needed
 
@@ -263,7 +275,7 @@ SELECT id, column_to_remove FROM users;
 ALTER TABLE users DROP COLUMN column_to_remove;
 
 -- 3. Update Prisma migration history
-DELETE FROM "_prisma_migrations" 
+DELETE FROM "_prisma_migrations"
 WHERE migration_name = '20251208120000_add_column_to_remove';
 
 COMMIT;
@@ -305,12 +317,12 @@ After rollback:
 
 ### Database Backup Strategy
 
-| Environment | Backup Type | Retention | Frequency |
-|-------------|-------------|-----------|-----------|
-| Production | RDS Automated | 30 days | Continuous |
-| Production | Manual Snapshot | 90 days | Before migrations |
-| Staging | RDS Automated | 7 days | Continuous |
-| Development | None | - | - |
+| Environment | Backup Type     | Retention | Frequency         |
+| ----------- | --------------- | --------- | ----------------- |
+| Production  | RDS Automated   | 30 days   | Continuous        |
+| Production  | Manual Snapshot | 90 days   | Before migrations |
+| Staging     | RDS Automated   | 7 days    | Continuous        |
+| Development | None            | -         | -                 |
 
 ### Migration Safety Checklist
 

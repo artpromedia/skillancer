@@ -87,4 +87,3 @@ export class LearningGoalRepository {
     await this.prisma.learningGoal.delete({ where: { id } });
   }
 }
-

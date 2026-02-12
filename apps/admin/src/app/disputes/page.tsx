@@ -181,7 +181,9 @@ export default function DisputesPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium text-gray-900">
-                      {(dispute.contractTitle as string) || (dispute.title as string) || `Dispute #${dispute.id}`}
+                      {(dispute.contractTitle as string) ||
+                        (dispute.title as string) ||
+                        `Dispute #${dispute.id}`}
                     </h3>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[(dispute.status as string) || ''] || 'bg-gray-100 text-gray-800'}`}
@@ -211,24 +213,36 @@ export default function DisputesPage() {
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-medium text-blue-700">
-                      {((dispute.client as Record<string, string>)?.name || (dispute.clientName as string) || '?').charAt(0)}
+                      {(
+                        (dispute.client as Record<string, string>)?.name ||
+                        (dispute.clientName as string) ||
+                        '?'
+                      ).charAt(0)}
                     </div>
                     <div className="text-sm">
                       <span className="text-gray-500">Client:</span>{' '}
                       <span className="font-medium text-gray-900">
-                        {(dispute.client as Record<string, string>)?.name || (dispute.clientName as string) || 'Unknown'}
+                        {(dispute.client as Record<string, string>)?.name ||
+                          (dispute.clientName as string) ||
+                          'Unknown'}
                       </span>
                     </div>
                   </div>
                   <div className="text-gray-300">vs</div>
                   <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-sm font-medium text-green-700">
-                      {((dispute.freelancer as Record<string, string>)?.name || (dispute.freelancerName as string) || '?').charAt(0)}
+                      {(
+                        (dispute.freelancer as Record<string, string>)?.name ||
+                        (dispute.freelancerName as string) ||
+                        '?'
+                      ).charAt(0)}
                     </div>
                     <div className="text-sm">
                       <span className="text-gray-500">Freelancer:</span>{' '}
                       <span className="font-medium text-gray-900">
-                        {(dispute.freelancer as Record<string, string>)?.name || (dispute.freelancerName as string) || 'Unknown'}
+                        {(dispute.freelancer as Record<string, string>)?.name ||
+                          (dispute.freelancerName as string) ||
+                          'Unknown'}
                       </span>
                     </div>
                   </div>

@@ -84,4 +84,3 @@ export function errorHandler(
     requestId,
   } as ErrorResponse);
 }
-

@@ -52,6 +52,13 @@ async function loadErrorTracking() {
         environment: process.env.NODE_ENV,
         release: process.env.NEXT_PUBLIC_VERSION,
         appName: 'admin',
+      });
+    } catch (e) {
+      console.warn('[ErrorProvider] Error tracking not available:', e);
+    }
+  }
+  return errorTracking;
+}
 
 // ============================================================================
 // Error Fallback Component
@@ -142,6 +149,8 @@ function ErrorHandler({ children }: { children: ReactNode }) {
         if (typeof window !== 'undefined') {
           window.localStorage.removeItem('admin_auth_token');
           window.sessionStorage.removeItem('admin_auth_token');
+        }
+        const returnUrl = encodeURIComponent(window.location.pathname);
         router.push(`/auth/login?returnUrl=${returnUrl}&reason=session_expired`);
         return;
       }

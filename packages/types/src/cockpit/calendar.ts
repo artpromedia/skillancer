@@ -5,11 +5,7 @@
 
 import { z } from 'zod';
 
-import {
-  uuidSchema,
-  dateSchema,
-  timestampsSchema,
-} from '../common/base';
+import { uuidSchema, dateSchema, timestampsSchema } from '../common/base';
 
 // =============================================================================
 // Calendar Enums
@@ -71,12 +67,7 @@ export type RecurrenceFrequency = z.infer<typeof recurrenceFrequencySchema>;
 /**
  * Attendee response status
  */
-export const attendeeResponseSchema = z.enum([
-  'PENDING',
-  'ACCEPTED',
-  'DECLINED',
-  'TENTATIVE',
-]);
+export const attendeeResponseSchema = z.enum(['PENDING', 'ACCEPTED', 'DECLINED', 'TENTATIVE']);
 export type AttendeeResponse = z.infer<typeof attendeeResponseSchema>;
 
 // =============================================================================
@@ -150,63 +141,70 @@ export type MeetingLocation = z.infer<typeof meetingLocationSchema>;
  */
 export const calendarEventSchema = z.object({
   id: uuidSchema,
-  
+
   // Owner
   userId: uuidSchema,
   tenantId: uuidSchema.optional(),
-  
+
   // Relationships
   clientId: uuidSchema.optional(),
   contractId: uuidSchema.optional(),
   jobId: uuidSchema.optional(),
   milestoneId: uuidSchema.optional(),
-  
+
   // Basic info
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional(),
   type: eventTypeSchema,
   status: eventStatusSchema.default('CONFIRMED'),
   visibility: eventVisibilitySchema.default('PRIVATE'),
-  
+
   // Timing
   startTime: dateSchema,
   endTime: dateSchema,
   isAllDay: z.boolean().default(false),
   timezone: z.string().default('UTC'),
-  
+
   // Location
   location: meetingLocationSchema.optional(),
-  
+
   // Recurrence
   isRecurring: z.boolean().default(false),
   recurrence: recurrenceRuleSchema.optional(),
   recurringEventId: uuidSchema.optional(), // Parent event for instances
   originalStartTime: dateSchema.optional(), // For modified recurring instances
-  
+
   // Attendees
   attendees: z.array(eventAttendeeSchema).optional(),
-  
+
   // Reminders
   reminders: z.array(eventReminderSchema).optional(),
-  
+
   // Appearance
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
+
   // External sync
   externalId: z.string().optional(),
   externalProvider: z.enum(['GOOGLE', 'OUTLOOK', 'APPLE', 'OTHER']).optional(),
   externalUrl: z.string().url().optional(),
   lastSyncedAt: dateSchema.optional(),
-  
+
   // Notes and attachments
   notes: z.string().max(5000).optional(),
-  attachments: z.array(z.object({
-    id: uuidSchema,
-    name: z.string(),
-    url: z.string().url(),
-    mimeType: z.string(),
-  })).optional(),
-  
+  attachments: z
+    .array(
+      z.object({
+        id: uuidSchema,
+        name: z.string(),
+        url: z.string().url(),
+        mimeType: z.string(),
+      })
+    )
+    .optional(),
+
   ...timestampsSchema.shape,
 });
 export type CalendarEvent = z.infer<typeof calendarEventSchema>;
@@ -234,9 +232,14 @@ const baseEventDataSchema = z.object({
   location: meetingLocationSchema.optional(),
   isRecurring: z.boolean().default(false),
   recurrence: recurrenceRuleSchema.optional(),
-  attendees: z.array(eventAttendeeSchema.omit({ id: true, response: true, responseAt: true })).optional(),
+  attendees: z
+    .array(eventAttendeeSchema.omit({ id: true, response: true, responseAt: true }))
+    .optional(),
   reminders: z.array(eventReminderSchema.omit({ id: true, sent: true, sentAt: true })).optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
   clientId: uuidSchema.optional(),
   contractId: uuidSchema.optional(),
   jobId: uuidSchema.optional(),

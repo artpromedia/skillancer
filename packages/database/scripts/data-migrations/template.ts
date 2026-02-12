@@ -25,10 +25,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import {
-  withMigrationLock,
-  getMigrationLockStatus,
-} from '../../src/migration-lock';
+import { withMigrationLock, getMigrationLockStatus } from '../../src/migration-lock';
 
 // ============================================================================
 // CONFIGURATION
@@ -246,7 +243,11 @@ async function runMigration(
 
     // Process batch with retries
     let retries = 0;
-    let batchResult: { migrated: number; skipped: number; errors: Array<{ id: string; error: string }> } | null = null;
+    let batchResult: {
+      migrated: number;
+      skipped: number;
+      errors: Array<{ id: string; error: string }>;
+    } | null = null;
 
     while (retries < CONFIG.maxRetries) {
       try {
@@ -254,8 +255,11 @@ async function runMigration(
         break;
       } catch (error) {
         retries++;
-        console.error(`   Batch ${batchNumber} failed (attempt ${retries}/${CONFIG.maxRetries}):`, error);
-        
+        console.error(
+          `   Batch ${batchNumber} failed (attempt ${retries}/${CONFIG.maxRetries}):`,
+          error
+        );
+
         if (retries < CONFIG.maxRetries) {
           await new Promise((resolve) => setTimeout(resolve, CONFIG.retryDelayMs));
         }
@@ -270,17 +274,15 @@ async function runMigration(
     } else {
       // Batch completely failed after retries
       totalFailed += batch.length;
-      allErrors.push(
-        ...batch.map((r) => ({ id: r.id, error: 'Batch failed after max retries' }))
-      );
+      allErrors.push(...batch.map((r) => ({ id: r.id, error: 'Batch failed after max retries' })));
     }
 
     // Progress logging
     if (batchNumber % CONFIG.logInterval === 0 || options.verbose) {
-      const progress = ((offset + batch.length) / totalCount * 100).toFixed(1);
+      const progress = (((offset + batch.length) / totalCount) * 100).toFixed(1);
       console.log(
         `   Batch ${batchNumber}: ${progress}% complete ` +
-        `(${totalProcessed} migrated, ${totalSkipped} skipped, ${totalFailed} failed)`
+          `(${totalProcessed} migrated, ${totalSkipped} skipped, ${totalFailed} failed)`
       );
     }
 

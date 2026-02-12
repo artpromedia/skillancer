@@ -168,14 +168,14 @@ The following services are deployed:
 
 ### Endpoints Checked
 
-| Endpoint            | Expected | Description                            |
-| ------------------- | -------- | -------------------------------------- |
-| `/health`           | 200      | Basic health check                     |
-| `/health/live`      | 200      | Liveness probe (is process alive)      |
-| `/health/ready`     | 200      | Readiness probe (can handle traffic)   |
-| `/health/dashboard` | 200      | Aggregated health of all services      |
-| `/health/circuits`  | 200      | Circuit breaker status                 |
-| `/api/v1/status`    | 200      | API status                             |
+| Endpoint            | Expected | Description                          |
+| ------------------- | -------- | ------------------------------------ |
+| `/health`           | 200      | Basic health check                   |
+| `/health/live`      | 200      | Liveness probe (is process alive)    |
+| `/health/ready`     | 200      | Readiness probe (can handle traffic) |
+| `/health/dashboard` | 200      | Aggregated health of all services    |
+| `/health/circuits`  | 200      | Circuit breaker status               |
+| `/api/v1/status`    | 200      | API status                           |
 
 ### Health Dashboard
 
@@ -196,6 +196,7 @@ The `/health/dashboard` endpoint provides comprehensive health status:
 ```
 
 Health thresholds:
+
 - **healthy**: 100% of services responding
 - **degraded**: 80-99% of services responding
 - **critical**: 50-79% of services responding
@@ -388,22 +389,22 @@ pnpm --filter auth-svc dev
 
 ### Service URLs (Local)
 
-| Service          | URL                      |
-| ---------------- | ------------------------ |
-| API Gateway      | http://localhost:4000    |
-| Auth Service     | http://localhost:3001    |
-| Market Service   | http://localhost:3002    |
-| SkillPod Service | http://localhost:3003    |
-| Cockpit Service  | http://localhost:3004    |
-| Billing Service  | http://localhost:3005    |
-| Notification Svc | http://localhost:4006    |
-| Executive Svc    | http://localhost:3007    |
-| Financial Svc    | http://localhost:3008    |
-| Talent Graph Svc | http://localhost:3009    |
-| Intelligence Svc | http://localhost:3010    |
-| Copilot Service  | http://localhost:3011    |
-| PostgreSQL       | localhost:5432           |
-| Redis            | localhost:6379           |
+| Service          | URL                   |
+| ---------------- | --------------------- |
+| API Gateway      | http://localhost:4000 |
+| Auth Service     | http://localhost:3001 |
+| Market Service   | http://localhost:3002 |
+| SkillPod Service | http://localhost:3003 |
+| Cockpit Service  | http://localhost:3004 |
+| Billing Service  | http://localhost:3005 |
+| Notification Svc | http://localhost:4006 |
+| Executive Svc    | http://localhost:3007 |
+| Financial Svc    | http://localhost:3008 |
+| Talent Graph Svc | http://localhost:3009 |
+| Intelligence Svc | http://localhost:3010 |
+| Copilot Service  | http://localhost:3011 |
+| PostgreSQL       | localhost:5432        |
+| Redis            | localhost:6379        |
 
 ### Environment Configuration
 
@@ -423,9 +424,9 @@ vim services/api-gateway/.env
 
 ### Required Environment Variables
 
-| Variable        | Description                  | Example                                  |
-| --------------- | ---------------------------- | ---------------------------------------- |
-| DATABASE_URL    | PostgreSQL connection string | postgresql://user:pass@localhost:5432/db |
-| REDIS_URL       | Redis connection string      | redis://localhost:6379                   |
-| JWT_SECRET      | JWT signing secret (32+ chars) | your-secure-secret-here                |
-| SENDGRID_API_KEY| SendGrid API key             | SG.xxxxxx                                |
+| Variable         | Description                    | Example                                  |
+| ---------------- | ------------------------------ | ---------------------------------------- |
+| DATABASE_URL     | PostgreSQL connection string   | postgresql://user:pass@localhost:5432/db |
+| REDIS_URL        | Redis connection string        | redis://localhost:6379                   |
+| JWT_SECRET       | JWT signing secret (32+ chars) | your-secure-secret-here                  |
+| SENDGRID_API_KEY | SendGrid API key               | SG.xxxxxx                                |

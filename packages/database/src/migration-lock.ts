@@ -105,9 +105,7 @@ export interface LockStatus {
  * }
  * ```
  */
-export async function tryAcquireMigrationLock(
-  prisma: PrismaClient
-): Promise<boolean> {
+export async function tryAcquireMigrationLock(prisma: PrismaClient): Promise<boolean> {
   const result = await prisma.$queryRaw<[{ pg_try_advisory_lock: boolean }]>`
     SELECT pg_try_advisory_lock(${MIGRATION_LOCK_KEY_1}, ${MIGRATION_LOCK_KEY_2})
   `;
@@ -136,11 +134,7 @@ export async function acquireMigrationLock(
   prisma: PrismaClient,
   options: MigrationLockOptions = {}
 ): Promise<boolean> {
-  const {
-    timeoutMs = DEFAULT_LOCK_TIMEOUT_MS,
-    onWaiting,
-    throwOnTimeout = true,
-  } = options;
+  const { timeoutMs = DEFAULT_LOCK_TIMEOUT_MS, onWaiting, throwOnTimeout = true } = options;
 
   const startTime = Date.now();
   let attempts = 0;
@@ -214,9 +208,7 @@ export async function releaseMigrationLock(prisma: PrismaClient): Promise<void> 
  * }
  * ```
  */
-export async function getMigrationLockStatus(
-  prisma: PrismaClient
-): Promise<LockStatus> {
+export async function getMigrationLockStatus(prisma: PrismaClient): Promise<LockStatus> {
   const result = await prisma.$queryRaw<
     Array<{
       pid: number;
@@ -297,9 +289,7 @@ export async function withMigrationLock<T>(
  *
  * @param prisma - Prisma client instance
  */
-export async function forceReleaseMigrationLock(
-  prisma: PrismaClient
-): Promise<void> {
+export async function forceReleaseMigrationLock(prisma: PrismaClient): Promise<void> {
   console.warn('⚠️ Force releasing migration lock...');
 
   await prisma.$queryRaw`
@@ -341,9 +331,7 @@ export async function waitForMigrationLock(
       return true;
     }
 
-    console.log(
-      `⏳ Migration in progress (PID: ${status.holderPid}), waiting...`
-    );
+    console.log(`⏳ Migration in progress (PID: ${status.holderPid}), waiting...`);
     await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_INTERVAL_MS));
   }
 

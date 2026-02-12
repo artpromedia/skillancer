@@ -805,4 +805,3 @@ export function getDateRangeForPeriod(period: ReportPeriod, date = new Date()): 
       };
   }
 }
-

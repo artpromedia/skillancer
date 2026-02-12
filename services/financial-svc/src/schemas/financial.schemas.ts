@@ -39,21 +39,24 @@ export const TaxVaultStatusSchema = z.enum(['ACTIVE', 'PAUSED', 'CLOSED']);
 // SKILLANCER CARD SCHEMAS
 // =============================================================================
 
-export const ApplyForCardSchema = z.object({
-  cardType: CardTypeSchema,
-  cardName: z.string().min(1).max(50).optional(),
-  spendingLimit: z.number().positive().max(100000).optional(),
-  shippingAddress: z.object({
-    street: z.string().min(1).max(200),
-    city: z.string().min(1).max(100),
-    state: z.string().min(1).max(100),
-    postalCode: z.string().min(1).max(20),
-    country: z.string().length(2), // ISO 3166-1 alpha-2
-  }).optional(), // Only required for physical cards
-}).refine(
-  (data) => data.cardType !== 'PHYSICAL' || data.shippingAddress !== undefined,
-  { message: 'Shipping address is required for physical cards' }
-);
+export const ApplyForCardSchema = z
+  .object({
+    cardType: CardTypeSchema,
+    cardName: z.string().min(1).max(50).optional(),
+    spendingLimit: z.number().positive().max(100000).optional(),
+    shippingAddress: z
+      .object({
+        street: z.string().min(1).max(200),
+        city: z.string().min(1).max(100),
+        state: z.string().min(1).max(100),
+        postalCode: z.string().min(1).max(20),
+        country: z.string().length(2), // ISO 3166-1 alpha-2
+      })
+      .optional(), // Only required for physical cards
+  })
+  .refine((data) => data.cardType !== 'PHYSICAL' || data.shippingAddress !== undefined, {
+    message: 'Shipping address is required for physical cards',
+  });
 
 export const UpdateCardSchema = z.object({
   cardName: z.string().min(1).max(50).optional(),
@@ -126,7 +129,10 @@ export const CreateBusinessAccountSchema = z.object({
   accountType: z.enum(['CHECKING', 'SAVINGS']),
   businessName: z.string().min(1).max(200),
   businessType: z.enum(['SOLE_PROPRIETOR', 'LLC', 'CORPORATION', 'PARTNERSHIP']),
-  ein: z.string().regex(/^\d{2}-\d{7}$/, 'Invalid EIN format').optional(),
+  ein: z
+    .string()
+    .regex(/^\d{2}-\d{7}$/, 'Invalid EIN format')
+    .optional(),
   address: z.object({
     street: z.string().min(1).max(200),
     city: z.string().min(1).max(100),

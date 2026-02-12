@@ -374,4 +374,3 @@ export class BookingReminderWorker {
 }
 
 export default BookingReminderWorker;
-

@@ -32,37 +32,15 @@ export type PodStatus =
   | 'FAILED'
   | 'TERMINATED';
 
-export type SessionStatus =
-  | 'PENDING'
-  | 'ACTIVE'
-  | 'PAUSED'
-  | 'COMPLETED'
-  | 'TERMINATED'
-  | 'FAILED';
+export type SessionStatus = 'PENDING' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'TERMINATED' | 'FAILED';
 
-export type ScalingEventType =
-  | 'SCALE_UP'
-  | 'SCALE_DOWN'
-  | 'SCALE_OUT'
-  | 'SCALE_IN';
+export type ScalingEventType = 'SCALE_UP' | 'SCALE_DOWN' | 'SCALE_OUT' | 'SCALE_IN';
 
-export type OsType =
-  | 'LINUX'
-  | 'WINDOWS'
-  | 'MACOS';
+export type OsType = 'LINUX' | 'WINDOWS' | 'MACOS';
 
-export type RegistryType =
-  | 'DOCKER_HUB'
-  | 'ECR'
-  | 'GCR'
-  | 'ACR'
-  | 'PRIVATE';
+export type RegistryType = 'DOCKER_HUB' | 'ECR' | 'GCR' | 'ACR' | 'PRIVATE';
 
-export type KillSwitchStatus =
-  | 'ACTIVE'
-  | 'TRIGGERED'
-  | 'RESOLVED'
-  | 'DISABLED';
+export type KillSwitchStatus = 'ACTIVE' | 'TRIGGERED' | 'RESOLVED' | 'DISABLED';
 
 export type KillSwitchReason =
   | 'POLICY_VIOLATION'
@@ -72,10 +50,7 @@ export type KillSwitchReason =
   | 'DATA_LEAK'
   | 'UNAUTHORIZED_ACCESS';
 
-export type WatermarkType =
-  | 'VISIBLE'
-  | 'INVISIBLE'
-  | 'HYBRID';
+export type WatermarkType = 'VISIBLE' | 'INVISIBLE' | 'HYBRID';
 
 export type SecurityPolicyType =
   | 'DATA_TRANSFER'
@@ -85,16 +60,9 @@ export type SecurityPolicyType =
   | 'USB'
   | 'NETWORK';
 
-export type PolicyAction =
-  | 'ALLOW'
-  | 'DENY'
-  | 'PROMPT'
-  | 'LOG';
+export type PolicyAction = 'ALLOW' | 'DENY' | 'PROMPT' | 'LOG';
 
-export type TransferDirection =
-  | 'INBOUND'
-  | 'OUTBOUND'
-  | 'BIDIRECTIONAL';
+export type TransferDirection = 'INBOUND' | 'OUTBOUND' | 'BIDIRECTIONAL';
 
 export type RecordingStatus =
   | 'PENDING'
@@ -104,23 +72,11 @@ export type RecordingStatus =
   | 'FAILED'
   | 'DELETED';
 
-export type LearningPathStatus =
-  | 'DRAFT'
-  | 'ACTIVE'
-  | 'COMPLETED'
-  | 'ARCHIVED';
+export type LearningPathStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
 
-export type RecommendationType =
-  | 'SKILL_GAP'
-  | 'CAREER_PATH'
-  | 'MARKET_DEMAND'
-  | 'LEARNING_PATH';
+export type RecommendationType = 'SKILL_GAP' | 'CAREER_PATH' | 'MARKET_DEMAND' | 'LEARNING_PATH';
 
-export type SignalType =
-  | 'JOB_POSTING'
-  | 'SKILL_DEMAND'
-  | 'SALARY_TREND'
-  | 'CERTIFICATION';
+export type SignalType = 'JOB_POSTING' | 'SKILL_DEMAND' | 'SALARY_TREND' | 'CERTIFICATION';
 
 // =============================================================================
 // ENUM VALUE OBJECTS (for using enums as values)

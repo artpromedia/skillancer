@@ -53,11 +53,13 @@ export class BusinessMetrics {
   /**
    * Record a user signup
    */
-  userSignup(options: {
-    provider?: string;
-    userType?: 'freelancer' | 'client';
-    referralSource?: string;
-  } = {}): void {
+  userSignup(
+    options: {
+      provider?: string;
+      userType?: 'freelancer' | 'client';
+      referralSource?: string;
+    } = {}
+  ): void {
     this.metrics.increment('UserSignup', 1, {
       Provider: options.provider ?? 'email',
       UserType: options.userType ?? 'unknown',
@@ -68,10 +70,12 @@ export class BusinessMetrics {
   /**
    * Record a user login
    */
-  userLogin(options: {
-    provider?: string;
-    success?: boolean;
-  } = {}): void {
+  userLogin(
+    options: {
+      provider?: string;
+      success?: boolean;
+    } = {}
+  ): void {
     this.metrics.increment('UserLogin', 1, {
       Provider: options.provider ?? 'email',
       Success: String(options.success ?? true),
@@ -81,10 +85,12 @@ export class BusinessMetrics {
   /**
    * Record a failed login attempt
    */
-  loginFailed(options: {
-    provider?: string;
-    reason?: string;
-  } = {}): void {
+  loginFailed(
+    options: {
+      provider?: string;
+      reason?: string;
+    } = {}
+  ): void {
     this.metrics.increment('LoginFailed', 1, {
       Provider: options.provider ?? 'email',
       Reason: options.reason ?? 'invalid_credentials',
@@ -94,10 +100,12 @@ export class BusinessMetrics {
   /**
    * Record profile update
    */
-  profileUpdated(options: {
-    userType?: 'freelancer' | 'client';
-    field?: string;
-  } = {}): void {
+  profileUpdated(
+    options: {
+      userType?: 'freelancer' | 'client';
+      field?: string;
+    } = {}
+  ): void {
     this.metrics.increment('ProfileUpdated', 1, {
       UserType: options.userType ?? 'unknown',
       ...(options.field && { Field: options.field }),
@@ -111,11 +119,13 @@ export class BusinessMetrics {
   /**
    * Record a job posting
    */
-  jobPosted(options: {
-    category?: string;
-    budget?: number;
-    budgetType?: 'fixed' | 'hourly';
-  } = {}): void {
+  jobPosted(
+    options: {
+      category?: string;
+      budget?: number;
+      budgetType?: 'fixed' | 'hourly';
+    } = {}
+  ): void {
     this.metrics.increment('JobPosted', 1, {
       Category: options.category ?? 'other',
       BudgetType: options.budgetType ?? 'fixed',
@@ -136,10 +146,12 @@ export class BusinessMetrics {
   /**
    * Record a bid submission
    */
-  bidSubmitted(options: {
-    category?: string;
-    amount?: number;
-  } = {}): void {
+  bidSubmitted(
+    options: {
+      category?: string;
+      amount?: number;
+    } = {}
+  ): void {
     this.metrics.increment('BidSubmitted', 1, {
       Category: options.category ?? 'other',
     });
@@ -158,10 +170,12 @@ export class BusinessMetrics {
   /**
    * Record a bid acceptance
    */
-  bidAccepted(options: {
-    category?: string;
-    amount?: number;
-  } = {}): void {
+  bidAccepted(
+    options: {
+      category?: string;
+      amount?: number;
+    } = {}
+  ): void {
     this.metrics.increment('BidAccepted', 1, {
       Category: options.category ?? 'other',
     });
@@ -180,11 +194,13 @@ export class BusinessMetrics {
   /**
    * Record a contract creation
    */
-  contractCreated(options: {
-    category?: string;
-    value?: number;
-    contractType?: 'fixed' | 'hourly';
-  } = {}): void {
+  contractCreated(
+    options: {
+      category?: string;
+      value?: number;
+      contractType?: 'fixed' | 'hourly';
+    } = {}
+  ): void {
     this.metrics.increment('ContractCreated', 1, {
       Category: options.category ?? 'other',
       ContractType: options.contractType ?? 'fixed',
@@ -205,11 +221,13 @@ export class BusinessMetrics {
   /**
    * Record a contract completion
    */
-  contractCompleted(options: {
-    category?: string;
-    value?: number;
-    duration?: number; // days
-  } = {}): void {
+  contractCompleted(
+    options: {
+      category?: string;
+      value?: number;
+      duration?: number; // days
+    } = {}
+  ): void {
     this.metrics.increment('ContractCompleted', 1, {
       Category: options.category ?? 'other',
     });
@@ -268,12 +286,14 @@ export class BusinessMetrics {
   /**
    * Record a payment failure
    */
-  paymentFailed(options: {
-    amount?: number;
-    currency?: string;
-    paymentMethod?: string;
-    reason?: string;
-  } = {}): void {
+  paymentFailed(
+    options: {
+      amount?: number;
+      currency?: string;
+      paymentMethod?: string;
+      reason?: string;
+    } = {}
+  ): void {
     this.metrics.increment('PaymentFailed', 1, {
       Currency: options.currency ?? 'USD',
       PaymentMethod: options.paymentMethod ?? 'unknown',
@@ -284,11 +304,7 @@ export class BusinessMetrics {
   /**
    * Record a refund
    */
-  refundProcessed(options: {
-    amount: number;
-    currency?: string;
-    reason?: string;
-  }): void {
+  refundProcessed(options: { amount: number; currency?: string; reason?: string }): void {
     this.metrics.increment('RefundProcessed', 1, {
       Currency: options.currency ?? 'USD',
       Reason: options.reason ?? 'unknown',
@@ -311,9 +327,11 @@ export class BusinessMetrics {
   /**
    * Record a session start
    */
-  sessionStarted(options: {
-    platform?: 'web' | 'mobile' | 'api';
-  } = {}): void {
+  sessionStarted(
+    options: {
+      platform?: 'web' | 'mobile' | 'api';
+    } = {}
+  ): void {
     this.metrics.increment('SessionStarted', 1, {
       Platform: options.platform ?? 'web',
     });
@@ -322,10 +340,12 @@ export class BusinessMetrics {
   /**
    * Record a session end
    */
-  sessionEnded(options: {
-    duration?: number; // seconds
-    platform?: 'web' | 'mobile' | 'api';
-  } = {}): void {
+  sessionEnded(
+    options: {
+      duration?: number; // seconds
+      platform?: 'web' | 'mobile' | 'api';
+    } = {}
+  ): void {
     this.metrics.increment('SessionEnded', 1, {
       Platform: options.platform ?? 'web',
     });
@@ -344,12 +364,14 @@ export class BusinessMetrics {
   /**
    * Record a search performed
    */
-  searchPerformed(options: {
-    query?: string;
-    resultsCount?: number;
-    searchType?: 'jobs' | 'freelancers' | 'all';
-    filters?: Record<string, unknown>;
-  } = {}): void {
+  searchPerformed(
+    options: {
+      query?: string;
+      resultsCount?: number;
+      searchType?: 'jobs' | 'freelancers' | 'all';
+      filters?: Record<string, unknown>;
+    } = {}
+  ): void {
     this.metrics.increment('SearchPerformed', 1, {
       SearchType: options.searchType ?? 'all',
       HasResults: String((options.resultsCount ?? 0) > 0),
@@ -369,10 +391,12 @@ export class BusinessMetrics {
   /**
    * Record messages sent
    */
-  messagesSent(options: {
-    count?: number;
-    hasAttachment?: boolean;
-  } = {}): void {
+  messagesSent(
+    options: {
+      count?: number;
+      hasAttachment?: boolean;
+    } = {}
+  ): void {
     this.metrics.increment('MessagesSent', options.count ?? 1, {
       HasAttachment: String(options.hasAttachment ?? false),
     });

@@ -49,9 +49,7 @@ const profileSchema = z.object({
   city: z.string().optional(),
   country: z.string().optional(),
   timezone: z.string().optional(),
-  availability: z
-    .enum(['AVAILABLE', 'PARTIALLY_AVAILABLE', 'NOT_AVAILABLE'])
-    .optional(),
+  availability: z.enum(['AVAILABLE', 'PARTIALLY_AVAILABLE', 'NOT_AVAILABLE']).optional(),
   hoursPerWeek: z.coerce.number().min(0).max(80).optional(),
   linkedIn: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   github: z.string().url('Must be a valid URL').optional().or(z.literal('')),

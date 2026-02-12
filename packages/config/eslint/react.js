@@ -22,10 +22,7 @@ module.exports = {
     'react/prop-types': 'off',
     'react/react-in-jsx-scope': 'off',
     'react/jsx-no-target-blank': 'error',
-    'react/jsx-curly-brace-presence': [
-      'warn',
-      { props: 'never', children: 'never' },
-    ],
+    'react/jsx-curly-brace-presence': ['warn', { props: 'never', children: 'never' }],
     'react/self-closing-comp': 'warn',
     'react/jsx-sort-props': [
       'warn',

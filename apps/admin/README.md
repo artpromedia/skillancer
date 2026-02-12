@@ -34,14 +34,14 @@ The admin dashboard runs on [http://localhost:3010](http://localhost:3010).
 
 ## Roles
 
-| Role | Description |
-|------|-------------|
-| Super Admin | Full access to all features |
-| Operations | User management, disputes, payments |
-| Moderator | Content moderation only |
-| Support | Read-only + support tools |
-| Finance | Financial operations only |
-| Analytics | Reports and analytics only |
+| Role        | Description                         |
+| ----------- | ----------------------------------- |
+| Super Admin | Full access to all features         |
+| Operations  | User management, disputes, payments |
+| Moderator   | Content moderation only             |
+| Support     | Read-only + support tools           |
+| Finance     | Financial operations only           |
+| Analytics   | Reports and analytics only          |
 
 ## Environment Variables
 

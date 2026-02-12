@@ -23,10 +23,7 @@ const ALLOWED_ORIGINS: Record<string, string[]> = {
     'http://localhost:3003',
     'http://localhost:3010',
   ],
-  test: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-  ],
+  test: ['http://localhost:3000', 'http://localhost:3001'],
 };
 
 export function getAllowedOrigins(env?: string): string[] {

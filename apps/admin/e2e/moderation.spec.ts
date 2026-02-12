@@ -53,7 +53,10 @@ test.describe('Admin Content Moderation', () => {
         '[data-testid="item-type"], .item-type, .badge, td:nth-child(2)'
       );
 
-      const isVisible = await typeIndicator.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await typeIndicator
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
 
@@ -65,7 +68,10 @@ test.describe('Admin Content Moderation', () => {
         '[data-testid="item-status"], .status-badge, text=/pending|flagged|reported/i'
       );
 
-      const isVisible = await statusIndicator.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await statusIndicator
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
 
@@ -78,7 +84,10 @@ test.describe('Admin Content Moderation', () => {
         '[data-testid="filter"], select, [role="tablist"], .filter-group, button:has-text("Filter")'
       );
 
-      const isVisible = await filterControls.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await filterControls
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
 
@@ -91,7 +100,10 @@ test.describe('Admin Content Moderation', () => {
       );
 
       // This may or may not be visible depending on test data
-      const isVisible = await emptyState.first().isVisible({ timeout: 2000 }).catch(() => false);
+      const isVisible = await emptyState
+        .first()
+        .isVisible({ timeout: 2000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
   });
@@ -109,7 +121,10 @@ test.describe('Admin Content Moderation', () => {
         'button:has-text("Approve"), [data-testid="approve-button"], button[aria-label="Approve"]'
       );
 
-      const isVisible = await approveButton.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await approveButton
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
 
@@ -117,9 +132,9 @@ test.describe('Admin Content Moderation', () => {
       await page.goto('/moderation');
       await page.waitForTimeout(2000);
 
-      const approveButton = page.locator(
-        'button:has-text("Approve"), [data-testid="approve-button"]'
-      ).first();
+      const approveButton = page
+        .locator('button:has-text("Approve"), [data-testid="approve-button"]')
+        .first();
 
       if (await approveButton.isVisible({ timeout: 3000 }).catch(() => false)) {
         await approveButton.click();
@@ -130,7 +145,10 @@ test.describe('Admin Content Moderation', () => {
           '[role="status"], .toast, [data-testid="success-message"], text=/approved/i'
         );
 
-        const isVisible = await successIndicator.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const isVisible = await successIndicator
+          .first()
+          .isVisible({ timeout: 3000 })
+          .catch(() => false);
         expect(typeof isVisible).toBe('boolean');
       }
     });
@@ -143,11 +161,14 @@ test.describe('Admin Content Moderation', () => {
       const items = page.locator('tr, [data-testid="moderation-item"]');
       const countBefore = await items.count();
 
-      const approveButton = page.locator(
-        'button:has-text("Approve"), [data-testid="approve-button"]'
-      ).first();
+      const approveButton = page
+        .locator('button:has-text("Approve"), [data-testid="approve-button"]')
+        .first();
 
-      if (await approveButton.isVisible({ timeout: 3000 }).catch(() => false) && countBefore > 0) {
+      if (
+        (await approveButton.isVisible({ timeout: 3000 }).catch(() => false)) &&
+        countBefore > 0
+      ) {
         await approveButton.click();
         await page.waitForTimeout(2000);
 
@@ -171,7 +192,10 @@ test.describe('Admin Content Moderation', () => {
         'button:has-text("Reject"), [data-testid="reject-button"], button[aria-label="Reject"]'
       );
 
-      const isVisible = await rejectButton.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await rejectButton
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
 
@@ -179,9 +203,9 @@ test.describe('Admin Content Moderation', () => {
       await page.goto('/moderation');
       await page.waitForTimeout(2000);
 
-      const rejectButton = page.locator(
-        'button:has-text("Reject"), [data-testid="reject-button"]'
-      ).first();
+      const rejectButton = page
+        .locator('button:has-text("Reject"), [data-testid="reject-button"]')
+        .first();
 
       if (await rejectButton.isVisible({ timeout: 3000 }).catch(() => false)) {
         await rejectButton.click();
@@ -192,7 +216,10 @@ test.describe('Admin Content Moderation', () => {
           '[role="dialog"], .modal, [data-testid="reject-dialog"], [role="alertdialog"]'
         );
 
-        const isVisible = await dialog.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const isVisible = await dialog
+          .first()
+          .isVisible({ timeout: 3000 })
+          .catch(() => false);
         expect(typeof isVisible).toBe('boolean');
       }
     });
@@ -201,26 +228,28 @@ test.describe('Admin Content Moderation', () => {
       await page.goto('/moderation');
       await page.waitForTimeout(2000);
 
-      const rejectButton = page.locator(
-        'button:has-text("Reject"), [data-testid="reject-button"]'
-      ).first();
+      const rejectButton = page
+        .locator('button:has-text("Reject"), [data-testid="reject-button"]')
+        .first();
 
       if (await rejectButton.isVisible({ timeout: 3000 }).catch(() => false)) {
         await rejectButton.click();
         await page.waitForTimeout(500);
 
         // Fill in rejection reason if a dialog appears
-        const reasonInput = page.locator(
-          'textarea, input[name="reason"], [data-testid="reject-reason"]'
-        ).first();
+        const reasonInput = page
+          .locator('textarea, input[name="reason"], [data-testid="reject-reason"]')
+          .first();
 
         if (await reasonInput.isVisible({ timeout: 2000 }).catch(() => false)) {
           await reasonInput.fill('Content violates community guidelines - inappropriate language.');
 
           // Confirm rejection
-          const confirmButton = page.locator(
-            'button:has-text("Confirm"), button:has-text("Submit"), [data-testid="confirm-reject"]'
-          ).first();
+          const confirmButton = page
+            .locator(
+              'button:has-text("Confirm"), button:has-text("Submit"), [data-testid="confirm-reject"]'
+            )
+            .first();
 
           if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
             await confirmButton.click();
@@ -237,18 +266,18 @@ test.describe('Admin Content Moderation', () => {
       const items = page.locator('tr, [data-testid="moderation-item"]');
       const countBefore = await items.count();
 
-      const rejectButton = page.locator(
-        'button:has-text("Reject"), [data-testid="reject-button"]'
-      ).first();
+      const rejectButton = page
+        .locator('button:has-text("Reject"), [data-testid="reject-button"]')
+        .first();
 
-      if (await rejectButton.isVisible({ timeout: 3000 }).catch(() => false) && countBefore > 0) {
+      if ((await rejectButton.isVisible({ timeout: 3000 }).catch(() => false)) && countBefore > 0) {
         await rejectButton.click();
         await page.waitForTimeout(500);
 
         // Handle potential dialog
-        const confirmButton = page.locator(
-          'button:has-text("Confirm"), button:has-text("Submit")'
-        ).first();
+        const confirmButton = page
+          .locator('button:has-text("Confirm"), button:has-text("Submit")')
+          .first();
 
         if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
           const reasonInput = page.locator('textarea').first();
@@ -274,9 +303,9 @@ test.describe('Admin Content Moderation', () => {
       await page.goto('/moderation');
       await page.waitForTimeout(2000);
 
-      const item = page.locator(
-        'tr, [data-testid="moderation-item"], a[href*="moderation"]'
-      ).first();
+      const item = page
+        .locator('tr, [data-testid="moderation-item"], a[href*="moderation"]')
+        .first();
 
       if (await item.isVisible({ timeout: 3000 }).catch(() => false)) {
         await item.click();

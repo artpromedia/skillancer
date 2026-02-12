@@ -621,4 +621,3 @@ function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus
 
   return statusMap[status] || 'ACTIVE';
 }
-

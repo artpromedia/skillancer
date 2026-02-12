@@ -5,7 +5,12 @@
  * Repository for managing rate history entries.
  */
 
-import { type PrismaClient, Prisma, type RateHistory, type RateSource } from '../types/prisma-shim.js';
+import {
+  type PrismaClient,
+  Prisma,
+  type RateHistory,
+  type RateSource,
+} from '../types/prisma-shim.js';
 import { logger } from '@skillancer/logger';
 
 import type { RateHistoryCreateInput } from '@skillancer/types/cockpit';
@@ -309,4 +314,3 @@ export class RateHistoryRepository {
     }
   }
 }
-

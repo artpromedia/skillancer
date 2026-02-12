@@ -288,4 +288,3 @@ export class EHRIntegrationService {
 }
 
 export const ehrIntegrationService = new EHRIntegrationService();
-

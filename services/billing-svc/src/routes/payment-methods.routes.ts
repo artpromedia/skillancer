@@ -537,4 +537,3 @@ async function ensureStripeCustomer(userId: string, stripe: Stripe): Promise<str
 }
 
 export default paymentMethodsRoutes;
-

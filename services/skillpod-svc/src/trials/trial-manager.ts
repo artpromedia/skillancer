@@ -784,4 +784,3 @@ export function getTrialManagerService(): TrialManagerService {
   }
   return service;
 }
-

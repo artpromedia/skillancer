@@ -637,4 +637,3 @@ export function getSecurityService(): SecurityService {
   }
   return securityServiceInstance;
 }
-

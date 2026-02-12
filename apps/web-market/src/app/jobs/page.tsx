@@ -8,7 +8,6 @@ import { JobListSkeleton } from './components/job-list-skeleton';
 
 import type { Metadata } from 'next';
 
-
 // ============================================================================
 // Types
 // ============================================================================

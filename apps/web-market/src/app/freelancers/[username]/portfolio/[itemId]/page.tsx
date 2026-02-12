@@ -9,7 +9,6 @@ import { getFreelancerByUsername, getPortfolioItem } from '@/lib/api/freelancers
 
 import type { Metadata } from 'next';
 
-
 // ============================================================================
 // Types
 // ============================================================================

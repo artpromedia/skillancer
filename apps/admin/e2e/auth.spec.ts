@@ -213,7 +213,12 @@ test.describe('Logout Flow', () => {
       'button:has-text("Logout"), button:has-text("Sign out"), button:has-text("Log out"), [data-testid="logout"], a:has-text("Logout")'
     );
 
-    if (await logoutButton.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (
+      await logoutButton
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false)
+    ) {
       await logoutButton.first().click();
       await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
     }
@@ -225,15 +230,19 @@ test.describe('Logout Flow', () => {
       'button:has-text("Logout"), button:has-text("Sign out"), button:has-text("Log out"), [data-testid="logout"]'
     );
 
-    if (await logoutButton.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (
+      await logoutButton
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false)
+    ) {
       await logoutButton.first().click();
       await page.waitForTimeout(1000);
 
       // Verify tokens are cleared
       const hasToken = await page.evaluate(() => {
         return (
-          localStorage.getItem('accessToken') !== null ||
-          localStorage.getItem('token') !== null
+          localStorage.getItem('accessToken') !== null || localStorage.getItem('token') !== null
         );
       });
 
@@ -247,7 +256,12 @@ test.describe('Logout Flow', () => {
       'button:has-text("Logout"), button:has-text("Sign out"), button:has-text("Log out"), [data-testid="logout"]'
     );
 
-    if (await logoutButton.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (
+      await logoutButton
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false)
+    ) {
       await logoutButton.first().click();
       await expect(page).toHaveURL(/\/login/);
 

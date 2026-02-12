@@ -39,7 +39,10 @@ async function main() {
 async function seedSkills() {
   console.log('📚 Seeding skills...');
 
-  const skillsByCategory: Record<string, Array<{ name: string; slug: string; description?: string }>> = {
+  const skillsByCategory: Record<
+    string,
+    Array<{ name: string; slug: string; description?: string }>
+  > = {
     'Web Development': [
       { name: 'JavaScript', slug: 'javascript', description: 'Core web programming language' },
       { name: 'TypeScript', slug: 'typescript', description: 'Typed superset of JavaScript' },
@@ -53,7 +56,11 @@ async function seedSkills() {
       { name: 'Tailwind CSS', slug: 'tailwindcss', description: 'Utility-first CSS framework' },
     ],
     'Mobile Development': [
-      { name: 'React Native', slug: 'react-native', description: 'Cross-platform mobile framework' },
+      {
+        name: 'React Native',
+        slug: 'react-native',
+        description: 'Cross-platform mobile framework',
+      },
       { name: 'Flutter', slug: 'flutter', description: 'Google UI toolkit for mobile' },
       { name: 'iOS/Swift', slug: 'ios-swift', description: 'Native iOS development' },
       { name: 'Android/Kotlin', slug: 'android-kotlin', description: 'Native Android development' },
@@ -68,7 +75,7 @@ async function seedSkills() {
       { name: 'C#/.NET', slug: 'csharp-dotnet', description: 'Microsoft ecosystem' },
       { name: 'Rust', slug: 'rust', description: 'Systems programming language' },
     ],
-    'Database': [
+    Database: [
       { name: 'PostgreSQL', slug: 'postgresql', description: 'Advanced open-source database' },
       { name: 'MySQL', slug: 'mysql', description: 'Popular relational database' },
       { name: 'MongoDB', slug: 'mongodb', description: 'Document database' },
@@ -84,7 +91,7 @@ async function seedSkills() {
       { name: 'Terraform', slug: 'terraform', description: 'Infrastructure as Code' },
       { name: 'CI/CD', slug: 'ci-cd', description: 'Continuous Integration/Deployment' },
     ],
-    'Design': [
+    Design: [
       { name: 'UI Design', slug: 'ui-design', description: 'User interface design' },
       { name: 'UX Design', slug: 'ux-design', description: 'User experience design' },
       { name: 'Figma', slug: 'figma', description: 'Design collaboration tool' },
@@ -94,18 +101,26 @@ async function seedSkills() {
       { name: 'Brand Identity', slug: 'brand-identity', description: 'Brand design' },
     ],
     'Data & AI': [
-      { name: 'Machine Learning', slug: 'machine-learning', description: 'ML algorithms and models' },
+      {
+        name: 'Machine Learning',
+        slug: 'machine-learning',
+        description: 'ML algorithms and models',
+      },
       { name: 'Data Science', slug: 'data-science', description: 'Data analysis and insights' },
       { name: 'Deep Learning', slug: 'deep-learning', description: 'Neural networks' },
       { name: 'NLP', slug: 'nlp', description: 'Natural language processing' },
       { name: 'Computer Vision', slug: 'computer-vision', description: 'Image and video analysis' },
       { name: 'Data Engineering', slug: 'data-engineering', description: 'Data pipelines' },
     ],
-    'Security': [
+    Security: [
       { name: 'Penetration Testing', slug: 'penetration-testing', description: 'Security testing' },
       { name: 'Security Auditing', slug: 'security-auditing', description: 'Security assessment' },
       { name: 'Network Security', slug: 'network-security', description: 'Network protection' },
-      { name: 'Cloud Security', slug: 'cloud-security', description: 'Cloud security architecture' },
+      {
+        name: 'Cloud Security',
+        slug: 'cloud-security',
+        description: 'Cloud security architecture',
+      },
       { name: 'OWASP', slug: 'owasp', description: 'Web application security' },
     ],
   };
@@ -134,7 +149,9 @@ async function seedSkills() {
     }
   }
 
-  console.log(`   ✓ Created ${totalSkills} skills in ${Object.keys(skillsByCategory).length} categories`);
+  console.log(
+    `   ✓ Created ${totalSkills} skills in ${Object.keys(skillsByCategory).length} categories`
+  );
 }
 
 /**
@@ -147,7 +164,9 @@ async function seedAdminUser() {
   const adminPassword = process.env.ADMIN_PASSWORD;
 
   if (!adminPassword) {
-    console.log('   ⚠️  ADMIN_PASSWORD environment variable not set. Skipping admin user creation.');
+    console.log(
+      '   ⚠️  ADMIN_PASSWORD environment variable not set. Skipping admin user creation.'
+    );
     console.log('   ⚠️  Set ADMIN_PASSWORD to create the initial admin user.');
     return;
   }
@@ -187,7 +206,8 @@ async function seedNotificationTemplates() {
       name: 'Welcome Email',
       category: NotificationCategory.SYSTEM,
       inAppTitle: 'Welcome to Skillancer!',
-      inAppBody: 'We are excited to have you join our community. Complete your profile to get started.',
+      inAppBody:
+        'We are excited to have you join our community. Complete your profile to get started.',
       emailSubject: 'Welcome to Skillancer!',
       emailHtmlTemplate: `
         <h1>Welcome to Skillancer, {{firstName}}!</h1>

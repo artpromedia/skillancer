@@ -212,12 +212,9 @@ class ExecutiveSkillPodService {
   /**
    * Generate session URL with security tokens
    */
-  private generateSessionUrl(
-    sessionId: string,
-    config: ExecutiveSessionConfig
-  ): string {
+  private generateSessionUrl(sessionId: string, config: ExecutiveSessionConfig): string {
     const baseUrl = process.env.SKILLPOD_URL || 'https://skillpod.skillancer.dev';
-    
+
     // In production, this would include signed tokens for authentication
     const params = new URLSearchParams({
       session: sessionId,
@@ -240,10 +237,7 @@ class ExecutiveSkillPodService {
   /**
    * Get session history for engagement
    */
-  async getSessionHistory(
-    engagementId: string,
-    limit = 10
-  ): Promise<ExecutiveSession[]> {
+  async getSessionHistory(engagementId: string, limit = 10): Promise<ExecutiveSession[]> {
     // Would query session history from database
     return [];
   }
@@ -264,4 +258,3 @@ class ExecutiveSkillPodService {
 }
 
 export const executiveSkillPodService = new ExecutiveSkillPodService();
-

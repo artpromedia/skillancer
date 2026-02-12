@@ -227,4 +227,3 @@ export class VerifiedCredentialRepository {
     await this.prisma.verifiedCredential.delete({ where: { id } });
   }
 }
-

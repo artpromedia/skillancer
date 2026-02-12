@@ -700,4 +700,3 @@ export function getTenantAdminPortalService(): TenantAdminPortalService {
   }
   return adminPortalService;
 }
-

@@ -543,4 +543,3 @@ export class UnifiedTransactionRepository {
     return where;
   }
 }
-

@@ -16,7 +16,7 @@ const audit = getAuditClient();
 // TYPES
 // =============================================================================
 
-export type ReportType = 
+export type ReportType =
   | 'usage'
   | 'security'
   | 'compliance'
@@ -189,7 +189,7 @@ class EnterpriseReportsService {
   async generateReport(request: ReportRequest): Promise<GeneratedReport> {
     const startTime = Date.now();
     const format = request.format || 'json';
-    
+
     logger.info('Generating enterprise report', {
       tenantId: request.tenantId,
       type: request.reportType,
@@ -212,7 +212,11 @@ class EnterpriseReportsService {
         data = await this.generateUsageReport(request.tenantId, request.dateRange, request.filters);
         break;
       case 'security':
-        data = await this.generateSecurityReport(request.tenantId, request.dateRange, request.filters);
+        data = await this.generateSecurityReport(
+          request.tenantId,
+          request.dateRange,
+          request.filters
+        );
         break;
       case 'compliance':
         data = await this.generateComplianceReport(request.tenantId, request.dateRange);
@@ -221,10 +225,18 @@ class EnterpriseReportsService {
         data = await this.generateExecutiveReport(request.tenantId, request.dateRange);
         break;
       case 'user_activity':
-        data = await this.generateUserActivityReport(request.tenantId, request.dateRange, request.filters);
+        data = await this.generateUserActivityReport(
+          request.tenantId,
+          request.dateRange,
+          request.filters
+        );
         break;
       case 'session_analytics':
-        data = await this.generateSessionAnalyticsReport(request.tenantId, request.dateRange, request.filters);
+        data = await this.generateSessionAnalyticsReport(
+          request.tenantId,
+          request.dateRange,
+          request.filters
+        );
         break;
       case 'cost_analysis':
         data = await this.generateCostAnalysisReport(request.tenantId, request.dateRange);
@@ -306,12 +318,10 @@ class EnterpriseReportsService {
     // Calculate summary
     const totalSessions = sessions.length;
     const totalMinutes = sessions.reduce((sum, s) => {
-      const duration = s.endedAt 
-        ? (s.endedAt.getTime() - s.createdAt.getTime()) / 60000 
-        : 0;
+      const duration = s.endedAt ? (s.endedAt.getTime() - s.createdAt.getTime()) / 60000 : 0;
       return sum + duration;
     }, 0);
-    const uniqueUserIds = new Set(sessions.map(s => s.userId));
+    const uniqueUserIds = new Set(sessions.map((s) => s.userId));
     const avgDuration = totalSessions > 0 ? totalMinutes / totalSessions : 0;
 
     // Daily usage breakdown
@@ -339,10 +349,10 @@ class EnterpriseReportsService {
     // User breakdown
     const userMap = new Map<string, { email: string; sessions: number; minutes: number }>();
     for (const session of sessions) {
-      const entry = userMap.get(session.userId) || { 
-        email: session.user.email, 
-        sessions: 0, 
-        minutes: 0 
+      const entry = userMap.get(session.userId) || {
+        email: session.user.email,
+        sessions: 0,
+        minutes: 0,
       };
       entry.sessions++;
       if (session.endedAt) {
@@ -401,9 +411,9 @@ class EnterpriseReportsService {
     });
 
     // Calculate summary
-    const criticalAlerts = securityEvents.filter(e => e.severity === 'CRITICAL').length;
-    const uniquePolicies = new Set(securityEvents.filter(e => e.policyId).map(e => e.policyId));
-    const blockedAttempts = securityEvents.filter(e => e.blocked).length;
+    const criticalAlerts = securityEvents.filter((e) => e.severity === 'CRITICAL').length;
+    const uniquePolicies = new Set(securityEvents.filter((e) => e.policyId).map((e) => e.policyId));
+    const blockedAttempts = securityEvents.filter((e) => e.blocked).length;
 
     // Events by category
     const categoryMap = new Map<string, { count: number; maxSeverity: string }>();
@@ -412,7 +422,10 @@ class EnterpriseReportsService {
       entry.count++;
       // Update max severity
       const severityOrder = ['low', 'medium', 'high', 'critical'];
-      if (severityOrder.indexOf(event.severity.toLowerCase()) > severityOrder.indexOf(entry.maxSeverity)) {
+      if (
+        severityOrder.indexOf(event.severity.toLowerCase()) >
+        severityOrder.indexOf(entry.maxSeverity)
+      ) {
         entry.maxSeverity = event.severity.toLowerCase();
       }
       categoryMap.set(event.category, entry);
@@ -428,10 +441,10 @@ class EnterpriseReportsService {
     const userRiskMap = new Map<string, { email: string; incidents: number; riskScore: number }>();
     for (const event of securityEvents) {
       if (!event.userId) continue;
-      const entry = userRiskMap.get(event.userId) || { 
-        email: event.user?.email || 'unknown', 
-        incidents: 0, 
-        riskScore: 0 
+      const entry = userRiskMap.get(event.userId) || {
+        email: event.user?.email || 'unknown',
+        incidents: 0,
+        riskScore: 0,
       };
       entry.incidents++;
       // Increment risk score based on severity
@@ -481,7 +494,7 @@ class EnterpriseReportsService {
         criticalAlerts,
         policiesTriggered: uniquePolicies.size,
         blockedAttempts,
-        suspiciousActivities: securityEvents.filter(e => e.suspicious).length,
+        suspiciousActivities: securityEvents.filter((e) => e.suspicious).length,
       },
       eventsByCategory,
       topRiskyUsers,
@@ -510,8 +523,8 @@ class EnterpriseReportsService {
       },
     });
 
-    const passing = controls.filter(c => c.assessments[0]?.status === 'PASSING').length;
-    const failing = controls.filter(c => c.assessments[0]?.status === 'FAILING').length;
+    const passing = controls.filter((c) => c.assessments[0]?.status === 'PASSING').length;
+    const failing = controls.filter((c) => c.assessments[0]?.status === 'FAILING').length;
     const overallScore = controls.length > 0 ? Math.round((passing / controls.length) * 100) : 0;
 
     // Open findings
@@ -529,13 +542,13 @@ class EnterpriseReportsService {
 
     const frameworkStatus = await Promise.all(
       frameworks.map(async (fw) => {
-        const fwControls = controls.filter(c => c.frameworkId === fw.id);
-        const fwPassing = fwControls.filter(c => c.assessments[0]?.status === 'PASSING').length;
+        const fwControls = controls.filter((c) => c.frameworkId === fw.id);
+        const fwPassing = fwControls.filter((c) => c.assessments[0]?.status === 'PASSING').length;
         const score = fwControls.length > 0 ? Math.round((fwPassing / fwControls.length) * 100) : 0;
-        
+
         return {
           framework: fw.name,
-          status: score >= 90 ? 'compliant' : score >= 70 ? 'partial' : 'non_compliant' as const,
+          status: score >= 90 ? 'compliant' : score >= 70 ? 'partial' : ('non_compliant' as const),
           score,
           lastAssessment: fw.lastAssessedAt?.toISOString() || 'Never',
         };
@@ -543,11 +556,14 @@ class EnterpriseReportsService {
     );
 
     // Control details
-    const controlDetails = controls.slice(0, 50).map(c => ({
+    const controlDetails = controls.slice(0, 50).map((c) => ({
       controlId: c.id,
       controlName: c.name,
       framework: c.framework.name,
-      status: (c.assessments[0]?.status || 'not_assessed').toLowerCase() as 'passing' | 'failing' | 'not_assessed',
+      status: (c.assessments[0]?.status || 'not_assessed').toLowerCase() as
+        | 'passing'
+        | 'failing'
+        | 'not_assessed',
       evidence: c.assessments[0]?.evidence || [],
       lastChecked: c.assessments[0]?.assessedAt?.toISOString() || 'Never',
     }));
@@ -563,7 +579,7 @@ class EnterpriseReportsService {
       take: 100,
     });
 
-    const auditTrail = auditLogs.map(log => ({
+    const auditTrail = auditLogs.map((log) => ({
       timestamp: log.createdAt.toISOString(),
       action: log.action,
       actor: log.actorId,
@@ -596,9 +612,11 @@ class EnterpriseReportsService {
     const currentPeriodDays = Math.ceil(
       (dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)
     );
-    
+
     // Previous period for comparison
-    const previousStart = new Date(dateRange.start.getTime() - currentPeriodDays * 24 * 60 * 60 * 1000);
+    const previousStart = new Date(
+      dateRange.start.getTime() - currentPeriodDays * 24 * 60 * 60 * 1000
+    );
     const previousEnd = new Date(dateRange.start.getTime() - 1);
 
     // Current period data
@@ -631,12 +649,12 @@ class EnterpriseReportsService {
     });
 
     // Growth calculations
-    const userGrowth = previousUsers > 0 
-      ? Math.round(((currentUsers - previousUsers) / previousUsers) * 100) 
-      : 0;
-    const sessionGrowth = previousSessions > 0 
-      ? Math.round(((currentSessions - previousSessions) / previousSessions) * 100) 
-      : 0;
+    const userGrowth =
+      previousUsers > 0 ? Math.round(((currentUsers - previousUsers) / previousUsers) * 100) : 0;
+    const sessionGrowth =
+      previousSessions > 0
+        ? Math.round(((currentSessions - previousSessions) / previousSessions) * 100)
+        : 0;
 
     // Security and compliance scores
     const securityScore = await this.calculateSecurityScore(tenantId, dateRange);
@@ -667,8 +685,17 @@ class EnterpriseReportsService {
     const securityTrend = await this.getSecurityTrend(tenantId, dateRange);
 
     // Generate highlights and recommendations
-    const highlights = this.generateHighlights(currentUsers, userGrowth, sessionGrowth, securityScore);
-    const recommendations = this.generateRecommendations(userGrowth, securityScore, complianceScore);
+    const highlights = this.generateHighlights(
+      currentUsers,
+      userGrowth,
+      sessionGrowth,
+      securityScore
+    );
+    const recommendations = this.generateRecommendations(
+      userGrowth,
+      securityScore,
+      complianceScore
+    );
 
     return {
       overview: {
@@ -718,7 +745,7 @@ class EnterpriseReportsService {
     });
 
     return {
-      users: users.map(user => ({
+      users: users.map((user) => ({
         id: user.id,
         email: user.email,
         name: user.name,
@@ -730,12 +757,13 @@ class EnterpriseReportsService {
           return sum + (s.endedAt.getTime() - s.createdAt.getTime()) / 60000;
         }, 0),
         firstSession: user.sessions.length > 0 ? user.sessions[0].createdAt : null,
-        lastSession: user.sessions.length > 0 ? user.sessions[user.sessions.length - 1].createdAt : null,
+        lastSession:
+          user.sessions.length > 0 ? user.sessions[user.sessions.length - 1].createdAt : null,
       })),
       summary: {
         totalUsers: users.length,
-        activeUsers: users.filter(u => u.sessions.length > 0).length,
-        inactiveUsers: users.filter(u => u.sessions.length === 0).length,
+        activeUsers: users.filter((u) => u.sessions.length > 0).length,
+        inactiveUsers: users.filter((u) => u.sessions.length === 0).length,
       },
     };
   }
@@ -762,11 +790,11 @@ class EnterpriseReportsService {
 
     // Duration distribution
     const durationBuckets = {
-      'under_5min': 0,
+      under_5min: 0,
       '5_15min': 0,
       '15_30min': 0,
       '30_60min': 0,
-      'over_60min': 0,
+      over_60min: 0,
     };
 
     for (const session of sessions) {
@@ -796,8 +824,8 @@ class EnterpriseReportsService {
     return {
       summary: {
         totalSessions: sessions.length,
-        completedSessions: sessions.filter(s => s.endedAt).length,
-        activeSessions: sessions.filter(s => !s.endedAt).length,
+        completedSessions: sessions.filter((s) => s.endedAt).length,
+        activeSessions: sessions.filter((s) => !s.endedAt).length,
         avgDuration: 0, // Calculate
       },
       durationDistribution: durationBuckets,
@@ -809,10 +837,7 @@ class EnterpriseReportsService {
   /**
    * Generate cost analysis report
    */
-  private async generateCostAnalysisReport(
-    tenantId: string,
-    dateRange: DateRange
-  ): Promise<any> {
+  private async generateCostAnalysisReport(tenantId: string, dateRange: DateRange): Promise<any> {
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       include: {
@@ -859,9 +884,15 @@ class EnterpriseReportsService {
         },
       },
       projections: {
-        monthlyEstimate: (basePrice + computeCost) * (30 / Math.max(1, Math.ceil(
-          (dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)
-        ))),
+        monthlyEstimate:
+          (basePrice + computeCost) *
+          (30 /
+            Math.max(
+              1,
+              Math.ceil(
+                (dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)
+              )
+            )),
       },
     };
   }
@@ -963,10 +994,10 @@ class EnterpriseReportsService {
     // In production, this would convert to the appropriate format
     // and upload to S3/blob storage
     const fileName = `reports/${reportId}.${format}`;
-    
+
     // Placeholder - would upload to S3
     logger.info('Converting and uploading report', { reportId, format, fileName });
-    
+
     return `https://storage.example.com/${fileName}`;
   }
 
@@ -976,10 +1007,7 @@ class EnterpriseReportsService {
       where: {
         tenantId,
         createdAt: { lte: dateRange.end },
-        OR: [
-          { endedAt: null },
-          { endedAt: { gte: dateRange.start } },
-        ],
+        OR: [{ endedAt: null }, { endedAt: { gte: dateRange.start } }],
       },
     });
     return activeSessions;
@@ -1009,10 +1037,10 @@ class EnterpriseReportsService {
         assessments: { orderBy: { assessedAt: 'desc' }, take: 1 },
       },
     });
-    
+
     if (controls.length === 0) return 100;
-    
-    const passing = controls.filter(c => c.assessments[0]?.status === 'PASSING').length;
+
+    const passing = controls.filter((c) => c.assessments[0]?.status === 'PASSING').length;
     return Math.round((passing / controls.length) * 100);
   }
 
@@ -1038,7 +1066,7 @@ class EnterpriseReportsService {
     securityScore: number
   ): string[] {
     const highlights: string[] = [];
-    
+
     if (userGrowth > 10) {
       highlights.push(`User adoption increased by ${userGrowth}% this period`);
     }
@@ -1051,7 +1079,7 @@ class EnterpriseReportsService {
     if (users > 100) {
       highlights.push(`Platform now serving ${users} active users`);
     }
-    
+
     return highlights;
   }
 
@@ -1061,7 +1089,7 @@ class EnterpriseReportsService {
     complianceScore: number
   ): string[] {
     const recommendations: string[] = [];
-    
+
     if (userGrowth < 0) {
       recommendations.push('Consider user engagement initiatives to improve adoption');
     }
@@ -1071,7 +1099,7 @@ class EnterpriseReportsService {
     if (complianceScore < 90) {
       recommendations.push('Focus on failing compliance controls to improve score');
     }
-    
+
     return recommendations;
   }
 
@@ -1102,4 +1130,3 @@ export function getEnterpriseReportsService(): EnterpriseReportsService {
   }
   return service;
 }
-

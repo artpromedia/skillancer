@@ -810,4 +810,3 @@ router.get('/rate-history/stats', async (req: Request, res: Response, next: Next
 });
 
 export default router;
-

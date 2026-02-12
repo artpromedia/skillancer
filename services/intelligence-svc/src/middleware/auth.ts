@@ -35,10 +35,7 @@ export interface AuthenticatedRequest extends FastifyRequest {
  *
  * For now, extracts user from request (set by API Gateway)
  */
-export async function authenticate(
-  request: FastifyRequest,
-  reply: FastifyReply
-): Promise<void> {
+export async function authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   // Check for user set by API Gateway or from JWT
   const user = (request as any).user;
 
@@ -96,7 +93,7 @@ export function requirePermission(permission: string) {
 
     // Check if user has required permission
     // In production, this would check against a permissions system
-    const hasPermission = user.roles?.some(role => {
+    const hasPermission = user.roles?.some((role) => {
       // Admin has all permissions
       if (role === 'admin' || role === 'ADMIN') return true;
       // Check specific permission

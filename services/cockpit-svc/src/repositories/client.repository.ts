@@ -460,4 +460,3 @@ export class ClientRepository {
     return parts.length > 0 ? parts.join(' ') : 'Unknown Client';
   }
 }
-

@@ -729,7 +729,13 @@ export class RetryManager {
   }
 
   private async notifyCustomerOfFailure(
-    payment: { id: string; stripeCustomerId: string; amount: number; currency: string; userId?: string },
+    payment: {
+      id: string;
+      stripeCustomerId: string;
+      amount: number;
+      currency: string;
+      userId?: string;
+    },
     strategy: RetryStrategy
   ): Promise<void> {
     logger.info(
@@ -818,7 +824,8 @@ export class RetryManager {
         },
         {
           amount: 'N/A',
-          reason: 'Your payment method needs to be updated. Please add a new card to continue using Skillancer.',
+          reason:
+            'Your payment method needs to be updated. Please add a new card to continue using Skillancer.',
         }
       );
     }
@@ -859,4 +866,3 @@ export async function processScheduledRetries(): Promise<void> {
     }
   }
 }
-

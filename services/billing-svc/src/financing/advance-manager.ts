@@ -427,4 +427,3 @@ export function getAdvanceManager(): AdvanceManager {
   }
   return advanceManager;
 }
-

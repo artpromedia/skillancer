@@ -676,4 +676,3 @@ export function createLearningRecommendationRepository(
     refreshScores,
   };
 }
-

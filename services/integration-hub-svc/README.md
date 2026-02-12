@@ -38,6 +38,7 @@ The Integration Hub Service provides a unified framework for connecting executiv
 ## Connectors
 
 ### Common (All Executive Types)
+
 - Slack
 - Google Calendar
 - Microsoft Teams
@@ -45,12 +46,14 @@ The Integration Hub Service provides a unified framework for connecting executiv
 - Asana
 
 ### CTO Integrations
+
 - GitHub
 - GitLab
 - Jira
 - Datadog
 
 ### CFO Integrations
+
 - QuickBooks
 - Xero
 - Stripe
@@ -60,20 +63,24 @@ The Integration Hub Service provides a unified framework for connecting executiv
 ## API Endpoints
 
 ### Discovery
+
 - `GET /integrations` - List available integrations
 - `GET /integrations/:slug` - Get integration details
 
 ### Connection
+
 - `POST /workspaces/:workspaceId/integrations/:slug/connect` - Initiate OAuth
 - `GET /oauth/callback/:slug` - OAuth callback handler
 - `POST /workspaces/:workspaceId/integrations/:integrationId/disconnect` - Disconnect
 
 ### Status & Data
+
 - `GET /workspaces/:workspaceId/integrations` - List connected integrations
 - `GET /workspaces/:workspaceId/integrations/:integrationId/widgets/:widgetId/data` - Widget data
 - `POST /workspaces/:workspaceId/integrations/:integrationId/sync` - Trigger sync
 
 ### Webhooks
+
 - `POST /webhooks/:connectorSlug` - Receive provider webhooks
 
 ## Environment Variables

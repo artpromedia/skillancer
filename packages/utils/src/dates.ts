@@ -91,10 +91,7 @@ export function formatDateTime(date: Date | string | number): string {
  * parseDate('2024-01-15') // Date object for Jan 15, 2024
  * parseDate('15/01/2024', 'dd/MM/yyyy') // Date object for Jan 15, 2024
  */
-export function parseDate(
-  dateString: string,
-  formatStr: string = 'yyyy-MM-dd'
-): Date {
+export function parseDate(dateString: string, formatStr: string = 'yyyy-MM-dd'): Date {
   const parsed = parse(dateString, formatStr, new Date());
   if (!isValid(parsed)) {
     throw new Error(`Invalid date string: ${dateString}`);

@@ -141,7 +141,7 @@ export function createExpressMetrics(options: ExpressMetricsOptions = {}): Reque
     metricsReq.metricsService = metrics;
 
     // Get the path (without query string)
-    const rawPath: string = req.path ?? (req.url?.split('?')[0] ?? '/');
+    const rawPath: string = req.path ?? req.url?.split('?')[0] ?? '/';
 
     // Skip ignored paths
     if (shouldIgnorePath(rawPath, ignorePaths)) {
@@ -150,7 +150,9 @@ export function createExpressMetrics(options: ExpressMetricsOptions = {}): Reque
     }
 
     // Normalize path if enabled
-    const path: string = normalizePaths ? normalizePath(rawPath, pathNormalizationPatterns) : rawPath;
+    const path: string = normalizePaths
+      ? normalizePath(rawPath, pathNormalizationPatterns)
+      : rawPath;
     const method: string = req.method ?? 'UNKNOWN';
 
     // Record metrics on response finish
@@ -244,10 +246,12 @@ export function createExpressErrorMetrics(
     });
 
   return (err: Error, req: Request, _res: Response, next: NextFunction): void => {
-    const rawPath: string = req.path ?? (req.url?.split('?')[0] ?? '/');
+    const rawPath: string = req.path ?? req.url?.split('?')[0] ?? '/';
 
     if (!shouldIgnorePath(rawPath, ignorePaths)) {
-      const path: string = normalizePaths ? normalizePath(rawPath, pathNormalizationPatterns) : rawPath;
+      const path: string = normalizePaths
+        ? normalizePath(rawPath, pathNormalizationPatterns)
+        : rawPath;
       const method: string = req.method ?? 'UNKNOWN';
 
       metrics.increment('UnhandledErrorCount', 1, {

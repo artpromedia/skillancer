@@ -482,4 +482,3 @@ export class TeamCompositionService {
 }
 
 export const teamCompositionService = new TeamCompositionService();
-

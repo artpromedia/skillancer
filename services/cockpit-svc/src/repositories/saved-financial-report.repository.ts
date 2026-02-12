@@ -352,4 +352,3 @@ export class SavedFinancialReportRepository {
     return where;
   }
 }
-

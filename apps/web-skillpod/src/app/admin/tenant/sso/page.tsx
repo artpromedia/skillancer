@@ -22,7 +22,14 @@ import {
   Trash2,
   Info,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@skillancer/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+  CardFooter,
+} from '@skillancer/ui/card';
 import { Button } from '@skillancer/ui/button';
 import { Input } from '@skillancer/ui/input';
 import { Label } from '@skillancer/ui/label';
@@ -222,9 +229,7 @@ function SpMetadataCard({ metadata }: { metadata: SpMetadata }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Service Provider Details</CardTitle>
-        <CardDescription>
-          Provide these values to your Identity Provider (IdP)
-        </CardDescription>
+        <CardDescription>Provide these values to your Identity Provider (IdP)</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -251,7 +256,7 @@ function SpMetadataCard({ metadata }: { metadata: SpMetadata }) {
       </CardContent>
       <CardFooter>
         <Button variant="outline" onClick={downloadMetadata}>
-          <Download className="h-4 w-4 mr-2" />
+          <Download className="mr-2 h-4 w-4" />
           Download SP Metadata XML
         </Button>
       </CardFooter>
@@ -301,7 +306,7 @@ function SamlConfigForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label>Identity Provider</Label>
           <Select value={provider} onValueChange={setProvider}>
@@ -370,13 +375,13 @@ function SamlConfigForm({ onSuccess }: { onSuccess: () => void }) {
         />
       </div>
 
-      <div className="border-t pt-6 space-y-4">
+      <div className="space-y-4 border-t pt-6">
         <h4 className="font-medium">Provisioning Settings</h4>
 
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">Just-in-Time Provisioning</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Automatically create users on first SSO login
             </p>
           </div>
@@ -406,7 +411,7 @@ function SamlConfigForm({ onSuccess }: { onSuccess: () => void }) {
             placeholder="example.com&#10;subsidiary.com"
             rows={3}
           />
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Only users with these email domains can log in. Leave empty to allow all.
           </p>
         </div>
@@ -414,7 +419,7 @@ function SamlConfigForm({ onSuccess }: { onSuccess: () => void }) {
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">Enforce SSO for All Users</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Disable password login for all users (recommended)
             </p>
           </div>
@@ -471,7 +476,7 @@ function OidcConfigForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label>Identity Provider</Label>
           <Select value={provider} onValueChange={setProvider}>
@@ -507,12 +512,12 @@ function OidcConfigForm({ onSuccess }: { onSuccess: () => void }) {
           placeholder="https://login.microsoftonline.com/{tenant}/v2.0"
           required
         />
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           The OIDC discovery endpoint will be derived from this URL
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label>Client ID *</Label>
           <Input
@@ -542,13 +547,13 @@ function OidcConfigForm({ onSuccess }: { onSuccess: () => void }) {
         />
       </div>
 
-      <div className="border-t pt-6 space-y-4">
+      <div className="space-y-4 border-t pt-6">
         <h4 className="font-medium">Provisioning Settings</h4>
 
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">Just-in-Time Provisioning</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Automatically create users on first SSO login
             </p>
           </div>
@@ -583,9 +588,7 @@ function OidcConfigForm({ onSuccess }: { onSuccess: () => void }) {
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">Enforce SSO for All Users</p>
-            <p className="text-sm text-muted-foreground">
-              Disable password login for all users
-            </p>
+            <p className="text-muted-foreground text-sm">Disable password login for all users</p>
           </div>
           <Switch checked={enforceForAllUsers} onCheckedChange={setEnforceForAllUsers} />
         </div>
@@ -704,16 +707,13 @@ function SsoStatusCard({ config }: { config: SsoConfig }) {
             onClick={() => testMutation.mutate()}
             disabled={testMutation.isPending}
           >
-            <Play className="h-4 w-4 mr-2" />
+            <Play className="mr-2 h-4 w-4" />
             Test
           </Button>
 
           {config.status === 'CONFIGURED' && (
-            <Button
-              onClick={() => activateMutation.mutate()}
-              disabled={activateMutation.isPending}
-            >
-              <Power className="h-4 w-4 mr-2" />
+            <Button onClick={() => activateMutation.mutate()} disabled={activateMutation.isPending}>
+              <Power className="mr-2 h-4 w-4" />
               Activate
             </Button>
           )}
@@ -724,7 +724,7 @@ function SsoStatusCard({ config }: { config: SsoConfig }) {
               onClick={() => deactivateMutation.mutate()}
               disabled={deactivateMutation.isPending}
             >
-              <Power className="h-4 w-4 mr-2" />
+              <Power className="mr-2 h-4 w-4" />
               Deactivate
             </Button>
           )}
@@ -735,7 +735,7 @@ function SsoStatusCard({ config }: { config: SsoConfig }) {
               className="text-red-600"
               onClick={() => setDeleteDialogOpen(true)}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </Button>
           )}
@@ -747,8 +747,7 @@ function SsoStatusCard({ config }: { config: SsoConfig }) {
           <DialogHeader>
             <DialogTitle>Delete SSO Configuration</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this SSO configuration? This action cannot be
-              undone.
+              Are you sure you want to delete this SSO configuration? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -793,14 +792,14 @@ export default function SsoConfigPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="border-primary h-12 w-12 animate-spin rounded-full border-b-2" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
+    <div className="container mx-auto max-w-4xl px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Single Sign-On</h1>
         <p className="text-muted-foreground">
@@ -868,10 +867,10 @@ export default function SsoConfigPage() {
                 href={guide.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
               >
                 <span>{guide.name}</span>
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <ExternalLink className="text-muted-foreground h-4 w-4" />
               </a>
             ))}
           </CardContent>

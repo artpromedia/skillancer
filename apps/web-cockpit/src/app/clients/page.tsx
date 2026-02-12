@@ -365,10 +365,7 @@ function ClientListRow({ client }: Readonly<{ client: Client }>) {
 
 export default function ClientsPage() {
   const { data: clientsResponse, isLoading, error } = useClients();
-  const clients = useMemo(
-    () => (clientsResponse?.data ?? []).map(mapApiClient),
-    [clientsResponse]
-  );
+  const clients = useMemo(() => (clientsResponse?.data ?? []).map(mapApiClient), [clientsResponse]);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('All');

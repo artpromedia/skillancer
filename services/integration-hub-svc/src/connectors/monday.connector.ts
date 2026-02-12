@@ -216,4 +216,3 @@ export class MondayConnector extends BaseConnector {
 }
 
 export const createMondayConnector = (config: MondayConfig) => new MondayConnector(config);
-

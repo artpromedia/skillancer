@@ -657,4 +657,3 @@ export function createSignalProcessor(
     cleanupExpiredSignals,
   };
 }
-

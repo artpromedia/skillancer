@@ -408,4 +408,3 @@ export class SlackConnector extends BaseConnector {
 }
 
 export const slackConnector = new SlackConnector();
-

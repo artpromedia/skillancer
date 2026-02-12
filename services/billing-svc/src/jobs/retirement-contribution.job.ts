@@ -296,4 +296,3 @@ export function getRetirementContributionJob(): RetirementContributionJob {
   }
   return job;
 }
-

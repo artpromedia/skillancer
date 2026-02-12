@@ -52,7 +52,7 @@ export const NoResults: Story = {
   args: {
     icon: <Search className="h-12 w-12" />,
     title: 'No results found',
-    description: 'Try adjusting your search or filters to find what you\'re looking for.',
+    description: "Try adjusting your search or filters to find what you're looking for.",
     actionLabel: 'Clear Filters',
     onAction: () => alert('Clear filters clicked'),
   },
@@ -85,7 +85,7 @@ export const WithSecondaryAction: Story = {
 
 export const InCard: Story = {
   render: () => (
-    <div className="w-[500px] border rounded-lg">
+    <div className="w-[500px] rounded-lg border">
       <EmptyState
         icon={<Inbox className="h-12 w-12" />}
         title="Your inbox is empty"
@@ -97,8 +97,8 @@ export const InCard: Story = {
 
 export const Variations: Story = {
   render: () => (
-    <div className="grid grid-cols-2 gap-6 w-[800px]">
-      <div className="border rounded-lg">
+    <div className="grid w-[800px] grid-cols-2 gap-6">
+      <div className="rounded-lg border">
         <EmptyState
           icon={<FileX className="h-10 w-10" />}
           title="No documents"
@@ -107,7 +107,7 @@ export const Variations: Story = {
           onAction={() => {}}
         />
       </div>
-      <div className="border rounded-lg">
+      <div className="rounded-lg border">
         <EmptyState
           icon={<Users className="h-10 w-10" />}
           title="No team members"
@@ -116,14 +116,14 @@ export const Variations: Story = {
           onAction={() => {}}
         />
       </div>
-      <div className="border rounded-lg">
+      <div className="rounded-lg border">
         <EmptyState
           icon={<Search className="h-10 w-10" />}
           title="No search results"
           description="Try different keywords"
         />
       </div>
-      <div className="border rounded-lg">
+      <div className="rounded-lg border">
         <EmptyState
           icon={<Package className="h-10 w-10" />}
           title="No products"

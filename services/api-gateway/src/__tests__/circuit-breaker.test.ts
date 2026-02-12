@@ -218,9 +218,7 @@ describe('CircuitBreaker', () => {
 
       // Some successes and failures
       await breaker.execute(() => Promise.resolve('ok'));
-      await expect(
-        breaker.execute(() => Promise.reject(new Error('fail')))
-      ).rejects.toThrow();
+      await expect(breaker.execute(() => Promise.reject(new Error('fail')))).rejects.toThrow();
 
       const stats = breaker.getStats();
 

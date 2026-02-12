@@ -6,12 +6,7 @@
 import { z } from 'zod';
 
 import { jobTypeSchema } from './job';
-import {
-  uuidSchema,
-  dateSchema,
-  currencyCodeSchema,
-  timestampsSchema,
-} from '../common/base';
+import { uuidSchema, dateSchema, currencyCodeSchema, timestampsSchema } from '../common/base';
 
 // =============================================================================
 // Bid Enums
@@ -56,51 +51,55 @@ export const bidSchema = z.object({
   jobId: uuidSchema,
   freelancerUserId: uuidSchema,
   tenantId: uuidSchema.optional(),
-  
+
   // Proposal content
   coverLetter: z.string().min(100).max(5000),
   proposedApproach: z.string().max(3000).optional(),
   relevantExperience: z.string().max(2000).optional(),
-  
+
   // Pricing
   type: jobTypeSchema,
   amount: z.number().positive(),
   currency: currencyCodeSchema.default('USD'),
   hourlyRate: z.number().positive().optional(), // For hourly jobs
   estimatedHours: z.number().positive().optional(),
-  
+
   // Milestones (for milestone-based projects)
   milestones: z.array(bidMilestoneSchema).optional(),
-  
+
   // Timeline
   estimatedDurationDays: z.number().int().positive().optional(),
   availableStartDate: dateSchema.optional(),
-  
+
   // Status
   status: bidStatusSchema,
-  
+
   // Attachments/samples
-  attachments: z.array(z.object({
-    id: uuidSchema,
-    name: z.string(),
-    url: z.string().url(),
-    mimeType: z.string(),
-    size: z.number().int().positive(),
-  })).optional(),
+  attachments: z
+    .array(
+      z.object({
+        id: uuidSchema,
+        name: z.string(),
+        url: z.string().url(),
+        mimeType: z.string(),
+        size: z.number().int().positive(),
+      })
+    )
+    .optional(),
   portfolioItems: z.array(uuidSchema).optional(),
-  
+
   // Client response
   clientMessage: z.string().max(2000).optional(),
   shortlistedAt: dateSchema.optional(),
   acceptedAt: dateSchema.optional(),
   rejectedAt: dateSchema.optional(),
   rejectionReason: z.string().max(500).optional(),
-  
+
   // Metadata
   isBookmarked: z.boolean().default(false),
   viewedByClient: z.boolean().default(false),
   viewedAt: dateSchema.optional(),
-  
+
   // Timestamps
   submittedAt: dateSchema.optional(),
   expiresAt: dateSchema.optional(),

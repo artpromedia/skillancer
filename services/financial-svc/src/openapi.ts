@@ -95,7 +95,10 @@ This service is PCI DSS compliant. All card data is tokenized and encrypted.
             amount: { $ref: '#/components/schemas/Money' },
             advanceAmount: { $ref: '#/components/schemas/Money' },
             feeAmount: { $ref: '#/components/schemas/Money' },
-            status: { type: 'string', enum: ['PENDING', 'APPROVED', 'FUNDED', 'REPAID', 'DEFAULTED'] },
+            status: {
+              type: 'string',
+              enum: ['PENDING', 'APPROVED', 'FUNDED', 'REPAID', 'DEFAULTED'],
+            },
             fundedAt: { type: 'string', format: 'date-time' },
             dueAt: { type: 'string', format: 'date-time' },
           },

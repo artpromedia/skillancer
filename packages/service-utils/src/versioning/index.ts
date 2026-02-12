@@ -215,9 +215,7 @@ export function createVersionedHandler<T>(
     if (!handler) {
       // Find the highest available version that's <= requested
       const availableVersions = Object.keys(handlers).sort();
-      const fallbackVersion = availableVersions
-        .filter((v) => v <= version)
-        .pop();
+      const fallbackVersion = availableVersions.filter((v) => v <= version).pop();
 
       if (fallbackVersion && handlers[fallbackVersion]) {
         return handlers[fallbackVersion]!(request, reply);

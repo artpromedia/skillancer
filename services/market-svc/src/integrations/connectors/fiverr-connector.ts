@@ -513,4 +513,3 @@ const fiverrConnector = new FiverrConnector();
 export function getFiverrConnector(): FiverrConnector {
   return fiverrConnector;
 }
-

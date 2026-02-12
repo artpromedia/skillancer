@@ -21,23 +21,13 @@ import {
 /**
  * Tenant subscription plan
  */
-export const tenantPlanSchema = z.enum([
-  'FREE',
-  'STARTER',
-  'PROFESSIONAL',
-  'ENTERPRISE',
-]);
+export const tenantPlanSchema = z.enum(['FREE', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE']);
 export type TenantPlan = z.infer<typeof tenantPlanSchema>;
 
 /**
  * Tenant status
  */
-export const tenantStatusSchema = z.enum([
-  'ACTIVE',
-  'SUSPENDED',
-  'PENDING',
-  'CANCELLED',
-]);
+export const tenantStatusSchema = z.enum(['ACTIVE', 'SUSPENDED', 'PENDING', 'CANCELLED']);
 export type TenantStatus = z.infer<typeof tenantStatusSchema>;
 
 // =============================================================================
@@ -54,15 +44,17 @@ export const tenantSecuritySettingsSchema = z.object({
   ssoConfigUrl: urlSchema.optional(),
   mfaRequired: z.boolean().default(false),
   mfaGracePeriodDays: z.number().int().nonnegative().default(7),
-  passwordPolicy: z.object({
-    minLength: z.number().int().min(8).default(12),
-    requireUppercase: z.boolean().default(true),
-    requireLowercase: z.boolean().default(true),
-    requireNumbers: z.boolean().default(true),
-    requireSpecialChars: z.boolean().default(true),
-    maxAgeDays: z.number().int().positive().optional(),
-    preventReuse: z.number().int().nonnegative().default(5),
-  }).optional(),
+  passwordPolicy: z
+    .object({
+      minLength: z.number().int().min(8).default(12),
+      requireUppercase: z.boolean().default(true),
+      requireLowercase: z.boolean().default(true),
+      requireNumbers: z.boolean().default(true),
+      requireSpecialChars: z.boolean().default(true),
+      maxAgeDays: z.number().int().positive().optional(),
+      preventReuse: z.number().int().nonnegative().default(5),
+    })
+    .optional(),
   sessionTimeoutMinutes: z.number().int().positive().default(480),
   ipWhitelist: z.array(z.string()).optional(),
 });
@@ -74,8 +66,14 @@ export type TenantSecuritySettings = z.infer<typeof tenantSecuritySettingsSchema
 export const tenantBrandingSettingsSchema = z.object({
   logoUrl: urlSchema.optional(),
   faviconUrl: urlSchema.optional(),
-  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  secondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
+  secondaryColor: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
   customCss: z.string().max(10000).optional(),
 });
 export type TenantBrandingSettings = z.infer<typeof tenantBrandingSettingsSchema>;
@@ -123,11 +121,13 @@ export const tenantSchema = z.object({
   plan: tenantPlanSchema,
   ownerUserId: uuidSchema,
   billingEmail: emailSchema.optional(),
-  settings: z.object({
-    security: tenantSecuritySettingsSchema.optional(),
-    branding: tenantBrandingSettingsSchema.optional(),
-    features: tenantFeaturesSchema.optional(),
-  }).optional(),
+  settings: z
+    .object({
+      security: tenantSecuritySettingsSchema.optional(),
+      branding: tenantBrandingSettingsSchema.optional(),
+      features: tenantFeaturesSchema.optional(),
+    })
+    .optional(),
   limits: tenantLimitsSchema.optional(),
   trialEndsAt: dateSchema.optional(),
   subscriptionId: z.string().optional(),
@@ -148,11 +148,13 @@ export const createTenantSchema = z.object({
   plan: tenantPlanSchema.default('FREE'),
   ownerUserId: uuidSchema,
   billingEmail: emailSchema.optional(),
-  settings: z.object({
-    security: tenantSecuritySettingsSchema.optional(),
-    branding: tenantBrandingSettingsSchema.optional(),
-    features: tenantFeaturesSchema.optional(),
-  }).optional(),
+  settings: z
+    .object({
+      security: tenantSecuritySettingsSchema.optional(),
+      branding: tenantBrandingSettingsSchema.optional(),
+      features: tenantFeaturesSchema.optional(),
+    })
+    .optional(),
 });
 export type CreateTenant = z.infer<typeof createTenantSchema>;
 
@@ -162,11 +164,13 @@ export type CreateTenant = z.infer<typeof createTenantSchema>;
 export const updateTenantSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   billingEmail: emailSchema.optional(),
-  settings: z.object({
-    security: tenantSecuritySettingsSchema.optional(),
-    branding: tenantBrandingSettingsSchema.optional(),
-    features: tenantFeaturesSchema.optional(),
-  }).optional(),
+  settings: z
+    .object({
+      security: tenantSecuritySettingsSchema.optional(),
+      branding: tenantBrandingSettingsSchema.optional(),
+      features: tenantFeaturesSchema.optional(),
+    })
+    .optional(),
 });
 export type UpdateTenant = z.infer<typeof updateTenantSchema>;
 
@@ -177,12 +181,7 @@ export type UpdateTenant = z.infer<typeof updateTenantSchema>;
 /**
  * Tenant member role
  */
-export const tenantMemberRoleSchema = z.enum([
-  'OWNER',
-  'ADMIN',
-  'MEMBER',
-  'VIEWER',
-]);
+export const tenantMemberRoleSchema = z.enum(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER']);
 export type TenantMemberRole = z.infer<typeof tenantMemberRoleSchema>;
 
 /**

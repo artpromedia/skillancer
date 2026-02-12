@@ -445,4 +445,3 @@ export class SplunkConnector extends BaseConnector {
 }
 
 export const createSplunkConnector = (config: ConnectorConfig) => new SplunkConnector(config);
-

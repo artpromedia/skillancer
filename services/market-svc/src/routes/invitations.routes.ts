@@ -273,4 +273,3 @@ export function registerInvitationRoutes(
     }
   );
 }
-

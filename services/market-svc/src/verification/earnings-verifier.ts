@@ -601,4 +601,3 @@ export function getEarningsVerifier(): EarningsVerifier {
   }
   return verifierInstance;
 }
-

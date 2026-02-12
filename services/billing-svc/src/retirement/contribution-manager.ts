@@ -359,4 +359,3 @@ export function getContributionManager(): ContributionManager {
   }
   return contributionManager;
 }
-

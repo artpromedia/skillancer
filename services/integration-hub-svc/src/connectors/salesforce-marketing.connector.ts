@@ -401,4 +401,3 @@ export class SalesforceMarketingConnector extends BaseConnector {
 }
 
 export const salesforceMarketingConnector = new SalesforceMarketingConnector({});
-

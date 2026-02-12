@@ -685,4 +685,3 @@ export function getCardService(): CardService {
   }
   return cardServiceInstance;
 }
-

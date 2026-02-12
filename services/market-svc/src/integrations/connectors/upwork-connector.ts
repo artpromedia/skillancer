@@ -416,4 +416,3 @@ const upworkConnector = new UpworkConnector();
 export function getUpworkConnector(): UpworkConnector {
   return upworkConnector;
 }
-

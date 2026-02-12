@@ -49,7 +49,14 @@ import { useToast } from '@skillancer/ui/use-toast';
 // TYPES
 // =============================================================================
 
-type ReportType = 'usage' | 'security' | 'compliance' | 'executive' | 'user_activity' | 'session_analytics' | 'cost_analysis';
+type ReportType =
+  | 'usage'
+  | 'security'
+  | 'compliance'
+  | 'executive'
+  | 'user_activity'
+  | 'session_analytics'
+  | 'cost_analysis';
 type ReportFormat = 'json' | 'csv' | 'pdf' | 'xlsx';
 
 interface GeneratedReport {
@@ -234,7 +241,7 @@ function GenerateReportDialog({
       });
       onSuccess();
       onOpenChange(false);
-      
+
       // Trigger download if URL available
       if (report.downloadUrl) {
         window.open(report.downloadUrl, '_blank');
@@ -245,7 +252,7 @@ function GenerateReportDialog({
     },
   });
 
-  const applyPreset = (preset: typeof datePresets[0]) => {
+  const applyPreset = (preset: (typeof datePresets)[0]) => {
     const now = new Date();
     let start: Date, end: Date;
 
@@ -275,9 +282,7 @@ function GenerateReportDialog({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Generate Report</DialogTitle>
-            <DialogDescription>
-              Select the report type, date range, and format
-            </DialogDescription>
+            <DialogDescription>Select the report type, date range, and format</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -298,14 +303,14 @@ function GenerateReportDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {reportTypes.find((rt) => rt.type === reportType)?.description}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label>Date Range</Label>
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className="mb-2 flex flex-wrap gap-2">
                 {datePresets.map((preset) => (
                   <Button
                     key={preset.label}
@@ -363,12 +368,12 @@ function GenerateReportDialog({
             <Button type="submit" disabled={mutation.isPending || !startDate || !endDate}>
               {mutation.isPending ? (
                 <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Generating...
                 </>
               ) : (
                 <>
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="mr-2 h-4 w-4" />
                   Generate Report
                 </>
               )}
@@ -434,9 +439,7 @@ function ScheduleReportDialog({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Schedule Report</DialogTitle>
-            <DialogDescription>
-              Set up automatic report generation and delivery
-            </DialogDescription>
+            <DialogDescription>Set up automatic report generation and delivery</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -499,14 +502,14 @@ function ScheduleReportDialog({
                 </Button>
               </div>
               {recipients.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {recipients.map((email) => (
                     <Badge key={email} variant="secondary" className="gap-1">
                       {email}
                       <button
                         type="button"
                         onClick={() => removeRecipient(email)}
-                        className="ml-1 hover:text-destructive"
+                        className="hover:text-destructive ml-1"
                       >
                         ×
                       </button>
@@ -531,17 +534,15 @@ function ScheduleReportDialog({
   );
 }
 
-function ReportTypeCard({ report }: { report: typeof reportTypes[0] }) {
+function ReportTypeCard({ report }: { report: (typeof reportTypes)[0] }) {
   return (
-    <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+    <Card className="hover:border-primary/50 cursor-pointer transition-colors">
       <CardContent className="pt-6">
         <div className="flex items-start gap-4">
-          <div className={`${report.color} p-3 rounded-lg text-white`}>
-            {report.icon}
-          </div>
+          <div className={`${report.color} rounded-lg p-3 text-white`}>{report.icon}</div>
           <div>
             <h3 className="font-semibold">{report.name}</h3>
-            <p className="text-sm text-muted-foreground mt-1">{report.description}</p>
+            <p className="text-muted-foreground mt-1 text-sm">{report.description}</p>
           </div>
         </div>
       </CardContent>
@@ -562,15 +563,15 @@ function ReportHistoryTable() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2" />
       </div>
     );
   }
 
   if (reports.length === 0) {
     return (
-      <div className="text-center py-12">
-        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+      <div className="py-12 text-center">
+        <FileText className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
         <p className="text-lg font-medium">No reports generated yet</p>
         <p className="text-muted-foreground">Generate your first report to see it here</p>
       </div>
@@ -581,12 +582,12 @@ function ReportHistoryTable() {
     <table className="w-full">
       <thead className="bg-muted/50">
         <tr>
-          <th className="text-left py-3 px-4">Report</th>
-          <th className="text-left py-3 px-4">Date Range</th>
-          <th className="text-left py-3 px-4">Format</th>
-          <th className="text-left py-3 px-4">Generated</th>
-          <th className="text-left py-3 px-4">Expires</th>
-          <th className="text-left py-3 px-4 w-24"></th>
+          <th className="px-4 py-3 text-left">Report</th>
+          <th className="px-4 py-3 text-left">Date Range</th>
+          <th className="px-4 py-3 text-left">Format</th>
+          <th className="px-4 py-3 text-left">Generated</th>
+          <th className="px-4 py-3 text-left">Expires</th>
+          <th className="w-24 px-4 py-3 text-left"></th>
         </tr>
       </thead>
       <tbody>
@@ -594,27 +595,27 @@ function ReportHistoryTable() {
           const typeInfo = getTypeInfo(report.type);
           return (
             <tr key={report.id} className="border-b">
-              <td className="py-4 px-4">
+              <td className="px-4 py-4">
                 <div className="flex items-center gap-3">
-                  <div className={`${typeInfo?.color || 'bg-gray-500'} p-2 rounded text-white`}>
+                  <div className={`${typeInfo?.color || 'bg-gray-500'} rounded p-2 text-white`}>
                     {typeInfo?.icon}
                   </div>
                   <span className="font-medium">{typeInfo?.name || report.type}</span>
                 </div>
               </td>
-              <td className="py-4 px-4 text-sm">
+              <td className="px-4 py-4 text-sm">
                 {formatDate(report.dateRange.start)} - {formatDate(report.dateRange.end)}
               </td>
-              <td className="py-4 px-4">
+              <td className="px-4 py-4">
                 <Badge variant="outline">{report.format.toUpperCase()}</Badge>
               </td>
-              <td className="py-4 px-4 text-sm text-muted-foreground">
+              <td className="text-muted-foreground px-4 py-4 text-sm">
                 {formatDate(report.generatedAt)}
               </td>
-              <td className="py-4 px-4 text-sm text-muted-foreground">
+              <td className="text-muted-foreground px-4 py-4 text-sm">
                 {formatDate(report.expiresAt)}
               </td>
-              <td className="py-4 px-4">
+              <td className="px-4 py-4">
                 {report.downloadUrl && (
                   <Button variant="ghost" size="sm" asChild>
                     <a href={report.downloadUrl} target="_blank">
@@ -662,15 +663,15 @@ function ScheduledReportsTable() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="border-primary h-8 w-8 animate-spin rounded-full border-b-2" />
       </div>
     );
   }
 
   if (schedules.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+      <div className="py-12 text-center">
+        <Calendar className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
         <p className="text-lg font-medium">No scheduled reports</p>
         <p className="text-muted-foreground">Create a schedule to receive reports automatically</p>
       </div>
@@ -686,12 +687,12 @@ function ScheduledReportsTable() {
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`${typeInfo?.color || 'bg-gray-500'} p-2 rounded text-white`}>
+                  <div className={`${typeInfo?.color || 'bg-gray-500'} rounded p-2 text-white`}>
                     {typeInfo?.icon}
                   </div>
                   <div>
                     <h4 className="font-medium">{typeInfo?.name}</h4>
-                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                    <div className="text-muted-foreground mt-1 flex items-center gap-2 text-sm">
                       <Badge variant="outline">{frequencyLabels[schedule.frequency]}</Badge>
                       <Badge variant="outline">{schedule.format.toUpperCase()}</Badge>
                       <span>→ {schedule.recipients.length} recipient(s)</span>
@@ -703,7 +704,11 @@ function ScheduledReportsTable() {
                     <p className="text-muted-foreground">Next run</p>
                     <p>{new Date(schedule.nextRunAt).toLocaleDateString()}</p>
                   </div>
-                  <Badge className={schedule.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                  <Badge
+                    className={
+                      schedule.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }
+                  >
                     {schedule.enabled ? 'Active' : 'Paused'}
                   </Badge>
                   <Button
@@ -738,21 +743,19 @@ export default function ReportsPage() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex justify-between items-center mb-8">
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Reports</h1>
-          <p className="text-muted-foreground">
-            Generate and schedule enterprise reports
-          </p>
+          <p className="text-muted-foreground">Generate and schedule enterprise reports</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setScheduleOpen(true)}>
-            <Calendar className="h-4 w-4 mr-2" />
+            <Calendar className="mr-2 h-4 w-4" />
             Schedule Report
           </Button>
           <Button onClick={() => setGenerateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Generate Report
           </Button>
         </div>
@@ -775,7 +778,7 @@ export default function ReportsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {reportTypes.map((report) => (
                     <div key={report.type} onClick={() => setGenerateOpen(true)}>
                       <ReportTypeCard report={report} />
@@ -788,27 +791,25 @@ export default function ReportsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Quick Insights</CardTitle>
-                <CardDescription>
-                  Key metrics from your most recent reports
-                </CardDescription>
+                <CardDescription>Key metrics from your most recent reports</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                  <div className="bg-muted/50 rounded-lg p-4 text-center">
                     <p className="text-3xl font-bold text-blue-600">1,234</p>
-                    <p className="text-sm text-muted-foreground">Sessions This Month</p>
+                    <p className="text-muted-foreground text-sm">Sessions This Month</p>
                   </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                  <div className="bg-muted/50 rounded-lg p-4 text-center">
                     <p className="text-3xl font-bold text-green-600">98%</p>
-                    <p className="text-sm text-muted-foreground">Compliance Score</p>
+                    <p className="text-muted-foreground text-sm">Compliance Score</p>
                   </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                  <div className="bg-muted/50 rounded-lg p-4 text-center">
                     <p className="text-3xl font-bold text-purple-600">95</p>
-                    <p className="text-sm text-muted-foreground">Security Score</p>
+                    <p className="text-muted-foreground text-sm">Security Score</p>
                   </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
+                  <div className="bg-muted/50 rounded-lg p-4 text-center">
                     <p className="text-3xl font-bold text-orange-600">+12%</p>
-                    <p className="text-sm text-muted-foreground">User Growth</p>
+                    <p className="text-muted-foreground text-sm">User Growth</p>
                   </div>
                 </div>
               </CardContent>
@@ -820,9 +821,7 @@ export default function ReportsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Report History</CardTitle>
-              <CardDescription>
-                Previously generated reports available for download
-              </CardDescription>
+              <CardDescription>Previously generated reports available for download</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <ReportHistoryTable />
@@ -833,7 +832,7 @@ export default function ReportsPage() {
         <TabsContent value="scheduled">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Scheduled Reports</CardTitle>
                   <CardDescription>
@@ -841,7 +840,7 @@ export default function ReportsPage() {
                   </CardDescription>
                 </div>
                 <Button onClick={() => setScheduleOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   New Schedule
                 </Button>
               </div>

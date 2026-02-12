@@ -667,4 +667,3 @@ export class MetaAdsConnector extends BaseConnector {
 
 // Export singleton instance
 export const metaAdsConnector = new MetaAdsConnector();
-

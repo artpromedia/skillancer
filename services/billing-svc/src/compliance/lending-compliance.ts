@@ -484,4 +484,3 @@ export function getLendingComplianceService(): LendingComplianceService {
   }
   return service;
 }
-

@@ -21,7 +21,7 @@ This checklist covers all activities required for a successful Skillancer public
 - [ ] Backup procedures tested (hourly snapshots, 7-day PITR, cross-region replication)
 
 **Owner:** DevOps Lead
-**Sign-off:** ****\_\_\_\_**** Date: **\_\_\_\_**
+**Sign-off:** \***\*\_\_\_\_\*\*** Date: **\_\_\_\_**
 
 ### Security
 
@@ -39,7 +39,7 @@ This checklist covers all activities required for a successful Skillancer public
 - [ ] OWASP Top 10 verification completed
 
 **Owner:** Security Lead
-**Sign-off:** ****\_\_\_\_**** Date: **\_\_\_\_**
+**Sign-off:** \***\*\_\_\_\_\*\*** Date: **\_\_\_\_**
 
 ### Monitoring
 
@@ -54,7 +54,7 @@ This checklist covers all activities required for a successful Skillancer public
 - [ ] Health dashboard accessible (`/health/dashboard` endpoint)
 
 **Owner:** SRE Lead
-**Sign-off:** ****\_\_\_\_**** Date: **\_\_\_\_**
+**Sign-off:** \***\*\_\_\_\_\*\*** Date: **\_\_\_\_**
 
 ### Integrations
 
@@ -70,7 +70,7 @@ This checklist covers all activities required for a successful Skillancer public
 - [ ] Invoice PDF generation operational (Puppeteer + S3 storage)
 
 **Owner:** Engineering Lead
-**Sign-off:** ****\_\_\_\_**** Date: **\_\_\_\_**
+**Sign-off:** \***\*\_\_\_\_\*\*** Date: **\_\_\_\_**
 
 ### Testing
 
@@ -85,7 +85,7 @@ This checklist covers all activities required for a successful Skillancer public
 - [ ] Smoke tests for all Moat services (executive profile, financial card, talent graph, copilot)
 
 **Owner:** QA Lead
-**Sign-off:** ****\_\_\_\_**** Date: **\_\_\_\_**
+**Sign-off:** \***\*\_\_\_\_\*\*** Date: **\_\_\_\_**
 
 ### Business
 
@@ -100,7 +100,7 @@ This checklist covers all activities required for a successful Skillancer public
 - [ ] Intercom/Zendesk support tools configured
 
 **Owner:** Legal/Compliance + Support Lead
-**Sign-off:** ****\_\_\_\_**** Date: **\_\_\_\_**
+**Sign-off:** \***\*\_\_\_\_\*\*** Date: **\_\_\_\_**
 
 ### Mobile App
 
@@ -116,7 +116,7 @@ This checklist covers all activities required for a successful Skillancer public
 - [ ] Push notification delivery confirmed end-to-end
 
 **Owner:** Mobile Lead
-**Sign-off:** ****\_\_\_\_**** Date: **\_\_\_\_**
+**Sign-off:** \***\*\_\_\_\_\*\*** Date: **\_\_\_\_**
 
 ---
 
@@ -166,7 +166,7 @@ This checklist covers all activities required for a successful Skillancer public
 - [ ] Team debriefed
 
 **Owner:** CTO
-**Sign-off:** ****\_\_\_\_**** Date: **\_\_\_\_**
+**Sign-off:** \***\*\_\_\_\_\*\*** Date: **\_\_\_\_**
 
 ---
 

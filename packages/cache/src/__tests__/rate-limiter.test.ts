@@ -58,7 +58,7 @@ describe('RateLimiter', () => {
       await limiter.consume('user1', testConfig);
       await limiter.consume('user1', testConfig);
       await limiter.consume('user1', testConfig);
-      
+
       const result = await limiter.consume('user2', testConfig);
 
       expect(result.remaining).toBe(4);
@@ -69,7 +69,7 @@ describe('RateLimiter', () => {
     it('should return current state without consuming', async () => {
       await limiter.consume('user1', testConfig);
       await limiter.consume('user1', testConfig);
-      
+
       const result = await limiter.check('user1', testConfig);
 
       expect(result.remaining).toBe(3);
@@ -102,7 +102,7 @@ describe('RateLimiter', () => {
     it('should return rate limit info', async () => {
       await limiter.consume('user1', testConfig);
       await limiter.consume('user1', testConfig);
-      
+
       const info = await limiter.getInfo('user1', testConfig);
 
       expect(info.limit).toBe(5);

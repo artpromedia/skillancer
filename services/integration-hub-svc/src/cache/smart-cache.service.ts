@@ -370,4 +370,3 @@ export class SmartCacheService {
 
 // Singleton instance
 export const smartCache = new SmartCacheService();
-

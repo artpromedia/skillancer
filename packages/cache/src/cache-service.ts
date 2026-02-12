@@ -193,13 +193,7 @@ export class CacheService {
     let cursor = '0';
 
     do {
-      const [nextCursor, batch] = await this.redis.scan(
-        cursor,
-        'MATCH',
-        pattern,
-        'COUNT',
-        100
-      );
+      const [nextCursor, batch] = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
       cursor = nextCursor;
       keys.push(...batch);
     } while (cursor !== '0');
@@ -466,11 +460,7 @@ export class CacheService {
    * @param options - Cache options
    * @returns Cached or newly generated value
    */
-  async getOrSet<T>(
-    key: string,
-    factory: () => Promise<T>,
-    options?: CacheOptions
-  ): Promise<T> {
+  async getOrSet<T>(key: string, factory: () => Promise<T>, options?: CacheOptions): Promise<T> {
     const cached = await this.get<T>(key);
     if (cached !== null) {
       return cached;
@@ -502,10 +492,7 @@ export class CacheService {
    * @param entries - Object with key-value pairs
    * @param options - Cache options (ttl applies to all keys)
    */
-  async mset<T>(
-    entries: Record<string, T>,
-    options?: CacheOptions
-  ): Promise<void> {
+  async mset<T>(entries: Record<string, T>, options?: CacheOptions): Promise<void> {
     const pairs: string[] = [];
     for (const [key, value] of Object.entries(entries)) {
       pairs.push(this.buildKey(key), this.serialize(value));

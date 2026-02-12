@@ -152,23 +152,23 @@ export const errorCodes = {
   FORBIDDEN: 'FORBIDDEN',
   TOKEN_EXPIRED: 'TOKEN_EXPIRED',
   INVALID_TOKEN: 'INVALID_TOKEN',
-  
+
   // Validation errors
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   INVALID_INPUT: 'INVALID_INPUT',
-  
+
   // Resource errors
   NOT_FOUND: 'NOT_FOUND',
   ALREADY_EXISTS: 'ALREADY_EXISTS',
   CONFLICT: 'CONFLICT',
-  
+
   // Rate limiting
   RATE_LIMITED: 'RATE_LIMITED',
-  
+
   // Server errors
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
-  
+
   // Business logic errors
   INSUFFICIENT_FUNDS: 'INSUFFICIENT_FUNDS',
   QUOTA_EXCEEDED: 'QUOTA_EXCEEDED',
@@ -224,13 +224,15 @@ export type Money = z.infer<typeof moneySchema>;
 /**
  * Price range for budgets
  */
-export const priceRangeSchema = z.object({
-  min: z.number().nonnegative(),
-  max: z.number().nonnegative(),
-  currency: currencyCodeSchema.default('USD'),
-}).refine((data) => data.min <= data.max, {
-  message: 'Minimum price must be less than or equal to maximum price',
-});
+export const priceRangeSchema = z
+  .object({
+    min: z.number().nonnegative(),
+    max: z.number().nonnegative(),
+    currency: currencyCodeSchema.default('USD'),
+  })
+  .refine((data) => data.min <= data.max, {
+    message: 'Minimum price must be less than or equal to maximum price',
+  });
 export type PriceRange = z.infer<typeof priceRangeSchema>;
 
 // =============================================================================

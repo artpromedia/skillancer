@@ -7,9 +7,7 @@
 // TYPES
 // ============================================================================
 
-export type CacheKeyGenerator<T extends unknown[] = unknown[]> = (
-  ...args: T
-) => string;
+export type CacheKeyGenerator<T extends unknown[] = unknown[]> = (...args: T) => string;
 
 // ============================================================================
 // CACHE KEYS
@@ -116,8 +114,7 @@ export const CacheKeys = {
   contract: (id: string) => `market:contract:${id}`,
 
   /** Contract milestones */
-  contractMilestones: (contractId: string) =>
-    `market:contract:${contractId}:milestones`,
+  contractMilestones: (contractId: string) => `market:contract:${contractId}:milestones`,
 
   /** User's contracts */
   userContracts: (userId: string) => `market:user:${userId}:contracts`,
@@ -149,20 +146,16 @@ export const CacheKeys = {
   session: (id: string) => `skillpod:session:${id}`,
 
   /** Active sessions for a tenant */
-  activeSessions: (tenantId: string) =>
-    `skillpod:tenant:${tenantId}:sessions:active`,
+  activeSessions: (tenantId: string) => `skillpod:tenant:${tenantId}:sessions:active`,
 
   /** Session participants */
-  sessionParticipants: (sessionId: string) =>
-    `skillpod:session:${sessionId}:participants`,
+  sessionParticipants: (sessionId: string) => `skillpod:session:${sessionId}:participants`,
 
   /** Session chat messages */
-  sessionMessages: (sessionId: string) =>
-    `skillpod:session:${sessionId}:messages`,
+  sessionMessages: (sessionId: string) => `skillpod:session:${sessionId}:messages`,
 
   /** User's scheduled sessions */
-  userScheduledSessions: (userId: string) =>
-    `skillpod:user:${userId}:sessions:scheduled`,
+  userScheduledSessions: (userId: string) => `skillpod:user:${userId}:sessions:scheduled`,
 
   // ==========================================================================
   // TENANT KEYS
@@ -226,8 +219,7 @@ export const CacheKeys = {
   inviteToken: (token: string) => `invite:${token}`,
 
   /** Feature flags */
-  featureFlags: (environment: string = 'production') =>
-    `features:${environment}`,
+  featureFlags: (environment: string = 'production') => `features:${environment}`,
 
   /** System health status */
   healthStatus: () => 'system:health',

@@ -306,4 +306,3 @@ export class ClientProfitabilityRepository {
     return where;
   }
 }
-

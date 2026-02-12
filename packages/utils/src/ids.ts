@@ -12,17 +12,73 @@ const readableNanoId = customAlphabet(READABLE_ALPHABET, 10);
 
 // Word lists for slug IDs
 const ADJECTIVES = [
-  'happy', 'sunny', 'swift', 'brave', 'calm', 'eager', 'fair', 'gentle',
-  'kind', 'lively', 'merry', 'neat', 'proud', 'quick', 'royal', 'smart',
-  'tall', 'warm', 'wise', 'young', 'blue', 'green', 'red', 'golden',
-  'silver', 'cosmic', 'bright', 'bold', 'cool', 'fresh', 'grand', 'prime',
+  'happy',
+  'sunny',
+  'swift',
+  'brave',
+  'calm',
+  'eager',
+  'fair',
+  'gentle',
+  'kind',
+  'lively',
+  'merry',
+  'neat',
+  'proud',
+  'quick',
+  'royal',
+  'smart',
+  'tall',
+  'warm',
+  'wise',
+  'young',
+  'blue',
+  'green',
+  'red',
+  'golden',
+  'silver',
+  'cosmic',
+  'bright',
+  'bold',
+  'cool',
+  'fresh',
+  'grand',
+  'prime',
 ];
 
 const NOUNS = [
-  'fox', 'owl', 'bear', 'wolf', 'hawk', 'deer', 'lynx', 'dove',
-  'swan', 'eagle', 'tiger', 'lion', 'panda', 'koala', 'otter', 'whale',
-  'moon', 'star', 'cloud', 'river', 'ocean', 'forest', 'mountain', 'valley',
-  'breeze', 'storm', 'flame', 'wave', 'stone', 'leaf', 'bloom', 'frost',
+  'fox',
+  'owl',
+  'bear',
+  'wolf',
+  'hawk',
+  'deer',
+  'lynx',
+  'dove',
+  'swan',
+  'eagle',
+  'tiger',
+  'lion',
+  'panda',
+  'koala',
+  'otter',
+  'whale',
+  'moon',
+  'star',
+  'cloud',
+  'river',
+  'ocean',
+  'forest',
+  'mountain',
+  'valley',
+  'breeze',
+  'storm',
+  'flame',
+  'wave',
+  'stone',
+  'leaf',
+  'bloom',
+  'frost',
 ];
 
 /**
@@ -148,13 +204,8 @@ export function generateApiKey(isLive: boolean = true): string {
  * generateShortCode() // '847291'
  * generateShortCode(4, false) // 'A3K7'
  */
-export function generateShortCode(
-  length: number = 6,
-  numbersOnly: boolean = true
-): string {
-  const alphabet = numbersOnly
-    ? '0123456789'
-    : '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+export function generateShortCode(length: number = 6, numbersOnly: boolean = true): string {
+  const alphabet = numbersOnly ? '0123456789' : '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   const generator = customAlphabet(alphabet, length);
   return generator();
 }

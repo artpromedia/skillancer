@@ -590,4 +590,3 @@ export function getBalanceManager(): BalanceManager {
   }
   return balanceManagerInstance;
 }
-

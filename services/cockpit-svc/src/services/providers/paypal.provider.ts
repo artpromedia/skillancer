@@ -66,9 +66,7 @@ export class PayPalProvider {
     private readonly config: PayPalConfig,
     private readonly logger: Logger
   ) {
-    this.baseUrl = config.sandbox
-      ? 'https://api-m.sandbox.paypal.com'
-      : 'https://api-m.paypal.com';
+    this.baseUrl = config.sandbox ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com';
     this.logger.info('[PayPal] Provider initialized', { sandbox: config.sandbox });
   }
 
@@ -81,14 +79,14 @@ export class PayPalProvider {
       return this.accessToken;
     }
 
-    const auth = Buffer.from(
-      `${this.config.clientId}:${this.config.clientSecret}`
-    ).toString('base64');
+    const auth = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString(
+      'base64'
+    );
 
     const response = await fetch(`${this.baseUrl}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${auth}`,
+        Authorization: `Basic ${auth}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'grant_type=client_credentials',
@@ -100,7 +98,7 @@ export class PayPalProvider {
       throw new Error(`PayPal OAuth failed: ${error}`);
     }
 
-    const data = await response.json() as PayPalTokenResponse;
+    const data = (await response.json()) as PayPalTokenResponse;
     this.accessToken = data.access_token;
     this.tokenExpiry = Date.now() + data.expires_in * 1000;
 
@@ -111,17 +109,13 @@ export class PayPalProvider {
   /**
    * Make authenticated API request
    */
-  private async apiRequest<T>(
-    method: string,
-    path: string,
-    body?: unknown
-  ): Promise<T> {
+  private async apiRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
     const token = await this.getAccessToken();
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       method,
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
         'PayPal-Request-Id': `skillancer-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       },
@@ -191,10 +185,7 @@ export class PayPalProvider {
         throw new Error('No approval URL in PayPal response');
       }
 
-      this.logger.info(
-        { orderId: order.id, invoiceId, amount },
-        'PayPal order created'
-      );
+      this.logger.info({ orderId: order.id, invoiceId, amount }, 'PayPal order created');
 
       return {
         id: order.id,
@@ -248,10 +239,7 @@ export class PayPalProvider {
    */
   async getOrder(orderId: string): Promise<PayPalOrderResponse> {
     try {
-      return await this.apiRequest<PayPalOrderResponse>(
-        'GET',
-        `/v2/checkout/orders/${orderId}`
-      );
+      return await this.apiRequest<PayPalOrderResponse>('GET', `/v2/checkout/orders/${orderId}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error({ orderId, error: message }, 'Failed to get PayPal order');
@@ -288,10 +276,7 @@ export class PayPalProvider {
         Object.keys(body).length > 0 ? body : undefined
       );
 
-      this.logger.info(
-        { refundId: result.id, captureId, amount },
-        'PayPal refund created'
-      );
+      this.logger.info({ refundId: result.id, captureId, amount }, 'PayPal refund created');
 
       return result;
     } catch (error) {
@@ -304,10 +289,7 @@ export class PayPalProvider {
   /**
    * Verify webhook signature
    */
-  async verifyWebhookSignature(
-    headers: Record<string, string>,
-    body: string
-  ): Promise<boolean> {
+  async verifyWebhookSignature(headers: Record<string, string>, body: string): Promise<boolean> {
     try {
       const result = await this.apiRequest<{ verification_status: string }>(
         'POST',

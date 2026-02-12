@@ -894,4 +894,3 @@ interface AgingReport {
 }
 
 export const quickBooksConnector = new QuickBooksConnector();
-

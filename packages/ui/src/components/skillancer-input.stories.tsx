@@ -72,22 +72,14 @@ export const FormExample: Story = {
         placeholder="John Doe"
         helperText="Enter your legal name"
       />
-      <SkillancerInput
-        label="Email"
-        type="email"
-        placeholder="john@example.com"
-      />
+      <SkillancerInput label="Email" type="email" placeholder="john@example.com" />
       <SkillancerInput
         label="Password"
         type="password"
         placeholder="••••••••"
         helperText="Must be at least 8 characters"
       />
-      <SkillancerInput
-        label="Phone (Optional)"
-        type="tel"
-        placeholder="+1 (555) 000-0000"
-      />
+      <SkillancerInput label="Phone (Optional)" type="tel" placeholder="+1 (555) 000-0000" />
     </div>
   ),
 };
@@ -95,11 +87,7 @@ export const FormExample: Story = {
 export const ValidationStates: Story = {
   render: () => (
     <div className="w-[400px] space-y-4">
-      <SkillancerInput
-        label="Valid Input"
-        value="john@example.com"
-        helperText="Email is valid"
-      />
+      <SkillancerInput label="Valid Input" value="john@example.com" helperText="Email is valid" />
       <SkillancerInput
         label="Invalid Input"
         value="invalid-email"

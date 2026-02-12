@@ -80,9 +80,7 @@ export function getDefaultCacheService(): CacheService | null {
  */
 function requireCacheService(): CacheService {
   if (!defaultCacheService) {
-    throw new Error(
-      'Cache service not initialized. Call setDefaultCacheService() first.'
-    );
+    throw new Error('Cache service not initialized. Call setDefaultCacheService() first.');
   }
   return defaultCacheService;
 }
@@ -124,11 +122,7 @@ function requireCacheService(): CacheService {
  * ```
  */
 export function Cacheable(options: CacheableOptions): MethodDecorator {
-  return function (
-    _target: object,
-    _propertyKey: string | symbol,
-    descriptor: PropertyDescriptor
-  ) {
+  return function (_target: object, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const originalMethod = descriptor.value;
 
@@ -209,11 +203,7 @@ export function Cacheable(options: CacheableOptions): MethodDecorator {
  * ```
  */
 export function CacheEvict(options: CacheEvictOptions): MethodDecorator {
-  return function (
-    _target: object,
-    _propertyKey: string | symbol,
-    descriptor: PropertyDescriptor
-  ) {
+  return function (_target: object, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const originalMethod = descriptor.value;
 
@@ -265,11 +255,7 @@ export function CacheEvict(options: CacheEvictOptions): MethodDecorator {
  * ```
  */
 export function CachePut(options: CachePutOptions): MethodDecorator {
-  return function (
-    _target: object,
-    _propertyKey: string | symbol,
-    descriptor: PropertyDescriptor
-  ) {
+  return function (_target: object, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const originalMethod = descriptor.value;
 
@@ -431,9 +417,7 @@ export function withCache<T extends (...args: unknown[]) => Promise<unknown>>(
  * const data = await cachedFetch('https://api.example.com/data');
  * ```
  */
-export function createCachedFunction<
-  T extends (...args: unknown[]) => Promise<unknown>
->(
+export function createCachedFunction<T extends (...args: unknown[]) => Promise<unknown>>(
   namespace: string,
   fn: T,
   options: Omit<CacheableOptions, 'key'>

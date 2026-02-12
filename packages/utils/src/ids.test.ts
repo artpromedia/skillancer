@@ -127,9 +127,7 @@ describe('ids', () => {
     });
 
     it('should generate unique prefixed IDs', () => {
-      const ids = new Set(
-        Array.from({ length: 100 }, () => generatePrefixedId('test'))
-      );
+      const ids = new Set(Array.from({ length: 100 }, () => generatePrefixedId('test')));
       expect(ids.size).toBe(100);
     });
 

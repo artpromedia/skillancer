@@ -371,4 +371,3 @@ export function createAIAssistantRoutes(deps: AIAssistantRoutesDeps): Hono {
 // =============================================================================
 
 export const aiAssistantRoutes = createAIAssistantRoutes;
-

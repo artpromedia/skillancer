@@ -15,7 +15,12 @@
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 
-import type { PrismaClient, ResourcePool, TenantResourceQuota, Prisma } from '@/types/prisma-shim.js';
+import type {
+  PrismaClient,
+  ResourcePool,
+  TenantResourceQuota,
+  Prisma,
+} from '@/types/prisma-shim.js';
 
 // =============================================================================
 // TYPES

@@ -152,4 +152,3 @@ export class ReportGeneratorService {
     return report.id;
   }
 }
-

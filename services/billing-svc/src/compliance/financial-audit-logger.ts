@@ -354,4 +354,3 @@ export function getFinancialAuditLogger(): FinancialAuditLogger {
   }
   return auditLogger;
 }
-

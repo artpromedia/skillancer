@@ -6,4 +6,3 @@
 
 export * from './ehr-integration';
 export * from './ehr-pod-template';
-

@@ -407,4 +407,3 @@ export function registerPresenceRoutes(fastify: FastifyInstance, deps: PresenceR
     }
   );
 }
-

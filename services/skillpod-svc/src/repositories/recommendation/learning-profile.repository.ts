@@ -467,4 +467,3 @@ export function createLearningProfileRepository(prisma: PrismaClient): LearningP
     getOrCreate,
   };
 }
-

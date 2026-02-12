@@ -1050,4 +1050,3 @@ export class CredentialSyncService {
     this.logger.debug('Profile search index update requested', { userId });
   }
 }
-

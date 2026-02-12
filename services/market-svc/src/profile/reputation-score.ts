@@ -880,4 +880,3 @@ export function getReputationScoreService(): ReputationScoreService {
   }
   return serviceInstance;
 }
-

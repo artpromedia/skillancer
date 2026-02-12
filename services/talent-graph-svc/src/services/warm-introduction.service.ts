@@ -387,7 +387,12 @@ export class WarmIntroductionService {
     }
 
     // Check 2nd degree connections
-    type ConnectionRecord = { userId: string; relatedUserId: string; relationshipType: string; company?: string | null };
+    type ConnectionRecord = {
+      userId: string;
+      relatedUserId: string;
+      relationshipType: string;
+      company?: string | null;
+    };
     const firstDegreeIds = (directConnections as ConnectionRecord[]).map((rel) =>
       rel.userId === userId ? rel.relatedUserId : rel.userId
     );

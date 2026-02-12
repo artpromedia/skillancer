@@ -458,15 +458,17 @@ export function createEndpointBuilder(baseUrl: string) {
     build: (endpoint: string, params?: Record<string, string | number | boolean | undefined>) =>
       buildUrl(baseUrl, endpoint, params),
     auth: (endpoint: keyof typeof AUTH_ENDPOINTS | string) => {
-      const path = typeof endpoint === 'string' && endpoint in AUTH_ENDPOINTS
-        ? AUTH_ENDPOINTS[endpoint as keyof typeof AUTH_ENDPOINTS]
-        : endpoint;
+      const path =
+        typeof endpoint === 'string' && endpoint in AUTH_ENDPOINTS
+          ? AUTH_ENDPOINTS[endpoint as keyof typeof AUTH_ENDPOINTS]
+          : endpoint;
       return `${baseUrl}${typeof path === 'function' ? '' : path}`;
     },
     market: (endpoint: keyof typeof MARKET_ENDPOINTS | string) => {
-      const path = typeof endpoint === 'string' && endpoint in MARKET_ENDPOINTS
-        ? MARKET_ENDPOINTS[endpoint as keyof typeof MARKET_ENDPOINTS]
-        : endpoint;
+      const path =
+        typeof endpoint === 'string' && endpoint in MARKET_ENDPOINTS
+          ? MARKET_ENDPOINTS[endpoint as keyof typeof MARKET_ENDPOINTS]
+          : endpoint;
       return `${baseUrl}${typeof path === 'function' ? '' : path}`;
     },
   };

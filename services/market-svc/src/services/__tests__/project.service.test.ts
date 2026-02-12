@@ -132,10 +132,7 @@ describe('ProjectService', () => {
       mockPrisma.job.findFirst.mockResolvedValue(null);
       // Mock prisma.skill.findMany for addSkillsToProject - returns skill IDs
       mockPrisma.skill = {
-        findMany: vi.fn().mockResolvedValue([
-          { id: 'skill-id-1' },
-          { id: 'skill-id-2' },
-        ]),
+        findMany: vi.fn().mockResolvedValue([{ id: 'skill-id-1' }, { id: 'skill-id-2' }]),
       };
       const createdProject = {
         id: 'project-123',
@@ -248,10 +245,7 @@ describe('ProjectService', () => {
       mockProjectRepository.update.mockResolvedValue(project);
       // Mock prisma.skill.findMany for addSkillsToProject - returns skill IDs
       mockPrisma.skill = {
-        findMany: vi.fn().mockResolvedValue([
-          { id: 'skill-id-1' },
-          { id: 'skill-id-2' },
-        ]),
+        findMany: vi.fn().mockResolvedValue([{ id: 'skill-id-1' }, { id: 'skill-id-2' }]),
       };
 
       await service.updateProject('project-123', 'client-123', {

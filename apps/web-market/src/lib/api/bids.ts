@@ -276,11 +276,13 @@ export interface FreelancerProposalStats {
 
 export type BoostType = 'BASIC' | 'FEATURED' | 'PREMIUM';
 
-export type BoostOptions = BoostType | {
-  type?: BoostType;
-  duration?: '24h' | '3d' | '7d';
-  paymentMethodId?: string;
-};
+export type BoostOptions =
+  | BoostType
+  | {
+      type?: BoostType;
+      duration?: '24h' | '3d' | '7d';
+      paymentMethodId?: string;
+    };
 
 export interface BoostPricing {
   duration: '24h' | '3d' | '7d';
@@ -716,9 +718,10 @@ export async function hireFreelancer(
   dataOrProposalId: HireData | string,
   options?: Omit<HireData, 'proposalId'>
 ): Promise<Contract> {
-  const data: HireData = typeof dataOrProposalId === 'string'
-    ? { proposalId: dataOrProposalId, ...options } as HireData
-    : dataOrProposalId;
+  const data: HireData =
+    typeof dataOrProposalId === 'string'
+      ? ({ proposalId: dataOrProposalId, ...options } as HireData)
+      : dataOrProposalId;
   return apiFetch<Contract>(`${API_BASE_URL}/bids/${data.proposalId}/hire`, {
     method: 'POST',
     body: JSON.stringify(data),

@@ -44,9 +44,7 @@ type CheckrPackage = 'tasker_standard' | 'driver_standard' | 'executive_pro';
 /**
  * Initiate background check for an executive
  */
-export async function initiateBackgroundCheck(
-  executiveId: string
-): Promise<ExecutiveProfile> {
+export async function initiateBackgroundCheck(executiveId: string): Promise<ExecutiveProfile> {
   const config = getConfig();
 
   const profile = await prisma.executiveProfile.findUnique({
@@ -342,9 +340,7 @@ export async function reviewBackgroundCheck(
 /**
  * Get background check status
  */
-export async function getBackgroundCheckStatus(
-  executiveId: string
-): Promise<{
+export async function getBackgroundCheckStatus(executiveId: string): Promise<{
   status: BackgroundCheckStatus;
   date: Date | null;
   checkrId: string | null;
@@ -397,7 +393,7 @@ async function createCheckrCandidate(data: {
   const response = await fetch('https://api.checkr.com/v1/candidates', {
     method: 'POST',
     headers: {
-      'Authorization': `Basic ${Buffer.from(`${config.checkrApiKey}:`).toString('base64')}`,
+      Authorization: `Basic ${Buffer.from(`${config.checkrApiKey}:`).toString('base64')}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(data),
@@ -427,7 +423,7 @@ async function createCheckrInvitation(
   const response = await fetch('https://api.checkr.com/v1/invitations', {
     method: 'POST',
     headers: {
-      'Authorization': `Basic ${Buffer.from(`${config.checkrApiKey}:`).toString('base64')}`,
+      Authorization: `Basic ${Buffer.from(`${config.checkrApiKey}:`).toString('base64')}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -446,10 +442,7 @@ async function createCheckrInvitation(
 /**
  * Verify Checkr webhook signature
  */
-export function verifyCheckrWebhookSignature(
-  payload: string,
-  signature: string
-): boolean {
+export function verifyCheckrWebhookSignature(payload: string, signature: string): boolean {
   const config = getConfig();
 
   if (!config.checkrWebhookSecret) {
@@ -464,8 +457,5 @@ export function verifyCheckrWebhookSignature(
     .update(payload)
     .digest('hex');
 
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
 }

@@ -486,4 +486,3 @@ export class CrowdStrikeConnector extends BaseConnector {
 
 export const createCrowdStrikeConnector = (config: ConnectorConfig) =>
   new CrowdStrikeConnector(config);
-

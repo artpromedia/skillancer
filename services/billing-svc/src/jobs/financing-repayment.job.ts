@@ -213,4 +213,3 @@ export function getFinancingRepaymentJob(): FinancingRepaymentJob {
   }
   return job;
 }
-

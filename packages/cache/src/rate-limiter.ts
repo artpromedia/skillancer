@@ -163,10 +163,7 @@ export class RateLimiter {
    * @param config - Rate limit configuration
    * @returns Headers object
    */
-  async getHeaders(
-    key: string,
-    config: RateLimitConfig
-  ): Promise<Record<string, string>> {
+  async getHeaders(key: string, config: RateLimitConfig): Promise<Record<string, string>> {
     const info = await this.getInfo(key, config);
     return {
       'X-RateLimit-Limit': String(config.maxRequests),

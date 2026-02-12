@@ -4,9 +4,9 @@ Utility scripts for development and operations.
 
 ## Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `setup.sh` | Initial project setup |
+| Script     | Description               |
+| ---------- | ------------------------- |
+| `setup.sh` | Initial project setup     |
 | `clean.sh` | Clean all build artifacts |
 
 ## Usage

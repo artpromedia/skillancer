@@ -211,7 +211,9 @@ export class MfaRecoveryService {
     }
 
     // Check attempts
-    const attempts = Number.parseInt((await this.redis.get(CacheKeys.recoveryAttempts(requestId))) || '0');
+    const attempts = Number.parseInt(
+      (await this.redis.get(CacheKeys.recoveryAttempts(requestId))) || '0'
+    );
     if (attempts >= MAX_VERIFICATION_ATTEMPTS) {
       await this.expireRequest(requestId);
       throw new ValidationError('Maximum verification attempts exceeded');

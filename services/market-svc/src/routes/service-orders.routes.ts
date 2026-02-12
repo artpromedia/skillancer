@@ -821,4 +821,3 @@ export function registerServiceReviewRoutes(fastify: FastifyInstance, deps: Orde
     }
   });
 }
-

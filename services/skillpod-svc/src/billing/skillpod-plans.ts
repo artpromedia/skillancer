@@ -826,4 +826,3 @@ export function getPublicPlanData() {
     features: Object.values(FEATURES),
   };
 }
-

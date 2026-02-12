@@ -34,11 +34,15 @@ import {
   addSkill as addSkillApi,
   removeSkill as removeSkillApi,
 } from '@/lib/api/freelancers';
-import { searchSkills as searchSkillsApi, type Skill, startSkillAssessment as startSkillAssessmentApi } from '@/lib/api/skills';
+import {
+  searchSkills as searchSkillsApi,
+  type Skill,
+  startSkillAssessment as startSkillAssessmentApi,
+} from '@/lib/api/skills';
 
 // Helper to get auth token
 function getAuthToken(): string {
-  return typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? '' : '';
+  return typeof window !== 'undefined' ? (localStorage.getItem('auth_token') ?? '') : '';
 }
 
 // Wrapper functions with token handling
@@ -58,7 +62,10 @@ async function removeSkill(skillId: string): Promise<void> {
   return removeSkillApi(getAuthToken(), skillId);
 }
 
-async function searchSkills(params: { query: string; limit?: number }): Promise<{ skills: Skill[] }> {
+async function searchSkills(params: {
+  query: string;
+  limit?: number;
+}): Promise<{ skills: Skill[] }> {
   return searchSkillsApi(params.query, { limit: params.limit });
 }
 

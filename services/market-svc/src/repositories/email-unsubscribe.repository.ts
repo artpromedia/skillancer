@@ -131,4 +131,3 @@ export function createEmailUnsubscribeRepository(prisma: PrismaClient): EmailUns
     },
   };
 }
-

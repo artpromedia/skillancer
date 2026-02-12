@@ -496,4 +496,3 @@ router.get('/kyc/status', authenticate, async (req: Request, res: Response, next
 });
 
 export default router;
-

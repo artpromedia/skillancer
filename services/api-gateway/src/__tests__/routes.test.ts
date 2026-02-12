@@ -4,11 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-  getServiceRoutes,
-  getServiceRoute,
-  getServiceUrl,
-} from '../config/routes.js';
+import { getServiceRoutes, getServiceRoute, getServiceUrl } from '../config/routes.js';
 import { clearConfigCache } from '../config/index.js';
 
 describe('Service Routes', () => {

@@ -190,4 +190,3 @@ export class PrefetchService {
 }
 
 export const prefetchService = new PrefetchService();
-

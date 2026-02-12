@@ -404,4 +404,3 @@ export class GoogleAdsConnector extends BaseConnector {
 }
 
 export const googleAdsConnector = new GoogleAdsConnector({});
-

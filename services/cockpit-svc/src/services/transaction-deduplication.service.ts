@@ -647,4 +647,3 @@ export class TransactionDeduplicationService {
     return score1 >= score2 ? [tx1, tx2] : [tx2, tx1];
   }
 }
-

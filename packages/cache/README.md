@@ -23,11 +23,7 @@ pnpm add @skillancer/cache
 ### Basic Usage
 
 ```typescript
-import { 
-  createRedisClient, 
-  CacheService, 
-  getRedisConfigFromEnv 
-} from '@skillancer/cache';
+import { createRedisClient, CacheService, getRedisConfigFromEnv } from '@skillancer/cache';
 
 // Create Redis client from environment
 const config = getRedisConfigFromEnv();
@@ -41,11 +37,10 @@ await cache.set('user:123', { name: 'John', email: 'john@example.com' }, { ttl: 
 const user = await cache.get('user:123');
 
 // Use cache-aside pattern
-const user = await cache.getOrSet(
-  'user:123',
-  async () => userRepository.findById('123'),
-  { ttl: 3600, tags: ['users'] }
-);
+const user = await cache.getOrSet('user:123', async () => userRepository.findById('123'), {
+  ttl: 3600,
+  tags: ['users'],
+});
 
 // Invalidate by tag
 await cache.deleteByTag('users');
@@ -66,7 +61,7 @@ const session = await sessions.create({
   userId: 'user123',
   userEmail: 'user@example.com',
   tenantId: 'tenant1',
-  metadata: { browser: 'Chrome', ip: '192.168.1.1' }
+  metadata: { browser: 'Chrome', ip: '192.168.1.1' },
 });
 
 // Get session
@@ -89,27 +84,27 @@ import { SlidingWindowLimiter } from '@skillancer/cache';
 
 const limiter = new SlidingWindowLimiter(redis, {
   keyPrefix: 'ratelimit:api',
-  points: 100,      // 100 requests
-  duration: 60,     // per 60 seconds
+  points: 100, // 100 requests
+  duration: 60, // per 60 seconds
 });
 
 // In your middleware
 async function rateLimitMiddleware(req, res, next) {
   const result = await limiter.consume(req.user.id);
-  
+
   // Set rate limit headers
   const headers = limiter.getHeaders(result);
   Object.entries(headers).forEach(([key, value]) => {
     res.setHeader(key, value);
   });
-  
+
   if (!result.allowed) {
-    return res.status(429).json({ 
+    return res.status(429).json({
       error: 'Too Many Requests',
-      retryAfter: result.retryAfter 
+      retryAfter: result.retryAfter,
     });
   }
-  
+
   next();
 }
 ```
@@ -117,11 +112,11 @@ async function rateLimitMiddleware(req, res, next) {
 ### Cache Decorators
 
 ```typescript
-import { 
-  Cacheable, 
-  CacheEvict, 
+import {
+  Cacheable,
+  CacheEvict,
   CachePut,
-  setDefaultCacheService 
+  setDefaultCacheService,
 } from '@skillancer/cache/decorators';
 
 // Initialize cache service for decorators
@@ -131,7 +126,7 @@ class UserService {
   @Cacheable({
     key: (id: string) => `user:${id}`,
     ttl: 3600,
-    tags: ['users']
+    tags: ['users'],
   })
   async getUser(id: string): Promise<User> {
     return this.userRepository.findById(id);
@@ -139,7 +134,7 @@ class UserService {
 
   @CacheEvict({
     key: (id: string) => `user:${id}`,
-    tags: ['users']
+    tags: ['users'],
   })
   async updateUser(id: string, data: UpdateUserDto): Promise<User> {
     return this.userRepository.update(id, data);
@@ -147,7 +142,7 @@ class UserService {
 
   @CachePut({
     key: (id: string) => `user:${id}`,
-    ttl: 3600
+    ttl: 3600,
   })
   async refreshUser(id: string): Promise<User> {
     return this.userRepository.findById(id);
@@ -175,20 +170,20 @@ const searchKey = `search:${hashKey({ query: 'react', filters: {...} })}`;
 ### Health Checks
 
 ```typescript
-import { 
-  checkRedisHealth, 
-  isRedisHealthy, 
+import {
+  checkRedisHealth,
+  isRedisHealthy,
   waitForRedis,
-  createHealthResponse 
+  createHealthResponse,
 } from '@skillancer/cache';
 
 // Quick health check
 const healthy = await isRedisHealthy(redis);
 
 // Detailed health check
-const health = await checkRedisHealth(redis, { 
+const health = await checkRedisHealth(redis, {
   includeDetails: true,
-  timeout: 5000 
+  timeout: 5000,
 });
 
 console.log(health);
@@ -208,7 +203,7 @@ console.log(health);
 const ready = await waitForRedis(redis, {
   maxWait: 30000,
   checkInterval: 1000,
-  onRetry: (attempt) => console.log(`Waiting for Redis... attempt ${attempt}`)
+  onRetry: (attempt) => console.log(`Waiting for Redis... attempt ${attempt}`),
 });
 
 // Express health endpoint
@@ -248,11 +243,11 @@ REDIS_CLUSTER_NODES=node1:6379,node2:6379,node3:6379
 ### Programmatic Configuration
 
 ```typescript
-import { 
-  createRedisClient, 
+import {
+  createRedisClient,
   createRedisCluster,
   getConfigForEnvironment,
-  validateConfig 
+  validateConfig,
 } from '@skillancer/cache';
 
 // Development
@@ -266,7 +261,7 @@ if (!validation.valid) {
   throw new Error(`Invalid config: ${validation.errors.join(', ')}`);
 }
 
-validation.warnings.forEach(w => console.warn(w));
+validation.warnings.forEach((w) => console.warn(w));
 
 // Create client
 const redis = createRedisClient(prodConfig);
@@ -283,44 +278,44 @@ const cluster = createRedisCluster([
 
 ### CacheService
 
-| Method | Description |
-|--------|-------------|
-| `get<T>(key)` | Get cached value |
-| `set(key, value, options?)` | Set value with optional TTL and tags |
-| `delete(key)` | Delete a key |
-| `deleteByTag(tag)` | Delete all keys with tag |
-| `deletePattern(pattern)` | Delete keys matching pattern |
-| `exists(key)` | Check if key exists |
-| `getOrSet(key, factory, options?)` | Get or compute and cache |
-| `increment(key, amount?)` | Increment counter |
-| `decrement(key, amount?)` | Decrement counter |
-| `hset(key, field, value)` | Set hash field |
-| `hget(key, field)` | Get hash field |
-| `hgetall(key)` | Get all hash fields |
-| `hdel(key, ...fields)` | Delete hash fields |
-| `flush()` | Clear all cache |
+| Method                             | Description                          |
+| ---------------------------------- | ------------------------------------ |
+| `get<T>(key)`                      | Get cached value                     |
+| `set(key, value, options?)`        | Set value with optional TTL and tags |
+| `delete(key)`                      | Delete a key                         |
+| `deleteByTag(tag)`                 | Delete all keys with tag             |
+| `deletePattern(pattern)`           | Delete keys matching pattern         |
+| `exists(key)`                      | Check if key exists                  |
+| `getOrSet(key, factory, options?)` | Get or compute and cache             |
+| `increment(key, amount?)`          | Increment counter                    |
+| `decrement(key, amount?)`          | Decrement counter                    |
+| `hset(key, field, value)`          | Set hash field                       |
+| `hget(key, field)`                 | Get hash field                       |
+| `hgetall(key)`                     | Get all hash fields                  |
+| `hdel(key, ...fields)`             | Delete hash fields                   |
+| `flush()`                          | Clear all cache                      |
 
 ### SessionStore
 
-| Method | Description |
-|--------|-------------|
-| `create(data)` | Create new session |
-| `get(sessionId)` | Get session by ID |
-| `update(sessionId, data)` | Update session data |
-| `delete(sessionId)` | Delete session |
-| `refresh(sessionId)` | Refresh session TTL |
-| `getUserSessions(userId)` | Get all user sessions |
+| Method                       | Description              |
+| ---------------------------- | ------------------------ |
+| `create(data)`               | Create new session       |
+| `get(sessionId)`             | Get session by ID        |
+| `update(sessionId, data)`    | Update session data      |
+| `delete(sessionId)`          | Delete session           |
+| `refresh(sessionId)`         | Refresh session TTL      |
+| `getUserSessions(userId)`    | Get all user sessions    |
 | `deleteUserSessions(userId)` | Delete all user sessions |
-| `isHealthy()` | Check store health |
+| `isHealthy()`                | Check store health       |
 
 ### RateLimiter
 
-| Method | Description |
-|--------|-------------|
-| `consume(key, points?)` | Consume rate limit points |
-| `get(key)` | Get current rate limit state |
-| `reset(key)` | Reset rate limit for key |
-| `getHeaders(result)` | Get HTTP headers for response |
+| Method                  | Description                   |
+| ----------------------- | ----------------------------- |
+| `consume(key, points?)` | Consume rate limit points     |
+| `get(key)`              | Get current rate limit state  |
+| `reset(key)`            | Reset rate limit for key      |
+| `getHeaders(result)`    | Get HTTP headers for response |
 
 ## Testing
 

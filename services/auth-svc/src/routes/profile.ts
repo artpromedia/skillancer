@@ -446,7 +446,10 @@ async function searchSkillsHandler(request: FastifyRequest, reply: FastifyReply)
     return;
   }
 
-  const skills = await skillsService.searchSkills(q, limit ? Number.parseInt(limit, 10) : undefined);
+  const skills = await skillsService.searchSkills(
+    q,
+    limit ? Number.parseInt(limit, 10) : undefined
+  );
   void reply.send({ skills });
 }
 

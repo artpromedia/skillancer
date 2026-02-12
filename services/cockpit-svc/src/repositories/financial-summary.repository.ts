@@ -262,4 +262,3 @@ export class FinancialSummaryRepository {
     return where;
   }
 }
-

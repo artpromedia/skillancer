@@ -850,4 +850,3 @@ export function getEscrowManager(): EscrowManager {
   }
   return escrowManager;
 }
-

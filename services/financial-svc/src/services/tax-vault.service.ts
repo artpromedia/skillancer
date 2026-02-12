@@ -1,4 +1,3 @@
-
 import { TaxVaultWithdrawalReason } from '../types/financial.types.js';
 
 import type {
@@ -201,7 +200,8 @@ export class TaxVaultService {
       new Date(now.getFullYear() + 1, 0, 15), // Q4 - January 15 next year
     ];
 
-    const nextQuarterlyDue = quarterlyDueDates.find((date) => date > now) ?? quarterlyDueDates[0] ?? null;
+    const nextQuarterlyDue =
+      quarterlyDueDates.find((date) => date > now) ?? quarterlyDueDates[0] ?? null;
 
     return {
       currentBalance: Number(vault.balance),

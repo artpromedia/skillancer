@@ -687,4 +687,3 @@ export async function timeTrackingRoutes(
     }
   });
 }
-

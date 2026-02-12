@@ -353,4 +353,3 @@ export class SkillRateRepository {
     }
   }
 }
-

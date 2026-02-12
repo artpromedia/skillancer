@@ -33,9 +33,21 @@ export namespace Prisma {
 // ============================================================================
 
 export type IntegrationProvider =
-  | 'QUICKBOOKS' | 'XERO' | 'FRESHBOOKS' | 'WAVE' | 'STRIPE'
-  | 'PAYPAL' | 'SQUARE' | 'PLAID' | 'GOOGLE_CALENDAR' | 'OUTLOOK'
-  | 'SLACK' | 'TRELLO' | 'ASANA' | 'JIRA' | 'NOTION'
+  | 'QUICKBOOKS'
+  | 'XERO'
+  | 'FRESHBOOKS'
+  | 'WAVE'
+  | 'STRIPE'
+  | 'PAYPAL'
+  | 'SQUARE'
+  | 'PLAID'
+  | 'GOOGLE_CALENDAR'
+  | 'OUTLOOK'
+  | 'SLACK'
+  | 'TRELLO'
+  | 'ASANA'
+  | 'JIRA'
+  | 'NOTION'
   | 'CUSTOM';
 
 export const IntegrationProvider = {
@@ -58,8 +70,13 @@ export const IntegrationProvider = {
 };
 
 export type IntegrationCategory =
-  | 'ACCOUNTING' | 'PAYMENTS' | 'BANKING' | 'CALENDAR'
-  | 'PROJECT_MANAGEMENT' | 'COMMUNICATION' | 'OTHER';
+  | 'ACCOUNTING'
+  | 'PAYMENTS'
+  | 'BANKING'
+  | 'CALENDAR'
+  | 'PROJECT_MANAGEMENT'
+  | 'COMMUNICATION'
+  | 'OTHER';
 
 export const IntegrationCategory = {
   ACCOUNTING: 'ACCOUNTING' as const,
@@ -113,7 +130,13 @@ export const IntegrationSyncStatus = {
   CANCELLED: 'CANCELLED' as const,
 };
 
-export type MappingEntityType = 'INVOICE' | 'CLIENT' | 'PROJECT' | 'EXPENSE' | 'PAYMENT' | 'TIME_ENTRY';
+export type MappingEntityType =
+  | 'INVOICE'
+  | 'CLIENT'
+  | 'PROJECT'
+  | 'EXPENSE'
+  | 'PAYMENT'
+  | 'TIME_ENTRY';
 export const MappingEntityType = {
   INVOICE: 'INVOICE' as const,
   CLIENT: 'CLIENT' as const,
@@ -145,8 +168,17 @@ export const IntegrationAuthType = {
 // ============================================================================
 
 export type InvoiceStatus =
-  | 'DRAFT' | 'PENDING' | 'SENT' | 'VIEWED' | 'PARTIAL'
-  | 'PAID' | 'OVERDUE' | 'CANCELLED' | 'REFUNDED' | 'DISPUTED' | 'VOIDED';
+  | 'DRAFT'
+  | 'PENDING'
+  | 'SENT'
+  | 'VIEWED'
+  | 'PARTIAL'
+  | 'PAID'
+  | 'OVERDUE'
+  | 'CANCELLED'
+  | 'REFUNDED'
+  | 'DISPUTED'
+  | 'VOIDED';
 export const InvoiceStatus = {
   DRAFT: 'DRAFT' as const,
   PENDING: 'PENDING' as const,
@@ -184,8 +216,13 @@ export const LateFeeType = {
 };
 
 export type InvoicePaymentMethod =
-  | 'BANK_TRANSFER' | 'CREDIT_CARD' | 'PAYPAL' | 'STRIPE'
-  | 'CHECK' | 'CASH' | 'OTHER';
+  | 'BANK_TRANSFER'
+  | 'CREDIT_CARD'
+  | 'PAYPAL'
+  | 'STRIPE'
+  | 'CHECK'
+  | 'CASH'
+  | 'OTHER';
 export const InvoicePaymentMethod = {
   BANK_TRANSFER: 'BANK_TRANSFER' as const,
   CREDIT_CARD: 'CREDIT_CARD' as const,
@@ -213,8 +250,15 @@ export const TemplateLayout = {
 };
 
 export type InvoiceActivityType =
-  | 'CREATED' | 'UPDATED' | 'SENT' | 'VIEWED' | 'PAID'
-  | 'PARTIAL_PAYMENT' | 'REMINDER_SENT' | 'OVERDUE' | 'CANCELLED';
+  | 'CREATED'
+  | 'UPDATED'
+  | 'SENT'
+  | 'VIEWED'
+  | 'PAID'
+  | 'PARTIAL_PAYMENT'
+  | 'REMINDER_SENT'
+  | 'OVERDUE'
+  | 'CANCELLED';
 export const InvoiceActivityType = {
   CREATED: 'CREATED' as const,
   UPDATED: 'UPDATED' as const,
@@ -227,7 +271,13 @@ export const InvoiceActivityType = {
   CANCELLED: 'CANCELLED' as const,
 };
 
-export type RecurrenceFrequency = 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+export type RecurrenceFrequency =
+  | 'DAILY'
+  | 'WEEKLY'
+  | 'BIWEEKLY'
+  | 'MONTHLY'
+  | 'QUARTERLY'
+  | 'YEARLY';
 export const RecurrenceFrequency = {
   DAILY: 'DAILY' as const,
   WEEKLY: 'WEEKLY' as const,
@@ -241,7 +291,15 @@ export const RecurrenceFrequency = {
 // Enums - Financial
 // ============================================================================
 
-export type FinancialAccountType = 'CHECKING' | 'SAVINGS' | 'CREDIT' | 'CREDIT_CARD' | 'INVESTMENT' | 'CASH' | 'PAYPAL' | 'OTHER';
+export type FinancialAccountType =
+  | 'CHECKING'
+  | 'SAVINGS'
+  | 'CREDIT'
+  | 'CREDIT_CARD'
+  | 'INVESTMENT'
+  | 'CASH'
+  | 'PAYPAL'
+  | 'OTHER';
 export const FinancialAccountType = {
   CHECKING: 'CHECKING' as const,
   SAVINGS: 'SAVINGS' as const,
@@ -253,7 +311,12 @@ export const FinancialAccountType = {
   OTHER: 'OTHER' as const,
 };
 
-export type FinancialGoalType = 'SAVINGS' | 'DEBT_PAYOFF' | 'INVESTMENT' | 'REVENUE' | 'EXPENSE_REDUCTION';
+export type FinancialGoalType =
+  | 'SAVINGS'
+  | 'DEBT_PAYOFF'
+  | 'INVESTMENT'
+  | 'REVENUE'
+  | 'EXPENSE_REDUCTION';
 export const FinancialGoalType = {
   SAVINGS: 'SAVINGS' as const,
   DEBT_PAYOFF: 'DEBT_PAYOFF' as const,
@@ -600,7 +663,11 @@ export interface User {
 // ============================================================================
 
 export type FinancialTransactionSource =
-  | 'MANUAL' | 'BANK_IMPORT' | 'INTEGRATION' | 'CONTRACT' | 'INVOICE';
+  | 'MANUAL'
+  | 'BANK_IMPORT'
+  | 'INTEGRATION'
+  | 'CONTRACT'
+  | 'INVOICE';
 export const FinancialTransactionSource = {
   MANUAL: 'MANUAL' as const,
   BANK_IMPORT: 'BANK_IMPORT' as const,

@@ -25,7 +25,14 @@ import {
   Check,
   AlertCircle,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@skillancer/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+  CardFooter,
+} from '@skillancer/ui/card';
 import { Button } from '@skillancer/ui/button';
 import { Badge } from '@skillancer/ui/badge';
 import {
@@ -202,15 +209,15 @@ function AddonCard({
   };
 
   return (
-    <Card className={`relative ${isActive ? 'ring-2 ring-purple-200 bg-purple-50/30' : ''}`}>
+    <Card className={`relative ${isActive ? 'bg-purple-50/30 ring-2 ring-purple-200' : ''}`}>
       {addon.popular && !isActive && (
-        <div className="absolute -top-2 -right-2">
-          <Badge className="bg-amber-500 text-white text-xs">Popular</Badge>
+        <div className="absolute -right-2 -top-2">
+          <Badge className="bg-amber-500 text-xs text-white">Popular</Badge>
         </div>
       )}
       {isActive && (
-        <div className="absolute -top-2 -right-2">
-          <Badge className="bg-green-500 text-white text-xs">Active</Badge>
+        <div className="absolute -right-2 -top-2">
+          <Badge className="bg-green-500 text-xs text-white">Active</Badge>
         </div>
       )}
 
@@ -218,7 +225,7 @@ function AddonCard({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div
-              className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+              className={`flex h-10 w-10 items-center justify-center rounded-lg ${
                 isActive ? 'bg-purple-100' : 'bg-gray-100'
               }`}
             >
@@ -226,7 +233,7 @@ function AddonCard({
             </div>
             <div>
               <CardTitle className="text-base">{addon.name}</CardTitle>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="mt-0.5 flex items-center gap-2">
                 <span className="text-lg font-bold">${addon.monthlyPrice}</span>
                 <span className="text-sm text-gray-500">/{addon.unit}/mo</span>
               </div>
@@ -238,7 +245,7 @@ function AddonCard({
       <CardContent className="pb-3">
         <p className="text-sm text-gray-600">{addon.description}</p>
         {tierRestricted && (
-          <div className="flex items-center gap-1 mt-2 text-amber-600 text-xs">
+          <div className="mt-2 flex items-center gap-1 text-xs text-amber-600">
             <AlertCircle className="h-3 w-3" />
             Requires {tierLabels[addon.minTier]} plan
           </div>
@@ -247,7 +254,7 @@ function AddonCard({
 
       <CardFooter className="pt-0">
         {canAdd || isActive ? (
-          <div className="flex items-center justify-between w-full">
+          <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -350,7 +357,7 @@ export default function AddonsPage() {
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/settings/billing">
-              <ArrowLeft className="h-4 w-4 mr-1" />
+              <ArrowLeft className="mr-1 h-4 w-4" />
               Back to Billing
             </Link>
           </Button>
@@ -362,9 +369,7 @@ export default function AddonsPage() {
               <div className="text-lg font-bold">
                 ${newTotal}/mo
                 <span
-                  className={`text-sm ml-2 ${
-                    totalChange > 0 ? 'text-red-600' : 'text-green-600'
-                  }`}
+                  className={`ml-2 text-sm ${totalChange > 0 ? 'text-red-600' : 'text-green-600'}`}
                 >
                   ({totalChange > 0 ? '+' : ''}${totalChange})
                 </span>
@@ -377,14 +382,14 @@ export default function AddonsPage() {
 
       <div>
         <h1 className="text-2xl font-bold">Add-ons</h1>
-        <p className="text-gray-500 mt-1">
+        <p className="mt-1 text-gray-500">
           Extend your subscription with additional features and capacity
         </p>
       </div>
 
       {/* Current Add-ons Summary */}
       {activeAddons.length > 0 && (
-        <Card className="bg-purple-50 border-purple-200">
+        <Card className="border-purple-200 bg-purple-50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -400,7 +405,7 @@ export default function AddonsPage() {
       )}
 
       {/* Add-on Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {addons.map((addon) => (
           <AddonCard
             key={addon.id}
@@ -422,11 +427,11 @@ export default function AddonsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4 space-y-3">
+          <div className="space-y-3 py-4">
             {changes.map((change) => (
               <div
                 key={change.addon.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between rounded-lg bg-gray-50 p-3"
               >
                 <div>
                   <div className="font-medium">{change.addon.name}</div>

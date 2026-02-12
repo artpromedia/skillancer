@@ -25,4 +25,3 @@ export {
   ScoreHistory,
   ReputationBadge,
 } from './reputation-score';
-

@@ -10,10 +10,7 @@
  * - Rate limiting per provider
  */
 
-import Fastify, {
-  type FastifyInstance,
-  type FastifyServerOptions,
-} from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 
 import { getConfig } from './config/index.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -43,9 +40,7 @@ export interface BuildAppOptions {
 /**
  * Build the Integration Hub Fastify application with all plugins and routes
  */
-export async function buildApp(
-  options: BuildAppOptions = {}
-): Promise<FastifyInstance> {
+export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const config = getConfig();
 
   // Determine logger configuration

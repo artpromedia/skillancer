@@ -421,4 +421,3 @@ export class GCPSecurityConnector extends BaseConnector {
 
 export const createGCPSecurityConnector = (config: ConnectorConfig) =>
   new GCPSecurityConnector(config);
-

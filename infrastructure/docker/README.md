@@ -24,8 +24,8 @@ Production Docker images are built in CI/CD and pushed to the container registry
 
 ## Services
 
-| Service | Port | Description |
-|---------|------|-------------|
+| Service  | Port | Description         |
+| -------- | ---- | ------------------- |
 | postgres | 5432 | PostgreSQL database |
-| redis | 6379 | Redis cache |
-| mailhog | 8025 | Email testing |
+| redis    | 6379 | Redis cache         |
+| mailhog  | 8025 | Email testing       |

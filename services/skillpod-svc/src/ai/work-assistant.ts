@@ -491,4 +491,3 @@ export function getWorkAssistantService(): WorkAssistantService {
   }
   return service;
 }
-

@@ -339,4 +339,3 @@ export class HealthcarePodTemplateService {
 }
 
 export const healthcarePodTemplateService = new HealthcarePodTemplateService();
-

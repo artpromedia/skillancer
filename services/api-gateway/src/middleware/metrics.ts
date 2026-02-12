@@ -153,7 +153,9 @@ export const metricsPlugin: FastifyPluginCallback = (fastify, _options, done) =>
     if (contentLength) {
       httpResponseSize.observe(
         { method: request.method, route },
-        typeof contentLength === 'string' ? Number.parseInt(contentLength, 10) : Number(contentLength)
+        typeof contentLength === 'string'
+          ? Number.parseInt(contentLength, 10)
+          : Number(contentLength)
       );
     }
 

@@ -320,10 +320,7 @@ export class InvoicePaymentService {
   /**
    * Verify and process PayPal webhook with signature validation
    */
-  async processPayPalWebhook(
-    headers: Record<string, string>,
-    body: string
-  ): Promise<void> {
+  async processPayPalWebhook(headers: Record<string, string>, body: string): Promise<void> {
     if (!this.paypalProvider) {
       throw paypalErrors.notConfigured();
     }
@@ -332,7 +329,10 @@ export class InvoicePaymentService {
     const isValid = await this.paypalProvider.verifyWebhookSignature(headers, body);
 
     if (!isValid) {
-      throw new InvoiceError(InvoiceErrorCode.PAYMENT_PROCESSING_FAILED, 'Invalid webhook signature');
+      throw new InvoiceError(
+        InvoiceErrorCode.PAYMENT_PROCESSING_FAILED,
+        'Invalid webhook signature'
+      );
     }
 
     // Parse event

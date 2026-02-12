@@ -86,9 +86,7 @@ export class NotFoundError extends AppError {
   public override readonly name = 'NotFoundError';
 
   constructor(resource: string, id?: string) {
-    const message = id
-      ? `${resource} with id '${id}' not found`
-      : `${resource} not found`;
+    const message = id ? `${resource} with id '${id}' not found` : `${resource} not found`;
     super(message, 'NOT_FOUND', 404, { resource, id });
   }
 }

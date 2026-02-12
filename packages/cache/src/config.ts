@@ -96,9 +96,7 @@ export function parseRedisUrl(
   const config: RedisConfig = {
     host: parsed.hostname || 'localhost',
     port: Number.parseInt(parsed.port || '6379', 10),
-    database: parsed.pathname
-      ? Number.parseInt(parsed.pathname.slice(1), 10) || 0
-      : 0,
+    database: parsed.pathname ? Number.parseInt(parsed.pathname.slice(1), 10) || 0 : 0,
     tls: parsed.protocol === 'rediss:',
   };
 
@@ -200,9 +198,7 @@ export interface ClusterNode {
  * @param env - Environment variables
  * @returns Cluster nodes and options
  */
-export function getClusterConfigFromEnv(
-  env: Record<string, string | undefined> = process.env
-): {
+export function getClusterConfigFromEnv(env: Record<string, string | undefined> = process.env): {
   nodes: ClusterNode[];
   password?: string;
   tls?: boolean;

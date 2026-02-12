@@ -5,11 +5,7 @@
 
 import { z } from 'zod';
 
-import {
-  uuidSchema,
-  dateSchema,
-  timestampsSchema,
-} from '../common/base';
+import { uuidSchema, dateSchema, timestampsSchema } from '../common/base';
 
 // =============================================================================
 // Alert Enums
@@ -26,7 +22,7 @@ export const alertTypeSchema = z.enum([
   'CONTRACT_COMPLETED',
   'CONTRACT_CANCELLED',
   'CONTRACT_DISPUTED',
-  
+
   // Milestone related
   'MILESTONE_FUNDED',
   'MILESTONE_SUBMITTED',
@@ -35,7 +31,7 @@ export const alertTypeSchema = z.enum([
   'MILESTONE_PAID',
   'MILESTONE_DUE_SOON',
   'MILESTONE_OVERDUE',
-  
+
   // Job related
   'NEW_JOB_MATCH',
   'JOB_APPLICATION_RECEIVED',
@@ -43,18 +39,18 @@ export const alertTypeSchema = z.enum([
   'JOB_APPLICATION_ACCEPTED',
   'JOB_APPLICATION_REJECTED',
   'JOB_INVITATION',
-  
+
   // Bid related
   'BID_RECEIVED',
   'BID_SHORTLISTED',
   'BID_ACCEPTED',
   'BID_REJECTED',
   'BID_EXPIRED',
-  
+
   // Review related
   'REVIEW_RECEIVED',
   'REVIEW_RESPONSE',
-  
+
   // Payment related
   'PAYMENT_RECEIVED',
   'PAYMENT_SENT',
@@ -62,7 +58,7 @@ export const alertTypeSchema = z.enum([
   'PAYMENT_PENDING',
   'INVOICE_RECEIVED',
   'INVOICE_OVERDUE',
-  
+
   // SkillPod related
   'POD_READY',
   'POD_EXPIRING',
@@ -70,25 +66,25 @@ export const alertTypeSchema = z.enum([
   'SESSION_STARTED',
   'SESSION_ENDED',
   'POLICY_VIOLATION',
-  
+
   // Communication
   'NEW_MESSAGE',
   'MENTION',
   'FILE_SHARED',
-  
+
   // Calendar
   'EVENT_REMINDER',
   'EVENT_INVITATION',
   'EVENT_UPDATED',
   'EVENT_CANCELLED',
-  
+
   // System
   'SYSTEM_ANNOUNCEMENT',
   'MAINTENANCE_SCHEDULED',
   'FEATURE_UPDATE',
   'SECURITY_ALERT',
   'ACCOUNT_ALERT',
-  
+
   // Custom
   'CUSTOM',
 ]);
@@ -97,12 +93,7 @@ export type AlertType = z.infer<typeof alertTypeSchema>;
 /**
  * Alert priority/severity
  */
-export const alertPrioritySchema = z.enum([
-  'LOW',
-  'MEDIUM',
-  'HIGH',
-  'URGENT',
-]);
+export const alertPrioritySchema = z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']);
 export type AlertPriority = z.infer<typeof alertPrioritySchema>;
 
 /**
@@ -123,13 +114,7 @@ export type AlertCategory = z.infer<typeof alertCategorySchema>;
 /**
  * Delivery channel
  */
-export const deliveryChannelSchema = z.enum([
-  'IN_APP',
-  'EMAIL',
-  'PUSH',
-  'SMS',
-  'WEBHOOK',
-]);
+export const deliveryChannelSchema = z.enum(['IN_APP', 'EMAIL', 'PUSH', 'SMS', 'WEBHOOK']);
 export type DeliveryChannel = z.infer<typeof deliveryChannelSchema>;
 
 // =============================================================================
@@ -169,47 +154,49 @@ export type AlertDelivery = z.infer<typeof alertDeliverySchema>;
  */
 export const alertSchema = z.object({
   id: uuidSchema,
-  
+
   // Recipient
   userId: uuidSchema,
   tenantId: uuidSchema.optional(),
-  
+
   // Classification
   type: alertTypeSchema,
   category: alertCategorySchema,
   priority: alertPrioritySchema.default('MEDIUM'),
-  
+
   // Content
   title: z.string().min(1).max(200),
   message: z.string().max(1000),
   richContent: z.string().max(5000).optional(), // HTML content
-  
+
   // Related entities
-  relatedEntityType: z.enum([
-    'CONTRACT',
-    'JOB',
-    'BID',
-    'MILESTONE',
-    'REVIEW',
-    'PAYMENT',
-    'INVOICE',
-    'POD',
-    'SESSION',
-    'MESSAGE',
-    'EVENT',
-    'USER',
-    'CLIENT',
-  ]).optional(),
+  relatedEntityType: z
+    .enum([
+      'CONTRACT',
+      'JOB',
+      'BID',
+      'MILESTONE',
+      'REVIEW',
+      'PAYMENT',
+      'INVOICE',
+      'POD',
+      'SESSION',
+      'MESSAGE',
+      'EVENT',
+      'USER',
+      'CLIENT',
+    ])
+    .optional(),
   relatedEntityId: uuidSchema.optional(),
-  
+
   // Sender (if from another user)
   senderUserId: uuidSchema.optional(),
   senderName: z.string().max(200).optional(),
   senderAvatar: z.string().url().optional(),
-  
+
   // Actions
   actions: z.array(alertActionSchema).max(3).optional(),
-  
+
   // Status
   isRead: z.boolean().default(false),
   readAt: dateSchema.optional(),
@@ -217,21 +204,21 @@ export const alertSchema = z.object({
   archivedAt: dateSchema.optional(),
   isDismissed: z.boolean().default(false),
   dismissedAt: dateSchema.optional(),
-  
+
   // Delivery
   channels: z.array(deliveryChannelSchema).default(['IN_APP']),
   deliveries: z.array(alertDeliverySchema).optional(),
-  
+
   // Grouping
   groupId: z.string().optional(), // For grouping related alerts
   groupCount: z.number().int().positive().optional(), // Count in group
-  
+
   // Expiry
   expiresAt: dateSchema.optional(),
-  
+
   // Metadata
   metadata: z.record(z.unknown()).optional(),
-  
+
   ...timestampsSchema.shape,
 });
 export type Alert = z.infer<typeof alertSchema>;
@@ -304,29 +291,38 @@ export type AlertNotificationPreferenceItem = z.infer<typeof alertNotificationPr
  */
 export const alertNotificationPreferencesSchema = z.object({
   userId: uuidSchema,
-  
+
   // Global settings
   emailEnabled: z.boolean().default(true),
   pushEnabled: z.boolean().default(true),
   smsEnabled: z.boolean().default(false),
-  
+
   // Quiet hours
   quietHoursEnabled: z.boolean().default(false),
-  quietHoursStart: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
-  quietHoursEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+  quietHoursStart: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/)
+    .optional(),
+  quietHoursEnd: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/)
+    .optional(),
   quietHoursTimezone: z.string().optional(),
-  
+
   // Digest preferences
   digestEnabled: z.boolean().default(false),
   digestFrequency: z.enum(['DAILY', 'WEEKLY']).default('DAILY'),
-  digestTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).default('09:00'),
-  
+  digestTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/)
+    .default('09:00'),
+
   // Per-type preferences
   preferences: z.array(alertNotificationPreferenceItemSchema).optional(),
-  
+
   // Categories to mute entirely
   mutedCategories: z.array(alertCategorySchema).optional(),
-  
+
   ...timestampsSchema.shape,
 });
 export type AlertNotificationPreferences = z.infer<typeof alertNotificationPreferencesSchema>;
@@ -337,4 +333,6 @@ export type AlertNotificationPreferences = z.infer<typeof alertNotificationPrefe
 export const updateAlertNotificationPreferencesSchema = alertNotificationPreferencesSchema
   .omit({ userId: true, createdAt: true, updatedAt: true })
   .partial();
-export type UpdateAlertNotificationPreferences = z.infer<typeof updateAlertNotificationPreferencesSchema>;
+export type UpdateAlertNotificationPreferences = z.infer<
+  typeof updateAlertNotificationPreferencesSchema
+>;

@@ -14,7 +14,17 @@
  * @module scripts/demo-data-seed
  */
 
-import { PrismaClient, BidStatus, ContractStatus, JobStatus, ReviewType, ReviewStatus, BudgetType, ExperienceLevel, JobDuration } from '@prisma/client';
+import {
+  PrismaClient,
+  BidStatus,
+  ContractStatus,
+  JobStatus,
+  ReviewType,
+  ReviewStatus,
+  BudgetType,
+  ExperienceLevel,
+  JobDuration,
+} from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { faker } from '@faker-js/faker';
 
@@ -76,7 +86,11 @@ async function main() {
   console.log(`   Passwords: ${DEMO_ACCOUNTS.freelancer.password.slice(0, 4)}... (check code)`);
 }
 
-async function seedDemoAccounts(): Promise<{ freelancerId: string; clientId: string; adminId: string }> {
+async function seedDemoAccounts(): Promise<{
+  freelancerId: string;
+  clientId: string;
+  adminId: string;
+}> {
   console.log('👤 Creating demo accounts...');
 
   // Demo Freelancer
@@ -148,7 +162,9 @@ async function seedFreelancers(count: number): Promise<string[]> {
   for (let i = 0; i < count; i++) {
     const firstName = faker.person.firstName();
     const lastName = faker.person.lastName();
-    const email = faker.internet.email({ firstName, lastName, provider: 'demo.skillancer.com' }).toLowerCase();
+    const email = faker.internet
+      .email({ firstName, lastName, provider: 'demo.skillancer.com' })
+      .toLowerCase();
     const hashedPassword = await hash('Password123!', 12);
 
     const user = await prisma.user.upsert({
@@ -182,7 +198,9 @@ async function seedClients(count: number): Promise<string[]> {
   for (let i = 0; i < count; i++) {
     const firstName = faker.person.firstName();
     const lastName = faker.person.lastName();
-    const email = faker.internet.email({ firstName, lastName, provider: 'democlient.skillancer.com' }).toLowerCase();
+    const email = faker.internet
+      .email({ firstName, lastName, provider: 'democlient.skillancer.com' })
+      .toLowerCase();
     const hashedPassword = await hash('Password123!', 12);
 
     const user = await prisma.user.upsert({
@@ -278,20 +296,10 @@ async function seedJobs(clientIds: string[], count: number): Promise<string[]> {
   return ids;
 }
 
-async function seedBids(
-  freelancerIds: string[],
-  jobIds: string[],
-  count: number
-): Promise<void> {
+async function seedBids(freelancerIds: string[], jobIds: string[], count: number): Promise<void> {
   console.log(`📝 Creating ${count} sample bids...`);
 
-  const bidStatuses: BidStatus[] = [
-    'PENDING',
-    'SHORTLISTED',
-    'ACCEPTED',
-    'REJECTED',
-    'WITHDRAWN',
-  ];
+  const bidStatuses: BidStatus[] = ['PENDING', 'SHORTLISTED', 'ACCEPTED', 'REJECTED', 'WITHDRAWN'];
 
   for (let i = 0; i < count; i++) {
     const jobId = faker.helpers.arrayElement(jobIds);
@@ -395,7 +403,9 @@ async function seedReviews(
           contractId,
           reviewerId: isClientReview ? reviewerId : revieweeId,
           revieweeId: isClientReview ? revieweeId : reviewerId,
-          reviewType: isClientReview ? ReviewType.CLIENT_TO_FREELANCER : ReviewType.FREELANCER_TO_CLIENT,
+          reviewType: isClientReview
+            ? ReviewType.CLIENT_TO_FREELANCER
+            : ReviewType.FREELANCER_TO_CLIENT,
           overallRating: faker.number.int({ min: 3, max: 5 }),
           categoryRatings: isClientReview
             ? {

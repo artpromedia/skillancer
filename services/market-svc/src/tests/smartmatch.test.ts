@@ -100,18 +100,8 @@ describe('SmartMatch Scoring Functions', () => {
         compliances: [],
       };
 
-      const withClearance = scoreCompliance(
-        profileWithClearance,
-        [],
-        [],
-        'TOP_SECRET'
-      );
-      const withoutClearance = scoreCompliance(
-        profileWithoutClearance,
-        [],
-        [],
-        'TOP_SECRET'
-      );
+      const withClearance = scoreCompliance(profileWithClearance, [], [], 'TOP_SECRET');
+      const withoutClearance = scoreCompliance(profileWithoutClearance, [], [], 'TOP_SECRET');
 
       expect(withClearance.score).toBeGreaterThan(withoutClearance.score);
     });
@@ -168,12 +158,7 @@ describe('SmartMatch Scoring Functions', () => {
         new Map()
       );
 
-      const withoutEndorsements = scoreSkills(
-        ['TypeScript'],
-        ['TypeScript'],
-        new Map(),
-        new Map()
-      );
+      const withoutEndorsements = scoreSkills(['TypeScript'], ['TypeScript'], new Map(), new Map());
 
       expect(withEndorsements.score).toBeGreaterThan(withoutEndorsements.score);
     });
@@ -753,7 +738,11 @@ describe('SmartMatch Score Utilities', () => {
     });
 
     it('should sort by score descending', () => {
-      const matches = [createMatch(70, 50, 4.0, 80), createMatch(90, 60, 4.5, 85), createMatch(80, 55, 4.2, 82)];
+      const matches = [
+        createMatch(70, 50, 4.0, 80),
+        createMatch(90, 60, 4.5, 85),
+        createMatch(80, 55, 4.2, 82),
+      ];
 
       const result = sortMatches(matches, 'score');
 
@@ -763,7 +752,11 @@ describe('SmartMatch Score Utilities', () => {
     });
 
     it('should sort by rate ascending', () => {
-      const matches = [createMatch(70, 60, 4.0, 80), createMatch(90, 40, 4.5, 85), createMatch(80, 50, 4.2, 82)];
+      const matches = [
+        createMatch(70, 60, 4.0, 80),
+        createMatch(90, 40, 4.5, 85),
+        createMatch(80, 50, 4.2, 82),
+      ];
 
       const result = sortMatches(matches, 'rate');
 
@@ -773,7 +766,11 @@ describe('SmartMatch Score Utilities', () => {
     });
 
     it('should sort by rating descending', () => {
-      const matches = [createMatch(70, 50, 4.0, 80), createMatch(90, 60, 4.8, 85), createMatch(80, 55, 4.5, 82)];
+      const matches = [
+        createMatch(70, 50, 4.0, 80),
+        createMatch(90, 60, 4.8, 85),
+        createMatch(80, 55, 4.5, 82),
+      ];
 
       const result = sortMatches(matches, 'rating');
 
@@ -783,7 +780,11 @@ describe('SmartMatch Score Utilities', () => {
     });
 
     it('should sort by trust score descending', () => {
-      const matches = [createMatch(70, 50, 4.0, 75), createMatch(90, 60, 4.5, 95), createMatch(80, 55, 4.2, 85)];
+      const matches = [
+        createMatch(70, 50, 4.0, 75),
+        createMatch(90, 60, 4.5, 95),
+        createMatch(80, 55, 4.2, 85),
+      ];
 
       const result = sortMatches(matches, 'trust');
 

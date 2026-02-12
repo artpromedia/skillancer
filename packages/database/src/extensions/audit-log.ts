@@ -82,9 +82,7 @@ export function isAuditedModel(model: string): model is AuditedModel {
 /**
  * Check if an operation should be audited
  */
-export function isAuditedOperation(
-  operation: string
-): operation is AuditedOperation {
+export function isAuditedOperation(operation: string): operation is AuditedOperation {
   return AUDITED_OPERATIONS.includes(operation as AuditedOperation);
 }
 
@@ -172,9 +170,7 @@ export const auditLogExtension = Prisma.defineExtension((client) => {
           if (isAuditedModel(model) && args.where) {
             try {
               // Fetch old values before update
-              const modelClient = (client as any)[
-                model.charAt(0).toLowerCase() + model.slice(1)
-              ];
+              const modelClient = (client as any)[model.charAt(0).toLowerCase() + model.slice(1)];
               oldValues = await modelClient.findUnique({
                 where: args.where,
               });
@@ -204,9 +200,7 @@ export const auditLogExtension = Prisma.defineExtension((client) => {
 
           if (isAuditedModel(model) && args.where) {
             try {
-              const modelClient = (client as any)[
-                model.charAt(0).toLowerCase() + model.slice(1)
-              ];
+              const modelClient = (client as any)[model.charAt(0).toLowerCase() + model.slice(1)];
               oldValues = await modelClient.findUnique({
                 where: args.where,
               });

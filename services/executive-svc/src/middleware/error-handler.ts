@@ -24,9 +24,7 @@ export function errorHandler(
 
   // Don't expose internal errors in production
   const isProduction = process.env.NODE_ENV === 'production';
-  const responseMessage = statusCode >= 500 && isProduction
-    ? 'Internal Server Error'
-    : message;
+  const responseMessage = statusCode >= 500 && isProduction ? 'Internal Server Error' : message;
 
   reply.status(statusCode).send({
     error: true,

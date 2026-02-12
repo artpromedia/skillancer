@@ -33,36 +33,19 @@ export type UserStatus = z.infer<typeof userStatusSchema>;
 /**
  * User verification level
  */
-export const verificationLevelSchema = z.enum([
-  'NONE',
-  'EMAIL',
-  'BASIC',
-  'ENHANCED',
-  'PREMIUM',
-]);
+export const verificationLevelSchema = z.enum(['NONE', 'EMAIL', 'BASIC', 'ENHANCED', 'PREMIUM']);
 export type VerificationLevel = z.infer<typeof verificationLevelSchema>;
 
 /**
  * User roles in the system
  */
-export const userRoleSchema = z.enum([
-  'USER',
-  'FREELANCER',
-  'CLIENT',
-  'ADMIN',
-  'SUPER_ADMIN',
-]);
+export const userRoleSchema = z.enum(['USER', 'FREELANCER', 'CLIENT', 'ADMIN', 'SUPER_ADMIN']);
 export type UserRole = z.infer<typeof userRoleSchema>;
 
 /**
  * OAuth provider types
  */
-export const oauthProviderSchema = z.enum([
-  'GOOGLE',
-  'GITHUB',
-  'LINKEDIN',
-  'MICROSOFT',
-]);
+export const oauthProviderSchema = z.enum(['GOOGLE', 'GITHUB', 'LINKEDIN', 'MICROSOFT']);
 export type OAuthProvider = z.infer<typeof oauthProviderSchema>;
 
 // =============================================================================
@@ -151,7 +134,8 @@ export type PublicUser = z.infer<typeof publicUserSchema>;
  * Password validation schema
  * Requires: 12+ chars, uppercase, lowercase, number, special char
  */
-export const passwordSchema = z.string()
+export const passwordSchema = z
+  .string()
   .min(12, 'Password must be at least 12 characters')
   .regex(
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
@@ -194,14 +178,16 @@ export type UpdateUser = z.infer<typeof updateUserSchema>;
 /**
  * Change password input schema
  */
-export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: passwordSchema,
-  confirmPassword: z.string(),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 export type ChangePassword = z.infer<typeof changePasswordSchema>;
 
 // =============================================================================

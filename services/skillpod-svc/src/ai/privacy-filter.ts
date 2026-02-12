@@ -536,4 +536,3 @@ AI Assistant Data Usage:
 export function createPrivacyFilter(config?: Partial<FilterConfig>): PrivacyFilter {
   return new PrivacyFilter(config);
 }
-

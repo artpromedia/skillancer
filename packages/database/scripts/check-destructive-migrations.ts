@@ -31,31 +31,75 @@ const MIGRATIONS_DIR = path.join(__dirname, '..', 'prisma', 'migrations');
  * Patterns that indicate destructive operations
  * Each pattern includes a regex and a human-readable description
  */
-const DESTRUCTIVE_PATTERNS: Array<{ pattern: RegExp; description: string; severity: 'high' | 'medium' }> = [
+const DESTRUCTIVE_PATTERNS: Array<{
+  pattern: RegExp;
+  description: string;
+  severity: 'high' | 'medium';
+}> = [
   // Table operations
-  { pattern: /DROP\s+TABLE/gi, description: 'DROP TABLE - Removes entire table and all data', severity: 'high' },
-  { pattern: /TRUNCATE\s+TABLE/gi, description: 'TRUNCATE TABLE - Removes all rows from table', severity: 'high' },
-  { pattern: /TRUNCATE\s+["']?\w+["']?/gi, description: 'TRUNCATE - Removes all rows', severity: 'high' },
+  {
+    pattern: /DROP\s+TABLE/gi,
+    description: 'DROP TABLE - Removes entire table and all data',
+    severity: 'high',
+  },
+  {
+    pattern: /TRUNCATE\s+TABLE/gi,
+    description: 'TRUNCATE TABLE - Removes all rows from table',
+    severity: 'high',
+  },
+  {
+    pattern: /TRUNCATE\s+["']?\w+["']?/gi,
+    description: 'TRUNCATE - Removes all rows',
+    severity: 'high',
+  },
 
   // Column operations
-  { pattern: /ALTER\s+TABLE\s+["']?\w+["']?\s+DROP\s+COLUMN/gi, description: 'DROP COLUMN - Removes column and its data', severity: 'high' },
-  { pattern: /ALTER\s+TABLE\s+["']?\w+["']?\s+DROP\s+CONSTRAINT/gi, description: 'DROP CONSTRAINT - Removes constraint', severity: 'medium' },
+  {
+    pattern: /ALTER\s+TABLE\s+["']?\w+["']?\s+DROP\s+COLUMN/gi,
+    description: 'DROP COLUMN - Removes column and its data',
+    severity: 'high',
+  },
+  {
+    pattern: /ALTER\s+TABLE\s+["']?\w+["']?\s+DROP\s+CONSTRAINT/gi,
+    description: 'DROP CONSTRAINT - Removes constraint',
+    severity: 'medium',
+  },
 
   // Index operations (medium severity - usually safe but can affect performance)
   { pattern: /DROP\s+INDEX/gi, description: 'DROP INDEX - Removes index', severity: 'medium' },
 
   // Data operations
-  { pattern: /DELETE\s+FROM/gi, description: 'DELETE FROM - Removes rows from table', severity: 'high' },
+  {
+    pattern: /DELETE\s+FROM/gi,
+    description: 'DELETE FROM - Removes rows from table',
+    severity: 'high',
+  },
 
   // Type changes that may cause data loss
-  { pattern: /ALTER\s+TABLE\s+["']?\w+["']?\s+ALTER\s+COLUMN\s+["']?\w+["']?\s+TYPE/gi, description: 'ALTER COLUMN TYPE - May cause data loss on type conversion', severity: 'medium' },
+  {
+    pattern: /ALTER\s+TABLE\s+["']?\w+["']?\s+ALTER\s+COLUMN\s+["']?\w+["']?\s+TYPE/gi,
+    description: 'ALTER COLUMN TYPE - May cause data loss on type conversion',
+    severity: 'medium',
+  },
 
   // Schema operations
-  { pattern: /DROP\s+SCHEMA/gi, description: 'DROP SCHEMA - Removes entire schema', severity: 'high' },
-  { pattern: /DROP\s+DATABASE/gi, description: 'DROP DATABASE - Removes entire database', severity: 'high' },
+  {
+    pattern: /DROP\s+SCHEMA/gi,
+    description: 'DROP SCHEMA - Removes entire schema',
+    severity: 'high',
+  },
+  {
+    pattern: /DROP\s+DATABASE/gi,
+    description: 'DROP DATABASE - Removes entire database',
+    severity: 'high',
+  },
 
   // Enum modifications (can be destructive in PostgreSQL)
-  { pattern: /DROP\s+TYPE/gi, description: 'DROP TYPE - Removes custom type/enum', severity: 'medium' },
+  {
+    pattern: /DROP\s+TYPE/gi,
+    description: 'DROP TYPE - Removes custom type/enum',
+    severity: 'medium',
+  },
 ];
 
 // ============================================================================
@@ -101,7 +145,7 @@ function getMigrationDirs(): string[] {
  */
 function readMigrationFile(migrationDir: string): string | null {
   const sqlPath = path.join(MIGRATIONS_DIR, migrationDir, 'migration.sql');
-  
+
   if (!fs.existsSync(sqlPath)) {
     return null;
   }
@@ -118,14 +162,14 @@ function analyzeSQL(sql: string, fileName: string): DestructiveMatch[] {
 
   for (let lineNum = 0; lineNum < lines.length; lineNum++) {
     const line = lines[lineNum]!;
-    
+
     // Skip comments
     if (line.trim().startsWith('--')) continue;
 
     for (const { pattern, description, severity } of DESTRUCTIVE_PATTERNS) {
       // Reset regex lastIndex for global patterns
       pattern.lastIndex = 0;
-      
+
       if (pattern.test(line)) {
         matches.push({
           file: fileName,
@@ -153,7 +197,7 @@ function analyzeMigrations(): AnalysisResult {
 
   for (const migration of migrations) {
     const sql = readMigrationFile(migration);
-    
+
     if (sql === null) {
       continue;
     }
@@ -236,8 +280,10 @@ try {
   if (result.hasDestructive) {
     const highCount = result.matches.filter((m) => m.severity === 'high').length;
     const mediumCount = result.matches.filter((m) => m.severity === 'medium').length;
-    
-    console.log(`Summary: ${highCount} high severity, ${mediumCount} medium severity issues found.`);
+
+    console.log(
+      `Summary: ${highCount} high severity, ${mediumCount} medium severity issues found.`
+    );
     process.exit(1);
   }
 

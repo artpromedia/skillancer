@@ -609,4 +609,3 @@ export function createLearningPathGenerator(
     suggestNextMilestone,
   };
 }
-

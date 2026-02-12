@@ -35,21 +35,13 @@ const DataExportRequestSchema = z.object({
 
 const AccountDeletionRequestSchema = z.object({
   reason: z
-    .enum([
-      'NO_LONGER_NEEDED',
-      'PRIVACY_CONCERNS',
-      'SWITCHING_PLATFORM',
-      'DISSATISFIED',
-      'OTHER',
-    ])
+    .enum(['NO_LONGER_NEEDED', 'PRIVACY_CONCERNS', 'SWITCHING_PLATFORM', 'DISSATISFIED', 'OTHER'])
     .optional(),
   feedback: z.string().max(1000).optional(),
   password: z.string().min(1, 'Password is required to confirm deletion'),
-  confirmPhrase: z
-    .string()
-    .refine((val) => val === 'DELETE MY ACCOUNT', {
-      message: 'Please type "DELETE MY ACCOUNT" to confirm',
-    }),
+  confirmPhrase: z.string().refine((val) => val === 'DELETE MY ACCOUNT', {
+    message: 'Please type "DELETE MY ACCOUNT" to confirm',
+  }),
 });
 
 const ConsentUpdateSchema = z.object({
@@ -66,7 +58,10 @@ const ConsentUpdateSchema = z.object({
 /**
  * Export user data in JSON format
  */
-async function exportUserDataJson(userId: string, categories: string[]): Promise<Record<string, any>> {
+async function exportUserDataJson(
+  userId: string,
+  categories: string[]
+): Promise<Record<string, any>> {
   const data: Record<string, any> = {
     exportedAt: new Date().toISOString(),
     userId,
@@ -302,7 +297,11 @@ async function exportUserDataJson(userId: string, categories: string[]): Promise
 /**
  * Soft delete user account and anonymize data
  */
-async function deleteUserAccount(userId: string, reason?: string, feedback?: string): Promise<void> {
+async function deleteUserAccount(
+  userId: string,
+  reason?: string,
+  feedback?: string
+): Promise<void> {
   const anonymizedEmail = `deleted-${userId}@anonymized.skillancer.com`;
   const anonymizedName = 'Deleted User';
 

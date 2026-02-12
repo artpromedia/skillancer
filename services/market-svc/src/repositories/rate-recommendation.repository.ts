@@ -4,7 +4,11 @@
  */
 
 import type { RecommendationReason } from '../types/rate-intelligence.types.js';
-import type { PrismaClient, RecommendationStatus, RecommendationType } from '../types/prisma-shim.js';
+import type {
+  PrismaClient,
+  RecommendationStatus,
+  RecommendationType,
+} from '../types/prisma-shim.js';
 
 export interface RateRecommendationCreate {
   userId: string;

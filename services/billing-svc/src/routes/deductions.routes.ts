@@ -43,7 +43,9 @@ router.get(
       return;
     }
 
-    const year = req.query.year ? Number.parseInt(req.query.year as string) : new Date().getFullYear();
+    const year = req.query.year
+      ? Number.parseInt(req.query.year as string)
+      : new Date().getFullYear();
     const category = req.query.category as string | undefined;
     const limit = Number.parseInt(req.query.limit as string) || 50;
     const offset = Number.parseInt(req.query.offset as string) || 0;
@@ -158,7 +160,9 @@ router.get(
       return;
     }
 
-    const year = req.query.year ? Number.parseInt(req.query.year as string) : new Date().getFullYear();
+    const year = req.query.year
+      ? Number.parseInt(req.query.year as string)
+      : new Date().getFullYear();
 
     const tracker = getDeductionTracker();
     const categories = await tracker.getCategorySummary(userId, year);
@@ -180,7 +184,9 @@ router.get(
       return;
     }
 
-    const year = req.query.year ? Number.parseInt(req.query.year as string) : new Date().getFullYear();
+    const year = req.query.year
+      ? Number.parseInt(req.query.year as string)
+      : new Date().getFullYear();
     const limit = Number.parseInt(req.query.limit as string) || 50;
     const offset = Number.parseInt(req.query.offset as string) || 0;
 
@@ -279,4 +285,3 @@ router.get(
 );
 
 export default router;
-

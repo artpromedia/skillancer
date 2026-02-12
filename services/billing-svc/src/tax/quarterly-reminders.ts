@@ -592,4 +592,3 @@ export function getQuarterlyRemindersService(): QuarterlyRemindersService {
   }
   return quarterlyRemindersInstance;
 }
-

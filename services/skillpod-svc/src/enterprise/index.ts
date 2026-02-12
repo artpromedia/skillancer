@@ -112,4 +112,3 @@ export const TRIAL_CONFIG = {
 export type ApiScope = (typeof API_SCOPES)[keyof typeof API_SCOPES];
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[keyof typeof WEBHOOK_EVENTS];
 export type AdminRole = (typeof ADMIN_ROLES)[keyof typeof ADMIN_ROLES];
-

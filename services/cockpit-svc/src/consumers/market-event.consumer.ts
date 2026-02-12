@@ -188,4 +188,3 @@ export function getMarketConsumerHealth(): {
     paused: worker?.isPaused() ?? false,
   };
 }
-

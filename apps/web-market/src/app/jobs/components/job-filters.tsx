@@ -19,7 +19,6 @@ import { useJobStore } from '@/stores/job-store';
 
 import type { Category, JobSearchFilters } from '@/lib/api/jobs';
 
-
 // ============================================================================
 // Types
 // ============================================================================

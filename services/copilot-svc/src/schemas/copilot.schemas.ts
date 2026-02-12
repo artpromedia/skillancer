@@ -34,12 +34,14 @@ export const DraftStatusSchema = z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'REJECTED'
 // PROPOSAL DRAFT SCHEMAS
 // =============================================================================
 
-export const BudgetRangeSchema = z.object({
-  min: z.number().positive(),
-  max: z.number().positive(),
-}).refine((data) => data.max >= data.min, {
-  message: 'Max budget must be greater than or equal to min budget',
-});
+export const BudgetRangeSchema = z
+  .object({
+    min: z.number().positive(),
+    max: z.number().positive(),
+  })
+  .refine((data) => data.max >= data.min, {
+    message: 'Max budget must be greater than or equal to min budget',
+  });
 
 export const GenerateProposalDraftSchema = z.object({
   jobId: z.string().uuid(),

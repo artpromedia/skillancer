@@ -461,4 +461,3 @@ export abstract class BaseConnector implements IntegrationConnector {
     };
   }
 }
-

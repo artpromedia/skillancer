@@ -361,7 +361,7 @@ export function VerificationCenter() {
                 {/* Identity */}
                 <button
                   type="button"
-                  className="flex items-center gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
+                  className="hover:bg-muted/50 flex items-center gap-3 rounded-lg border p-4 text-left transition-colors"
                   onClick={() => setActiveTab('identity')}
                 >
                   <Shield
@@ -376,7 +376,7 @@ export function VerificationCenter() {
                       {status?.identityVerified ? level : 'Not verified'}
                     </p>
                   </div>
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <CheckCircle2 className="text-primary h-4 w-4" />
                 </button>
               </div>
 
@@ -399,7 +399,7 @@ export function VerificationCenter() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
+                <Sparkles className="text-primary h-5 w-5" />
                 Quick Actions
               </CardTitle>
               <CardDescription>
@@ -525,7 +525,10 @@ export function VerificationCenter() {
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
                 {['HIPAA', 'SOC 2', 'GDPR', 'PCI DSS'].map((cert) => (
-                  <div key={cert} className="flex items-center justify-between rounded-lg border p-4">
+                  <div
+                    key={cert}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                  >
                     <div className="flex items-center gap-3">
                       <FileCheck className="text-muted-foreground h-5 w-5" />
                       <span className="font-medium">{cert}</span>

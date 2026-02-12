@@ -693,4 +693,3 @@ export function getUnifiedProfileService(): UnifiedProfileService {
   }
   return serviceInstance;
 }
-

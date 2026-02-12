@@ -368,4 +368,3 @@ export function registerReminderRoutes(fastify: FastifyInstance, deps: ReminderR
     }
   });
 }
-

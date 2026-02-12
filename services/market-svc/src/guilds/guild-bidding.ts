@@ -544,4 +544,3 @@ export class GuildBiddingService {
 }
 
 export const guildBiddingService = new GuildBiddingService();
-

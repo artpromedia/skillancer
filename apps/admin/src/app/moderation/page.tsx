@@ -25,7 +25,11 @@ export default function ModerationPage() {
   const [activeTab, setActiveTab] = useState<ModerationTab>('jobs');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
-  const { data: itemsData, isLoading, error } = useModerationItems({
+  const {
+    data: itemsData,
+    isLoading,
+    error,
+  } = useModerationItems({
     contentType: contentTypeMap[activeTab] as never,
     status: 'pending' as never,
   });
@@ -232,10 +236,7 @@ export default function ModerationPage() {
           </div>
           <div className="divide-y">
             {queue.map((item: Record<string, unknown>) => (
-              <div
-                key={item.id as string}
-                className="flex items-start gap-4 p-4 hover:bg-gray-50"
-              >
+              <div key={item.id as string} className="flex items-start gap-4 p-4 hover:bg-gray-50">
                 <input
                   checked={selectedItems.includes(item.id as string)}
                   className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600"
@@ -249,11 +250,14 @@ export default function ModerationPage() {
                         {(item.title as string) || (item.contentTitle as string) || 'Untitled'}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {(item.reason as string) || (item.flagReason as string) || 'Flagged for review'}
+                        {(item.reason as string) ||
+                          (item.flagReason as string) ||
+                          'Flagged for review'}
                       </p>
                       {(item.reportedBy as Record<string, string>) && (
                         <p className="mt-1 text-xs text-gray-400">
-                          Reported by: {(item.reportedBy as Record<string, string>)?.name || 'Unknown'}{' '}
+                          Reported by:{' '}
+                          {(item.reportedBy as Record<string, string>)?.name || 'Unknown'}{' '}
                           {(item.reportedBy as Record<string, string>)?.email
                             ? `(${(item.reportedBy as Record<string, string>).email})`
                             : ''}

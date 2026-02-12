@@ -31,10 +31,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import { useExpenses, useExpenseSummary } from '@/hooks/api/use-expenses';
-import type {
-  Expense,
-  ExpenseStatus as ApiExpenseStatus,
-} from '@/lib/api/services/expenses';
+import type { Expense, ExpenseStatus as ApiExpenseStatus } from '@/lib/api/services/expenses';
 
 // Display category type for UI styling
 type DisplayExpenseCategory =
@@ -266,7 +263,9 @@ export default function ExpensesPage() {
             <select
               className="appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value as DisplayExpenseCategory | 'all')}
+              onChange={(e) =>
+                setSelectedCategory(e.target.value as DisplayExpenseCategory | 'all')
+              }
             >
               <option value="all">All Categories</option>
               {Object.entries(categoryConfig).map(([key, config]) => (

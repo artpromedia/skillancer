@@ -852,4 +852,3 @@ export function getPortableCredentialService(): PortableCredentialService {
   }
   return serviceInstance;
 }
-

@@ -52,22 +52,20 @@ export const deviceInfoSchema = z.object({
   browser: z.string().optional(),
   os: z.string().optional(),
   device: z.string().optional(),
-  location: z.object({
-    country: z.string().optional(),
-    region: z.string().optional(),
-    city: z.string().optional(),
-  }).optional(),
+  location: z
+    .object({
+      country: z.string().optional(),
+      region: z.string().optional(),
+      city: z.string().optional(),
+    })
+    .optional(),
 });
 export type DeviceInfo = z.infer<typeof deviceInfoSchema>;
 
 /**
  * Session status
  */
-export const sessionStatusSchema = z.enum([
-  'ACTIVE',
-  'EXPIRED',
-  'REVOKED',
-]);
+export const sessionStatusSchema = z.enum(['ACTIVE', 'EXPIRED', 'REVOKED']);
 export type SessionStatus = z.infer<typeof sessionStatusSchema>;
 
 /**
@@ -149,12 +147,7 @@ export type LogoutRequest = z.infer<typeof logoutRequestSchema>;
 /**
  * MFA method types
  */
-export const mfaMethodSchema = z.enum([
-  'TOTP',
-  'SMS',
-  'EMAIL',
-  'BACKUP_CODE',
-]);
+export const mfaMethodSchema = z.enum(['TOTP', 'SMS', 'EMAIL', 'BACKUP_CODE']);
 export type MFAMethod = z.infer<typeof mfaMethodSchema>;
 
 /**
@@ -193,14 +186,16 @@ export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
 /**
  * Confirm password reset
  */
-export const passwordResetConfirmSchema = z.object({
-  token: z.string(),
-  newPassword: z.string().min(12),
-  confirmPassword: z.string(),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+export const passwordResetConfirmSchema = z
+  .object({
+    token: z.string(),
+    newPassword: z.string().min(12),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 export type PasswordResetConfirm = z.infer<typeof passwordResetConfirmSchema>;
 
 // =============================================================================

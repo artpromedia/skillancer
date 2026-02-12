@@ -224,9 +224,7 @@ export function EscrowStatus({
 
   // Calculate progress
   const progressPercent =
-    escrow.totalAmount > 0
-      ? Math.round((escrow.releasedAmount / escrow.totalAmount) * 100)
-      : 0;
+    escrow.totalAmount > 0 ? Math.round((escrow.releasedAmount / escrow.totalAmount) * 100) : 0;
 
   // ---------------------------------------------------------------------------
   // Compact View
@@ -275,7 +273,9 @@ export function EscrowStatus({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-100 p-6">
         <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${statusConfig.bgColor}`}>
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-full ${statusConfig.bgColor}`}
+          >
             <StatusIcon className={`h-5 w-5 ${statusConfig.iconColor}`} />
           </div>
           <div>
@@ -326,7 +326,7 @@ export function EscrowStatus({
 
       {/* Progress Bar */}
       {showAmounts && (
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className="border-b border-gray-100 px-6 py-4">
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>Release Progress</span>
             <span>{progressPercent}%</span>

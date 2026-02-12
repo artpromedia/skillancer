@@ -742,4 +742,3 @@ export function registerNotificationRoutes(
 
   logger.info({ msg: 'Notification routes registered' });
 }
-

@@ -9,12 +9,12 @@ import { test, expect, type Page } from '@playwright/test';
 const createTestInvoice = (suffix: string = Date.now().toString()) => ({
   clientName: 'Test Client ' + suffix,
   clientEmail: `client.${suffix}@test.com`,
-  amount: 1500.00,
+  amount: 1500.0,
   description: 'Web Development Services',
   dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   items: [
-    { description: 'Frontend Development', quantity: 40, rate: 25.00 },
-    { description: 'Backend Development', quantity: 20, rate: 25.00 },
+    { description: 'Frontend Development', quantity: 40, rate: 25.0 },
+    { description: 'Backend Development', quantity: 20, rate: 25.0 },
   ],
 });
 
@@ -115,7 +115,8 @@ test.describe('Invoice Creation Flow', () => {
 
     // Verify calculated total
     const expectedTotal = testInvoice.items.reduce(
-      (sum, item) => sum + item.quantity * item.rate, 0
+      (sum, item) => sum + item.quantity * item.rate,
+      0
     );
     await expect(page.getByTestId('invoice-total')).toContainText(expectedTotal.toFixed(2));
   });
@@ -235,7 +236,9 @@ test.describe('Stripe Payment Flow', () => {
     await paymentPage.submitPayment();
 
     // Should show 3DS iframe or modal
-    await expect(page.frameLocator('[name*="stripe"]').first().getByRole('button')).toBeVisible({ timeout: 10000 });
+    await expect(page.frameLocator('[name*="stripe"]').first().getByRole('button')).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('should validate card details', async ({ page }) => {
@@ -264,10 +267,7 @@ test.describe('PayPal Payment Flow', () => {
     await expect(paypalButton).toBeVisible();
 
     // Intercept PayPal redirect
-    const [popup] = await Promise.all([
-      page.waitForEvent('popup'),
-      paypalButton.click(),
-    ]);
+    const [popup] = await Promise.all([page.waitForEvent('popup'), paypalButton.click()]);
 
     // Should redirect to PayPal
     expect(popup.url()).toContain('paypal.com');

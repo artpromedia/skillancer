@@ -36,11 +36,13 @@ pnpm db:generate
 ### 3. Run Migrations
 
 For development:
+
 ```bash
 pnpm db:migrate:dev
 ```
 
 For production:
+
 ```bash
 pnpm db:migrate:deploy
 ```
@@ -106,10 +108,10 @@ const allUsers = await withDeleted(prisma.user.findMany());
 
 ```typescript
 import { prisma } from '@skillancer/database';
-import { 
-  auditLogExtension, 
+import {
+  auditLogExtension,
   setAuditContext,
-  getAuditHistory 
+  getAuditHistory
 } from '@skillancer/database/extensions';
 
 // Create extended client
@@ -134,13 +136,7 @@ const history = await getAuditHistory(prisma, 'job', 'job-id');
 ### Type Exports
 
 ```typescript
-import type { 
-  User, 
-  Job, 
-  Contract,
-  DatabaseClient,
-  TransactionClient 
-} from '@skillancer/database';
+import type { User, Job, Contract, DatabaseClient, TransactionClient } from '@skillancer/database';
 
 // Use in your application
 function createUser(data: Prisma.UserCreateInput): Promise<User> {
@@ -150,16 +146,16 @@ function createUser(data: Prisma.UserCreateInput): Promise<User> {
 
 ## Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `pnpm build` | Build the package |
-| `pnpm db:generate` | Generate Prisma Client |
-| `pnpm db:migrate:dev` | Run migrations in development |
-| `pnpm db:migrate:deploy` | Run migrations in production |
-| `pnpm db:push` | Push schema changes (development) |
-| `pnpm db:seed` | Seed database with test data |
-| `pnpm db:reset` | Reset database (drop all data) |
-| `pnpm db:studio` | Open Prisma Studio |
+| Script                   | Description                       |
+| ------------------------ | --------------------------------- |
+| `pnpm build`             | Build the package                 |
+| `pnpm db:generate`       | Generate Prisma Client            |
+| `pnpm db:migrate:dev`    | Run migrations in development     |
+| `pnpm db:migrate:deploy` | Run migrations in production      |
+| `pnpm db:push`           | Push schema changes (development) |
+| `pnpm db:seed`           | Seed database with test data      |
+| `pnpm db:reset`          | Reset database (drop all data)    |
+| `pnpm db:studio`         | Open Prisma Studio                |
 
 ## Schema Overview
 
@@ -267,7 +263,6 @@ const result = await prisma.$transaction(async (tx) => {
   return { job, notification };
 });
 ```
-
 
 ## Environment Variables
 

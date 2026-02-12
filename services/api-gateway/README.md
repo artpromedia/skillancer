@@ -76,64 +76,64 @@ pnpm start
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment (development, staging, production, test) | `development` |
-| `PORT` | Server port | `4000` |
-| `HOST` | Server host | `0.0.0.0` |
-| `LOG_LEVEL` | Logging level | `info` |
-| `JWT_SECRET` | JWT signing secret (required in production) | - |
-| `JWT_EXPIRES_IN` | JWT expiration time | `1h` |
-| `CORS_ORIGINS` | Allowed CORS origins (comma-separated) | `http://localhost:3000` |
-| `AUTH_SERVICE_URL` | Auth service URL | `http://localhost:3001` |
-| `MARKET_SERVICE_URL` | Market service URL | `http://localhost:3002` |
-| `SKILLPOD_SERVICE_URL` | SkillPod service URL | `http://localhost:3003` |
-| `COCKPIT_SERVICE_URL` | Cockpit service URL | `http://localhost:3004` |
-| `BILLING_SERVICE_URL` | Billing service URL | `http://localhost:3005` |
-| `NOTIFICATION_SERVICE_URL` | Notification service URL | `http://localhost:3006` |
-| `RATE_LIMIT_MAX` | Max requests per time window | `100` |
-| `RATE_LIMIT_TIME_WINDOW` | Rate limit time window | `1 minute` |
-| `CIRCUIT_BREAKER_TIMEOUT` | Request timeout (ms) | `30000` |
-| `CIRCUIT_BREAKER_ERROR_THRESHOLD` | Error threshold percentage | `50` |
-| `CIRCUIT_BREAKER_RESET_TIMEOUT` | Time before retry (ms) | `30000` |
-| `CIRCUIT_BREAKER_VOLUME_THRESHOLD` | Min requests before opening | `10` |
+| Variable                           | Description                                          | Default                 |
+| ---------------------------------- | ---------------------------------------------------- | ----------------------- |
+| `NODE_ENV`                         | Environment (development, staging, production, test) | `development`           |
+| `PORT`                             | Server port                                          | `4000`                  |
+| `HOST`                             | Server host                                          | `0.0.0.0`               |
+| `LOG_LEVEL`                        | Logging level                                        | `info`                  |
+| `JWT_SECRET`                       | JWT signing secret (required in production)          | -                       |
+| `JWT_EXPIRES_IN`                   | JWT expiration time                                  | `1h`                    |
+| `CORS_ORIGINS`                     | Allowed CORS origins (comma-separated)               | `http://localhost:3000` |
+| `AUTH_SERVICE_URL`                 | Auth service URL                                     | `http://localhost:3001` |
+| `MARKET_SERVICE_URL`               | Market service URL                                   | `http://localhost:3002` |
+| `SKILLPOD_SERVICE_URL`             | SkillPod service URL                                 | `http://localhost:3003` |
+| `COCKPIT_SERVICE_URL`              | Cockpit service URL                                  | `http://localhost:3004` |
+| `BILLING_SERVICE_URL`              | Billing service URL                                  | `http://localhost:3005` |
+| `NOTIFICATION_SERVICE_URL`         | Notification service URL                             | `http://localhost:3006` |
+| `RATE_LIMIT_MAX`                   | Max requests per time window                         | `100`                   |
+| `RATE_LIMIT_TIME_WINDOW`           | Rate limit time window                               | `1 minute`              |
+| `CIRCUIT_BREAKER_TIMEOUT`          | Request timeout (ms)                                 | `30000`                 |
+| `CIRCUIT_BREAKER_ERROR_THRESHOLD`  | Error threshold percentage                           | `50`                    |
+| `CIRCUIT_BREAKER_RESET_TIMEOUT`    | Time before retry (ms)                               | `30000`                 |
+| `CIRCUIT_BREAKER_VOLUME_THRESHOLD` | Min requests before opening                          | `10`                    |
 
 ## API Routes
 
 ### Health Checks
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /health` | Overall health status |
-| `GET /health/ready` | Readiness probe for Kubernetes |
-| `GET /health/live` | Liveness probe for Kubernetes |
-| `GET /health/circuits` | Circuit breaker states |
+| Endpoint               | Description                    |
+| ---------------------- | ------------------------------ |
+| `GET /health`          | Overall health status          |
+| `GET /health/ready`    | Readiness probe for Kubernetes |
+| `GET /health/live`     | Liveness probe for Kubernetes  |
+| `GET /health/circuits` | Circuit breaker states         |
 
 ### BFF (Backend for Frontend)
 
-| Endpoint | Description | Auth |
-|----------|-------------|------|
-| `GET /api/bff/dashboard` | Dashboard aggregation | Required |
-| `GET /api/bff/market-overview` | Market overview data | Optional |
+| Endpoint                       | Description           | Auth     |
+| ------------------------------ | --------------------- | -------- |
+| `GET /api/bff/dashboard`       | Dashboard aggregation | Required |
+| `GET /api/bff/market-overview` | Market overview data  | Optional |
 
 ### Service Proxies
 
 All service routes proxy requests to downstream services with authentication handling:
 
-| Prefix | Target Service | Auth |
-|--------|---------------|------|
-| `/api/auth/*` | auth-svc | None/Required (varies by endpoint) |
-| `/api/market/*` | market-svc | Optional |
-| `/api/skillpods/*` | skillpod-svc | Required |
-| `/api/cockpit/*` | cockpit-svc | Required |
-| `/api/billing/*` | billing-svc | Required |
-| `/api/notifications/*` | notification-svc | Required |
+| Prefix                 | Target Service   | Auth                               |
+| ---------------------- | ---------------- | ---------------------------------- |
+| `/api/auth/*`          | auth-svc         | None/Required (varies by endpoint) |
+| `/api/market/*`        | market-svc       | Optional                           |
+| `/api/skillpods/*`     | skillpod-svc     | Required                           |
+| `/api/cockpit/*`       | cockpit-svc      | Required                           |
+| `/api/billing/*`       | billing-svc      | Required                           |
+| `/api/notifications/*` | notification-svc | Required                           |
 
 ### Documentation
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /docs` | Swagger UI |
+| Endpoint         | Description       |
+| ---------------- | ----------------- |
+| `GET /docs`      | Swagger UI        |
 | `GET /docs/json` | OpenAPI JSON spec |
 
 ## Circuit Breaker States
@@ -145,6 +145,7 @@ The circuit breaker protects downstream services:
 3. **HALF-OPEN** (Probing) - Limited requests allowed to test recovery
 
 Transitions:
+
 - CLOSED → OPEN: Error rate exceeds threshold (after volume threshold met)
 - OPEN → HALF-OPEN: After reset timeout expires
 - HALF-OPEN → CLOSED: Successful probe request
@@ -175,7 +176,7 @@ services:
   api-gateway:
     image: skillancer/api-gateway
     ports:
-      - "4000:4000"
+      - '4000:4000'
     environment:
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET}
@@ -186,7 +187,7 @@ services:
       - BILLING_SERVICE_URL=http://billing-svc:3005
       - NOTIFICATION_SERVICE_URL=http://notification-svc:3006
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:4000/health/live"]
+      test: ['CMD', 'wget', '--spider', 'http://localhost:4000/health/live']
       interval: 30s
       timeout: 10s
       retries: 3

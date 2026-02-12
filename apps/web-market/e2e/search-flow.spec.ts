@@ -250,7 +250,9 @@ test.describe('Freelancer Search Flow', () => {
     await searchPage.selectFilter('country', 'United States');
     await searchPage.waitForResults();
 
-    await expect(page.getByTestId('freelancer-location').first()).toContainText(/united states|usa|us/i);
+    await expect(page.getByTestId('freelancer-location').first()).toContainText(
+      /united states|usa|us/i
+    );
   });
 
   test('should filter freelancers by experience level', async ({ page }) => {

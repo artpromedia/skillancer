@@ -194,4 +194,3 @@ export class TemplateRepository {
     return result.map((r) => r.category).filter((c): c is string => c !== null);
   }
 }
-

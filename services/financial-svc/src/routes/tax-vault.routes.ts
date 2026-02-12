@@ -227,7 +227,9 @@ export async function taxVaultRoutes(fastify: FastifyInstance) {
 
         // Validate required fields
         if (!userId || !paymentAmount || !paymentId) {
-          return reply.status(400).send({ error: 'Missing required fields: userId, paymentAmount, paymentId' });
+          return reply
+            .status(400)
+            .send({ error: 'Missing required fields: userId, paymentAmount, paymentId' });
         }
 
         const deposit = await taxVaultService.autoSaveFromPayment(userId, paymentAmount, paymentId);

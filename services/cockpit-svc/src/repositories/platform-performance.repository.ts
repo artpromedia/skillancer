@@ -322,4 +322,3 @@ export class PlatformPerformanceRepository {
     return where;
   }
 }
-

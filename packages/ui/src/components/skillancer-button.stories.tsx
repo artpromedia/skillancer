@@ -77,9 +77,7 @@ export const WithBothIcons: Story = {
 export const Variants: Story = {
   render: () => (
     <div className="flex flex-wrap gap-4">
-      <SkillancerButton leftIcon={<Plus className="h-4 w-4" />}>
-        Default
-      </SkillancerButton>
+      <SkillancerButton leftIcon={<Plus className="h-4 w-4" />}>Default</SkillancerButton>
       <SkillancerButton variant="secondary" leftIcon={<Plus className="h-4 w-4" />}>
         Secondary
       </SkillancerButton>

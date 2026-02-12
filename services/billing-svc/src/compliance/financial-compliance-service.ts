@@ -414,4 +414,3 @@ export function getFinancialComplianceService(): FinancialComplianceService {
   }
   return complianceService;
 }
-

@@ -12,4 +12,3 @@ export { getFreelancerConnector, FreelancerConnector } from './freelancer-connec
 import './upwork-connector';
 import './fiverr-connector';
 import './freelancer-connector';
-

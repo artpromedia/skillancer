@@ -64,7 +64,16 @@ const severityColors: Record<string, string> = {
 // =============================================================================
 
 function exportToCSV(logs: AuditLogEntry[]) {
-  const headers = ['Timestamp', 'Actor', 'Action', 'Target Type', 'Target', 'Details', 'IP Address', 'Severity'];
+  const headers = [
+    'Timestamp',
+    'Actor',
+    'Action',
+    'Target Type',
+    'Target',
+    'Details',
+    'IP Address',
+    'Severity',
+  ];
   const rows = logs.map((log) => [
     log.createdAt ? new Date(log.createdAt).toISOString() : '',
     log.actor?.name || log.actorName || '',
@@ -119,7 +128,12 @@ function AuditLogDetailPanel({
             onClick={onClose}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -135,9 +149,7 @@ function AuditLogDetailPanel({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium uppercase text-gray-500">Timestamp</label>
-                <p className="text-sm text-gray-900">
-                  {new Date(log.createdAt).toLocaleString()}
-                </p>
+                <p className="text-sm text-gray-900">{new Date(log.createdAt).toLocaleString()}</p>
               </div>
               <div>
                 <label className="text-xs font-medium uppercase text-gray-500">Action</label>
@@ -148,9 +160,7 @@ function AuditLogDetailPanel({
                 <p className="text-sm text-gray-900">
                   {log.actor?.name || log.actorName || 'System'}
                 </p>
-                {(log.actor?.email) && (
-                  <p className="text-xs text-gray-500">{log.actor.email}</p>
-                )}
+                {log.actor?.email && <p className="text-xs text-gray-500">{log.actor.email}</p>}
               </div>
               <div>
                 <label className="text-xs font-medium uppercase text-gray-500">Target</label>
@@ -201,9 +211,7 @@ function AuditLogDetailPanel({
         )}
 
         {!isLoading && !log && (
-          <div className="py-8 text-center text-gray-500">
-            Audit log entry not found
-          </div>
+          <div className="py-8 text-center text-gray-500">Audit log entry not found</div>
         )}
 
         <div className="mt-6 flex justify-end">
@@ -284,9 +292,7 @@ export default function AuditLogsPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {/* Search */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">
-              Search Entity
-            </label>
+            <label className="mb-1 block text-xs font-medium text-gray-500">Search Entity</label>
             <input
               className="w-full rounded-lg border px-3 py-2 text-sm"
               placeholder="Search by target name or ID..."
@@ -529,10 +535,7 @@ export default function AuditLogsPage() {
 
       {/* Detail Panel */}
       {selectedLogId && (
-        <AuditLogDetailPanel
-          logId={selectedLogId}
-          onClose={() => setSelectedLogId(null)}
-        />
+        <AuditLogDetailPanel logId={selectedLogId} onClose={() => setSelectedLogId(null)} />
       )}
     </div>
   );

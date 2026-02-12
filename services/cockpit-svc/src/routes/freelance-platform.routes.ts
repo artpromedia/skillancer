@@ -843,10 +843,7 @@ export function registerFreelancePlatformRoutes(
             projectsByPlatform: Object.fromEntries(
               projectCounts.map((p) => [p.source?.toLowerCase() ?? 'unknown', p._count._all])
             ),
-            totalProjects: projectCounts.reduce(
-              (sum: number, p) => sum + (p._count._all),
-              0
-            ),
+            totalProjects: projectCounts.reduce((sum: number, p) => sum + p._count._all, 0),
             totalEarnings: earnings._sum.amount ?? 0,
             earningsTransactions: earnings._count,
           },

@@ -169,10 +169,7 @@ export async function hardDeleteById<T extends SoftDeleteModel>(
 ): Promise<void> {
   // Use raw query to bypass soft delete extension
   const tableName = model.toLowerCase() + 's';
-  await client.$executeRawUnsafe(
-    `DELETE FROM ${tableName} WHERE id = $1`,
-    id
-  );
+  await client.$executeRawUnsafe(`DELETE FROM ${tableName} WHERE id = $1`, id);
 }
 
 /**
@@ -188,9 +185,7 @@ export function withDeleted<T>(whereClause: T): T & { deletedAt?: unknown } {
 /**
  * Find only soft-deleted records
  */
-export function onlyDeleted<T>(
-  whereClause: T
-): T & { deletedAt: { not: null } } {
+export function onlyDeleted<T>(whereClause: T): T & { deletedAt: { not: null } } {
   return {
     ...whereClause,
     deletedAt: { not: null },

@@ -437,4 +437,3 @@ export function getRiskScoringService(): RiskScoringService {
   }
   return riskService;
 }
-

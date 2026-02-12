@@ -677,9 +677,7 @@ export const escrowRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (
-      request: FastifyRequest<
-        EscrowIdParams & { Body: { reason: string } }
-      >,
+      request: FastifyRequest<EscrowIdParams & { Body: { reason: string } }>,
       reply: FastifyReply
     ) => {
       try {
@@ -748,9 +746,7 @@ export const escrowRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (
-      request: FastifyRequest<
-        EscrowIdParams & { Body: z.infer<typeof FreezeEscrowSchema> }
-      >,
+      request: FastifyRequest<EscrowIdParams & { Body: z.infer<typeof FreezeEscrowSchema> }>,
       reply: FastifyReply
     ) => {
       try {
@@ -816,9 +812,7 @@ export const escrowRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (
-      request: FastifyRequest<
-        EscrowIdParams & { Body: z.infer<typeof AdminResolveDisputeSchema> }
-      >,
+      request: FastifyRequest<EscrowIdParams & { Body: z.infer<typeof AdminResolveDisputeSchema> }>,
       reply: FastifyReply
     ) => {
       try {
@@ -887,7 +881,8 @@ export const escrowRoutes: FastifyPluginAsync = async (fastify) => {
               return reply.status(400).send({
                 error: 'InvalidRequest',
                 code: 'SPLIT_AMOUNTS_REQUIRED',
-                message: 'freelancerAmount and clientRefundAmount are required for split resolution',
+                message:
+                  'freelancerAmount and clientRefundAmount are required for split resolution',
               });
             }
 

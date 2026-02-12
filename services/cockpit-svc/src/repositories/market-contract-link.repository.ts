@@ -289,4 +289,3 @@ export class MarketContractLinkRepository {
     return where;
   }
 }
-

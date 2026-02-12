@@ -280,10 +280,9 @@ async function deletePaymentMethod(paymentMethodId: string): Promise<void> {
 }
 
 async function putSetDefaultPaymentMethod(paymentMethodId: string): Promise<PaymentMethod> {
-  return apiFetch<PaymentMethod>(
-    `${BILLING_API_URL}/payment-methods/${paymentMethodId}/default`,
-    { method: 'PUT' }
-  );
+  return apiFetch<PaymentMethod>(`${BILLING_API_URL}/payment-methods/${paymentMethodId}/default`, {
+    method: 'PUT',
+  });
 }
 
 async function postCreateSetupIntent(
@@ -328,7 +327,10 @@ export const paymentKeys = {
 /**
  * Get the current Stripe Connect account status
  */
-export function useConnectStatus(options?: { enabled?: boolean; refetchInterval?: number | false }) {
+export function useConnectStatus(options?: {
+  enabled?: boolean;
+  refetchInterval?: number | false;
+}) {
   return useQuery({
     queryKey: paymentKeys.connectStatus(),
     queryFn: fetchConnectStatus,

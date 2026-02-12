@@ -23,7 +23,14 @@ import {
   ChevronRight,
   ExternalLink,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@skillancer/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+  CardFooter,
+} from '@skillancer/ui/card';
 import { Button } from '@skillancer/ui/button';
 import { Badge } from '@skillancer/ui/badge';
 import { Progress } from '@skillancer/ui/progress';
@@ -131,7 +138,9 @@ async function createBillingPortalSession(): Promise<{ url: string }> {
   return response.json();
 }
 
-async function initiateUpgrade(planId: PlanId): Promise<{ checkoutUrl?: string; success?: boolean }> {
+async function initiateUpgrade(
+  planId: PlanId
+): Promise<{ checkoutUrl?: string; success?: boolean }> {
   const response = await fetch('/api/admin/tenant/billing/upgrade', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -256,7 +265,7 @@ function UsageBar({
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-muted-foreground" />
+          <Icon className="text-muted-foreground h-4 w-4" />
           <span>{label}</span>
         </div>
         <span className="text-muted-foreground">
@@ -282,7 +291,11 @@ function CurrentPlanCard({ billing }: { billing: BillingInfo }) {
       window.open(data.url, '_blank');
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to open billing portal', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Failed to open billing portal',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -315,9 +328,7 @@ function CurrentPlanCard({ billing }: { billing: BillingInfo }) {
           <div>
             <p className="text-3xl font-bold">{billing.currentPlan.name}</p>
             {billing.currentPlan.price && (
-              <p className="text-muted-foreground">
-                ${billing.currentPlan.price}/month
-              </p>
+              <p className="text-muted-foreground">${billing.currentPlan.price}/month</p>
             )}
             {billing.currentPlan.price === null && (
               <p className="text-muted-foreground">Custom pricing</p>
@@ -325,28 +336,28 @@ function CurrentPlanCard({ billing }: { billing: BillingInfo }) {
           </div>
           {billing.status !== 'TRIAL' && billing.currentPlan.id !== 'ENTERPRISE' && (
             <Button variant="outline" onClick={() => portalMutation.mutate()}>
-              <CreditCard className="h-4 w-4 mr-2" />
+              <CreditCard className="mr-2 h-4 w-4" />
               Manage Billing
             </Button>
           )}
         </div>
 
         {billing.status === 'TRIAL' && billing.trialEndsAt && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+            <div className="mb-2 flex items-center gap-2">
               <Calendar className="h-4 w-4 text-yellow-600" />
               <span className="font-medium text-yellow-800">Trial Period</span>
             </div>
             <p className="text-sm text-yellow-700">
-              Your trial ends on {formatDate(billing.trialEndsAt)}. Upgrade now to keep
-              your data and configurations.
+              Your trial ends on {formatDate(billing.trialEndsAt)}. Upgrade now to keep your data
+              and configurations.
             </p>
           </div>
         )}
 
         {billing.status === 'PAST_DUE' && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+            <div className="mb-2 flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-600" />
               <span className="font-medium text-red-800">Payment Past Due</span>
             </div>
@@ -365,8 +376,8 @@ function CurrentPlanCard({ billing }: { billing: BillingInfo }) {
         )}
 
         {billing.paymentMethod && (
-          <div className="border rounded-lg p-4">
-            <p className="text-sm font-medium mb-2">Payment Method</p>
+          <div className="rounded-lg border p-4">
+            <p className="mb-2 text-sm font-medium">Payment Method</p>
             {billing.paymentMethod.type === 'card' && (
               <div className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
@@ -384,7 +395,7 @@ function CurrentPlanCard({ billing }: { billing: BillingInfo }) {
         )}
 
         {billing.currentPeriodEndsAt && billing.status === 'ACTIVE' && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Next billing date: {formatDate(billing.currentPeriodEndsAt)}
           </p>
         )}
@@ -452,8 +463,7 @@ function PlanComparisonCard({
 }) {
   const isCurrent = plan.id === currentPlanId;
   const isDowngrade =
-    currentPlanId === 'ENTERPRISE' ||
-    (currentPlanId === 'PRO' && plan.id === 'STARTER');
+    currentPlanId === 'ENTERPRISE' || (currentPlanId === 'PRO' && plan.id === 'STARTER');
 
   const featureList = [
     { key: 'ssoEnabled', label: 'SSO Integration' },
@@ -482,19 +492,15 @@ function PlanComparisonCard({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3 mb-6">
+        <div className="mb-6 space-y-3">
           <div className="flex items-center gap-2 text-sm">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span>
-              {plan.limits.maxUsers === -1 ? 'Unlimited' : plan.limits.maxUsers} users
-            </span>
+            <Users className="text-muted-foreground h-4 w-4" />
+            <span>{plan.limits.maxUsers === -1 ? 'Unlimited' : plan.limits.maxUsers} users</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <HardDrive className="text-muted-foreground h-4 w-4" />
             <span>
-              {plan.limits.storageQuotaGB === -1
-                ? 'Unlimited'
-                : `${plan.limits.storageQuotaGB}GB`}{' '}
+              {plan.limits.storageQuotaGB === -1 ? 'Unlimited' : `${plan.limits.storageQuotaGB}GB`}{' '}
               storage
             </span>
           </div>
@@ -506,7 +512,7 @@ function PlanComparisonCard({
               {plan.features[feature.key as keyof typeof plan.features] ? (
                 <Check className="h-4 w-4 text-green-600" />
               ) : (
-                <span className="h-4 w-4 text-muted-foreground">—</span>
+                <span className="text-muted-foreground h-4 w-4">—</span>
               )}
               <span
                 className={
@@ -534,15 +540,11 @@ function PlanComparisonCard({
           <a href="mailto:sales@skillancer.io?subject=Enterprise%20Plan" className="w-full">
             <Button className="w-full" variant="outline">
               Contact Sales
-              <ExternalLink className="h-4 w-4 ml-2" />
+              <ExternalLink className="ml-2 h-4 w-4" />
             </Button>
           </a>
         ) : (
-          <Button
-            className="w-full"
-            onClick={() => onUpgrade(plan.id)}
-            disabled={isUpgrading}
-          >
+          <Button className="w-full" onClick={() => onUpgrade(plan.id)} disabled={isUpgrading}>
             {isUpgrading ? 'Processing...' : `Upgrade to ${plan.name}`}
           </Button>
         )}
@@ -568,28 +570,22 @@ function InvoicesCard({ invoices }: { invoices: Invoice[] }) {
       </CardHeader>
       <CardContent>
         {invoices.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No invoices yet
-          </p>
+          <p className="text-muted-foreground py-8 text-center text-sm">No invoices yet</p>
         ) : (
           <div className="space-y-3">
             {invoices.slice(0, 5).map((invoice) => (
               <div
                 key={invoice.id}
-                className="flex items-center justify-between py-2 border-b last:border-0"
+                className="flex items-center justify-between border-b py-2 last:border-0"
               >
                 <div>
-                  <p className="font-medium">
-                    ${invoice.amount.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-medium">${invoice.amount.toLocaleString()}</p>
+                  <p className="text-muted-foreground text-sm">
                     {new Date(invoice.date).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge className={statusColors[invoice.status]}>
-                    {invoice.status}
-                  </Badge>
+                  <Badge className={statusColors[invoice.status]}>{invoice.status}</Badge>
                   <a href={invoice.pdfUrl} target="_blank" rel="noopener noreferrer">
                     <Button variant="ghost" size="icon">
                       <Download className="h-4 w-4" />
@@ -605,7 +601,7 @@ function InvoicesCard({ invoices }: { invoices: Invoice[] }) {
         <CardFooter>
           <Button variant="ghost" className="w-full">
             View All Invoices
-            <ChevronRight className="h-4 w-4 ml-2" />
+            <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </CardFooter>
       )}
@@ -665,8 +661,8 @@ export default function TenantBillingPage() {
 
   if (billingLoading || usageLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="border-primary h-12 w-12 animate-spin rounded-full border-b-2" />
       </div>
     );
   }
@@ -674,20 +670,16 @@ export default function TenantBillingPage() {
   const currentPlanId = billing?.currentPlan.id || 'STARTER';
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Billing & Plans</h1>
-        <p className="text-muted-foreground">
-          Manage your subscription, usage, and invoices
-        </p>
+        <p className="text-muted-foreground">Manage your subscription, usage, and invoices</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Current Plan */}
-        <div className="lg:col-span-2">
-          {billing && <CurrentPlanCard billing={billing} />}
-        </div>
+        <div className="lg:col-span-2">{billing && <CurrentPlanCard billing={billing} />}</div>
 
         {/* Usage */}
         <div>{usage && <UsageCard usage={usage} />}</div>
@@ -695,8 +687,8 @@ export default function TenantBillingPage() {
 
       {/* Plan Comparison */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Available Plans</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <h2 className="mb-4 text-2xl font-bold">Available Plans</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {plans.map((plan) => (
             <PlanComparisonCard
               key={plan.id}
@@ -725,16 +717,15 @@ export default function TenantBillingPage() {
               {selectedPlan && plans.find((p) => p.id === selectedPlan)?.price && (
                 <span>
                   {' '}
-                  You will be charged $
-                  {plans.find((p) => p.id === selectedPlan)?.price}/month.
+                  You will be charged ${plans.find((p) => p.id === selectedPlan)?.price}/month.
                 </span>
               )}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="bg-muted rounded-lg p-4 space-y-2">
+            <div className="bg-muted space-y-2 rounded-lg p-4">
               <p className="text-sm font-medium">What happens next:</p>
-              <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+              <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
                 <li>Your new plan takes effect immediately</li>
                 <li>You'll be charged the prorated amount for this billing period</li>
                 <li>All new features will be unlocked right away</li>

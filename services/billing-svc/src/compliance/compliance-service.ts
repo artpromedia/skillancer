@@ -662,4 +662,3 @@ export function getComplianceService(): ComplianceService {
   }
   return complianceServiceInstance;
 }
-

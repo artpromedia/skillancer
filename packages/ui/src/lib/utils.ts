@@ -4,7 +4,7 @@ import { twMerge } from 'tailwind-merge';
 /**
  * Merge class names with Tailwind CSS classes intelligently
  * Combines clsx for conditional classes and tailwind-merge for deduplication
- * 
+ *
  * @example
  * cn('px-2 py-1', 'px-4') // => 'py-1 px-4'
  * cn('text-red-500', condition && 'text-blue-500') // => 'text-blue-500' if condition is true
@@ -15,7 +15,7 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Format a date using Intl.DateTimeFormat
- * 
+ *
  * @example
  * formatDate(new Date()) // => "Dec 8, 2025"
  * formatDate(new Date(), { format: 'long' }) // => "December 8, 2025"
@@ -54,7 +54,7 @@ export function formatDate(
 
 /**
  * Format a relative time string (e.g., "2 hours ago", "in 3 days")
- * 
+ *
  * @example
  * formatRelativeTime(new Date(Date.now() - 3600000)) // => "1 hour ago"
  * formatRelativeTime(new Date(Date.now() + 86400000)) // => "in 1 day"
@@ -99,7 +99,7 @@ export function formatRelativeTime(
 
 /**
  * Format a number as currency
- * 
+ *
  * @example
  * formatCurrency(1234.56) // => "$1,234.56"
  * formatCurrency(1234.56, { currency: 'EUR' }) // => "€1,234.56"
@@ -136,7 +136,7 @@ export function formatCurrency(
 
 /**
  * Format a number with optional compact notation
- * 
+ *
  * @example
  * formatNumber(1234567) // => "1,234,567"
  * formatNumber(1234567, { compact: true }) // => "1.2M"
@@ -168,7 +168,7 @@ export function formatNumber(
 
 /**
  * Truncate text to a specified length with ellipsis
- * 
+ *
  * @example
  * truncate('Hello World', 8) // => "Hello..."
  * truncate('Hello', 10) // => "Hello"
@@ -182,7 +182,7 @@ export function truncate(text: string, maxLength: number): string {
 
 /**
  * Generate initials from a name
- * 
+ *
  * @example
  * getInitials('John Doe') // => "JD"
  * getInitials('John') // => "J"
@@ -192,23 +192,21 @@ export function getInitials(name: string, maxLength = 2): string {
   if (!name) return '';
 
   const parts = name.trim().split(/\s+/);
-  
+
   if (parts.length === 1) {
     return (parts[0] ?? '').charAt(0).toUpperCase();
   }
 
   const first = parts[0] ?? '';
   const last = parts[parts.length - 1] ?? '';
-  const initials = [first, last]
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('');
+  const initials = [first, last].map((part) => part.charAt(0).toUpperCase()).join('');
 
   return initials.slice(0, maxLength);
 }
 
 /**
  * Sleep for a specified duration (useful for testing/debugging)
- * 
+ *
  * @example
  * await sleep(1000) // Wait for 1 second
  */
@@ -218,7 +216,7 @@ export function sleep(ms: number): Promise<void> {
 
 /**
  * Debounce a function call
- * 
+ *
  * @example
  * const debouncedSearch = debounce((query) => search(query), 300);
  */

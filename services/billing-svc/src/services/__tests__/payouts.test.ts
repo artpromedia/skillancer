@@ -363,9 +363,7 @@ describe('PayoutAccountService', () => {
     it('should throw when user has no payout account', async () => {
       mockPrisma.payoutAccount.findUnique.mockResolvedValue(null);
 
-      await expect(service.getOnboardingLink('user-nonexistent')).rejects.toThrow(
-        'not found'
-      );
+      await expect(service.getOnboardingLink('user-nonexistent')).rejects.toThrow('not found');
     });
 
     it('should throw when account has no Stripe Connect ID', async () => {
@@ -408,9 +406,7 @@ describe('PayoutAccountService', () => {
         status: 'ACTIVE',
       });
 
-      await expect(service.getDashboardLink('user-002')).rejects.toThrow(
-        'Express accounts'
-      );
+      await expect(service.getDashboardLink('user-002')).rejects.toThrow('Express accounts');
     });
 
     it('should throw when account is not active', async () => {
@@ -481,9 +477,9 @@ describe('PayoutAccountService', () => {
     it('should throw when user has no payout account', async () => {
       mockPrisma.payoutAccount.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.createPayout('nonexistent', { amount: 5000 })
-      ).rejects.toThrow('not found');
+      await expect(service.createPayout('nonexistent', { amount: 5000 })).rejects.toThrow(
+        'not found'
+      );
     });
 
     it('should throw when payout account is not active', async () => {
@@ -494,9 +490,9 @@ describe('PayoutAccountService', () => {
         payoutsEnabled: false,
       });
 
-      await expect(
-        service.createPayout('user-002', { amount: 5000 })
-      ).rejects.toThrow('not active');
+      await expect(service.createPayout('user-002', { amount: 5000 })).rejects.toThrow(
+        'not active'
+      );
     });
 
     it('should throw when payouts are disabled on account', async () => {
@@ -507,9 +503,9 @@ describe('PayoutAccountService', () => {
         payoutsEnabled: false,
       });
 
-      await expect(
-        service.createPayout('user-003', { amount: 5000 })
-      ).rejects.toThrow('not active');
+      await expect(service.createPayout('user-003', { amount: 5000 })).rejects.toThrow(
+        'not active'
+      );
     });
 
     it('should use default currency from account when not specified', async () => {

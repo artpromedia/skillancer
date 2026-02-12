@@ -46,21 +46,9 @@ export type EscrowStatus =
   | 'REFUNDED'
   | 'DISPUTED';
 
-export type PayoutStatus =
-  | 'PENDING'
-  | 'PROCESSING'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'CANCELED';
+export type PayoutStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELED';
 
-export type InvoiceStatus =
-  | 'DRAFT'
-  | 'SENT'
-  | 'VIEWED'
-  | 'PAID'
-  | 'OVERDUE'
-  | 'CANCELED'
-  | 'VOID';
+export type InvoiceStatus = 'DRAFT' | 'SENT' | 'VIEWED' | 'PAID' | 'OVERDUE' | 'CANCELED' | 'VOID';
 
 export type SubscriptionStatus =
   | 'TRIALING'
@@ -72,12 +60,7 @@ export type SubscriptionStatus =
   | 'INCOMPLETE_EXPIRED'
   | 'PAUSED';
 
-export type DisputeStatus =
-  | 'OPEN'
-  | 'UNDER_REVIEW'
-  | 'WON'
-  | 'LOST'
-  | 'CLOSED';
+export type DisputeStatus = 'OPEN' | 'UNDER_REVIEW' | 'WON' | 'LOST' | 'CLOSED';
 
 export type TransactionType =
   | 'PAYMENT'

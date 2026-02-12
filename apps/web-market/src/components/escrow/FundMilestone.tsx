@@ -22,11 +22,7 @@ import {
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import {
-  usePaymentMethods,
-  paymentKeys,
-  type PaymentMethod,
-} from '@/hooks/api/use-payments';
+import { usePaymentMethods, paymentKeys, type PaymentMethod } from '@/hooks/api/use-payments';
 
 // =============================================================================
 // Constants
@@ -220,7 +216,7 @@ export function FundMilestone({
   if (paymentMethods.length === 0) {
     return (
       <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <div className="text-center py-8">
+        <div className="py-8 text-center">
           <CreditCard className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-4 text-sm font-semibold text-gray-900">No Payment Methods</h3>
           <p className="mt-2 text-sm text-gray-500">
@@ -294,7 +290,7 @@ export function FundMilestone({
   if (step === 'processing') {
     return (
       <div className="rounded-lg border border-gray-200 bg-white p-6">
-        <div className="text-center py-8">
+        <div className="py-8 text-center">
           <Loader2 className="mx-auto h-10 w-10 animate-spin text-indigo-600" />
           <h3 className="mt-4 text-lg font-semibold text-gray-900">Processing Payment</h3>
           <p className="mt-2 text-sm text-gray-500">
@@ -326,9 +322,7 @@ export function FundMilestone({
                 <p className="text-sm font-medium text-gray-900">{milestoneName}</p>
                 <p className="text-xs text-gray-500">Escrow deposit</p>
               </div>
-              <p className="text-lg font-bold text-gray-900">
-                {formatCurrency(amount, currency)}
-              </p>
+              <p className="text-lg font-bold text-gray-900">{formatCurrency(amount, currency)}</p>
             </div>
           </div>
 
@@ -353,8 +347,8 @@ export function FundMilestone({
           <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-3">
             <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500" />
             <p className="text-xs text-blue-700">
-              Funds are held securely in escrow and will only be released upon your approval of
-              the completed milestone.
+              Funds are held securely in escrow and will only be released upon your approval of the
+              completed milestone.
             </p>
           </div>
         </div>
@@ -396,7 +390,9 @@ export function FundMilestone({
 
       {/* Amount */}
       <div className="mt-6 rounded-lg bg-gray-50 p-4 text-center">
-        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Amount to Deposit</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+          Amount to Deposit
+        </p>
         <p className="mt-1 text-3xl font-bold text-gray-900">{formatCurrency(amount, currency)}</p>
       </div>
 
@@ -439,7 +435,7 @@ export function FundMilestone({
               {paymentMethods.map((method) => (
                 <button
                   key={method.id}
-                  className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
+                  className={`w-full px-4 py-3 text-left text-sm first:rounded-t-lg last:rounded-b-lg hover:bg-gray-50 ${
                     method.id === effectiveSelectedId ? 'bg-indigo-50' : ''
                   }`}
                   type="button"

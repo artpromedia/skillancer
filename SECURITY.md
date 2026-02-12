@@ -21,21 +21,21 @@ Include the following information in your report:
 
 ### Response Timeline
 
-| Action | Timeline |
-|--------|----------|
-| Initial acknowledgment | 24 hours |
-| Preliminary assessment | 72 hours |
-| Status update | 7 days |
-| Resolution target | 30-90 days (based on severity) |
+| Action                 | Timeline                       |
+| ---------------------- | ------------------------------ |
+| Initial acknowledgment | 24 hours                       |
+| Preliminary assessment | 72 hours                       |
+| Status update          | 7 days                         |
+| Resolution target      | 30-90 days (based on severity) |
 
 ### Severity Classification
 
-| Severity | Description | Examples |
-|----------|-------------|----------|
-| Critical | Immediate exploitation possible | RCE, authentication bypass, data breach |
-| High | Significant impact with some complexity | SQL injection, privilege escalation |
-| Medium | Limited impact or requires user interaction | Stored XSS, CSRF |
-| Low | Minimal impact | Information disclosure, minor issues |
+| Severity | Description                                 | Examples                                |
+| -------- | ------------------------------------------- | --------------------------------------- |
+| Critical | Immediate exploitation possible             | RCE, authentication bypass, data breach |
+| High     | Significant impact with some complexity     | SQL injection, privilege escalation     |
+| Medium   | Limited impact or requires user interaction | Stored XSS, CSRF                        |
+| Low      | Minimal impact                              | Information disclosure, minor issues    |
 
 ### Safe Harbor
 
@@ -88,7 +88,7 @@ We support safe harbor for security researchers who:
 ## Supported Versions
 
 | Version | Supported |
-|---------|-----------|
+| ------- | --------- |
 | 1.x.x   | Yes       |
 | < 1.0   | No        |
 
@@ -113,12 +113,12 @@ Skillancer maintains compliance with:
 
 We currently operate a private bug bounty program. Researchers who report valid vulnerabilities may be eligible for rewards based on severity:
 
-| Severity | Reward Range |
-|----------|-------------|
+| Severity | Reward Range    |
+| -------- | --------------- |
 | Critical | $1,000 - $5,000 |
-| High | $500 - $1,000 |
-| Medium | $100 - $500 |
-| Low | Recognition |
+| High     | $500 - $1,000   |
+| Medium   | $100 - $500     |
+| Low      | Recognition     |
 
 To participate, please contact security@skillancer.com.
 

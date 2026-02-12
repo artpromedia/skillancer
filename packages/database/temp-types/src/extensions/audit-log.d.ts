@@ -6,20 +6,38 @@
  * Context for audit logging (usually from request)
  */
 export interface AuditContext {
-    userId?: string;
-    ipAddress?: string;
-    userAgent?: string;
-    metadata?: Record<string, unknown>;
+  userId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  metadata?: Record<string, unknown>;
 }
 /**
  * Models that should be audited
  */
-export declare const AUDITED_MODELS: readonly ["User", "Tenant", "TenantMember", "Job", "Bid", "Contract", "Milestone", "Service", "Session", "Payment", "Review"];
+export declare const AUDITED_MODELS: readonly [
+  'User',
+  'Tenant',
+  'TenantMember',
+  'Job',
+  'Bid',
+  'Contract',
+  'Milestone',
+  'Service',
+  'Session',
+  'Payment',
+  'Review',
+];
 export type AuditedModel = (typeof AUDITED_MODELS)[number];
 /**
  * Operations that should be audited
  */
-export declare const AUDITED_OPERATIONS: readonly ["create", "update", "delete", "deleteMany", "updateMany"];
+export declare const AUDITED_OPERATIONS: readonly [
+  'create',
+  'update',
+  'delete',
+  'deleteMany',
+  'updateMany',
+];
 export type AuditedOperation = (typeof AUDITED_OPERATIONS)[number];
 /**
  * Check if a model should be audited
@@ -72,30 +90,39 @@ export declare function clearAuditContext(): void;
  * ```
  */
 export declare const auditLogExtension: (client: any) => {
-    $extends: {
-        extArgs: {
-            result: {};
-            model: {};
-            query: {};
-            client: {};
-        };
+  $extends: {
+    extArgs: {
+      result: {};
+      model: {};
+      query: {};
+      client: {};
     };
+  };
 };
 /**
  * Query audit logs for an entity
  */
-export declare function getAuditHistory(client: any, entityType: string, entityId: string, options?: {
+export declare function getAuditHistory(
+  client: any,
+  entityType: string,
+  entityId: string,
+  options?: {
     limit?: number;
     offset?: number;
-}): Promise<unknown[]>;
+  }
+): Promise<unknown[]>;
 /**
  * Query audit logs by user
  */
-export declare function getAuditLogsByUser(client: any, userId: string, options?: {
+export declare function getAuditLogsByUser(
+  client: any,
+  userId: string,
+  options?: {
     limit?: number;
     offset?: number;
     action?: string;
-}): Promise<unknown[]>;
+  }
+): Promise<unknown[]>;
 /**
  * Type for Prisma client extended with audit logging
  */

@@ -357,4 +357,3 @@ export class AsanaConnector extends BaseConnector {
 }
 
 export const createAsanaConnector = (config: AsanaConfig) => new AsanaConnector(config);
-

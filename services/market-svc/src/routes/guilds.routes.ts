@@ -481,4 +481,3 @@ router.post('/projects/:projectId/complete', async (req, res, next) => {
 });
 
 export default router;
-

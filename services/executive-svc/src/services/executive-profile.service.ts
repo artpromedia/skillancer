@@ -244,9 +244,7 @@ export async function updateExecutiveProfile(
 /**
  * Get executive profile by ID
  */
-export async function getExecutiveProfile(
-  executiveId: string
-): Promise<ExecutiveProfile | null> {
+export async function getExecutiveProfile(executiveId: string): Promise<ExecutiveProfile | null> {
   return prisma.executiveProfile.findUnique({
     where: { id: executiveId },
     include: {
@@ -283,9 +281,7 @@ export async function getExecutiveProfile(
 /**
  * Get executive profile by user ID
  */
-export async function getExecutiveByUserId(
-  userId: string
-): Promise<ExecutiveProfile | null> {
+export async function getExecutiveByUserId(userId: string): Promise<ExecutiveProfile | null> {
   return prisma.executiveProfile.findUnique({
     where: { userId },
     include: {
@@ -424,9 +420,7 @@ export async function deleteExecutiveHistory(
 /**
  * Calculate profile completeness score (0-100)
  */
-export async function calculateProfileCompleteness(
-  executiveId: string
-): Promise<number> {
+export async function calculateProfileCompleteness(executiveId: string): Promise<number> {
   const profile = await prisma.executiveProfile.findUnique({
     where: { id: executiveId },
     include: {
@@ -533,10 +527,7 @@ export async function searchExecutives(
   }
 
   if (filters.availableNow) {
-    where.OR = [
-      { availableFrom: null },
-      { availableFrom: { lte: new Date() } },
-    ];
+    where.OR = [{ availableFrom: null }, { availableFrom: { lte: new Date() } }];
   }
 
   if (filters.timezone) {
@@ -560,10 +551,7 @@ export async function searchExecutives(
           },
         },
       },
-      orderBy: [
-        { featuredExecutive: 'desc' },
-        { profileCompleteness: 'desc' },
-      ],
+      orderBy: [{ featuredExecutive: 'desc' }, { profileCompleteness: 'desc' }],
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),

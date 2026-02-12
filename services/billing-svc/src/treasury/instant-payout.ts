@@ -581,4 +581,3 @@ export function getInstantPayoutService(): InstantPayoutService {
   }
   return instantPayoutServiceInstance;
 }
-

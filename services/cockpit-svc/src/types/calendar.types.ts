@@ -481,4 +481,3 @@ export interface MeetingLinkResult {
   joinInfo?: string;
   meetingId?: string;
 }
-

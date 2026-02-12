@@ -400,4 +400,3 @@ export function createMarketActivitySignalRepository(
     applyDecay,
   };
 }
-

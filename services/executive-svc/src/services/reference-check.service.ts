@@ -47,11 +47,11 @@ export interface ReferenceResponseInput {
 
 // Scoring weights
 const REFERENCE_SCORING = {
-  overallRating: 0.30,
+  overallRating: 0.3,
   wouldRecommend: 0.25,
   subRatings: 0.25, // Average of leadership, technical, etc.
-  relationshipWeight: 0.10,
-  yearsKnownWeight: 0.10,
+  relationshipWeight: 0.1,
+  yearsKnownWeight: 0.1,
 };
 
 // Relationship quality scores
@@ -416,14 +416,16 @@ function calculateReferenceScore(
     input.strategicRating,
   ].filter((r): r is number => r !== undefined);
 
-  const avgSubRating = subRatings.length > 0
-    ? subRatings.reduce((a, b) => a + b, 0) / subRatings.length
-    : input.rating; // Fall back to overall rating
+  const avgSubRating =
+    subRatings.length > 0
+      ? subRatings.reduce((a, b) => a + b, 0) / subRatings.length
+      : input.rating; // Fall back to overall rating
 
   const subRatingsScore = (avgSubRating / 10) * 100 * REFERENCE_SCORING.subRatings;
 
   // Relationship quality (10%)
-  const relationshipScore = RELATIONSHIP_SCORES[reference.relationship] * REFERENCE_SCORING.relationshipWeight;
+  const relationshipScore =
+    RELATIONSHIP_SCORES[reference.relationship] * REFERENCE_SCORING.relationshipWeight;
 
   // Years known (10%) - more years = more weight, capped at 10 years
   const yearsKnownCapped = Math.min(reference.yearsKnown, 10);
@@ -477,9 +479,12 @@ async function checkReferenceCompletion(executiveId: string): Promise<void> {
       },
     });
 
-    const avgScore = references.length > 0
-      ? Math.round(references.reduce((sum, r) => sum + (r.referenceScore || 0), 0) / references.length)
-      : 0;
+    const avgScore =
+      references.length > 0
+        ? Math.round(
+            references.reduce((sum, r) => sum + (r.referenceScore || 0), 0) / references.length
+          )
+        : 0;
 
     // Update profile with average score
     await prisma.executiveProfile.update({
@@ -546,9 +551,7 @@ export async function flagReference(
 /**
  * Get all references for an executive
  */
-export async function getExecutiveReferences(
-  executiveId: string
-): Promise<ExecutiveReference[]> {
+export async function getExecutiveReferences(executiveId: string): Promise<ExecutiveReference[]> {
   return prisma.executiveReference.findMany({
     where: { executiveId },
     orderBy: { createdAt: 'desc' },
@@ -558,10 +561,7 @@ export async function getExecutiveReferences(
 /**
  * Delete a reference (only if not yet requested)
  */
-export async function deleteReference(
-  referenceId: string,
-  executiveId: string
-): Promise<void> {
+export async function deleteReference(referenceId: string, executiveId: string): Promise<void> {
   const reference = await prisma.executiveReference.findFirst({
     where: { id: referenceId, executiveId },
   });

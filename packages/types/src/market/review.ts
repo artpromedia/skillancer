@@ -5,11 +5,7 @@
 
 import { z } from 'zod';
 
-import {
-  uuidSchema,
-  dateSchema,
-  timestampsSchema,
-} from '../common/base';
+import { uuidSchema, dateSchema, timestampsSchema } from '../common/base';
 
 // =============================================================================
 // Review Enums
@@ -18,10 +14,7 @@ import {
 /**
  * Review type (who is reviewing)
  */
-export const reviewTypeSchema = z.enum([
-  'CLIENT_TO_FREELANCER',
-  'FREELANCER_TO_CLIENT',
-]);
+export const reviewTypeSchema = z.enum(['CLIENT_TO_FREELANCER', 'FREELANCER_TO_CLIENT']);
 export type ReviewType = z.infer<typeof reviewTypeSchema>;
 
 /**
@@ -87,63 +80,68 @@ export type ReviewResponse = z.infer<typeof reviewResponseSchema>;
  */
 export const reviewSchema = z.object({
   id: uuidSchema,
-  
+
   // Context
   contractId: uuidSchema,
   jobId: uuidSchema.optional(),
   serviceId: uuidSchema.optional(),
-  
+
   // Participants
   reviewerUserId: uuidSchema,
   revieweeUserId: uuidSchema,
   tenantId: uuidSchema.optional(),
-  
+
   // Type
   type: reviewTypeSchema,
   status: reviewStatusSchema,
-  
+
   // Ratings
   overallRating: z.number().min(1).max(5),
   ratings: z.array(ratingItemSchema),
-  
+
   // Content
   title: z.string().max(200).optional(),
   content: z.string().min(10).max(3000),
-  
+
   // Highlights
   positives: z.array(z.string().max(200)).max(5).optional(),
   negatives: z.array(z.string().max(200)).max(5).optional(),
-  
+
   // Would work again / recommend
   wouldWorkAgain: z.boolean().optional(),
   wouldRecommend: z.boolean().optional(),
-  
+
   // Attachments (proof of work, screenshots)
-  attachments: z.array(z.object({
-    id: uuidSchema,
-    url: z.string().url(),
-    type: z.enum(['IMAGE', 'DOCUMENT']),
-    caption: z.string().max(200).optional(),
-  })).max(5).optional(),
-  
+  attachments: z
+    .array(
+      z.object({
+        id: uuidSchema,
+        url: z.string().url(),
+        type: z.enum(['IMAGE', 'DOCUMENT']),
+        caption: z.string().max(200).optional(),
+      })
+    )
+    .max(5)
+    .optional(),
+
   // Response from reviewee
   response: reviewResponseSchema.optional(),
-  
+
   // Moderation
   isVerified: z.boolean().default(true), // Verified contract completion
   isEdited: z.boolean().default(false),
   editedAt: dateSchema.optional(),
   moderationNote: z.string().max(500).optional(),
   hiddenReason: z.string().max(500).optional(),
-  
+
   // Helpfulness
   helpfulCount: z.number().int().nonnegative().default(0),
   notHelpfulCount: z.number().int().nonnegative().default(0),
-  
+
   // Dispute
   hasDispute: z.boolean().default(false),
   disputeId: uuidSchema.optional(),
-  
+
   ...timestampsSchema.shape,
 });
 export type Review = z.infer<typeof reviewSchema>;
@@ -155,24 +153,26 @@ export type Review = z.infer<typeof reviewSchema>;
 /**
  * Create review input
  */
-export const createReviewSchema = z.object({
-  contractId: uuidSchema,
-  type: reviewTypeSchema,
-  overallRating: z.number().min(1).max(5),
-  ratings: z.array(ratingItemSchema).min(1),
-  title: z.string().max(200).optional(),
-  content: z.string().min(10).max(3000),
-  positives: z.array(z.string().max(200)).max(5).optional(),
-  negatives: z.array(z.string().max(200)).max(5).optional(),
-  wouldWorkAgain: z.boolean().optional(),
-  wouldRecommend: z.boolean().optional(),
-}).refine(
-  (data) => {
-    // Ensure overall rating is provided in ratings array
-    return data.ratings.some(r => r.criteria === 'OVERALL');
-  },
-  { message: 'Overall rating must be included in ratings array' }
-);
+export const createReviewSchema = z
+  .object({
+    contractId: uuidSchema,
+    type: reviewTypeSchema,
+    overallRating: z.number().min(1).max(5),
+    ratings: z.array(ratingItemSchema).min(1),
+    title: z.string().max(200).optional(),
+    content: z.string().min(10).max(3000),
+    positives: z.array(z.string().max(200)).max(5).optional(),
+    negatives: z.array(z.string().max(200)).max(5).optional(),
+    wouldWorkAgain: z.boolean().optional(),
+    wouldRecommend: z.boolean().optional(),
+  })
+  .refine(
+    (data) => {
+      // Ensure overall rating is provided in ratings array
+      return data.ratings.some((r) => r.criteria === 'OVERALL');
+    },
+    { message: 'Overall rating must be included in ratings array' }
+  );
 export type CreateReview = z.infer<typeof createReviewSchema>;
 
 /**
@@ -229,11 +229,11 @@ export type ReviewFilter = z.infer<typeof reviewFilterSchema>;
 export const aggregatedRatingsSchema = z.object({
   userId: uuidSchema.optional(),
   serviceId: uuidSchema.optional(),
-  
+
   // Overall stats
   totalReviews: z.number().int().nonnegative(),
   averageRating: z.number().min(0).max(5),
-  
+
   // Rating distribution
   distribution: z.object({
     fiveStars: z.number().int().nonnegative(),
@@ -242,18 +242,20 @@ export const aggregatedRatingsSchema = z.object({
     twoStars: z.number().int().nonnegative(),
     oneStar: z.number().int().nonnegative(),
   }),
-  
+
   // Criteria averages
-  criteriaAverages: z.array(z.object({
-    criteria: ratingCriteriaSchema,
-    average: z.number().min(0).max(5),
-    count: z.number().int().nonnegative(),
-  })),
-  
+  criteriaAverages: z.array(
+    z.object({
+      criteria: ratingCriteriaSchema,
+      average: z.number().min(0).max(5),
+      count: z.number().int().nonnegative(),
+    })
+  ),
+
   // Recommendation rate
   recommendationRate: z.number().min(0).max(100).optional(),
   repeatClientRate: z.number().min(0).max(100).optional(),
-  
+
   // Time-based
   lastReviewAt: dateSchema.optional(),
   reviewsLast30Days: z.number().int().nonnegative().optional(),

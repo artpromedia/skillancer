@@ -541,4 +541,3 @@ export function createSkillGapRepository(prisma: PrismaClient): SkillGapReposito
     upsert,
   };
 }
-

@@ -70,19 +70,19 @@ export const AllSizes: Story = {
     <div className="flex items-end gap-8">
       <div className="flex flex-col items-center gap-2">
         <LoadingSpinner size="sm" />
-        <span className="text-xs text-muted-foreground">Small</span>
+        <span className="text-muted-foreground text-xs">Small</span>
       </div>
       <div className="flex flex-col items-center gap-2">
         <LoadingSpinner size="md" />
-        <span className="text-xs text-muted-foreground">Medium</span>
+        <span className="text-muted-foreground text-xs">Medium</span>
       </div>
       <div className="flex flex-col items-center gap-2">
         <LoadingSpinner size="lg" />
-        <span className="text-xs text-muted-foreground">Large</span>
+        <span className="text-muted-foreground text-xs">Large</span>
       </div>
       <div className="flex flex-col items-center gap-2">
         <LoadingSpinner size="xl" />
-        <span className="text-xs text-muted-foreground">XL</span>
+        <span className="text-muted-foreground text-xs">XL</span>
       </div>
     </div>
   ),
@@ -90,7 +90,7 @@ export const AllSizes: Story = {
 
 export const InContext: Story = {
   render: () => (
-    <div className="w-[400px] h-[200px] border rounded-lg flex items-center justify-center">
+    <div className="flex h-[200px] w-[400px] items-center justify-center rounded-lg border">
       <LoadingSpinner size="lg" text="Loading content..." />
     </div>
   ),

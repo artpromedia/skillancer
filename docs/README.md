@@ -13,12 +13,15 @@ Welcome to the Skillancer platform documentation.
 ## Products
 
 ### SkillPod
+
 Browser-based VDI for secure computing environments.
 
 ### Skillancer Market
+
 Hybrid talent marketplace connecting businesses with skilled professionals.
 
 ### Cockpit
+
 Multi-tenant dashboard for fractional executives.
 
 ## Contributing

@@ -117,9 +117,17 @@ export async function initializeVetting(executiveId: string): Promise<ExecutiveP
   // Auto-advance or queue for review based on score
   const config = getConfig();
   if (screeningResult.score >= config.vettingAutoAdvanceScore) {
-    await advanceVettingStage(executiveId, 'AUTOMATED_SCREENING', 'Auto-advanced: high screening score');
+    await advanceVettingStage(
+      executiveId,
+      'AUTOMATED_SCREENING',
+      'Auto-advanced: high screening score'
+    );
   } else if (screeningResult.score < config.vettingMinScreeningScore) {
-    await rejectExecutive(executiveId, 'AUTOMATED_SCREENING', 'Did not meet minimum screening requirements');
+    await rejectExecutive(
+      executiveId,
+      'AUTOMATED_SCREENING',
+      'Did not meet minimum screening requirements'
+    );
   }
   // Otherwise, wait for manual review
 
@@ -395,9 +403,10 @@ export async function recordInterviewOutcome(
     input.executivePresenceScore,
   ].filter((s): s is number => s !== undefined);
 
-  const overallScore = scores.length > 0
-    ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10)
-    : undefined;
+  const overallScore =
+    scores.length > 0
+      ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10)
+      : undefined;
 
   const updated = await prisma.vettingInterview.update({
     where: { id: interviewId },

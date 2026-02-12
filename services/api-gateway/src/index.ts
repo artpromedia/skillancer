@@ -1,7 +1,7 @@
 /**
  * @module @skillancer/api-gateway
  * API Gateway / Backend for Frontend (BFF)
- * 
+ *
  * Entry point for the API Gateway service.
  * Handles:
  * - Request routing to downstream services
@@ -36,7 +36,7 @@ async function start(): Promise<void> {
   for (const signal of signals) {
     process.on(signal, async () => {
       app.log.info(`Received ${signal}, shutting down gracefully...`);
-      
+
       try {
         await app.close();
         app.log.info('Server closed successfully');

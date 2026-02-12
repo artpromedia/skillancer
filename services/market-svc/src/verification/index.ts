@@ -39,4 +39,3 @@ export {
   ReviewTheme,
   ReviewTrend,
 } from './review-verifier';
-

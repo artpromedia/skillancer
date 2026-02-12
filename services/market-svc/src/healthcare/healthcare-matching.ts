@@ -342,4 +342,3 @@ export class HealthcareMatchingService {
 }
 
 export const healthcareMatchingService = new HealthcareMatchingService();
-

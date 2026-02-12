@@ -64,7 +64,10 @@ Authorization: Bearer <your-jwt-token>
             id: { type: 'string', format: 'uuid' },
             contractId: { type: 'string', format: 'uuid' },
             userId: { type: 'string', format: 'uuid' },
-            type: { type: 'string', enum: ['CONTRACT_COMPLETION', 'MILESTONE', 'REVIEW', 'PAYMENT'] },
+            type: {
+              type: 'string',
+              enum: ['CONTRACT_COMPLETION', 'MILESTONE', 'REVIEW', 'PAYMENT'],
+            },
             status: { type: 'string', enum: ['SUCCESS', 'PARTIAL', 'FAILURE'] },
             metrics: { $ref: '#/components/schemas/OutcomeMetrics' },
             factors: { type: 'array', items: { $ref: '#/components/schemas/OutcomeFactor' } },
@@ -95,7 +98,10 @@ Authorization: Bearer <your-jwt-token>
           type: 'object',
           properties: {
             id: { type: 'string', format: 'uuid' },
-            type: { type: 'string', enum: ['SUCCESS_RATE', 'EARNINGS', 'COMPLETION_TIME', 'CLIENT_SATISFACTION'] },
+            type: {
+              type: 'string',
+              enum: ['SUCCESS_RATE', 'EARNINGS', 'COMPLETION_TIME', 'CLIENT_SATISFACTION'],
+            },
             targetId: { type: 'string', format: 'uuid' },
             targetType: { type: 'string', enum: ['CONTRACT', 'PROPOSAL', 'USER'] },
             prediction: { type: 'number' },
@@ -130,7 +136,10 @@ Authorization: Bearer <your-jwt-token>
         RiskFactor: {
           type: 'object',
           properties: {
-            category: { type: 'string', enum: ['PAYMENT', 'SCOPE', 'TIMELINE', 'COMMUNICATION', 'REPUTATION'] },
+            category: {
+              type: 'string',
+              enum: ['PAYMENT', 'SCOPE', 'TIMELINE', 'COMMUNICATION', 'REPUTATION'],
+            },
             name: { type: 'string' },
             severity: { type: 'string', enum: ['LOW', 'MEDIUM', 'HIGH'] },
             score: { type: 'number', minimum: 0, maximum: 100 },

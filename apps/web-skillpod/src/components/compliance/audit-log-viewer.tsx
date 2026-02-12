@@ -194,7 +194,20 @@ function generateMockLogs(count: number): AuditLogEntry[] {
 // Sub-Components
 // ============================================================================
 
-function getLogRowBgClass(severity: AuditLogEntry['severity']): string {\n  switch (severity) {\n    case 'critical':\n      return 'bg-red-50 dark:bg-red-900/10';\n    case 'error':\n      return 'bg-red-50/50 dark:bg-red-900/5';\n    case 'warning':\n      return 'bg-yellow-50/50 dark:bg-yellow-900/5';\n    default:\n      return '';\n  }\n}\n\nfunction LogEntryRow({
+function getLogRowBgClass(severity: AuditLogEntry['severity']): string {
+  switch (severity) {
+    case 'critical':
+      return 'bg-red-50 dark:bg-red-900/10';
+    case 'error':
+      return 'bg-red-50/50 dark:bg-red-900/5';
+    case 'warning':
+      return 'bg-yellow-50/50 dark:bg-yellow-900/5';
+    default:
+      return '';
+  }
+}
+
+function LogEntryRow({
   entry,
   isExpanded,
   onToggle,
@@ -599,8 +612,7 @@ export function AuditLogViewer({
           <span className="text-sm text-gray-500">{filteredLogs.length} entries</span>
           {isLive && (
             <span className="flex items-center gap-1 text-xs text-green-600">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />{' '}
-              Live
+              <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" /> Live
             </span>
           )}
         </div>

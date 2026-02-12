@@ -137,12 +137,23 @@ export class SearchClient {
       primaryKey: 'id',
       searchableAttributes: ['title', 'description', 'skills', 'category', 'subcategory'],
       filterableAttributes: [
-        'skills', 'category', 'subcategory', 'experienceLevel',
-        'projectLength', 'status', 'clientCountry', 'budget.type',
+        'skills',
+        'category',
+        'subcategory',
+        'experienceLevel',
+        'projectLength',
+        'status',
+        'clientCountry',
+        'budget.type',
       ],
       sortableAttributes: ['createdAt', 'updatedAt', 'proposalCount', 'budget.max'],
       rankingRules: [
-        'words', 'typo', 'proximity', 'attribute', 'sort', 'exactness',
+        'words',
+        'typo',
+        'proximity',
+        'attribute',
+        'sort',
+        'exactness',
         'createdAt:desc',
       ],
     });
@@ -152,13 +163,25 @@ export class SearchClient {
       primaryKey: 'id',
       searchableAttributes: ['name', 'title', 'bio', 'skills', 'education', 'certifications'],
       filterableAttributes: [
-        'skills', 'country', 'experienceLevel', 'isVerified',
-        'isAvailable', 'languages', 'hourlyRate', 'rating',
+        'skills',
+        'country',
+        'experienceLevel',
+        'isVerified',
+        'isAvailable',
+        'languages',
+        'hourlyRate',
+        'rating',
       ],
       sortableAttributes: ['rating', 'completedJobs', 'hourlyRate', 'totalEarnings', 'createdAt'],
       rankingRules: [
-        'words', 'typo', 'proximity', 'attribute', 'sort', 'exactness',
-        'rating:desc', 'completedJobs:desc',
+        'words',
+        'typo',
+        'proximity',
+        'attribute',
+        'sort',
+        'exactness',
+        'rating:desc',
+        'completedJobs:desc',
       ],
     });
 
@@ -254,16 +277,18 @@ export class SearchClient {
     const filterStrings: string[] = [];
 
     if (filters?.skills?.length) {
-      filterStrings.push(`skills IN [${filters.skills.map(s => `"${s}"`).join(', ')}]`);
+      filterStrings.push(`skills IN [${filters.skills.map((s) => `"${s}"`).join(', ')}]`);
     }
     if (filters?.category) {
       filterStrings.push(`category = "${filters.category}"`);
     }
     if (filters?.experienceLevel?.length) {
-      filterStrings.push(`experienceLevel IN [${filters.experienceLevel.map(e => `"${e}"`).join(', ')}]`);
+      filterStrings.push(
+        `experienceLevel IN [${filters.experienceLevel.map((e) => `"${e}"`).join(', ')}]`
+      );
     }
     if (filters?.status?.length) {
-      filterStrings.push(`status IN [${filters.status.map(s => `"${s}"`).join(', ')}]`);
+      filterStrings.push(`status IN [${filters.status.map((s) => `"${s}"`).join(', ')}]`);
     }
     if (filters?.budgetMin !== undefined) {
       filterStrings.push(`budget.max >= ${filters.budgetMin}`);
@@ -331,13 +356,15 @@ export class SearchClient {
     const filterStrings: string[] = [];
 
     if (filters?.skills?.length) {
-      filterStrings.push(`skills IN [${filters.skills.map(s => `"${s}"`).join(', ')}]`);
+      filterStrings.push(`skills IN [${filters.skills.map((s) => `"${s}"`).join(', ')}]`);
     }
     if (filters?.country) {
       filterStrings.push(`country = "${filters.country}"`);
     }
     if (filters?.experienceLevel?.length) {
-      filterStrings.push(`experienceLevel IN [${filters.experienceLevel.map(e => `"${e}"`).join(', ')}]`);
+      filterStrings.push(
+        `experienceLevel IN [${filters.experienceLevel.map((e) => `"${e}"`).join(', ')}]`
+      );
     }
     if (filters?.isVerified !== undefined) {
       filterStrings.push(`isVerified = ${filters.isVerified}`);
@@ -355,7 +382,7 @@ export class SearchClient {
       filterStrings.push(`rating >= ${filters.minRating}`);
     }
     if (filters?.languages?.length) {
-      filterStrings.push(`languages IN [${filters.languages.map(l => `"${l}"`).join(', ')}]`);
+      filterStrings.push(`languages IN [${filters.languages.map((l) => `"${l}"`).join(', ')}]`);
     }
 
     return filterStrings;
@@ -422,7 +449,11 @@ export class SearchClient {
   async getStats(): Promise<Record<string, { numberOfDocuments: number; isIndexing: boolean }>> {
     const stats: Record<string, { numberOfDocuments: number; isIndexing: boolean }> = {};
 
-    for (const indexName of [SearchClient.JOBS_INDEX, SearchClient.FREELANCERS_INDEX, SearchClient.SKILLS_INDEX]) {
+    for (const indexName of [
+      SearchClient.JOBS_INDEX,
+      SearchClient.FREELANCERS_INDEX,
+      SearchClient.SKILLS_INDEX,
+    ]) {
       try {
         const index = this.client.index(indexName);
         const indexStats = await index.getStats();

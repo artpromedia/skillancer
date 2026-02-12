@@ -16,11 +16,7 @@ export type PrismaClient = InstanceType<typeof _PrismaClientClass>;
 // ENUMS (as string literal types)
 // =============================================================================
 
-export type ContractSourceType =
-  | 'JOB'
-  | 'SERVICE'
-  | 'DIRECT'
-  | 'REFERRAL';
+export type ContractSourceType = 'JOB' | 'SERVICE' | 'DIRECT' | 'REFERRAL';
 
 export type ContractTypeV2 =
   | 'FIXED_PRICE'
@@ -29,12 +25,7 @@ export type ContractTypeV2 =
   | 'MILESTONE'
   | 'TIME_AND_MATERIALS';
 
-export type RateTypeV2 =
-  | 'HOURLY'
-  | 'DAILY'
-  | 'WEEKLY'
-  | 'MONTHLY'
-  | 'FIXED';
+export type RateTypeV2 = 'HOURLY' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'FIXED';
 
 export type ContractStatusV2 =
   | 'DRAFT'
@@ -65,13 +56,7 @@ export type TimeEntryStatusV2 =
   | 'PAID'
   | 'INVOICED';
 
-export type EvidenceType =
-  | 'IMAGE'
-  | 'VIDEO'
-  | 'DOCUMENT'
-  | 'LINK'
-  | 'CODE'
-  | 'OTHER';
+export type EvidenceType = 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LINK' | 'CODE' | 'OTHER';
 
 export type AmendmentStatus =
   | 'PENDING'
@@ -126,10 +111,7 @@ export type ContractActivityType =
   | 'AMENDMENT_PROPOSED'
   | 'AMENDMENT_APPROVED';
 
-export type SignatureType =
-  | 'ELECTRONIC'
-  | 'DIGITAL'
-  | 'HANDWRITTEN';
+export type SignatureType = 'ELECTRONIC' | 'DIGITAL' | 'HANDWRITTEN';
 
 export type ContractDisputeStatus =
   | 'OPEN'
@@ -228,12 +210,7 @@ export type RateSourceType =
   | 'SERVICE_ORDER'
   | 'PROFILE_RATE';
 
-export type RateType =
-  | 'HOURLY'
-  | 'FIXED'
-  | 'DAILY'
-  | 'WEEKLY'
-  | 'MONTHLY';
+export type RateType = 'HOURLY' | 'FIXED' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
 export type PeriodType =
   | 'DAY'
@@ -255,20 +232,9 @@ export type RecommendationType =
   | 'COMPETITIVE_ANALYSIS'
   | 'DEMAND_BASED_ADJUSTMENT';
 
-export type RecommendationStatus =
-  | 'PENDING'
-  | 'ACCEPTED'
-  | 'REJECTED'
-  | 'EXPIRED'
-  | 'IMPLEMENTED';
+export type RecommendationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'IMPLEMENTED';
 
-export type DemandLevel =
-  | 'VERY_LOW'
-  | 'LOW'
-  | 'MODERATE'
-  | 'MEDIUM'
-  | 'HIGH'
-  | 'VERY_HIGH';
+export type DemandLevel = 'VERY_LOW' | 'LOW' | 'MODERATE' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
 
 export type RateChangeReason =
   | 'MARKET_TREND'
@@ -286,25 +252,11 @@ export type RateChangeReason =
   | 'MANUAL_CHANGE';
 
 // Review-related types
-export type ReviewStatus =
-  | 'PENDING'
-  | 'PUBLISHED'
-  | 'HIDDEN'
-  | 'FLAGGED'
-  | 'REMOVED'
-  | 'REVEALED';
+export type ReviewStatus = 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'FLAGGED' | 'REMOVED' | 'REVEALED';
 
-export type ReviewType =
-  | 'CLIENT_TO_FREELANCER'
-  | 'FREELANCER_TO_CLIENT'
-  | 'PROJECT'
-  | 'SERVICE';
+export type ReviewType = 'CLIENT_TO_FREELANCER' | 'FREELANCER_TO_CLIENT' | 'PROJECT' | 'SERVICE';
 
-export type ReportStatus =
-  | 'PENDING'
-  | 'UNDER_REVIEW'
-  | 'RESOLVED'
-  | 'DISMISSED';
+export type ReportStatus = 'PENDING' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED';
 
 // Payout-related types
 export type PayoutAccountStatus =
@@ -316,18 +268,10 @@ export type PayoutAccountStatus =
   | 'RESTRICTED'
   | 'ONBOARDING';
 
-export type PayoutStatus =
-  | 'PENDING'
-  | 'PROCESSING'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'CANCELLED';
+export type PayoutStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 
 // Service-related types
-export type PackageTier =
-  | 'BASIC'
-  | 'STANDARD'
-  | 'PREMIUM';
+export type PackageTier = 'BASIC' | 'STANDARD' | 'PREMIUM';
 
 export type ServiceMessageType =
   | 'TEXT'
@@ -346,17 +290,9 @@ export type ServiceOrderStatus =
   | 'CANCELLED'
   | 'DISPUTED';
 
-export type ServicePaymentStatus =
-  | 'PENDING'
-  | 'PAID'
-  | 'REFUNDED'
-  | 'PARTIALLY_REFUNDED';
+export type ServicePaymentStatus = 'PENDING' | 'PAID' | 'REFUNDED' | 'PARTIALLY_REFUNDED';
 
-export type ServiceEscrowStatus =
-  | 'PENDING'
-  | 'FUNDED'
-  | 'RELEASED'
-  | 'REFUNDED';
+export type ServiceEscrowStatus = 'PENDING' | 'FUNDED' | 'RELEASED' | 'REFUNDED';
 
 export type JobDuration =
   | 'LESS_THAN_1_MONTH'
@@ -715,11 +651,7 @@ export type NotificationCategory =
   | 'MARKETING'
   | 'SYSTEM';
 
-export type NotificationPriority =
-  | 'LOW'
-  | 'NORMAL'
-  | 'HIGH'
-  | 'URGENT';
+export type NotificationPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 
 export const NotificationCategory = {
   MESSAGES: 'MESSAGES' as const,
@@ -1296,11 +1228,7 @@ export type PrismaClientType = PrismaClient;
 // CONVERSATION & MESSAGING TYPES
 // =============================================================================
 
-export type ParticipantRole =
-  | 'OWNER'
-  | 'ADMIN'
-  | 'MEMBER'
-  | 'GUEST';
+export type ParticipantRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'GUEST';
 
 export const ParticipantRole = {
   OWNER: 'OWNER' as const,
@@ -1309,11 +1237,7 @@ export const ParticipantRole = {
   GUEST: 'GUEST' as const,
 };
 
-export type ConversationContentType =
-  | 'TEXT'
-  | 'HTML'
-  | 'MARKDOWN'
-  | 'RICH';
+export type ConversationContentType = 'TEXT' | 'HTML' | 'MARKDOWN' | 'RICH';
 
 export const ConversationContentType = {
   TEXT: 'TEXT' as const,
@@ -1322,10 +1246,7 @@ export const ConversationContentType = {
   RICH: 'RICH' as const,
 };
 
-export type ConversationMessageType =
-  | 'USER'
-  | 'SYSTEM'
-  | 'BOT';
+export type ConversationMessageType = 'USER' | 'SYSTEM' | 'BOT';
 
 export const ConversationMessageType = {
   USER: 'USER' as const,
@@ -1454,10 +1375,7 @@ export interface ConversationMessageReadReceipt {
 // NOTIFICATION TYPES
 // =============================================================================
 
-export type UnsubscribeType =
-  | 'ALL'
-  | 'CATEGORY'
-  | 'TYPE';
+export type UnsubscribeType = 'ALL' | 'CATEGORY' | 'TYPE';
 
 export const UnsubscribeType = {
   ALL: 'ALL' as const,
@@ -1465,10 +1383,7 @@ export const UnsubscribeType = {
   TYPE: 'TYPE' as const,
 };
 
-export type DigestType =
-  | 'HOURLY'
-  | 'DAILY'
-  | 'WEEKLY';
+export type DigestType = 'HOURLY' | 'DAILY' | 'WEEKLY';
 
 export const DigestType = {
   HOURLY: 'HOURLY' as const,
@@ -1476,11 +1391,7 @@ export const DigestType = {
   WEEKLY: 'WEEKLY' as const,
 };
 
-export type DigestStatus =
-  | 'PENDING'
-  | 'PROCESSING'
-  | 'SENT'
-  | 'FAILED';
+export type DigestStatus = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED';
 
 export const DigestStatus = {
   PENDING: 'PENDING' as const,
@@ -1489,12 +1400,7 @@ export const DigestStatus = {
   FAILED: 'FAILED' as const,
 };
 
-export type EmailFrequency =
-  | 'INSTANT'
-  | 'HOURLY'
-  | 'DAILY'
-  | 'WEEKLY'
-  | 'NEVER';
+export type EmailFrequency = 'INSTANT' | 'HOURLY' | 'DAILY' | 'WEEKLY' | 'NEVER';
 
 export const EmailFrequency = {
   INSTANT: 'INSTANT' as const,

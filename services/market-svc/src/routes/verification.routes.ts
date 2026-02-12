@@ -871,4 +871,3 @@ router.get('/verify/:credentialId/badge.svg', async (req: Request, res: Response
 });
 
 export const verificationRoutes = router;
-

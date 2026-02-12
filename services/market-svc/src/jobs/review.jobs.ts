@@ -166,7 +166,9 @@ export class ReviewJobs {
         distinct: ['revieweeId'],
       });
 
-      const userIds: string[] = [...new Set<string>(recentReviews.map((r) => String(r.revieweeId)))];
+      const userIds: string[] = [
+        ...new Set<string>(recentReviews.map((r) => String(r.revieweeId))),
+      ];
 
       for (const userId of userIds) {
         try {

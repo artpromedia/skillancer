@@ -831,4 +831,3 @@ export function getSpendingControlsService(): SpendingControlsService {
   }
   return spendingControlsInstance;
 }
-

@@ -3,7 +3,11 @@
  * Freelancer Rate History repository
  */
 
-import type { PrismaClient, RateChangeReason, FreelancerRateHistory } from '../types/prisma-shim.js';
+import type {
+  PrismaClient,
+  RateChangeReason,
+  FreelancerRateHistory,
+} from '../types/prisma-shim.js';
 
 export interface RateHistoryCreate {
   userId: string;

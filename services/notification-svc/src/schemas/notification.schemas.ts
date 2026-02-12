@@ -12,7 +12,13 @@ export const NotificationChannelSchema = z.enum(['EMAIL', 'PUSH', 'SMS', 'IN_APP
 
 export const NotificationPrioritySchema = z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']);
 
-export const NotificationStatusSchema = z.enum(['PENDING', 'SENT', 'DELIVERED', 'FAILED', 'BOUNCED']);
+export const NotificationStatusSchema = z.enum([
+  'PENDING',
+  'SENT',
+  'DELIVERED',
+  'FAILED',
+  'BOUNCED',
+]);
 
 export const EmailTypeSchema = z.enum([
   'WELCOME',
@@ -111,22 +117,24 @@ export const SendPushSchema = z.object({
 // MULTI-CHANNEL SCHEMAS
 // =============================================================================
 
-export const SendMultiChannelSchema = z.object({
-  channels: z.array(NotificationChannelSchema).min(1).max(4),
-  email: SendEmailSchema.omit({ priority: true, scheduledAt: true, metadata: true }).optional(),
-  push: SendPushSchema.omit({ priority: true, scheduledAt: true, metadata: true }).optional(),
-  priority: NotificationPrioritySchema.optional().default('NORMAL'),
-  scheduledAt: z.string().datetime().optional(),
-  metadata: z.record(z.unknown()).optional(),
-}).refine(
-  (data) => {
-    // At least one channel content must be provided
-    if (data.channels.includes('EMAIL') && !data.email) return false;
-    if (data.channels.includes('PUSH') && !data.push) return false;
-    return true;
-  },
-  { message: 'Content must be provided for all specified channels' }
-);
+export const SendMultiChannelSchema = z
+  .object({
+    channels: z.array(NotificationChannelSchema).min(1).max(4),
+    email: SendEmailSchema.omit({ priority: true, scheduledAt: true, metadata: true }).optional(),
+    push: SendPushSchema.omit({ priority: true, scheduledAt: true, metadata: true }).optional(),
+    priority: NotificationPrioritySchema.optional().default('NORMAL'),
+    scheduledAt: z.string().datetime().optional(),
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .refine(
+    (data) => {
+      // At least one channel content must be provided
+      if (data.channels.includes('EMAIL') && !data.email) return false;
+      if (data.channels.includes('PUSH') && !data.push) return false;
+      return true;
+    },
+    { message: 'Content must be provided for all specified channels' }
+  );
 
 // =============================================================================
 // DEVICE TOKEN SCHEMAS

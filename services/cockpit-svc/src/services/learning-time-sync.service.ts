@@ -280,4 +280,3 @@ export class LearningTimeSyncService {
     return map[contentType] ?? 'General Learning';
   }
 }
-

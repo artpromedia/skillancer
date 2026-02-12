@@ -325,4 +325,3 @@ export class MailchimpConnector extends BaseConnector {
 }
 
 export const mailchimpConnector = new MailchimpConnector({});
-

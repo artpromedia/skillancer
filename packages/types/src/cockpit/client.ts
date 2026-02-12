@@ -33,24 +33,13 @@ export type ClientStatus = z.infer<typeof clientStatusSchema>;
 /**
  * Client tier/priority
  */
-export const clientTierSchema = z.enum([
-  'STANDARD',
-  'PREMIUM',
-  'VIP',
-  'ENTERPRISE',
-]);
+export const clientTierSchema = z.enum(['STANDARD', 'PREMIUM', 'VIP', 'ENTERPRISE']);
 export type ClientTier = z.infer<typeof clientTierSchema>;
 
 /**
  * Contact type
  */
-export const contactTypeSchema = z.enum([
-  'PRIMARY',
-  'BILLING',
-  'TECHNICAL',
-  'LEGAL',
-  'OTHER',
-]);
+export const contactTypeSchema = z.enum(['PRIMARY', 'BILLING', 'TECHNICAL', 'LEGAL', 'OTHER']);
 export type ContactType = z.infer<typeof contactTypeSchema>;
 
 // =============================================================================
@@ -108,7 +97,10 @@ export type ClientNote = z.infer<typeof clientNoteSchema>;
 export const clientTagSchema = z.object({
   id: uuidSchema,
   name: z.string().max(50),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
 });
 export type ClientTag = z.infer<typeof clientTagSchema>;
 
@@ -123,7 +115,7 @@ export const clientSchema = z.object({
   id: uuidSchema,
   freelancerUserId: uuidSchema, // Owner of this client record
   tenantId: uuidSchema.optional(),
-  
+
   // Basic info
   name: z.string().min(1).max(200),
   displayName: z.string().max(200).optional(),
@@ -131,28 +123,28 @@ export const clientSchema = z.object({
   industry: z.string().max(100).optional(),
   website: z.string().url().optional(),
   logo: z.string().url().optional(),
-  
+
   // Status
   status: clientStatusSchema,
   tier: clientTierSchema.default('STANDARD'),
-  
+
   // Platform connection (if they're also a Skillancer user)
   linkedUserId: uuidSchema.optional(),
-  
+
   // Contacts
   contacts: z.array(clientContactSchema),
   addresses: z.array(clientAddressSchema).optional(),
-  
+
   // Communication preferences
   preferredCurrency: currencyCodeSchema.default('USD'),
   preferredLanguage: z.string().length(2).default('en'),
   timezone: z.string().default('UTC'),
-  
+
   // Billing
   taxId: z.string().max(50).optional(),
   paymentTermsDays: z.number().int().nonnegative().default(30),
   defaultHourlyRate: z.number().positive().optional(),
-  
+
   // Stats
   totalContracts: z.number().int().nonnegative().default(0),
   activeContracts: z.number().int().nonnegative().default(0),
@@ -161,15 +153,17 @@ export const clientSchema = z.object({
   averageRating: z.number().min(0).max(5).optional(),
   lastContractAt: dateSchema.optional(),
   lastContactAt: dateSchema.optional(),
-  
+
   // Tags and notes
   tags: z.array(clientTagSchema).optional(),
   notes: z.array(clientNoteSchema).optional(),
-  
+
   // Acquisition
-  source: z.enum(['SKILLANCER', 'REFERRAL', 'WEBSITE', 'SOCIAL', 'COLD_OUTREACH', 'OTHER']).optional(),
+  source: z
+    .enum(['SKILLANCER', 'REFERRAL', 'WEBSITE', 'SOCIAL', 'COLD_OUTREACH', 'OTHER'])
+    .optional(),
   referredBy: z.string().max(200).optional(),
-  
+
   ...timestampsSchema.shape,
 });
 export type Client = z.infer<typeof clientSchema>;
@@ -199,7 +193,9 @@ export const createClientSchema = z.object({
   paymentTermsDays: z.number().int().nonnegative().default(30),
   defaultHourlyRate: z.number().positive().optional(),
   tags: z.array(z.string().max(50)).optional(),
-  source: z.enum(['SKILLANCER', 'REFERRAL', 'WEBSITE', 'SOCIAL', 'COLD_OUTREACH', 'OTHER']).optional(),
+  source: z
+    .enum(['SKILLANCER', 'REFERRAL', 'WEBSITE', 'SOCIAL', 'COLD_OUTREACH', 'OTHER'])
+    .optional(),
   referredBy: z.string().max(200).optional(),
 });
 export type CreateClient = z.infer<typeof createClientSchema>;

@@ -1291,4 +1291,3 @@ export function registerWorkloadRoutes(fastify: FastifyInstance, deps: ProjectRo
     }
   });
 }
-

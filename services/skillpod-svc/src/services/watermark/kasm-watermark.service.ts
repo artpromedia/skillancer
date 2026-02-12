@@ -10,7 +10,10 @@ import {
 } from './visible-watermark.service.js';
 import { createWatermarkApplierService, type SessionContext } from './watermark-applier.service.js';
 
-import type { WatermarkRepository, WatermarkConfiguration } from '../../repositories/watermark.repository.js';
+import type {
+  WatermarkRepository,
+  WatermarkConfiguration,
+} from '../../repositories/watermark.repository.js';
 
 // =============================================================================
 // TYPES

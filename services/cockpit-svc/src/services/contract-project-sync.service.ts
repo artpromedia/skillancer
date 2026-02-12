@@ -1212,4 +1212,3 @@ export class ContractProjectSyncService {
     });
   }
 }
-

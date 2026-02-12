@@ -444,4 +444,3 @@ export class MixpanelConnector extends BaseConnector {
 
 // Export singleton instance
 export const mixpanelConnector = new MixpanelConnector();
-

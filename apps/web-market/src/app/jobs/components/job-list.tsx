@@ -22,7 +22,6 @@ import { JobCardSkeleton } from './job-card-skeleton';
 
 import type { JobSearchResult, JobSearchFilters } from '@/lib/api/jobs';
 
-
 // ============================================================================
 // Types
 // ============================================================================

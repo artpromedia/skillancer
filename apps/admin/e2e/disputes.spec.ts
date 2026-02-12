@@ -51,7 +51,10 @@ test.describe('Admin Dispute Management', () => {
         '.badge, [data-testid="dispute-status"], .status, text=/open|resolved|pending|escalated/i'
       );
 
-      const isVisible = await statusBadge.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await statusBadge
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
 
@@ -64,7 +67,10 @@ test.describe('Admin Dispute Management', () => {
         '[data-testid="dispute-parties"], [data-testid="dispute-client"], td'
       );
 
-      const isVisible = await partyInfo.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await partyInfo
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
 
@@ -76,7 +82,10 @@ test.describe('Admin Dispute Management', () => {
         '[data-testid="dispute-amount"], text=/\\$[\\d,]+/, .amount'
       );
 
-      const isVisible = await amountElement.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await amountElement
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
 
@@ -88,7 +97,10 @@ test.describe('Admin Dispute Management', () => {
         'select, [role="tablist"], [data-testid="status-filter"], button:has-text("Filter"), .filter'
       );
 
-      const isVisible = await filterControl.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await filterControl
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
 
@@ -101,7 +113,10 @@ test.describe('Admin Dispute Management', () => {
         '[data-testid="dispute-date"], time, text=/\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/'
       );
 
-      const isVisible = await dateElement.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await dateElement
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
   });
@@ -115,9 +130,9 @@ test.describe('Admin Dispute Management', () => {
       await page.goto('/disputes');
       await page.waitForTimeout(2000);
 
-      const disputeLink = page.locator(
-        'a[href*="/disputes/"], tr a, [data-testid="dispute-row"] a, tr[role="link"]'
-      ).first();
+      const disputeLink = page
+        .locator('a[href*="/disputes/"], tr a, [data-testid="dispute-row"] a, tr[role="link"]')
+        .first();
 
       if (await disputeLink.isVisible({ timeout: 3000 }).catch(() => false)) {
         await disputeLink.click();
@@ -156,7 +171,10 @@ test.describe('Admin Dispute Management', () => {
           '[data-testid="contract-info"], text=/contract/i, .contract-details'
         );
 
-        const isVisible = await contractInfo.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const isVisible = await contractInfo
+          .first()
+          .isVisible({ timeout: 3000 })
+          .catch(() => false);
         expect(typeof isVisible).toBe('boolean');
       }
     });
@@ -175,7 +193,10 @@ test.describe('Admin Dispute Management', () => {
           '[data-testid="escrow-info"], text=/escrow|balance|funds/i'
         );
 
-        const isVisible = await escrowInfo.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const isVisible = await escrowInfo
+          .first()
+          .isVisible({ timeout: 3000 })
+          .catch(() => false);
         expect(typeof isVisible).toBe('boolean');
       }
     });
@@ -194,7 +215,10 @@ test.describe('Admin Dispute Management', () => {
           '[data-testid="dispute-timeline"], [data-testid="messages"], .timeline, .messages'
         );
 
-        const isVisible = await timeline.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const isVisible = await timeline
+          .first()
+          .isVisible({ timeout: 3000 })
+          .catch(() => false);
         expect(typeof isVisible).toBe('boolean');
       }
     });
@@ -214,7 +238,10 @@ test.describe('Admin Dispute Management', () => {
           'button:has-text("Resolve"), button:has-text("Close"), [data-testid="resolve-button"], button:has-text("Split")'
         );
 
-        const isVisible = await resolveButton.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const isVisible = await resolveButton
+          .first()
+          .isVisible({ timeout: 3000 })
+          .catch(() => false);
         expect(typeof isVisible).toBe('boolean');
       }
     });
@@ -230,15 +257,17 @@ test.describe('Admin Dispute Management', () => {
         await page.waitForTimeout(2000);
 
         // Should show client and freelancer sides
-        const clientSection = page.locator(
-          '[data-testid="client-perspective"], text=/client/i'
-        ).first();
-        const freelancerSection = page.locator(
-          '[data-testid="freelancer-perspective"], text=/freelancer/i'
-        ).first();
+        const clientSection = page
+          .locator('[data-testid="client-perspective"], text=/client/i')
+          .first();
+        const freelancerSection = page
+          .locator('[data-testid="freelancer-perspective"], text=/freelancer/i')
+          .first();
 
         const clientVisible = await clientSection.isVisible({ timeout: 2000 }).catch(() => false);
-        const freelancerVisible = await freelancerSection.isVisible({ timeout: 2000 }).catch(() => false);
+        const freelancerVisible = await freelancerSection
+          .isVisible({ timeout: 2000 })
+          .catch(() => false);
 
         // At least one should be visible if there are disputes
         expect(typeof clientVisible).toBe('boolean');
@@ -260,7 +289,10 @@ test.describe('Admin Dispute Management', () => {
           '[data-testid="evidence"], text=/evidence|attachments|files/i, .evidence-section'
         );
 
-        const isVisible = await evidenceSection.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const isVisible = await evidenceSection
+          .first()
+          .isVisible({ timeout: 3000 })
+          .catch(() => false);
         expect(typeof isVisible).toBe('boolean');
       }
     });
@@ -275,9 +307,11 @@ test.describe('Admin Dispute Management', () => {
         await disputeLink.click();
         await page.waitForTimeout(1000);
 
-        const backButton = page.locator(
-          'a:has-text("Back"), button:has-text("Back"), a[href="/disputes"], [data-testid="back-button"]'
-        ).first();
+        const backButton = page
+          .locator(
+            'a:has-text("Back"), button:has-text("Back"), a[href="/disputes"], [data-testid="back-button"]'
+          )
+          .first();
 
         if (await backButton.isVisible({ timeout: 3000 }).catch(() => false)) {
           await backButton.click();
@@ -302,9 +336,9 @@ test.describe('Admin Dispute Management', () => {
         await disputeLink.click();
         await page.waitForTimeout(2000);
 
-        const resolveButton = page.locator(
-          'button:has-text("Resolve"), [data-testid="resolve-button"]'
-        ).first();
+        const resolveButton = page
+          .locator('button:has-text("Resolve"), [data-testid="resolve-button"]')
+          .first();
 
         if (await resolveButton.isVisible({ timeout: 3000 }).catch(() => false)) {
           await resolveButton.click();
@@ -315,7 +349,10 @@ test.describe('Admin Dispute Management', () => {
             '[data-testid="resolution-form"], form, [role="dialog"]'
           );
 
-          const isVisible = await resolutionForm.first().isVisible({ timeout: 3000 }).catch(() => false);
+          const isVisible = await resolutionForm
+            .first()
+            .isVisible({ timeout: 3000 })
+            .catch(() => false);
           expect(typeof isVisible).toBe('boolean');
         }
       }
@@ -336,7 +373,10 @@ test.describe('Admin Dispute Management', () => {
           '[data-testid="split-option"], input[type="range"], input[name*="split"], text=/split|percentage/i'
         );
 
-        const isVisible = await splitOption.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const isVisible = await splitOption
+          .first()
+          .isVisible({ timeout: 3000 })
+          .catch(() => false);
         expect(typeof isVisible).toBe('boolean');
       }
     });

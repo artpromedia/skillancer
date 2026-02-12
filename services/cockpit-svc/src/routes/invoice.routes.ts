@@ -833,4 +833,3 @@ export async function registerInvoiceRoutes(
 
   logger.info('Invoice routes registered');
 }
-

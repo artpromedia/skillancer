@@ -39,4 +39,3 @@ export { CreateGuildSchema, UpdateGuildSchema } from './guild-service';
 export { InviteMemberSchema, UpdateMemberRoleSchema } from './guild-membership';
 
 export { CreateGuildProjectSchema, UpdateProjectAssignmentSchema } from './guild-projects';
-

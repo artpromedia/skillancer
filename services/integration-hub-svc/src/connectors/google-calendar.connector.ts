@@ -484,4 +484,3 @@ export class GoogleCalendarConnector extends BaseConnector {
 }
 
 export const googleCalendarConnector = new GoogleCalendarConnector();
-

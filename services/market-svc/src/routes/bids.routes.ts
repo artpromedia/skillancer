@@ -143,45 +143,49 @@ export function registerBidRoutes(fastify: FastifyInstance, deps: BidRouteDeps):
   };
 
   // POST /bids - Submit a new bid (rate limited to prevent bid spam)
-  fastify.post('/', {
-    preHandler: proposalRateLimitHook ? [proposalRateLimitHook] : [],
-  }, async (request, reply) => {
-    try {
-      const user = getUser(request);
-      const body = SubmitBidSchema.parse(request.body);
+  fastify.post(
+    '/',
+    {
+      preHandler: proposalRateLimitHook ? [proposalRateLimitHook] : [],
+    },
+    async (request, reply) => {
+      try {
+        const user = getUser(request);
+        const body = SubmitBidSchema.parse(request.body);
 
-      const bid = await bidService.submitBid(user.id, body);
+        const bid = await bidService.submitBid(user.id, body);
 
-      // Signal bid submitted for learning recommendations (fire and forget)
-      const bidWithJob = bid as any;
-      if (bidWithJob.job) {
-        void signalBidSubmitted(
-          { id: user.id, skills: [] }, // User skills would ideally be fetched
-          bidWithJob.job,
-          {
-            proposedRate: body.proposedRate,
-            coverLetter: body.coverLetter,
-            attachments: body.attachments,
-          }
-        );
+        // Signal bid submitted for learning recommendations (fire and forget)
+        const bidWithJob = bid as any;
+        if (bidWithJob.job) {
+          void signalBidSubmitted(
+            { id: user.id, skills: [] }, // User skills would ideally be fetched
+            bidWithJob.job,
+            {
+              proposedRate: body.proposedRate,
+              coverLetter: body.coverLetter,
+              attachments: body.attachments,
+            }
+          );
+        }
+
+        logger.info({
+          msg: 'Bid submitted',
+          bidId: bid.id,
+          projectId: body.jobId,
+          freelancerId: user.id,
+        });
+
+        return await reply.status(201).send({
+          success: true,
+          bid,
+          message: 'Bid submitted successfully',
+        });
+      } catch (error) {
+        return handleError(error, reply);
       }
-
-      logger.info({
-        msg: 'Bid submitted',
-        bidId: bid.id,
-        projectId: body.jobId,
-        freelancerId: user.id,
-      });
-
-      return await reply.status(201).send({
-        success: true,
-        bid,
-        message: 'Bid submitted successfully',
-      });
-    } catch (error) {
-      return handleError(error, reply);
     }
-  });
+  );
 
   // GET /bids/my - Get current user's bids (freelancer)
   fastify.get('/my', async (request, reply) => {
@@ -473,4 +477,3 @@ export function registerBidRoutes(fastify: FastifyInstance, deps: BidRouteDeps):
     }
   );
 }
-

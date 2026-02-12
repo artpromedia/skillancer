@@ -258,4 +258,3 @@ export class EventBroadcaster {
 
 // Singleton instance
 export const eventBroadcaster = new EventBroadcaster();
-

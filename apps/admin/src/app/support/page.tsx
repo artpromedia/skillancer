@@ -65,7 +65,11 @@ export default function SupportPage() {
   const [activeTab, setActiveTab] = useState<'tools' | 'tickets'>('tools');
   const [ticketPage, setTicketPage] = useState(1);
 
-  const { data: ticketsData, isLoading: ticketsLoading, error: ticketsError } = useTickets({
+  const {
+    data: ticketsData,
+    isLoading: ticketsLoading,
+    error: ticketsError,
+  } = useTickets({
     page: ticketPage,
     limit: 20,
   } as never);
@@ -114,12 +118,16 @@ export default function SupportPage() {
           <div className="rounded-lg border bg-white p-4">
             <div className="text-sm text-gray-500">Avg Response Time</div>
             <div className="text-2xl font-bold text-gray-900">
-              {supportStats.avgResponseTime ? `${Math.round(supportStats.avgResponseTime / 60)}m` : '-'}
+              {supportStats.avgResponseTime
+                ? `${Math.round(supportStats.avgResponseTime / 60)}m`
+                : '-'}
             </div>
           </div>
           <div className="rounded-lg border bg-white p-4">
             <div className="text-sm text-gray-500">Resolved Today</div>
-            <div className="text-2xl font-bold text-green-600">{supportStats.resolvedToday ?? 0}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {supportStats.resolvedToday ?? 0}
+            </div>
           </div>
           <div className="rounded-lg border bg-white p-4">
             <div className="text-sm text-gray-500">Satisfaction</div>
@@ -263,7 +271,9 @@ export default function SupportPage() {
             <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
               <p className="font-medium text-red-800">Failed to load tickets</p>
               <p className="mt-1 text-sm text-red-600">
-                {ticketsError instanceof Error ? ticketsError.message : 'An unexpected error occurred'}
+                {ticketsError instanceof Error
+                  ? ticketsError.message
+                  : 'An unexpected error occurred'}
               </p>
             </div>
           )}
@@ -309,13 +319,13 @@ export default function SupportPage() {
                           onClick={() => {
                             setSearchQuery(
                               (ticket.userName as string) ||
-                              (ticket.user as Record<string, string>)?.name ||
-                              ''
+                                (ticket.user as Record<string, string>)?.name ||
+                                ''
                             );
                             setSelectedUserId(
                               (ticket.userId as string) ||
-                              (ticket.user as Record<string, string>)?.id ||
-                              ''
+                                (ticket.user as Record<string, string>)?.id ||
+                                ''
                             );
                           }}
                         >

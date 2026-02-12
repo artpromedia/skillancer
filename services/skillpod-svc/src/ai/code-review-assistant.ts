@@ -588,4 +588,3 @@ export function getCodeReviewAssistant(): CodeReviewAssistant {
   }
   return assistant;
 }
-

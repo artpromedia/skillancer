@@ -29,28 +29,28 @@
  */
 import type { PrismaClient } from '@prisma/client';
 export interface MigrationLockOptions {
-    /**
-     * Maximum time to wait for lock acquisition (ms)
-     * @default 30000
-     */
-    timeoutMs?: number;
-    /**
-     * Callback invoked while waiting for lock
-     */
-    onWaiting?: (elapsedMs: number) => void;
-    /**
-     * Whether to throw an error if lock cannot be acquired
-     * @default true
-     */
-    throwOnTimeout?: boolean;
+  /**
+   * Maximum time to wait for lock acquisition (ms)
+   * @default 30000
+   */
+  timeoutMs?: number;
+  /**
+   * Callback invoked while waiting for lock
+   */
+  onWaiting?: (elapsedMs: number) => void;
+  /**
+   * Whether to throw an error if lock cannot be acquired
+   * @default true
+   */
+  throwOnTimeout?: boolean;
 }
 export interface LockStatus {
-    /** Whether the lock is currently held */
-    isLocked: boolean;
-    /** PID of the process holding the lock (if locked) */
-    holderPid?: number;
-    /** When the lock was acquired (if available) */
-    lockedSince?: Date;
+  /** Whether the lock is currently held */
+  isLocked: boolean;
+  /** PID of the process holding the lock (if locked) */
+  holderPid?: number;
+  /** When the lock was acquired (if available) */
+  lockedSince?: Date;
 }
 /**
  * Attempt to acquire the migration lock (non-blocking)
@@ -87,7 +87,10 @@ export declare function tryAcquireMigrationLock(prisma: PrismaClient): Promise<b
  * });
  * ```
  */
-export declare function acquireMigrationLock(prisma: PrismaClient, options?: MigrationLockOptions): Promise<boolean>;
+export declare function acquireMigrationLock(
+  prisma: PrismaClient,
+  options?: MigrationLockOptions
+): Promise<boolean>;
 /**
  * Release the migration lock
  *
@@ -144,7 +147,11 @@ export declare function getMigrationLockStatus(prisma: PrismaClient): Promise<Lo
  * });
  * ```
  */
-export declare function withMigrationLock<T>(prisma: PrismaClient, fn: () => Promise<T>, options?: MigrationLockOptions): Promise<T>;
+export declare function withMigrationLock<T>(
+  prisma: PrismaClient,
+  fn: () => Promise<T>,
+  options?: MigrationLockOptions
+): Promise<T>;
 /**
  * Force release the migration lock
  *
@@ -173,5 +180,8 @@ export declare function forceReleaseMigrationLock(prisma: PrismaClient): Promise
  * }
  * ```
  */
-export declare function waitForMigrationLock(prisma: PrismaClient, timeoutMs?: number): Promise<boolean>;
+export declare function waitForMigrationLock(
+  prisma: PrismaClient,
+  timeoutMs?: number
+): Promise<boolean>;
 //# sourceMappingURL=migration-lock.d.ts.map

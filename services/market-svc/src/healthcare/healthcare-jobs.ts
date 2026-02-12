@@ -280,4 +280,3 @@ export class HealthcareJobService {
 }
 
 export const healthcareJobService = new HealthcareJobService();
-

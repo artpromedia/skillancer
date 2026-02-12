@@ -587,4 +587,3 @@ export function createWebSocketGateway(deps: WebSocketGatewayDependencies): WebS
     },
   };
 }
-

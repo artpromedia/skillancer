@@ -449,10 +449,7 @@ export class FeatureFlagService {
     }
   ): Promise<boolean> {
     // Check emergency disabled list first
-    const emergencyDisabled = await this.redis.sismember(
-      FeatureFlagService.EMERGENCY_KEY,
-      flagId
-    );
+    const emergencyDisabled = await this.redis.sismember(FeatureFlagService.EMERGENCY_KEY, flagId);
     if (emergencyDisabled) {
       return false;
     }
@@ -481,16 +478,17 @@ export class FeatureFlagService {
     const overrideKey = `${FeatureFlagService.OVERRIDE_PREFIX}${this.environment}:${flagId}`;
     const override = await this.redis.get(overrideKey);
 
-    const emergencyDisabled = await this.redis.sismember(
-      FeatureFlagService.EMERGENCY_KEY,
-      flagId
-    );
+    const emergencyDisabled = await this.redis.sismember(FeatureFlagService.EMERGENCY_KEY, flagId);
 
     return {
       ...staticFlag,
-      enabled: emergencyDisabled ? false : (override !== null ? override === 'true' : staticFlag.enabled),
+      enabled: emergencyDisabled
+        ? false
+        : override !== null
+          ? override === 'true'
+          : staticFlag.enabled,
       overrideEnabled: override !== null ? override === 'true' : undefined,
-      overrideSource: emergencyDisabled ? 'emergency' : (override !== null ? 'api' : undefined),
+      overrideSource: emergencyDisabled ? 'emergency' : override !== null ? 'api' : undefined,
     };
   }
 
@@ -540,7 +538,8 @@ export class FeatureFlagService {
     await this.redis.del(overrideKey);
 
     // Restore in-memory state
-    const staticFlag = CORE_FEATURES[flagId] ||
+    const staticFlag =
+      CORE_FEATURES[flagId] ||
       NEW_FEATURES[flagId] ||
       EXPERIMENTAL_FEATURES[flagId] ||
       OPERATIONS_FLAGS[flagId];
@@ -567,11 +566,15 @@ export class FeatureFlagService {
     }
 
     // Store reason for audit
-    pipeline.hset('feature:emergency:reasons', Date.now().toString(), JSON.stringify({
-      flagIds,
-      reason,
-      timestamp: new Date().toISOString(),
-    }));
+    pipeline.hset(
+      'feature:emergency:reasons',
+      Date.now().toString(),
+      JSON.stringify({
+        flagIds,
+        reason,
+        timestamp: new Date().toISOString(),
+      })
+    );
 
     await pipeline.exec();
 
@@ -661,7 +664,7 @@ export class FeatureFlagService {
     }
 
     if (ALL_FLAGS[flagId].targetGroups) {
-      ALL_FLAGS[flagId].targetGroups = ALL_FLAGS[flagId].targetGroups!.filter(g => g !== group);
+      ALL_FLAGS[flagId].targetGroups = ALL_FLAGS[flagId].targetGroups!.filter((g) => g !== group);
       ALL_FLAGS[flagId].updatedAt = new Date();
 
       const redisKey = `${FeatureFlagService.KEY_PREFIX}${this.environment}:${flagId}`;

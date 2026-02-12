@@ -105,9 +105,7 @@ const statusBadgeColors: Record<string, string> = {
 // HELPER: Map invoice status from API to page format
 // =============================================================================
 
-function mapInvoiceStatus(
-  apiStatus: string
-): 'paid' | 'pending' | 'failed' {
+function mapInvoiceStatus(apiStatus: string): 'paid' | 'pending' | 'failed' {
   if (apiStatus === 'paid') return 'paid';
   if (apiStatus === 'overdue' || apiStatus === 'cancelled' || apiStatus === 'refunded') {
     return 'failed';
@@ -220,11 +218,7 @@ export default function BillingPage() {
     error: financialError,
   } = useFinancialSummary();
 
-  const {
-    data: balanceData,
-    isLoading: isLoadingBalance,
-    error: balanceError,
-  } = useBalance();
+  const { data: balanceData, isLoading: isLoadingBalance, error: balanceError } = useBalance();
 
   const {
     data: invoicesData,
@@ -268,12 +262,8 @@ export default function BillingPage() {
 
   // Derive subscription info from financial summary
   const now = new Date();
-  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split('T')[0];
-  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split('T')[0];
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
   const subscription: SubscriptionInfo = {
     tier: 'PRO',

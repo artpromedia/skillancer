@@ -687,9 +687,7 @@ export class TaxReportingService {
   /**
    * Get tax calculations from Stripe
    */
-  async getStripeTaxCalculation(
-    paymentIntentId: string
-  ): Promise<{
+  async getStripeTaxCalculation(paymentIntentId: string): Promise<{
     taxAmount: number;
     taxBreakdown: Array<{ jurisdiction: string; amount: number; rate: number }>;
   }> {
@@ -730,4 +728,3 @@ export async function scheduleAnnual1099Generation(): Promise<void> {
   const taxService = getTaxReportingService();
   await taxService.batchGenerate1099s(previousYear);
 }
-

@@ -659,4 +659,3 @@ export class GoogleAnalyticsConnector extends BaseConnector {
 
 // Export singleton instance
 export const googleAnalyticsConnector = new GoogleAnalyticsConnector();
-

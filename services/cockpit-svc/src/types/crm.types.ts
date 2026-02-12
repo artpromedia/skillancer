@@ -533,4 +533,3 @@ export interface MarketSyncResult {
   updated: number;
   errors: string[];
 }
-

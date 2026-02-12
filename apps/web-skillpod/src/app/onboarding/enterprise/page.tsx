@@ -381,7 +381,9 @@ function TeamSetupStep({
           type="number"
           min="1"
           value={data.estimatedUsers}
-          onChange={(e) => onChange({ ...data, estimatedUsers: Number.parseInt(e.target.value) || 1 })}
+          onChange={(e) =>
+            onChange({ ...data, estimatedUsers: Number.parseInt(e.target.value) || 1 })
+          }
         />
         <p className="text-muted-foreground text-sm">
           This helps us recommend the right plan for you.

@@ -1,12 +1,6 @@
 import * as React from 'react';
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from './card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card';
 import { cn } from '../lib/utils';
 
 export interface SkillancerCardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -38,7 +32,7 @@ export interface SkillancerCardProps extends React.HTMLAttributes<HTMLDivElement
 
 /**
  * Branded card component with optional header actions
- * 
+ *
  * @example
  * <SkillancerCard
  *   title="Overview"
@@ -69,7 +63,7 @@ const SkillancerCard = React.forwardRef<HTMLDivElement, SkillancerCardProps>(
         ref={ref}
         className={cn(
           'shadow-skillancer',
-          hoverable && 'transition-shadow hover:shadow-skillancer-lg cursor-pointer',
+          hoverable && 'hover:shadow-skillancer-lg cursor-pointer transition-shadow',
           className
         )}
         {...props}

@@ -502,9 +502,10 @@ export function createRecommendationEngine(
       // Calculate ML-based scores using learning profile metrics
       const learningVelocity = calculateLearningVelocity(profile);
       const engagementScore = calculateEngagementScore(profile);
-      const completionRate = profile.completedCourses > 0
-        ? profile.completedCourses / Math.max(profile.completedCourses + 1, 1)
-        : 0.5;
+      const completionRate =
+        profile.completedCourses > 0
+          ? profile.completedCourses / Math.max(profile.completedCourses + 1, 1)
+          : 0.5;
 
       // Predict optimal content type based on profile
       const preferredContentType = predictContentType(profile, gap);
@@ -517,19 +518,19 @@ export function createRecommendationEngine(
         profile.averageSessionMinutes > 10,
         gap.priorityScore > 0,
       ].filter(Boolean).length;
-      const confidence = 0.4 + (dataPoints * 0.15);
+      const confidence = 0.4 + dataPoints * 0.15;
 
       // Calculate ML-enhanced scores
-      const relevance = 0.6 + (learningVelocity * 0.2) + (gap.priorityScore / 100 * 0.2);
+      const relevance = 0.6 + learningVelocity * 0.2 + (gap.priorityScore / 100) * 0.2;
       const urgency = calculateUrgency(gap, profile);
-      const impact = 0.5 + (engagementScore * 0.3) + (completionRate * 0.2);
+      const impact = 0.5 + engagementScore * 0.3 + completionRate * 0.2;
 
       const scores: RecommendationScores = {
         relevance: Math.min(relevance, 1),
         urgency: Math.min(urgency, 1),
         impact: Math.min(impact, 1),
         confidence,
-        overall: (relevance * 0.35 + urgency * 0.25 + impact * 0.25 + confidence * 0.15),
+        overall: relevance * 0.35 + urgency * 0.25 + impact * 0.25 + confidence * 0.15,
       };
 
       recommendations.push({
@@ -552,14 +553,16 @@ export function createRecommendationEngine(
 
   function calculateLearningVelocity(profile: UserLearningProfile): number {
     if (profile.totalLearningMinutes === 0) return 0.5;
-    const avgMinutesPerCourse = profile.totalLearningMinutes / Math.max(profile.completedCourses, 1);
+    const avgMinutesPerCourse =
+      profile.totalLearningMinutes / Math.max(profile.completedCourses, 1);
     // Normalize: faster learners (less time per course) get higher scores
     return Math.max(0.3, Math.min(1, 300 / avgMinutesPerCourse));
   }
 
   function calculateEngagementScore(profile: UserLearningProfile): number {
     const sessionScore = Math.min(profile.averageSessionMinutes / 30, 1);
-    const frequencyScore = profile.learningStreak > 0 ? Math.min(profile.learningStreak / 7, 1) : 0.3;
+    const frequencyScore =
+      profile.learningStreak > 0 ? Math.min(profile.learningStreak / 7, 1) : 0.3;
     return (sessionScore + frequencyScore) / 2;
   }
 
@@ -590,42 +593,49 @@ export function createRecommendationEngine(
     contentType: ContentType,
     skillName: string
   ): { title: string; provider: string; duration: number } {
-    const templates: Record<ContentType, { title: string; provider: string; duration: number }[]> = {
-      COURSE: [
-        { title: `Complete ${skillName} Mastery Course`, provider: 'skillpod', duration: 480 },
-        { title: `Professional ${skillName} Certification`, provider: 'coursera', duration: 720 },
-      ],
-      VIDEO: [
-        { title: `${skillName} Quick Start Guide`, provider: 'skillpod', duration: 45 },
-        { title: `${skillName} in 30 Minutes`, provider: 'youtube', duration: 30 },
-      ],
-      TUTORIAL: [
-        { title: `Hands-on ${skillName} Workshop`, provider: 'skillpod', duration: 120 },
-        { title: `Build with ${skillName}: Project-Based Learning`, provider: 'codecademy', duration: 180 },
-      ],
-      ARTICLE: [
-        { title: `${skillName} Fundamentals Explained`, provider: 'skillpod', duration: 15 },
-        { title: `Getting Started with ${skillName}`, provider: 'medium', duration: 10 },
-      ],
-      BOOK: [
-        { title: `${skillName}: The Complete Reference`, provider: 'oreilly', duration: 600 },
-      ],
-      PODCAST: [
-        { title: `${skillName} Weekly Insights`, provider: 'skillpod', duration: 45 },
-      ],
-      PROJECT: [
-        { title: `Real-world ${skillName} Portfolio Project`, provider: 'skillpod', duration: 300 },
-      ],
-      ASSESSMENT: [
-        { title: `${skillName} Skills Assessment`, provider: 'skillpod', duration: 30 },
-      ],
-      MENTORSHIP: [
-        { title: `${skillName} 1:1 Mentorship Sessions`, provider: 'skillpod', duration: 60 },
-      ],
-      PRACTICE: [
-        { title: `${skillName} Practice Exercises`, provider: 'skillpod', duration: 90 },
-      ],
-    };
+    const templates: Record<ContentType, { title: string; provider: string; duration: number }[]> =
+      {
+        COURSE: [
+          { title: `Complete ${skillName} Mastery Course`, provider: 'skillpod', duration: 480 },
+          { title: `Professional ${skillName} Certification`, provider: 'coursera', duration: 720 },
+        ],
+        VIDEO: [
+          { title: `${skillName} Quick Start Guide`, provider: 'skillpod', duration: 45 },
+          { title: `${skillName} in 30 Minutes`, provider: 'youtube', duration: 30 },
+        ],
+        TUTORIAL: [
+          { title: `Hands-on ${skillName} Workshop`, provider: 'skillpod', duration: 120 },
+          {
+            title: `Build with ${skillName}: Project-Based Learning`,
+            provider: 'codecademy',
+            duration: 180,
+          },
+        ],
+        ARTICLE: [
+          { title: `${skillName} Fundamentals Explained`, provider: 'skillpod', duration: 15 },
+          { title: `Getting Started with ${skillName}`, provider: 'medium', duration: 10 },
+        ],
+        BOOK: [
+          { title: `${skillName}: The Complete Reference`, provider: 'oreilly', duration: 600 },
+        ],
+        PODCAST: [{ title: `${skillName} Weekly Insights`, provider: 'skillpod', duration: 45 }],
+        PROJECT: [
+          {
+            title: `Real-world ${skillName} Portfolio Project`,
+            provider: 'skillpod',
+            duration: 300,
+          },
+        ],
+        ASSESSMENT: [
+          { title: `${skillName} Skills Assessment`, provider: 'skillpod', duration: 30 },
+        ],
+        MENTORSHIP: [
+          { title: `${skillName} 1:1 Mentorship Sessions`, provider: 'skillpod', duration: 60 },
+        ],
+        PRACTICE: [
+          { title: `${skillName} Practice Exercises`, provider: 'skillpod', duration: 90 },
+        ],
+      };
 
     const options = templates[contentType] || templates.COURSE;
     return options[Math.floor(Math.random() * options.length)];
@@ -1025,4 +1035,3 @@ export function createRecommendationEngine(
     refreshUserRecommendations,
   };
 }
-

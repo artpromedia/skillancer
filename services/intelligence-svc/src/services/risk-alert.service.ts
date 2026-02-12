@@ -1,9 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { RiskCategory, RiskLevel } from '../types/intelligence.types.js';
-import type {
-  RiskAlertCreateInput,
-  RiskAlertUpdateInput,
-} from '../types/intelligence.types.js';
+import type { RiskAlertCreateInput, RiskAlertUpdateInput } from '../types/intelligence.types.js';
 
 export class RiskAlertService {
   constructor(private prisma: PrismaClient) {}

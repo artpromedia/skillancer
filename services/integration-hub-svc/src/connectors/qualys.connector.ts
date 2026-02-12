@@ -360,4 +360,3 @@ export class QualysConnector extends BaseConnector {
 }
 
 export const createQualysConnector = (config: ConnectorConfig) => new QualysConnector(config);
-

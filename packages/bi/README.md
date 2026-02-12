@@ -12,13 +12,13 @@ Business Intelligence and KPI Reporting package for the Skillancer platform.
 
 ## KPI Categories
 
-| Category | KPIs |
-|----------|------|
-| Revenue | GMV, MRR, ARR, ARPU, LTV |
-| Growth | DAU, WAU, MAU, Growth Rate |
-| Retention | Retention Rate, Churn Rate |
-| Marketplace | Job Completion, Time to Fill |
-| Learning | Course Completion, Skill Adoption |
+| Category    | KPIs                              |
+| ----------- | --------------------------------- |
+| Revenue     | GMV, MRR, ARR, ARPU, LTV          |
+| Growth      | DAU, WAU, MAU, Growth Rate        |
+| Retention   | Retention Rate, Churn Rate        |
+| Marketplace | Job Completion, Time to Fill      |
+| Learning    | Course Completion, Skill Adoption |
 
 ## Usage
 

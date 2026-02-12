@@ -260,4 +260,3 @@ export function get1099GenerationJob(): Form1099GenerationJob {
   }
   return job;
 }
-

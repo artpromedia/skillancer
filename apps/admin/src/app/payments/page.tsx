@@ -201,7 +201,9 @@ export default function PaymentsPage() {
                     <span className="font-medium text-gray-900">
                       ${((tx.amount as number) || 0).toLocaleString()}
                     </span>
-                    <span className="ml-1 text-xs text-gray-500">{(tx.currency as string) || 'USD'}</span>
+                    <span className="ml-1 text-xs text-gray-500">
+                      {(tx.currency as string) || 'USD'}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <span

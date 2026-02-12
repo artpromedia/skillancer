@@ -53,10 +53,7 @@ describe('async', () => {
 
     it('should retry on failure', async () => {
       vi.useRealTimers();
-      const fn = vi
-        .fn()
-        .mockRejectedValueOnce(new Error('fail'))
-        .mockResolvedValue('success');
+      const fn = vi.fn().mockRejectedValueOnce(new Error('fail')).mockResolvedValue('success');
 
       const result = await retry(fn, { maxAttempts: 3, initialDelayMs: 10 });
 
@@ -68,18 +65,15 @@ describe('async', () => {
       vi.useRealTimers();
       const fn = vi.fn().mockRejectedValue(new Error('always fail'));
 
-      await expect(
-        retry(fn, { maxAttempts: 3, initialDelayMs: 10 })
-      ).rejects.toThrow('always fail');
+      await expect(retry(fn, { maxAttempts: 3, initialDelayMs: 10 })).rejects.toThrow(
+        'always fail'
+      );
       expect(fn).toHaveBeenCalledTimes(3);
     });
 
     it('should call onRetry callback', async () => {
       vi.useRealTimers();
-      const fn = vi
-        .fn()
-        .mockRejectedValueOnce(new Error('fail'))
-        .mockResolvedValue('success');
+      const fn = vi.fn().mockRejectedValueOnce(new Error('fail')).mockResolvedValue('success');
       const onRetry = vi.fn();
 
       await retry(fn, {
@@ -183,9 +177,7 @@ describe('async', () => {
     });
 
     it('should reject if promise times out', async () => {
-      const slowPromise = new Promise((resolve) =>
-        setTimeout(() => resolve('slow'), 2000)
-      );
+      const slowPromise = new Promise((resolve) => setTimeout(() => resolve('slow'), 2000));
 
       const promise = timeout(slowPromise, 1000);
 
@@ -195,9 +187,7 @@ describe('async', () => {
     });
 
     it('should use custom error message', async () => {
-      const slowPromise = new Promise((resolve) =>
-        setTimeout(() => resolve('slow'), 2000)
-      );
+      const slowPromise = new Promise((resolve) => setTimeout(() => resolve('slow'), 2000));
 
       const promise = timeout(slowPromise, 1000, 'Custom timeout');
 
@@ -211,11 +201,7 @@ describe('async', () => {
     it('should process all promises', async () => {
       vi.useRealTimers();
 
-      const tasks = [
-        () => Promise.resolve(1),
-        () => Promise.resolve(2),
-        () => Promise.resolve(3),
-      ];
+      const tasks = [() => Promise.resolve(1), () => Promise.resolve(2), () => Promise.resolve(3)];
 
       const results = await promiseAllSettledWithConcurrency(tasks, 2);
 
@@ -237,13 +223,7 @@ describe('async', () => {
         return value;
       };
 
-      const tasks = [
-        createTask(1),
-        createTask(2),
-        createTask(3),
-        createTask(4),
-        createTask(5),
-      ];
+      const tasks = [createTask(1), createTask(2), createTask(3), createTask(4), createTask(5)];
 
       await promiseAllSettledWithConcurrency(tasks, 2);
 
@@ -360,10 +340,7 @@ describe('async', () => {
       vi.useRealTimers();
 
       await expect(
-        raceToSuccess([
-          Promise.reject(new Error('fail1')),
-          Promise.reject(new Error('fail2')),
-        ])
+        raceToSuccess([Promise.reject(new Error('fail1')), Promise.reject(new Error('fail2'))])
       ).rejects.toThrow('All promises rejected');
     });
 

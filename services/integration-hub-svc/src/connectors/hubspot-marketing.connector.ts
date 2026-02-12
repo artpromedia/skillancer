@@ -415,4 +415,3 @@ export class HubSpotMarketingConnector extends BaseConnector {
 }
 
 export const hubspotMarketingConnector = new HubSpotMarketingConnector({});
-

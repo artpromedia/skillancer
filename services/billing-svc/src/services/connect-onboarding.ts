@@ -534,4 +534,3 @@ export function getConnectOnboardingService(): ConnectOnboardingService {
   }
   return connectService;
 }
-

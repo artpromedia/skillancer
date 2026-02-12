@@ -188,11 +188,11 @@ describe('Moat Services Integration', () => {
 
       it('should update withholding rate', async () => {
         const response = await client.patch(`/api/financial/tax-vault/${taxVaultId}`, {
-          withholdingRate: 0.30,
+          withholdingRate: 0.3,
         });
 
         expect(response.status).toBe(200);
-        expect(response.data.withholdingRate).toBe(0.30);
+        expect(response.data.withholdingRate).toBe(0.3);
       });
     });
 
@@ -270,10 +270,13 @@ describe('Moat Services Integration', () => {
       });
 
       it('should endorse a relationship', async () => {
-        const response = await client.post(`/api/talent-graph/relationships/${relationshipId}/endorse`, {
-          endorsement: 'Excellent collaborator, highly skilled in frontend development',
-          skills: ['React'],
-        });
+        const response = await client.post(
+          `/api/talent-graph/relationships/${relationshipId}/endorse`,
+          {
+            endorsement: 'Excellent collaborator, highly skilled in frontend development',
+            skills: ['React'],
+          }
+        );
 
         expect(response.status).toBe(200);
       });
@@ -577,9 +580,7 @@ describe('Moat Services Integration', () => {
           currentHeadline: 'Web Developer',
           currentSummary: 'I build websites',
           skills: ['React', 'TypeScript', 'Node.js', 'PostgreSQL'],
-          experience: [
-            { title: 'Senior Developer', company: 'Tech Co', duration: '3 years' },
-          ],
+          experience: [{ title: 'Senior Developer', company: 'Tech Co', duration: '3 years' }],
           targetRoles: ['Full Stack Developer', 'Technical Lead'],
         });
 
@@ -650,8 +651,8 @@ describe('Moat Services Integration', () => {
       // Latest notification should be about engagement
       if (notificationsResponse.data.length > 0) {
         expect(
-          notificationsResponse.data.some((n: any) =>
-            n.type.includes('ENGAGEMENT') || n.type.includes('CONTRACT')
+          notificationsResponse.data.some(
+            (n: any) => n.type.includes('ENGAGEMENT') || n.type.includes('CONTRACT')
           )
         ).toBe(true);
       }

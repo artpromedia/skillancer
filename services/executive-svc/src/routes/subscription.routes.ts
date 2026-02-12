@@ -423,4 +423,3 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
     }
   );
 }
-

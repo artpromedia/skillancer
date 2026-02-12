@@ -35,6 +35,7 @@
 ## Service Responsibilities
 
 ### API Gateway
+
 - Request routing
 - Authentication/Authorization
 - Rate limiting
@@ -42,6 +43,7 @@
 - Response aggregation
 
 ### Auth Service
+
 - User registration/login
 - Session management
 - OAuth2/Social login
@@ -49,27 +51,32 @@
 - RBAC
 
 ### Market Service
+
 - Talent profiles
 - Job postings
 - Bidding system
 - Matching algorithms
 
 ### Cockpit Service
+
 - Workspace management
 - Third-party integrations
 - Analytics
 
 ### SkillPod Service
+
 - VDI provisioning
 - Session management
 - Resource allocation
 
 ### Notification Service
+
 - Email notifications
 - Push notifications
 - In-app notifications
 
 ### Audit Service
+
 - Action logging
 - Compliance reporting
 - Data retention

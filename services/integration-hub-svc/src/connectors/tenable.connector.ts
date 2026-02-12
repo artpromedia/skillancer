@@ -339,4 +339,3 @@ export class TenableConnector extends BaseConnector {
 }
 
 export const createTenableConnector = (config: ConnectorConfig) => new TenableConnector(config);
-

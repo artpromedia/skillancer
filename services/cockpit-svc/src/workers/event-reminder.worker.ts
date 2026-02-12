@@ -420,4 +420,3 @@ function formatMinutesLabel(minutes: number): string {
 }
 
 export default EventReminderWorker;
-

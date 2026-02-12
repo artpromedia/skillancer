@@ -522,4 +522,3 @@ interface XeroReportRow {
 }
 
 export const xeroConnector = new XeroConnector();
-

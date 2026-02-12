@@ -421,9 +421,7 @@ describe('PaymentOrchestrator', () => {
       mockStripePaymentIntentsConfirm.mockRejectedValue(new Error('Authentication failed'));
       mockPrisma.payment.update.mockResolvedValue({});
 
-      await expect(orchestrator.confirmPayment('pay-004')).rejects.toThrow(
-        'Authentication failed'
-      );
+      await expect(orchestrator.confirmPayment('pay-004')).rejects.toThrow('Authentication failed');
 
       expect(mockPrisma.payment.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -472,9 +470,7 @@ describe('PaymentOrchestrator', () => {
     it('should throw PaymentNotFoundError when payment does not exist', async () => {
       mockPrisma.payment.findUnique.mockResolvedValue(null);
 
-      await expect(orchestrator.cancelPayment('nonexistent')).rejects.toThrow(
-        PaymentNotFoundError
-      );
+      await expect(orchestrator.cancelPayment('nonexistent')).rejects.toThrow(PaymentNotFoundError);
     });
 
     it('should throw InvalidStateTransitionError for succeeded payment', async () => {
@@ -617,9 +613,9 @@ describe('PaymentOrchestrator', () => {
     it('should throw PaymentNotFoundError for non-existent payment', async () => {
       mockPrisma.payment.findUnique.mockResolvedValue(null);
 
-      await expect(
-        orchestrator.refundPayment({ paymentId: 'nonexistent' })
-      ).rejects.toThrow(PaymentNotFoundError);
+      await expect(orchestrator.refundPayment({ paymentId: 'nonexistent' })).rejects.toThrow(
+        PaymentNotFoundError
+      );
     });
 
     it('should throw for payment not in refundable status', async () => {
@@ -629,9 +625,9 @@ describe('PaymentOrchestrator', () => {
         amount: 5000,
       });
 
-      await expect(
-        orchestrator.refundPayment({ paymentId: 'pay-004' })
-      ).rejects.toThrow('Cannot refund payment');
+      await expect(orchestrator.refundPayment({ paymentId: 'pay-004' })).rejects.toThrow(
+        'Cannot refund payment'
+      );
     });
 
     it('should throw when payment has no PaymentIntent', async () => {
@@ -642,9 +638,9 @@ describe('PaymentOrchestrator', () => {
         stripePaymentIntentId: null,
       });
 
-      await expect(
-        orchestrator.refundPayment({ paymentId: 'pay-005' })
-      ).rejects.toThrow('no associated PaymentIntent');
+      await expect(orchestrator.refundPayment({ paymentId: 'pay-005' })).rejects.toThrow(
+        'no associated PaymentIntent'
+      );
     });
 
     it('should handle Stripe refund failure gracefully', async () => {

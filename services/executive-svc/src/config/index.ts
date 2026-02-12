@@ -13,7 +13,10 @@ const configSchema = z.object({
 
   // API
   apiBaseUrl: z.string().default('http://localhost:3008'),
-  corsOrigins: z.string().transform((val) => val.split(',')).default('http://localhost:3000'),
+  corsOrigins: z
+    .string()
+    .transform((val) => val.split(','))
+    .default('http://localhost:3000'),
 
   // Auth - Required in production, optional with dev defaults for development
   jwtSecret: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),

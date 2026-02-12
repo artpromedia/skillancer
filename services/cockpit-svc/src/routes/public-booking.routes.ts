@@ -488,4 +488,3 @@ function formatDateForCalendar(date: Date): string {
 }
 
 export default publicBookingRoutes;
-

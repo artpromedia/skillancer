@@ -45,17 +45,13 @@ describe('CacheKeys', () => {
     });
 
     it('should generate job search key', () => {
-      expect(CacheKeys.jobSearch('react developer', 1)).toBe(
-        'market:search:react%20developer:1'
-      );
+      expect(CacheKeys.jobSearch('react developer', 1)).toBe('market:search:react%20developer:1');
     });
   });
 
   describe('system keys', () => {
     it('should generate rate limit key', () => {
-      expect(CacheKeys.rateLimit('api', 'user123')).toBe(
-        'ratelimit:api:user123'
-      );
+      expect(CacheKeys.rateLimit('api', 'user123')).toBe('ratelimit:api:user123');
     });
 
     it('should generate rate limit by IP key', () => {
@@ -78,7 +74,9 @@ describe('CacheKeys', () => {
     });
 
     it('should generate active sessions key', () => {
-      expect(CacheKeys.activeSessions('tenant123')).toBe('skillpod:tenant:tenant123:sessions:active');
+      expect(CacheKeys.activeSessions('tenant123')).toBe(
+        'skillpod:tenant:tenant123:sessions:active'
+      );
     });
   });
 

@@ -24,13 +24,7 @@ export interface ValidationResult {
   warnings: string[];
 }
 
-export type ServiceName =
-  | 'auth'
-  | 'api-gateway'
-  | 'market'
-  | 'billing'
-  | 'notification'
-  | 'common';
+export type ServiceName = 'auth' | 'api-gateway' | 'market' | 'billing' | 'notification' | 'common';
 
 export interface ValidateOptions {
   /** When true, treat all missing optional vars as errors. Defaults to true in production. */
@@ -49,7 +43,12 @@ const COMMON_REQUIREMENTS: EnvRequirement[] = [
 const AUTH_REQUIREMENTS: EnvRequirement[] = [
   { name: 'JWT_SECRET', required: true, minLength: 32, description: 'JWT signing secret' },
   { name: 'ENCRYPTION_KEY', required: false, minLength: 32, description: 'Data encryption key' },
-  { name: 'MFA_ENCRYPTION_KEY', required: false, minLength: 32, description: 'MFA TOTP encryption key' },
+  {
+    name: 'MFA_ENCRYPTION_KEY',
+    required: false,
+    minLength: 32,
+    description: 'MFA TOTP encryption key',
+  },
   { name: 'BCRYPT_ROUNDS', required: false, description: 'Bcrypt hashing rounds' },
 ];
 
@@ -143,8 +142,7 @@ function validateSingle(
   }
 
   if (req.minLength !== undefined && value.length < req.minLength) {
-    const message =
-      `Env var ${req.name} is too short (${value.length} chars, minimum ${req.minLength}): ${req.description}`;
+    const message = `Env var ${req.name} is too short (${value.length} chars, minimum ${req.minLength}): ${req.description}`;
     if (req.required) {
       return { error: message };
     }

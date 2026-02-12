@@ -27,7 +27,7 @@ const sizeClasses = {
 
 /**
  * Branded loading spinner component
- * 
+ *
  * @example
  * <LoadingSpinner size="lg" text="Loading..." />
  * <LoadingSpinner fullscreen />
@@ -40,21 +40,14 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
         aria-label={text || 'Loading'}
         className={cn(
           'flex flex-col items-center justify-center gap-2',
-          fullscreen && 'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm',
+          fullscreen && 'bg-background/80 fixed inset-0 z-50 backdrop-blur-sm',
           className
         )}
         role="status"
         {...props}
       >
-        <Loader2
-          className={cn(
-            'animate-spin text-primary',
-            sizeClasses[size]
-          )}
-        />
-        {text && (
-          <span className="text-sm text-muted-foreground">{text}</span>
-        )}
+        <Loader2 className={cn('text-primary animate-spin', sizeClasses[size])} />
+        {text && <span className="text-muted-foreground text-sm">{text}</span>}
         <span className="sr-only">{text || 'Loading...'}</span>
       </div>
     );

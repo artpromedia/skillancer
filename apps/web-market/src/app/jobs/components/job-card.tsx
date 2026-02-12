@@ -15,7 +15,6 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 
-
 import { MatchScoreBadge } from '@/components/shared/match-score-badge';
 import { SkillTag } from '@/components/shared/skill-tag';
 import { useJobStore } from '@/stores/job-store';

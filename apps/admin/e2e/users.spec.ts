@@ -68,7 +68,10 @@ test.describe('Admin User Management', () => {
       );
 
       // Pagination may not be visible if there are few users
-      const isVisible = await pagination.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await pagination
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       // This is fine either way
       expect(typeof isVisible).toBe('boolean');
     });
@@ -82,7 +85,10 @@ test.describe('Admin User Management', () => {
         '[data-testid="user-count"], .total-count, text=/\\d+ users?/i'
       );
 
-      const isVisible = await countIndicator.first().isVisible({ timeout: 3000 }).catch(() => false);
+      const isVisible = await countIndicator
+        .first()
+        .isVisible({ timeout: 3000 })
+        .catch(() => false);
       expect(typeof isVisible).toBe('boolean');
     });
   });
@@ -106,9 +112,11 @@ test.describe('Admin User Management', () => {
       await page.goto('/users');
       await page.waitForTimeout(1000);
 
-      const searchInput = page.locator(
-        'input[type="search"], input[placeholder*="search" i], [data-testid="search-input"]'
-      ).first();
+      const searchInput = page
+        .locator(
+          'input[type="search"], input[placeholder*="search" i], [data-testid="search-input"]'
+        )
+        .first();
 
       if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
         await searchInput.fill('admin');
@@ -125,9 +133,11 @@ test.describe('Admin User Management', () => {
       await page.goto('/users');
       await page.waitForTimeout(1000);
 
-      const searchInput = page.locator(
-        'input[type="search"], input[placeholder*="search" i], [data-testid="search-input"]'
-      ).first();
+      const searchInput = page
+        .locator(
+          'input[type="search"], input[placeholder*="search" i], [data-testid="search-input"]'
+        )
+        .first();
 
       if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
         await searchInput.fill('admin@skillancer.com');
@@ -144,9 +154,11 @@ test.describe('Admin User Management', () => {
       await page.goto('/users');
       await page.waitForTimeout(1000);
 
-      const searchInput = page.locator(
-        'input[type="search"], input[placeholder*="search" i], [data-testid="search-input"]'
-      ).first();
+      const searchInput = page
+        .locator(
+          'input[type="search"], input[placeholder*="search" i], [data-testid="search-input"]'
+        )
+        .first();
 
       if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
         await searchInput.fill('xyznonexistent12345');
@@ -157,7 +169,10 @@ test.describe('Admin User Management', () => {
           '[data-testid="empty-state"], text=/no (users|results)/i, .empty-state'
         );
 
-        const isVisible = await emptyState.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const isVisible = await emptyState
+          .first()
+          .isVisible({ timeout: 3000 })
+          .catch(() => false);
         expect(typeof isVisible).toBe('boolean');
       }
     });
@@ -166,9 +181,11 @@ test.describe('Admin User Management', () => {
       await page.goto('/users');
       await page.waitForTimeout(1000);
 
-      const searchInput = page.locator(
-        'input[type="search"], input[placeholder*="search" i], [data-testid="search-input"]'
-      ).first();
+      const searchInput = page
+        .locator(
+          'input[type="search"], input[placeholder*="search" i], [data-testid="search-input"]'
+        )
+        .first();
 
       if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
         // Search first
@@ -197,9 +214,9 @@ test.describe('Admin User Management', () => {
       await page.waitForTimeout(2000);
 
       // Click on first user row or link
-      const userLink = page.locator(
-        'tr a, [data-testid="user-row"] a, a[href*="/users/"], tr[role="link"]'
-      ).first();
+      const userLink = page
+        .locator('tr a, [data-testid="user-row"] a, a[href*="/users/"], tr[role="link"]')
+        .first();
 
       if (await userLink.isVisible({ timeout: 3000 }).catch(() => false)) {
         await userLink.click();
@@ -211,18 +228,14 @@ test.describe('Admin User Management', () => {
       await page.goto('/users');
       await page.waitForTimeout(2000);
 
-      const userLink = page.locator(
-        'tr a, [data-testid="user-row"] a, a[href*="/users/"]'
-      ).first();
+      const userLink = page.locator('tr a, [data-testid="user-row"] a, a[href*="/users/"]').first();
 
       if (await userLink.isVisible({ timeout: 3000 }).catch(() => false)) {
         await userLink.click();
         await page.waitForTimeout(2000);
 
         // Should show user details
-        const detailsContainer = page.locator(
-          '[data-testid="user-details"], .user-profile, main'
-        );
+        const detailsContainer = page.locator('[data-testid="user-details"], .user-profile, main');
         await expect(detailsContainer.first()).toBeVisible();
       }
     });
@@ -238,9 +251,7 @@ test.describe('Admin User Management', () => {
         await page.waitForTimeout(2000);
 
         // Look for email display
-        const emailElement = page.locator(
-          '[data-testid="user-email"], text=/@/', '.email'
-        ).first();
+        const emailElement = page.locator('[data-testid="user-email"], text=/@/', '.email').first();
 
         const isVisible = await emailElement.isVisible({ timeout: 3000 }).catch(() => false);
         expect(typeof isVisible).toBe('boolean');
@@ -258,9 +269,9 @@ test.describe('Admin User Management', () => {
         await page.waitForTimeout(2000);
 
         // Look for role badge or status indicator
-        const roleElement = page.locator(
-          '[data-testid="user-role"], .badge, .role, text=/admin|user|freelancer|client/i'
-        ).first();
+        const roleElement = page
+          .locator('[data-testid="user-role"], .badge, .role, text=/admin|user|freelancer|client/i')
+          .first();
 
         const isVisible = await roleElement.isVisible({ timeout: 3000 }).catch(() => false);
         expect(typeof isVisible).toBe('boolean');
@@ -277,9 +288,11 @@ test.describe('Admin User Management', () => {
         await userLink.click();
         await page.waitForTimeout(1000);
 
-        const backButton = page.locator(
-          'a:has-text("Back"), button:has-text("Back"), a[href="/users"], [data-testid="back-button"]'
-        ).first();
+        const backButton = page
+          .locator(
+            'a:has-text("Back"), button:has-text("Back"), a[href="/users"], [data-testid="back-button"]'
+          )
+          .first();
 
         if (await backButton.isVisible({ timeout: 3000 }).catch(() => false)) {
           await backButton.click();

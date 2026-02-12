@@ -159,10 +159,7 @@ export class StripeProvider {
         reason,
       });
 
-      this.logger.info(
-        { refundId: refund.id, paymentIntentId, amount },
-        'Stripe refund created'
-      );
+      this.logger.info({ refundId: refund.id, paymentIntentId, amount }, 'Stripe refund created');
 
       return refund;
     } catch (error) {
@@ -180,11 +177,7 @@ export class StripeProvider {
    */
   verifyWebhookSignature(payload: string | Buffer, signature: string): WebhookEvent {
     try {
-      const event = this.stripe.webhooks.constructEvent(
-        payload,
-        signature,
-        this.webhookSecret
-      );
+      const event = this.stripe.webhooks.constructEvent(payload, signature, this.webhookSecret);
 
       this.logger.debug({ eventType: event.type, eventId: event.id }, 'Stripe webhook verified');
 

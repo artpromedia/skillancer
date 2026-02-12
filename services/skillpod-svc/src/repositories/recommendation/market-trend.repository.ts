@@ -610,4 +610,3 @@ export function createMarketTrendRepository(prisma: PrismaClient): MarketTrendRe
     getIndustryComparison,
   };
 }
-

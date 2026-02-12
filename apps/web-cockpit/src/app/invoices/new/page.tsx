@@ -44,7 +44,13 @@ interface LineItem {
 // Helpers
 function formatAddress(address?: Address): string | undefined {
   if (!address) return undefined;
-  const parts = [address.line1, address.line2, address.city, address.state, address.postalCode].filter(Boolean);
+  const parts = [
+    address.line1,
+    address.line2,
+    address.city,
+    address.state,
+    address.postalCode,
+  ].filter(Boolean);
   return parts.length > 0 ? parts.join(', ') : undefined;
 }
 
@@ -52,10 +58,21 @@ function formatAddress(address?: Address): string | undefined {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 function useUnbilledTimeEntries(projectId: string) {
-  return useQuery<Array<{ id: string; description: string; hours: number; rate: number; date: string; projectId: string }>>({
+  return useQuery<
+    Array<{
+      id: string;
+      description: string;
+      hours: number;
+      rate: number;
+      date: string;
+      projectId: string;
+    }>
+  >({
     queryKey: ['cockpit', 'time', 'unbilled', projectId],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/api/cockpit/time?projectId=${projectId}&billable=true&invoiced=false`);
+      const res = await fetch(
+        `${API_BASE}/api/cockpit/time?projectId=${projectId}&billable=true&invoiced=false`
+      );
       if (!res.ok) throw new Error('Failed to fetch time entries');
       const json = await res.json();
       return json.data?.items ?? json.items ?? json.data ?? [];
@@ -66,7 +83,11 @@ function useUnbilledTimeEntries(projectId: string) {
 
 export default function NewInvoicePage() {
   const { data: clientsResponse, isLoading: clientsLoading, error: clientsError } = useClients();
-  const { data: projectsResponse, isLoading: projectsLoading, error: projectsError } = useProjects({ status: 'active' });
+  const {
+    data: projectsResponse,
+    isLoading: projectsLoading,
+    error: projectsError,
+  } = useProjects({ status: 'active' });
 
   const clients: Client[] = clientsResponse?.data ?? [];
   const projects: Project[] = projectsResponse?.data ?? [];

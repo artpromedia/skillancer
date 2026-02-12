@@ -1377,4 +1377,3 @@ export class CalendarService {
     return `${base}-${suffix}`;
   }
 }
-

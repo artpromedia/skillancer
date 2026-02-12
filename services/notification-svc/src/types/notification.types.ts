@@ -220,16 +220,22 @@ export interface NotificationStats {
   deliveryRate: number;
   openRate: number;
   clickRate: number;
-  byChannel: Record<NotificationChannel, {
-    sent: number;
-    delivered: number;
-    failed: number;
-  }>;
-  byType: Record<string, {
-    sent: number;
-    delivered: number;
-    failed: number;
-  }>;
+  byChannel: Record<
+    NotificationChannel,
+    {
+      sent: number;
+      delivered: number;
+      failed: number;
+    }
+  >;
+  byType: Record<
+    string,
+    {
+      sent: number;
+      delivered: number;
+      failed: number;
+    }
+  >;
 }
 
 // Webhook event for delivery tracking

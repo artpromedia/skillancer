@@ -81,7 +81,9 @@ function verifyMockToken(token: string): string | null {
 // TEST USER FACTORY
 // =============================================================================
 
-function createTestUser(overrides: Partial<TestUser> & { email: string; role: TestUser['role'] }): TestUser {
+function createTestUser(
+  overrides: Partial<TestUser> & { email: string; role: TestUser['role'] }
+): TestUser {
   const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const user: TestUser = {
     id,
@@ -118,9 +120,7 @@ async function mockRequest<T = unknown>(
     user?: TestUser;
   }
 ): Promise<{ status: number; body: T }> {
-  const authHeader = options?.user
-    ? { Authorization: `Bearer ${options.user.accessToken}` }
-    : {};
+  const authHeader = options?.user ? { Authorization: `Bearer ${options.user.accessToken}` } : {};
 
   const headers = {
     'Content-Type': 'application/json',
@@ -162,7 +162,13 @@ function simulateRoute<T>(
 
   // Protected routes require authentication
   if (!userId) {
-    return { status: 401, body: { success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } } as T };
+    return {
+      status: 401,
+      body: {
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+      } as T,
+    };
   }
 
   // Job routes
@@ -232,7 +238,10 @@ function simulateRoute<T>(
     return handleRefund<T>(body as Record<string, unknown>, userId);
   }
 
-  return { status: 404, body: { success: false, error: { code: 'NOT_FOUND', message: 'Route not found' } } as T };
+  return {
+    status: 404,
+    body: { success: false, error: { code: 'NOT_FOUND', message: 'Route not found' } } as T,
+  };
 }
 
 // =============================================================================
@@ -243,7 +252,10 @@ function handleRegister<T>(body: Record<string, unknown>): { status: number; bod
   if (!body.email || !body.password || !body.firstName || !body.lastName) {
     return {
       status: 400,
-      body: { success: false, error: { code: 'VALIDATION_ERROR', message: 'Missing required fields', details: [] } } as T,
+      body: {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Missing required fields', details: [] },
+      } as T,
     };
   }
 
@@ -281,7 +293,10 @@ function handleLogin<T>(body: Record<string, unknown>): { status: number; body: 
   if (!body.email || !body.password) {
     return {
       status: 400,
-      body: { success: false, error: { code: 'VALIDATION_ERROR', message: 'Email and password required' } } as T,
+      body: {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Email and password required' },
+      } as T,
     };
   }
 
@@ -292,7 +307,10 @@ function handleLogin<T>(body: Record<string, unknown>): { status: number; body: 
   if (!user) {
     return {
       status: 401,
-      body: { success: false, error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' } } as T,
+      body: {
+        success: false,
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' },
+      } as T,
     };
   }
 
@@ -333,15 +351,24 @@ function handleRefresh<T>(body: Record<string, unknown>): { status: number; body
 
   return {
     status: 200,
-    body: { success: true, data: { accessToken: newAccessToken, refreshToken: newRefreshToken, expiresIn: 3600 } } as T,
+    body: {
+      success: true,
+      data: { accessToken: newAccessToken, refreshToken: newRefreshToken, expiresIn: 3600 },
+    } as T,
   };
 }
 
-function handleCreateJob<T>(body: Record<string, unknown>, userId: string): { status: number; body: T } {
+function handleCreateJob<T>(
+  body: Record<string, unknown>,
+  userId: string
+): { status: number; body: T } {
   if (!body.title || !body.description || !body.budget) {
     return {
       status: 400,
-      body: { success: false, error: { code: 'VALIDATION_ERROR', message: 'Missing required fields' } } as T,
+      body: {
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Missing required fields' },
+      } as T,
     };
   }
 
@@ -371,12 +398,19 @@ function handleListJobs<T>(): { status: number; body: T } {
 function handleGetJob<T>(jobId: string): { status: number; body: T } {
   const job = mockDb.jobs.get(jobId);
   if (!job) {
-    return { status: 404, body: { success: false, error: { code: 'NOT_FOUND', message: 'Job not found' } } as T };
+    return {
+      status: 404,
+      body: { success: false, error: { code: 'NOT_FOUND', message: 'Job not found' } } as T,
+    };
   }
   return { status: 200, body: { success: true, data: job } as T };
 }
 
-function handleUpdateJob<T>(jobId: string, body: Record<string, unknown>, userId: string): { status: number; body: T } {
+function handleUpdateJob<T>(
+  jobId: string,
+  body: Record<string, unknown>,
+  userId: string
+): { status: number; body: T } {
   const job = mockDb.jobs.get(jobId);
   if (!job) {
     return { status: 404, body: { success: false, error: { code: 'NOT_FOUND' } } as T };
@@ -401,7 +435,10 @@ function handleDeleteJob<T>(jobId: string, userId: string): { status: number; bo
   return { status: 200, body: { success: true } as T };
 }
 
-function handleCreateProposal<T>(body: Record<string, unknown>, userId: string): { status: number; body: T } {
+function handleCreateProposal<T>(
+  body: Record<string, unknown>,
+  userId: string
+): { status: number; body: T } {
   if (!body.jobId || !body.coverLetter || !body.bidAmount) {
     return { status: 400, body: { success: false, error: { code: 'VALIDATION_ERROR' } } as T };
   }
@@ -436,7 +473,16 @@ function handleAcceptProposal<T>(proposalId: string, userId: string): { status: 
     return { status: 403, body: { success: false, error: { code: 'FORBIDDEN' } } as T };
   }
   if (proposal.status !== 'PENDING') {
-    return { status: 400, body: { success: false, error: { code: 'INVALID_STATUS', message: `Cannot accept proposal in ${proposal.status} status` } } as T };
+    return {
+      status: 400,
+      body: {
+        success: false,
+        error: {
+          code: 'INVALID_STATUS',
+          message: `Cannot accept proposal in ${proposal.status} status`,
+        },
+      } as T,
+    };
   }
 
   proposal.status = 'ACCEPTED';
@@ -476,7 +522,10 @@ function handleRejectProposal<T>(proposalId: string, userId: string): { status: 
   return { status: 200, body: { success: true, data: proposal } as T };
 }
 
-function handleCreateContract<T>(body: Record<string, unknown>, userId: string): { status: number; body: T } {
+function handleCreateContract<T>(
+  body: Record<string, unknown>,
+  userId: string
+): { status: number; body: T } {
   if (!body.jobId || !body.freelancerId || !body.amount) {
     return { status: 400, body: { success: false, error: { code: 'VALIDATION_ERROR' } } as T };
   }
@@ -505,7 +554,11 @@ function handleGetContract<T>(contractId: string): { status: number; body: T } {
   return { status: 200, body: { success: true, data: contract } as T };
 }
 
-function handleCreateMilestone<T>(contractId: string, body: Record<string, unknown>, userId: string): { status: number; body: T } {
+function handleCreateMilestone<T>(
+  contractId: string,
+  body: Record<string, unknown>,
+  userId: string
+): { status: number; body: T } {
   const contract = mockDb.contracts.get(contractId);
   if (!contract) {
     return { status: 404, body: { success: false, error: { code: 'NOT_FOUND' } } as T };
@@ -522,7 +575,7 @@ function handleCreateMilestone<T>(contractId: string, body: Record<string, unkno
     amount: body.amount,
     dueDate: body.dueDate,
     status: 'PENDING',
-    order: body.order ?? (mockDb.milestones.size + 1),
+    order: body.order ?? mockDb.milestones.size + 1,
     createdAt: new Date(),
   };
 
@@ -530,7 +583,10 @@ function handleCreateMilestone<T>(contractId: string, body: Record<string, unkno
   return { status: 201, body: { success: true, data: milestone } as T };
 }
 
-function handleCompleteContract<T>(contractId: string, userId: string): { status: number; body: T } {
+function handleCompleteContract<T>(
+  contractId: string,
+  userId: string
+): { status: number; body: T } {
   const contract = mockDb.contracts.get(contractId);
   if (!contract) {
     return { status: 404, body: { success: false, error: { code: 'NOT_FOUND' } } as T };
@@ -545,7 +601,10 @@ function handleCompleteContract<T>(contractId: string, userId: string): { status
   return { status: 200, body: { success: true, data: contract } as T };
 }
 
-function handleAddPaymentMethod<T>(body: Record<string, unknown>, userId: string): { status: number; body: T } {
+function handleAddPaymentMethod<T>(
+  body: Record<string, unknown>,
+  userId: string
+): { status: number; body: T } {
   if (!body.stripePaymentMethodId) {
     return { status: 400, body: { success: false, error: { code: 'VALIDATION_ERROR' } } as T };
   }
@@ -572,7 +631,10 @@ function handleListPaymentMethods<T>(userId: string): { status: number; body: T 
   return { status: 200, body: { success: true, data: methods } as T };
 }
 
-function handleRemovePaymentMethod<T>(methodId: string, userId: string): { status: number; body: T } {
+function handleRemovePaymentMethod<T>(
+  methodId: string,
+  userId: string
+): { status: number; body: T } {
   const method = mockDb.paymentMethods.get(methodId);
   if (!method) {
     return { status: 404, body: { success: false, error: { code: 'NOT_FOUND' } } as T };
@@ -584,7 +646,10 @@ function handleRemovePaymentMethod<T>(methodId: string, userId: string): { statu
   return { status: 200, body: { success: true } as T };
 }
 
-function handleFundEscrow<T>(body: Record<string, unknown>, userId: string): { status: number; body: T } {
+function handleFundEscrow<T>(
+  body: Record<string, unknown>,
+  userId: string
+): { status: number; body: T } {
   if (!body.contractId || !body.amount) {
     return { status: 400, body: { success: false, error: { code: 'VALIDATION_ERROR' } } as T };
   }
@@ -603,7 +668,10 @@ function handleFundEscrow<T>(body: Record<string, unknown>, userId: string): { s
   return { status: 201, body: { success: true, data: escrow } as T };
 }
 
-function handleReleaseEscrow<T>(body: Record<string, unknown>, userId: string): { status: number; body: T } {
+function handleReleaseEscrow<T>(
+  body: Record<string, unknown>,
+  userId: string
+): { status: number; body: T } {
   if (!body.escrowId) {
     return { status: 400, body: { success: false, error: { code: 'VALIDATION_ERROR' } } as T };
   }
@@ -621,7 +689,10 @@ function handleReleaseEscrow<T>(body: Record<string, unknown>, userId: string): 
   return { status: 200, body: { success: true, data: escrow } as T };
 }
 
-function handleRefund<T>(body: Record<string, unknown>, _userId: string): { status: number; body: T } {
+function handleRefund<T>(
+  body: Record<string, unknown>,
+  _userId: string
+): { status: number; body: T } {
   if (!body.paymentId) {
     return { status: 400, body: { success: false, error: { code: 'VALIDATION_ERROR' } } as T };
   }
@@ -629,7 +700,10 @@ function handleRefund<T>(body: Record<string, unknown>, _userId: string): { stat
   const refundId = `refund_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   return {
     status: 200,
-    body: { success: true, data: { id: refundId, paymentId: body.paymentId, amount: body.amount, status: 'SUCCEEDED' } } as T,
+    body: {
+      success: true,
+      data: { id: refundId, paymentId: body.paymentId, amount: body.amount, status: 'SUCCEEDED' },
+    } as T,
   };
 }
 
@@ -641,9 +715,24 @@ export function setupIntegrationTests(): TestContext {
   const apiUrl = 'http://localhost:3001';
 
   const users = {
-    admin: createTestUser({ email: 'admin@skillancer.test', role: 'ADMIN', firstName: 'Admin', lastName: 'User' }),
-    client: createTestUser({ email: 'client@skillancer.test', role: 'CLIENT', firstName: 'Client', lastName: 'User' }),
-    freelancer: createTestUser({ email: 'freelancer@skillancer.test', role: 'FREELANCER', firstName: 'Freelancer', lastName: 'User' }),
+    admin: createTestUser({
+      email: 'admin@skillancer.test',
+      role: 'ADMIN',
+      firstName: 'Admin',
+      lastName: 'User',
+    }),
+    client: createTestUser({
+      email: 'client@skillancer.test',
+      role: 'CLIENT',
+      firstName: 'Client',
+      lastName: 'User',
+    }),
+    freelancer: createTestUser({
+      email: 'freelancer@skillancer.test',
+      role: 'FREELANCER',
+      firstName: 'Freelancer',
+      lastName: 'User',
+    }),
   };
 
   const headers = (user: TestUser) => ({

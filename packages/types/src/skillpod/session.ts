@@ -5,11 +5,7 @@
 
 import { z } from 'zod';
 
-import {
-  uuidSchema,
-  dateSchema,
-  timestampsSchema,
-} from '../common/base';
+import { uuidSchema, dateSchema, timestampsSchema } from '../common/base';
 
 // =============================================================================
 // Pod Session Enums
@@ -32,24 +28,18 @@ export type PodSessionStatus = z.infer<typeof podSessionStatusSchema>;
 /**
  * Connection protocol
  */
-export const connectionProtocolSchema = z.enum([
-  'WEBRTC',
-  'RDP',
-  'VNC',
-  'SSH',
-  'SPICE',
-]);
+export const connectionProtocolSchema = z.enum(['WEBRTC', 'RDP', 'VNC', 'SSH', 'SPICE']);
 export type ConnectionProtocol = z.infer<typeof connectionProtocolSchema>;
 
 /**
  * Activity level categories
  */
 export const activityLevelSchema = z.enum([
-  'HIGH',     // 80-100%
-  'MEDIUM',   // 50-79%
-  'LOW',      // 20-49%
-  'IDLE',     // <20%
-  'AWAY',     // No activity detected
+  'HIGH', // 80-100%
+  'MEDIUM', // 50-79%
+  'LOW', // 20-49%
+  'IDLE', // <20%
+  'AWAY', // No activity detected
 ]);
 export type ActivityLevel = z.infer<typeof activityLevelSchema>;
 
@@ -67,15 +57,17 @@ export const sessionConnectionSchema = z.object({
   clientDevice: z.enum(['DESKTOP', 'TABLET', 'MOBILE', 'UNKNOWN']).default('UNKNOWN'),
   clientOs: z.string().optional(),
   clientBrowser: z.string().optional(),
-  
+
   // Connection quality
   latencyMs: z.number().int().nonnegative().optional(),
   bandwidthMbps: z.number().nonnegative().optional(),
   packetLossPercent: z.number().min(0).max(100).optional(),
-  resolution: z.object({
-    width: z.number().int().positive(),
-    height: z.number().int().positive(),
-  }).optional(),
+  resolution: z
+    .object({
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    })
+    .optional(),
   fps: z.number().int().positive().optional(),
 });
 export type SessionConnection = z.infer<typeof sessionConnectionSchema>;
@@ -87,26 +79,26 @@ export const activitySnapshotSchema = z.object({
   id: uuidSchema,
   sessionId: uuidSchema,
   timestamp: dateSchema,
-  
+
   // Activity metrics
   keystrokes: z.number().int().nonnegative().default(0),
   mouseClicks: z.number().int().nonnegative().default(0),
   mouseMovements: z.number().int().nonnegative().default(0),
   scrollEvents: z.number().int().nonnegative().default(0),
-  
+
   // Activity score (0-100)
   activityScore: z.number().int().min(0).max(100),
   activityLevel: activityLevelSchema,
-  
+
   // Screenshot (if enabled)
   screenshotUrl: z.string().url().optional(),
   screenshotThumbnailUrl: z.string().url().optional(),
   screenshotBlurredUrl: z.string().url().optional(), // Privacy option
-  
+
   // Active applications (if tracking enabled)
   activeWindow: z.string().optional(),
   activeApplication: z.string().optional(),
-  
+
   // System metrics
   cpuUsagePercent: z.number().min(0).max(100).optional(),
   memoryUsagePercent: z.number().min(0).max(100).optional(),
@@ -123,11 +115,11 @@ export const sessionTimeEntrySchema = z.object({
   startTime: dateSchema,
   endTime: dateSchema,
   durationMinutes: z.number().int().positive(),
-  
+
   // Activity summary
   averageActivityScore: z.number().int().min(0).max(100),
   activityLevel: activityLevelSchema,
-  
+
   // Billing
   hourlyRate: z.number().nonnegative(),
   amount: z.number().nonnegative(),
@@ -146,59 +138,61 @@ export type SessionTimeEntry = z.infer<typeof sessionTimeEntrySchema>;
  */
 export const podSessionSchema = z.object({
   id: uuidSchema,
-  
+
   // Context
   podId: uuidSchema,
   userId: uuidSchema,
   tenantId: uuidSchema.optional(),
   contractId: uuidSchema.optional(),
-  
+
   // Status
   status: podSessionStatusSchema,
   statusMessage: z.string().max(500).optional(),
-  
+
   // Connection
   connection: sessionConnectionSchema,
-  
+
   // Timing
   startedAt: dateSchema,
   endedAt: dateSchema.optional(),
   lastActivityAt: dateSchema.optional(),
   lastHeartbeatAt: dateSchema.optional(),
-  
+
   // Duration
   totalDurationMinutes: z.number().int().nonnegative().default(0),
   activeDurationMinutes: z.number().int().nonnegative().default(0),
   idleDurationMinutes: z.number().int().nonnegative().default(0),
-  
+
   // Activity summary
   averageActivityScore: z.number().int().min(0).max(100).optional(),
   activityLevel: activityLevelSchema.optional(),
   totalSnapshots: z.number().int().nonnegative().default(0),
-  
+
   // Aggregated metrics
   totalKeystrokes: z.number().int().nonnegative().default(0),
   totalMouseClicks: z.number().int().nonnegative().default(0),
-  
+
   // Time entries (for billing)
   timeEntries: z.array(sessionTimeEntrySchema).optional(),
-  
+
   // Billing
   hourlyRate: z.number().nonnegative().optional(),
   totalCost: z.number().nonnegative().default(0),
   billableMinutes: z.number().int().nonnegative().default(0),
-  
+
   // End reason
-  endReason: z.enum([
-    'USER_ENDED',
-    'IDLE_TIMEOUT',
-    'MAX_DURATION',
-    'POD_STOPPED',
-    'CONNECTION_LOST',
-    'ERROR',
-    'ADMIN_TERMINATED',
-  ]).optional(),
-  
+  endReason: z
+    .enum([
+      'USER_ENDED',
+      'IDLE_TIMEOUT',
+      'MAX_DURATION',
+      'POD_STOPPED',
+      'CONNECTION_LOST',
+      'ERROR',
+      'ADMIN_TERMINATED',
+    ])
+    .optional(),
+
   ...timestampsSchema.shape,
 });
 export type PodSession = z.infer<typeof podSessionSchema>;
@@ -214,10 +208,12 @@ export const startPodSessionSchema = z.object({
   podId: uuidSchema,
   contractId: uuidSchema.optional(),
   protocol: connectionProtocolSchema.default('WEBRTC'),
-  resolution: z.object({
-    width: z.number().int().positive(),
-    height: z.number().int().positive(),
-  }).optional(),
+  resolution: z
+    .object({
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    })
+    .optional(),
 });
 export type StartPodSession = z.infer<typeof startPodSessionSchema>;
 
@@ -269,21 +265,21 @@ export const podSessionStatsSchema = z.object({
   userId: uuidSchema.optional(),
   podId: uuidSchema.optional(),
   contractId: uuidSchema.optional(),
-  
+
   // Period
   periodStart: dateSchema,
   periodEnd: dateSchema,
-  
+
   // Session counts
   totalSessions: z.number().int().nonnegative(),
   completedSessions: z.number().int().nonnegative(),
-  
+
   // Time totals
   totalMinutes: z.number().int().nonnegative(),
   activeMinutes: z.number().int().nonnegative(),
   idleMinutes: z.number().int().nonnegative(),
   billableMinutes: z.number().int().nonnegative(),
-  
+
   // Activity
   averageActivityScore: z.number().int().min(0).max(100),
   activityDistribution: z.object({
@@ -292,7 +288,7 @@ export const podSessionStatsSchema = z.object({
     low: z.number().int().nonnegative(),
     idle: z.number().int().nonnegative(),
   }),
-  
+
   // Cost
   totalCost: z.number().nonnegative(),
 });

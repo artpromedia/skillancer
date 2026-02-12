@@ -589,4 +589,3 @@ export async function setupMarketActivityScheduler(
 
   await queue.close();
 }
-

@@ -238,4 +238,3 @@ export interface ClientSyncResult {
   linked: boolean;
   clientId: string;
 }
-

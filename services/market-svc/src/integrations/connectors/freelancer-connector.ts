@@ -561,4 +561,3 @@ const freelancerConnector = new FreelancerConnector();
 export function getFreelancerConnector(): FreelancerConnector {
   return freelancerConnector;
 }
-

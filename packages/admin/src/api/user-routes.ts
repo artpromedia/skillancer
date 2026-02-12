@@ -56,7 +56,9 @@ export function createUserRoutes(config: UserRoutesConfig): Router {
           createdBefore: createdBefore ? new Date(createdBefore as string) : undefined,
           limit: limit ? Number.parseInt(limit as string) : undefined,
           page: offset
-            ? Math.floor(Number.parseInt(offset as string) / (limit ? Number.parseInt(limit as string) : 20)) + 1
+            ? Math.floor(
+                Number.parseInt(offset as string) / (limit ? Number.parseInt(limit as string) : 20)
+              ) + 1
             : undefined,
         },
         adminId

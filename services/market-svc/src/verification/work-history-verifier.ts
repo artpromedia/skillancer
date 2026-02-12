@@ -737,4 +737,3 @@ export function getWorkHistoryVerifier(): WorkHistoryVerifier {
   }
   return verifierInstance;
 }
-

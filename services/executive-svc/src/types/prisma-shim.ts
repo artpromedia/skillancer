@@ -72,31 +72,13 @@ export type ReferenceRelationship =
   | 'BOARD_MEMBER'
   | 'INVESTOR';
 
-export type ReferenceStatus =
-  | 'PENDING'
-  | 'REQUESTED'
-  | 'COMPLETED'
-  | 'DECLINED'
-  | 'EXPIRED';
+export type ReferenceStatus = 'PENDING' | 'REQUESTED' | 'COMPLETED' | 'DECLINED' | 'EXPIRED';
 
-export type InterviewType =
-  | 'SCREENING'
-  | 'COMPETENCY'
-  | 'FINAL';
+export type InterviewType = 'SCREENING' | 'COMPETENCY' | 'FINAL';
 
-export type InterviewStatus =
-  | 'SCHEDULED'
-  | 'COMPLETED'
-  | 'NO_SHOW'
-  | 'RESCHEDULED'
-  | 'CANCELLED';
+export type InterviewStatus = 'SCHEDULED' | 'COMPLETED' | 'NO_SHOW' | 'RESCHEDULED' | 'CANCELLED';
 
-export type InterviewRecommendation =
-  | 'STRONG_YES'
-  | 'YES'
-  | 'MAYBE'
-  | 'NO'
-  | 'STRONG_NO';
+export type InterviewRecommendation = 'STRONG_YES' | 'YES' | 'MAYBE' | 'NO' | 'STRONG_NO';
 
 export type EngagementStatus =
   | 'PROPOSAL'
@@ -108,17 +90,9 @@ export type EngagementStatus =
   | 'COMPLETED'
   | 'TERMINATED';
 
-export type BillingModel =
-  | 'RETAINER'
-  | 'HOURLY'
-  | 'HYBRID'
-  | 'PROJECT';
+export type BillingModel = 'RETAINER' | 'HOURLY' | 'HYBRID' | 'PROJECT';
 
-export type EngagementBillingCycle =
-  | 'WEEKLY'
-  | 'BI_WEEKLY'
-  | 'MONTHLY'
-  | 'QUARTERLY';
+export type EngagementBillingCycle = 'WEEKLY' | 'BI_WEEKLY' | 'MONTHLY' | 'QUARTERLY';
 
 export type ExecutiveTimeCategory =
   | 'ADVISORY'
@@ -129,19 +103,9 @@ export type ExecutiveTimeCategory =
   | 'TRAVEL'
   | 'OTHER';
 
-export type TimeEntryStatus =
-  | 'PENDING'
-  | 'SUBMITTED'
-  | 'APPROVED'
-  | 'REJECTED'
-  | 'INVOICED';
+export type TimeEntryStatus = 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'INVOICED';
 
-export type InitiativeStatus =
-  | 'PLANNED'
-  | 'IN_PROGRESS'
-  | 'BLOCKED'
-  | 'COMPLETED'
-  | 'CANCELLED';
+export type InitiativeStatus = 'PLANNED' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
 
 export type OKRStatus =
   | 'NOT_STARTED'
@@ -151,19 +115,9 @@ export type OKRStatus =
   | 'ACHIEVED'
   | 'CANCELLED';
 
-export type RACIRole =
-  | 'RESPONSIBLE'
-  | 'ACCOUNTABLE'
-  | 'CONSULTED'
-  | 'INFORMED';
+export type RACIRole = 'RESPONSIBLE' | 'ACCOUNTABLE' | 'CONSULTED' | 'INFORMED';
 
-export type PRDStatus =
-  | 'DRAFT'
-  | 'REVIEW'
-  | 'APPROVED'
-  | 'IN_DEVELOPMENT'
-  | 'SHIPPED'
-  | 'ARCHIVED';
+export type PRDStatus = 'DRAFT' | 'REVIEW' | 'APPROVED' | 'IN_DEVELOPMENT' | 'SHIPPED' | 'ARCHIVED';
 
 export type PrioritizationFramework =
   | 'RICE'

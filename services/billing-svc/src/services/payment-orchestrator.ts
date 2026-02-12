@@ -680,4 +680,3 @@ export function initializePaymentOrchestrator(): PaymentOrchestrator {
   orchestrator = new PaymentOrchestrator();
   return orchestrator;
 }
-

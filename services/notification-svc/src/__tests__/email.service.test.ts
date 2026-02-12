@@ -107,11 +107,10 @@ describe('EmailService', () => {
         { statusCode: 202, headers: { 'x-message-id': 'msg-456' } },
       ]);
 
-      const result = await emailService.sendTemplatedEmail(
-        'test@example.com',
-        'WELCOME',
-        { userName: 'John', actionUrl: 'https://example.com' }
-      );
+      const result = await emailService.sendTemplatedEmail('test@example.com', 'WELCOME', {
+        userName: 'John',
+        actionUrl: 'https://example.com',
+      });
 
       expect(result.success).toBe(true);
       expect(sgMail.default.send).toHaveBeenCalledWith(

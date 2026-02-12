@@ -865,4 +865,3 @@ export function getPlatformConnectorService(): PlatformConnectorService {
   }
   return platformConnectorService;
 }
-

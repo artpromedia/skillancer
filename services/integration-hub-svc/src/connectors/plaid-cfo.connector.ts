@@ -518,4 +518,3 @@ interface PlaidInstitution {
 }
 
 export const plaidCFOConnector = new PlaidCFOConnector();
-

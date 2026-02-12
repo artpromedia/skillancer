@@ -427,4 +427,3 @@ export class NotificationError extends Error {
     this.name = 'NotificationError';
   }
 }
-

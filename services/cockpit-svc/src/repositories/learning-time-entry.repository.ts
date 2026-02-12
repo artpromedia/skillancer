@@ -114,4 +114,3 @@ export class LearningTimeEntryRepository {
     return result._sum.activeMinutes ?? 0;
   }
 }
-

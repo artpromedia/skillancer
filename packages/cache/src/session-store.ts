@@ -331,10 +331,7 @@ export class SessionStore {
    * @param currentSessionId - Session to keep
    * @returns Number of sessions deleted
    */
-  async deleteOtherUserSessions(
-    userId: string,
-    currentSessionId: string
-  ): Promise<number> {
+  async deleteOtherUserSessions(userId: string, currentSessionId: string): Promise<number> {
     const sessionIds = await this.getUserSessions(userId);
     const toDelete = sessionIds.filter((id) => id !== currentSessionId);
 
@@ -396,13 +393,7 @@ export class SessionStore {
       let cursor = '0';
 
       do {
-        const [nextCursor, keys] = await this.redis.scan(
-          cursor,
-          'MATCH',
-          pattern,
-          'COUNT',
-          100
-        );
+        const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
         cursor = nextCursor;
 
         for (const key of keys) {
@@ -436,10 +427,7 @@ export class SessionStore {
   /**
    * Remove session from user's session tracking
    */
-  private async removeUserSession(
-    userId: string,
-    sessionId: string
-  ): Promise<void> {
+  private async removeUserSession(userId: string, sessionId: string): Promise<void> {
     const key = this.buildUserSessionsKey(userId);
     await this.redis.srem(key, sessionId);
   }
@@ -453,16 +441,10 @@ export class SessionStore {
     if (sessions.length <= this.maxSessionsPerUser) return;
 
     // Sort by creation time (oldest first)
-    sessions.sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
+    sessions.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     // Remove oldest sessions
-    const toRemove = sessions.slice(
-      0,
-      sessions.length - this.maxSessionsPerUser
-    );
+    const toRemove = sessions.slice(0, sessions.length - this.maxSessionsPerUser);
     for (const session of toRemove) {
       await this.delete(session.sessionId);
     }
@@ -527,7 +509,7 @@ export class SessionStore {
       lastActivityAt?: string;
       metadata?: Record<string, unknown>;
     };
-    
+
     const result: SessionData = {
       userId: parsed.userId,
       roles: parsed.roles,
@@ -535,23 +517,23 @@ export class SessionStore {
       createdAt: new Date(parsed.createdAt),
       expiresAt: new Date(parsed.expiresAt),
     };
-    
+
     if (parsed.tenantId !== undefined) {
       result.tenantId = parsed.tenantId;
     }
-    
+
     if (parsed.permissions !== undefined) {
       result.permissions = parsed.permissions;
     }
-    
+
     if (parsed.lastActivityAt !== undefined) {
       result.lastActivityAt = new Date(parsed.lastActivityAt);
     }
-    
+
     if (parsed.metadata !== undefined) {
       result.metadata = parsed.metadata;
     }
-    
+
     return result;
   }
 }

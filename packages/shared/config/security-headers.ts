@@ -23,7 +23,12 @@ export const CSP_DIRECTIVES = {
   styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
   fontSrc: ["'self'", 'https://fonts.gstatic.com'],
   imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
-  connectSrc: ["'self'", 'https://api.skillancer.com', 'wss://ws.skillancer.com', 'https://api.stripe.com'],
+  connectSrc: [
+    "'self'",
+    'https://api.skillancer.com',
+    'wss://ws.skillancer.com',
+    'https://api.stripe.com',
+  ],
   frameSrc: ["'self'", 'https://js.stripe.com'],
   objectSrc: ["'none'"],
   baseUri: ["'self'"],

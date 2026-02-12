@@ -557,4 +557,3 @@ export function getWritingAssistant(): WritingAssistant {
   }
   return assistant;
 }
-

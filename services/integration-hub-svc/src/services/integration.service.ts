@@ -529,4 +529,3 @@ export class IntegrationService {
 
 // Export singleton instance
 export const integrationService = new IntegrationService();
-

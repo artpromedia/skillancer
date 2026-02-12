@@ -234,7 +234,9 @@ export class TeamReunionService {
       where: { teamReunionId },
     });
 
-    const confirmedCount = members.filter((m: { status: string }) => m.status === 'CONFIRMED').length;
+    const confirmedCount = members.filter(
+      (m: { status: string }) => m.status === 'CONFIRMED'
+    ).length;
     const pendingCount = members.filter((m: { status: string }) => m.status === 'INVITED').length;
 
     let newStatus: TeamReunionStatus = TeamReunionStatus.PROPOSED;
@@ -355,11 +357,13 @@ export class TeamReunionService {
     const total = await this.prisma.teamReunionMember.count({ where: membershipWhere });
 
     return {
-      reunions: memberships.map((m: { teamReunion: unknown; role?: string; proposedRole?: string; status: string }) => ({
-        ...m.teamReunion as object,
-        userRole: m.role || m.proposedRole,
-        userStatus: m.status,
-      })),
+      reunions: memberships.map(
+        (m: { teamReunion: unknown; role?: string; proposedRole?: string; status: string }) => ({
+          ...(m.teamReunion as object),
+          userRole: m.role || m.proposedRole,
+          userStatus: m.status,
+        })
+      ),
       pagination: {
         page,
         limit,
@@ -452,8 +456,20 @@ export class TeamReunionService {
 
     type RelationshipWithUsers = {
       userId: string;
-      user: { id: string; firstName: string; lastName: string; avatarUrl?: string | null; profile?: { title?: string; skills?: string[] } | null };
-      relatedUser: { id: string; firstName: string; lastName: string; avatarUrl?: string | null; profile?: { title?: string; skills?: string[] } | null };
+      user: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        avatarUrl?: string | null;
+        profile?: { title?: string; skills?: string[] } | null;
+      };
+      relatedUser: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        avatarUrl?: string | null;
+        profile?: { title?: string; skills?: string[] } | null;
+      };
       relationshipType: string;
       strength: string;
       startDate: Date;

@@ -295,4 +295,3 @@ export class LinkedInAdsConnector extends BaseConnector {
 }
 
 export const linkedInAdsConnector = new LinkedInAdsConnector({});
-

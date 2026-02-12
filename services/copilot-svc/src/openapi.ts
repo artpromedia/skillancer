@@ -112,7 +112,10 @@ Authorization: Bearer <your-jwt-token>
             },
             confidence: { type: 'number', minimum: 0, maximum: 1 },
             factors: { type: 'array', items: { $ref: '#/components/schemas/RateFactor' } },
-            marketPosition: { type: 'string', enum: ['BELOW_MARKET', 'MARKET_RATE', 'ABOVE_MARKET', 'PREMIUM'] },
+            marketPosition: {
+              type: 'string',
+              enum: ['BELOW_MARKET', 'MARKET_RATE', 'ABOVE_MARKET', 'PREMIUM'],
+            },
             recommendation: { type: 'string' },
             createdAt: { type: 'string', format: 'date-time' },
           },
@@ -131,7 +134,10 @@ Authorization: Bearer <your-jwt-token>
           properties: {
             id: { type: 'string', format: 'uuid' },
             userId: { type: 'string', format: 'uuid' },
-            category: { type: 'string', enum: ['HEADLINE', 'SUMMARY', 'SKILLS', 'PORTFOLIO', 'EXPERIENCE'] },
+            category: {
+              type: 'string',
+              enum: ['HEADLINE', 'SUMMARY', 'SKILLS', 'PORTFOLIO', 'EXPERIENCE'],
+            },
             currentValue: { type: 'string' },
             suggestedValue: { type: 'string' },
             reason: { type: 'string' },
@@ -147,7 +153,10 @@ Authorization: Bearer <your-jwt-token>
             overallScore: { type: 'number', minimum: 0, maximum: 100 },
             completeness: { type: 'number', minimum: 0, maximum: 100 },
             effectiveness: { type: 'number', minimum: 0, maximum: 100 },
-            suggestions: { type: 'array', items: { $ref: '#/components/schemas/ProfileSuggestion' } },
+            suggestions: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/ProfileSuggestion' },
+            },
             strengths: { type: 'array', items: { type: 'string' } },
             weaknesses: { type: 'array', items: { type: 'string' } },
             analyzedAt: { type: 'string', format: 'date-time' },

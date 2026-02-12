@@ -236,9 +236,9 @@ describe('InvoiceService', () => {
     it('should throw when subscription not found', async () => {
       mockSubscriptionRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        service.getInvoicesForSubscription('nonexistent', 'user-001')
-      ).rejects.toThrow('Subscription not found');
+      await expect(service.getInvoicesForSubscription('nonexistent', 'user-001')).rejects.toThrow(
+        'Subscription not found'
+      );
     });
 
     it('should throw when subscription belongs to different user', async () => {
@@ -247,9 +247,9 @@ describe('InvoiceService', () => {
         userId: 'user-other',
       });
 
-      await expect(
-        service.getInvoicesForSubscription('sub-001', 'user-001')
-      ).rejects.toThrow('Unauthorized');
+      await expect(service.getInvoicesForSubscription('sub-001', 'user-001')).rejects.toThrow(
+        'Unauthorized'
+      );
     });
   });
 
@@ -288,9 +288,7 @@ describe('InvoiceService', () => {
         userId: 'user-other',
       });
 
-      await expect(service.getInvoiceById('inv-001', 'user-001')).rejects.toThrow(
-        'Unauthorized'
-      );
+      await expect(service.getInvoiceById('inv-001', 'user-001')).rejects.toThrow('Unauthorized');
     });
 
     it('should handle null dates correctly', async () => {
@@ -360,9 +358,9 @@ describe('InvoiceService', () => {
     it('should throw when invoice not found', async () => {
       mockInvoiceRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        service.getInvoiceDownloadUrl('nonexistent', 'user-001')
-      ).rejects.toThrow('Invoice not found');
+      await expect(service.getInvoiceDownloadUrl('nonexistent', 'user-001')).rejects.toThrow(
+        'Invoice not found'
+      );
     });
 
     it('should throw when PDF is not available from Stripe', async () => {
@@ -375,9 +373,9 @@ describe('InvoiceService', () => {
 
       mockStripeService.getInvoice.mockResolvedValue({ invoice_pdf: null });
 
-      await expect(
-        service.getInvoiceDownloadUrl('inv-001', 'user-001')
-      ).rejects.toThrow('PDF not available');
+      await expect(service.getInvoiceDownloadUrl('inv-001', 'user-001')).rejects.toThrow(
+        'PDF not available'
+      );
     });
 
     it('should throw Unauthorized when user does not own the invoice', async () => {
@@ -387,9 +385,9 @@ describe('InvoiceService', () => {
         userId: 'user-other',
       });
 
-      await expect(
-        service.getInvoiceDownloadUrl('inv-001', 'user-001')
-      ).rejects.toThrow('Unauthorized');
+      await expect(service.getInvoiceDownloadUrl('inv-001', 'user-001')).rejects.toThrow(
+        'Unauthorized'
+      );
     });
   });
 
@@ -443,16 +441,13 @@ describe('InvoiceService', () => {
         payment_intent: null,
       });
 
-      mockInvoiceRepository.update.mockResolvedValue(
-        createMockInvoice({ status: 'PAID' })
-      );
+      mockInvoiceRepository.update.mockResolvedValue(createMockInvoice({ status: 'PAID' }));
 
       await service.payInvoice('inv-001', 'user-001', 'pm_new_method');
 
-      expect(mockStripeService.updateInvoice).toHaveBeenCalledWith(
-        'in_test123',
-        { default_payment_method: 'pm_new_method' }
-      );
+      expect(mockStripeService.updateInvoice).toHaveBeenCalledWith('in_test123', {
+        default_payment_method: 'pm_new_method',
+      });
     });
 
     it('should return payment intent client secret when 3DS required', async () => {
@@ -493,9 +488,7 @@ describe('InvoiceService', () => {
         userId: 'user-001',
       });
 
-      await expect(service.payInvoice('inv-001', 'user-001')).rejects.toThrow(
-        'cannot be paid'
-      );
+      await expect(service.payInvoice('inv-001', 'user-001')).rejects.toThrow('cannot be paid');
     });
 
     it('should throw when invoice not found', async () => {
@@ -514,9 +507,7 @@ describe('InvoiceService', () => {
         userId: 'user-other',
       });
 
-      await expect(service.payInvoice('inv-001', 'user-001')).rejects.toThrow(
-        'Unauthorized'
-      );
+      await expect(service.payInvoice('inv-001', 'user-001')).rejects.toThrow('Unauthorized');
     });
   });
 
@@ -735,9 +726,9 @@ describe('InvoiceService', () => {
     it('should throw when subscription not found', async () => {
       mockSubscriptionRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        service.getUpcomingInvoice('nonexistent', 'user-001')
-      ).rejects.toThrow('Subscription not found');
+      await expect(service.getUpcomingInvoice('nonexistent', 'user-001')).rejects.toThrow(
+        'Subscription not found'
+      );
     });
 
     it('should throw Unauthorized for non-owner', async () => {
@@ -746,9 +737,9 @@ describe('InvoiceService', () => {
         userId: 'user-other',
       });
 
-      await expect(
-        service.getUpcomingInvoice('sub-001', 'user-001')
-      ).rejects.toThrow('Unauthorized');
+      await expect(service.getUpcomingInvoice('sub-001', 'user-001')).rejects.toThrow(
+        'Unauthorized'
+      );
     });
   });
 

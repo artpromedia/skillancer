@@ -27,7 +27,7 @@ export const Default: Story = {
     title: 'Card Title',
     description: 'Card description goes here.',
     children: (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         This is the card content. You can put any React elements here.
       </p>
     ),
@@ -60,11 +60,11 @@ export const WithActions: Story = {
     children: (
       <div className="space-y-2">
         <div className="flex justify-between">
-          <span className="text-sm text-muted-foreground">Status</span>
+          <span className="text-muted-foreground text-sm">Status</span>
           <span className="text-sm font-medium">Active</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-sm text-muted-foreground">Members</span>
+          <span className="text-muted-foreground text-sm">Members</span>
           <span className="text-sm font-medium">12</span>
         </div>
       </div>
@@ -78,7 +78,7 @@ export const Hoverable: Story = {
     description: 'This card has a hover effect.',
     hoverable: true,
     children: (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         Hover over this card to see the shadow effect.
       </p>
     ),
@@ -89,9 +89,7 @@ export const NoPadding: Story = {
   args: {
     title: 'Image Card',
     noPadding: true,
-    children: (
-      <div className="h-48 bg-gradient-to-br from-primary to-secondary rounded-b-lg" />
-    ),
+    children: <div className="from-primary to-secondary h-48 rounded-b-lg bg-gradient-to-br" />,
   },
 };
 
@@ -100,7 +98,7 @@ export const ContentOnly: Story = {
     children: (
       <div className="space-y-4">
         <h4 className="font-semibold">Custom Content</h4>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           This card has no title or description, just content.
         </p>
         <Button>Action</Button>
@@ -111,7 +109,7 @@ export const ContentOnly: Story = {
 
 export const CardGrid: Story = {
   render: () => (
-    <div className="grid grid-cols-2 gap-4 w-[600px]">
+    <div className="grid w-[600px] grid-cols-2 gap-4">
       <SkillancerCard title="Revenue" description="Monthly revenue">
         <p className="text-2xl font-bold">$12,345</p>
       </SkillancerCard>

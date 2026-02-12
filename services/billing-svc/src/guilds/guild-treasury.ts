@@ -439,4 +439,3 @@ export class GuildTreasuryService {
 }
 
 export const guildTreasuryService = new GuildTreasuryService();
-

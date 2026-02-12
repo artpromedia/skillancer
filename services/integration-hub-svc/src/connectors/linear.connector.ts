@@ -314,4 +314,3 @@ export class LinearConnector extends BaseConnector {
 }
 
 export const createLinearConnector = (config: LinearConfig) => new LinearConnector(config);
-

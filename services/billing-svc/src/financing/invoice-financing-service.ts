@@ -436,4 +436,3 @@ export function getInvoiceFinancingService(): InvoiceFinancingService {
   }
   return financingService;
 }
-

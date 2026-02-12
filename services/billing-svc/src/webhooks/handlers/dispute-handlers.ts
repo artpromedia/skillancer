@@ -707,4 +707,3 @@ function formatCurrency(amount: number, currency: string): string {
     currency: currency.toUpperCase(),
   });
 }
-

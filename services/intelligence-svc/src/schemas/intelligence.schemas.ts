@@ -70,27 +70,30 @@ export const UpdateOutcomeSchema = z.object({
 // PREDICTION SCHEMAS
 // =============================================================================
 
-export const RequestPredictionSchema = z.object({
-  engagementId: z.string().uuid().optional(),
-  freelancerId: z.string().uuid().optional(),
-  clientId: z.string().uuid().optional(),
-  predictionType: z.enum([
-    'SUCCESS_PROBABILITY',
-    'COMPLETION_TIME',
-    'BUDGET_VARIANCE',
-    'CLIENT_SATISFACTION',
-    'RISK_SCORE',
-  ]),
-  context: z.object({
-    skills: z.array(z.string().max(50)).max(20).optional(),
-    budget: z.number().positive().optional(),
-    duration: z.number().positive().optional(),
-    complexity: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
-  }).optional(),
-}).refine(
-  (data) => data.engagementId || data.freelancerId || data.clientId,
-  { message: 'At least one of engagementId, freelancerId, or clientId must be provided' }
-);
+export const RequestPredictionSchema = z
+  .object({
+    engagementId: z.string().uuid().optional(),
+    freelancerId: z.string().uuid().optional(),
+    clientId: z.string().uuid().optional(),
+    predictionType: z.enum([
+      'SUCCESS_PROBABILITY',
+      'COMPLETION_TIME',
+      'BUDGET_VARIANCE',
+      'CLIENT_SATISFACTION',
+      'RISK_SCORE',
+    ]),
+    context: z
+      .object({
+        skills: z.array(z.string().max(50)).max(20).optional(),
+        budget: z.number().positive().optional(),
+        duration: z.number().positive().optional(),
+        complexity: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
+      })
+      .optional(),
+  })
+  .refine((data) => data.engagementId || data.freelancerId || data.clientId, {
+    message: 'At least one of engagementId, freelancerId, or clientId must be provided',
+  });
 
 export const GetPredictionsQuerySchema = z.object({
   engagementId: z.string().uuid().optional(),
@@ -169,21 +172,28 @@ export const GenerateInsightReportSchema = z.object({
 export const GetAnalyticsQuerySchema = z.object({
   startDate: z.string().datetime(),
   endDate: z.string().datetime(),
-  metrics: z.array(z.enum([
-    'TOTAL_ENGAGEMENTS',
-    'SUCCESS_RATE',
-    'AVERAGE_DURATION',
-    'AVERAGE_BUDGET',
-    'CLIENT_SATISFACTION',
-    'ON_TIME_DELIVERY',
-    'REPEAT_CLIENT_RATE',
-  ])).min(1).max(10),
+  metrics: z
+    .array(
+      z.enum([
+        'TOTAL_ENGAGEMENTS',
+        'SUCCESS_RATE',
+        'AVERAGE_DURATION',
+        'AVERAGE_BUDGET',
+        'CLIENT_SATISFACTION',
+        'ON_TIME_DELIVERY',
+        'REPEAT_CLIENT_RATE',
+      ])
+    )
+    .min(1)
+    .max(10),
   groupBy: z.enum(['DAY', 'WEEK', 'MONTH']).optional().default('WEEK'),
-  filters: z.object({
-    skills: z.array(z.string().max(50)).max(10).optional(),
-    clients: z.array(z.string().uuid()).max(10).optional(),
-    freelancers: z.array(z.string().uuid()).max(10).optional(),
-  }).optional(),
+  filters: z
+    .object({
+      skills: z.array(z.string().max(50)).max(10).optional(),
+      clients: z.array(z.string().uuid()).max(10).optional(),
+      freelancers: z.array(z.string().uuid()).max(10).optional(),
+    })
+    .optional(),
 });
 
 // =============================================================================

@@ -8,7 +8,11 @@ import { PrismaClient, Prisma } from '@prisma/client';
  * - In development: reuses the same client across hot-reloads
  * - In production: creates a new client
  */
-export declare const prisma: PrismaClient<Prisma.PrismaClientOptions, never, import("@prisma/client/runtime/library").DefaultArgs>;
+export declare const prisma: PrismaClient<
+  Prisma.PrismaClientOptions,
+  never,
+  import('@prisma/client/runtime/library').DefaultArgs
+>;
 /**
  * Type-safe database client type
  */
@@ -16,7 +20,10 @@ export type DatabaseClient = typeof prisma;
 /**
  * Prisma transaction client type
  */
-export type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+export type TransactionClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
 /**
  * Re-export Prisma types and utilities
  */

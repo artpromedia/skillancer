@@ -654,4 +654,3 @@ export function getTransactionProcessor(): TransactionProcessor {
   }
   return transactionProcessorInstance;
 }
-

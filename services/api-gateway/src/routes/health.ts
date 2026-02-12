@@ -200,9 +200,15 @@ export function healthRoutes(
 
       // Categorize services
       const coreServiceNames = ['auth', 'market', 'skillpod', 'cockpit', 'billing', 'notification'];
-      const moatServiceNames = ['executive', 'financial', 'talent-graph', 'intelligence', 'copilot'];
+      const moatServiceNames = [
+        'executive',
+        'financial',
+        'talent-graph',
+        'intelligence',
+        'copilot',
+      ];
 
-      const checkService = async (route: typeof serviceRoutes[0]) => {
+      const checkService = async (route: (typeof serviceRoutes)[0]) => {
         const startTime = Date.now();
         try {
           const controller = new AbortController();

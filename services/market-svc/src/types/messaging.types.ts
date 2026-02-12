@@ -458,4 +458,3 @@ export interface AttachmentUploadOptions {
   maxSizeBytes?: number;
   allowedTypes?: string[];
 }
-

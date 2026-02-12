@@ -55,4 +55,3 @@ export type TransactionClient = Omit<
  */
 export { PrismaClient, Prisma };
 export type { Prisma as PrismaNamespace } from '@prisma/client';
-

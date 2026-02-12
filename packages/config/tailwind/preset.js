@@ -71,11 +71,11 @@ module.exports = {
         },
       },
       spacing: {
-        '4.5': '1.125rem',
-        '18': '4.5rem',
-        '22': '5.5rem',
-        '26': '6.5rem',
-        '30': '7.5rem',
+        4.5: '1.125rem',
+        18: '4.5rem',
+        22: '5.5rem',
+        26: '6.5rem',
+        30: '7.5rem',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -84,14 +84,23 @@ module.exports = {
         skillancer: '0.5rem',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: [
+          'Inter',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif',
+        ],
       },
       fontSize: {
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
       },
       boxShadow: {
         skillancer: '0 4px 6px -1px rgba(27, 54, 93, 0.1), 0 2px 4px -1px rgba(27, 54, 93, 0.06)',
-        'skillancer-lg': '0 10px 15px -3px rgba(27, 54, 93, 0.1), 0 4px 6px -2px rgba(27, 54, 93, 0.05)',
+        'skillancer-lg':
+          '0 10px 15px -3px rgba(27, 54, 93, 0.1), 0 4px 6px -2px rgba(27, 54, 93, 0.05)',
       },
       keyframes: {
         'accordion-down': {

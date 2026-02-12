@@ -218,4 +218,3 @@ export class WebhookToRealtimeBridge {
 
 // Singleton instance
 export const webhookToRealtimeBridge = new WebhookToRealtimeBridge();
-

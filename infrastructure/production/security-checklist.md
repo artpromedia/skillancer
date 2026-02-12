@@ -276,6 +276,6 @@ Complete this checklist before going live. All items must be verified and docume
 
 **Security Lead Approval:**
 
-Name: **********\_\_\_**********
-Date: **********\_\_\_**********
-Signature: ********\_\_\_********
+Name: \***\*\*\*\*\***\_\_\_\***\*\*\*\*\***
+Date: \***\*\*\*\*\***\_\_\_\***\*\*\*\*\***
+Signature: **\*\*\*\***\_\_\_**\*\*\*\***

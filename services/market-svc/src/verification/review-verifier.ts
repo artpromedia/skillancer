@@ -790,4 +790,3 @@ export function getReviewVerifier(): ReviewVerifier {
   }
   return verifierInstance;
 }
-

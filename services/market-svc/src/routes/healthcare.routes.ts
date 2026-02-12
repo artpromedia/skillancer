@@ -445,4 +445,3 @@ export const healthcareRouter = router({
 });
 
 export type HealthcareRouter = typeof healthcareRouter;
-

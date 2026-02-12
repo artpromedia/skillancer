@@ -86,19 +86,19 @@ export const StatusBadges: Story = {
   render: () => (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground w-24">Order Status:</span>
+        <span className="text-muted-foreground w-24 text-sm">Order Status:</span>
         <Badge variant="success">Completed</Badge>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground w-24">Task Status:</span>
+        <span className="text-muted-foreground w-24 text-sm">Task Status:</span>
         <Badge variant="warning">In Progress</Badge>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground w-24">Issue:</span>
+        <span className="text-muted-foreground w-24 text-sm">Issue:</span>
         <Badge variant="destructive">Critical</Badge>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground w-24">Priority:</span>
+        <span className="text-muted-foreground w-24 text-sm">Priority:</span>
         <Badge variant="info">Medium</Badge>
       </div>
     </div>
