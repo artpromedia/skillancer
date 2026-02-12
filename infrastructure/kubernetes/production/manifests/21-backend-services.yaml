@@ -500,3 +500,363 @@ spec:
   ports:
     - port: 3012
       targetPort: 3012
+
+---
+# =============================================================================
+# Executive Service
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: executive-svc
+  namespace: skillancer
+  labels:
+    app: executive-svc
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: executive-svc
+  template:
+    metadata:
+      labels:
+        app: executive-svc
+    spec:
+      containers:
+        - name: executive-svc
+          image: skillancer/executive-svc:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3007
+          env:
+            - name: PORT
+              value: '3007'
+            - name: HOST
+              value: '0.0.0.0'
+          envFrom:
+            - configMapRef:
+                name: skillancer-config
+            - secretRef:
+                name: skillancer-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3007
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3007
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: executive-svc
+  namespace: skillancer
+spec:
+  type: ClusterIP
+  selector:
+    app: executive-svc
+  ports:
+    - port: 3007
+      targetPort: 3007
+
+---
+# =============================================================================
+# Financial Service
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: financial-svc
+  namespace: skillancer
+  labels:
+    app: financial-svc
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: financial-svc
+  template:
+    metadata:
+      labels:
+        app: financial-svc
+    spec:
+      containers:
+        - name: financial-svc
+          image: skillancer/financial-svc:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3008
+          env:
+            - name: PORT
+              value: '3008'
+            - name: HOST
+              value: '0.0.0.0'
+          envFrom:
+            - configMapRef:
+                name: skillancer-config
+            - secretRef:
+                name: skillancer-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3008
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3008
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: financial-svc
+  namespace: skillancer
+spec:
+  type: ClusterIP
+  selector:
+    app: financial-svc
+  ports:
+    - port: 3008
+      targetPort: 3008
+
+---
+# =============================================================================
+# Talent Graph Service
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: talent-graph-svc
+  namespace: skillancer
+  labels:
+    app: talent-graph-svc
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: talent-graph-svc
+  template:
+    metadata:
+      labels:
+        app: talent-graph-svc
+    spec:
+      containers:
+        - name: talent-graph-svc
+          image: skillancer/talent-graph-svc:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3009
+          env:
+            - name: PORT
+              value: '3009'
+            - name: HOST
+              value: '0.0.0.0'
+          envFrom:
+            - configMapRef:
+                name: skillancer-config
+            - secretRef:
+                name: skillancer-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3009
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3009
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: talent-graph-svc
+  namespace: skillancer
+spec:
+  type: ClusterIP
+  selector:
+    app: talent-graph-svc
+  ports:
+    - port: 3009
+      targetPort: 3009
+
+---
+# =============================================================================
+# Intelligence Service
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intelligence-svc
+  namespace: skillancer
+  labels:
+    app: intelligence-svc
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: intelligence-svc
+  template:
+    metadata:
+      labels:
+        app: intelligence-svc
+    spec:
+      containers:
+        - name: intelligence-svc
+          image: skillancer/intelligence-svc:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3010
+          env:
+            - name: PORT
+              value: '3010'
+            - name: HOST
+              value: '0.0.0.0'
+          envFrom:
+            - configMapRef:
+                name: skillancer-config
+            - secretRef:
+                name: skillancer-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3010
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3010
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: intelligence-svc
+  namespace: skillancer
+spec:
+  type: ClusterIP
+  selector:
+    app: intelligence-svc
+  ports:
+    - port: 3010
+      targetPort: 3010
+
+---
+# =============================================================================
+# Copilot Service
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: copilot-svc
+  namespace: skillancer
+  labels:
+    app: copilot-svc
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: copilot-svc
+  template:
+    metadata:
+      labels:
+        app: copilot-svc
+    spec:
+      containers:
+        - name: copilot-svc
+          image: skillancer/copilot-svc:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3011
+          env:
+            - name: PORT
+              value: '3011'
+            - name: HOST
+              value: '0.0.0.0'
+          envFrom:
+            - configMapRef:
+                name: skillancer-config
+            - secretRef:
+                name: skillancer-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3011
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3011
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: copilot-svc
+  namespace: skillancer
+spec:
+  type: ClusterIP
+  selector:
+    app: copilot-svc
+  ports:
+    - port: 3011
+      targetPort: 3011

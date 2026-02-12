@@ -80,7 +80,7 @@ jobs:
           INPUT_SERVICES="${{ github.event.inputs.services }}"
           if [[ "$INPUT_SERVICES" == "all" ]] || [[ -z "$INPUT_SERVICES" ]]; then
             # Only deploy core production-ready services
-            SERVICES='["api-gateway","auth-svc","market-svc","skillpod-svc","cockpit-svc","billing-svc","notification-svc","audit-svc"]'
+            SERVICES='["api-gateway","auth-svc","market-svc","skillpod-svc","cockpit-svc","billing-svc","notification-svc","audit-svc","executive-svc","financial-svc","intelligence-svc","talent-graph-svc","copilot-svc"]'
           else
             SERVICES=$(echo "$INPUT_SERVICES" | jq -R 'split(",") | map(gsub(" "; ""))')
           fi

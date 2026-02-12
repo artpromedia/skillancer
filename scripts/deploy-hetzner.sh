@@ -42,6 +42,11 @@ ALL_SERVICES=(
   "billing-svc"
   "notification-svc"
   "audit-svc"
+  "executive-svc"
+  "financial-svc"
+  "intelligence-svc"
+  "talent-graph-svc"
+  "copilot-svc"
 )
 
 # =============================================================================
