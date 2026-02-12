@@ -29,31 +29,29 @@ export class ExecutiveEngagementService {
     }
 
     // Check capacity
-    if (executiveProfile.currentClientCount >= executiveProfile.maxClients) {
+    if (executiveProfile.currentClients >= executiveProfile.maxClients) {
       throw new Error('Executive has reached maximum client capacity');
     }
 
     const engagement = await this.prisma.executiveEngagement.create({
       data: {
-        executiveProfileId: input.executiveProfileId,
+        executiveId: input.executiveProfileId,
         clientTenantId: input.clientTenantId,
-        clientUserId: input.clientUserId,
-        role: input.role,
+        clientContactId: input.clientUserId,
+        role: input.role as any,
         title: input.title,
         description: input.description,
         status: 'PROPOSAL',
         hoursPerWeek: input.hoursPerWeek,
         startDate: input.startDate,
-        expectedEndDate: input.expectedEndDate,
+        endDate: input.expectedEndDate,
         monthlyRetainer: input.monthlyRetainer,
         hourlyRate: input.hourlyRate,
-        billingCycle: input.billingCycle || 'MONTHLY',
-        equityPercentage: input.equityPercentage,
-        objectives: input.objectives ? JSON.parse(JSON.stringify(input.objectives)) : null,
-        successMetrics: input.successMetrics ? JSON.parse(JSON.stringify(input.successMetrics)) : null,
+        billingCycle: (input.billingCycle || 'MONTHLY') as any,
+        scopeOfWork: input.objectives ? JSON.stringify(input.objectives) : null,
       },
       include: {
-        executiveProfile: {
+        executive: {
           include: {
             user: {
               select: {
@@ -63,21 +61,6 @@ export class ExecutiveEngagementService {
                 email: true,
               },
             },
-          },
-        },
-        clientTenant: {
-          select: {
-            id: true,
-            name: true,
-            logoUrl: true,
-          },
-        },
-        clientUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
           },
         },
       },
@@ -93,7 +76,7 @@ export class ExecutiveEngagementService {
     const engagement = await this.prisma.executiveEngagement.findUnique({
       where: { id },
       include: {
-        executiveProfile: {
+        executive: {
           include: {
             user: {
               select: {
@@ -106,23 +89,7 @@ export class ExecutiveEngagementService {
             },
           },
         },
-        clientTenant: {
-          select: {
-            id: true,
-            name: true,
-            logoUrl: true,
-            website: true,
-          },
-        },
-        clientUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        integrations: {
+        connectedIntegrations: {
           include: {
             integrationType: true,
           },
@@ -145,7 +112,7 @@ export class ExecutiveEngagementService {
    * Get engagements for an executive
    */
   async getExecutiveEngagements(executiveProfileId: string, status?: ExecutiveEngagementStatus) {
-    const where: any = { executiveProfileId };
+    const where: any = { executiveId: executiveProfileId };
 
     if (status) {
       where.status = status;
@@ -155,20 +122,6 @@ export class ExecutiveEngagementService {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        clientTenant: {
-          select: {
-            id: true,
-            name: true,
-            logoUrl: true,
-          },
-        },
-        clientUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
         milestones: {
           where: { status: { not: 'COMPLETED' } },
           orderBy: { dueDate: 'asc' },
@@ -194,7 +147,7 @@ export class ExecutiveEngagementService {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        executiveProfile: {
+        executive: {
           include: {
             user: {
               select: {
@@ -226,35 +179,29 @@ export class ExecutiveEngagementService {
       data: {
         title: input.title,
         description: input.description,
-        status: input.status,
+        status: input.status as any,
         hoursPerWeek: input.hoursPerWeek,
         endDate: input.endDate,
-        expectedEndDate: input.expectedEndDate,
         monthlyRetainer: input.monthlyRetainer,
         hourlyRate: input.hourlyRate,
-        billingCycle: input.billingCycle,
-        equityPercentage: input.equityPercentage,
-        objectives: input.objectives ? JSON.parse(JSON.stringify(input.objectives)) : undefined,
-        successMetrics: input.successMetrics ? JSON.parse(JSON.stringify(input.successMetrics)) : undefined,
-        workspaceConfig: input.workspaceConfig ? JSON.parse(JSON.stringify(input.workspaceConfig)) : undefined,
+        billingCycle: input.billingCycle as any,
         lastActivityAt: new Date(),
       },
       include: {
-        executiveProfile: true,
-        clientTenant: true,
+        executive: true,
       },
     });
 
     // Update executive's current client count if status changed
     if (input.status === 'ACTIVE') {
       await this.prisma.executiveProfile.update({
-        where: { id: engagement.executiveProfileId },
-        data: { currentClientCount: { increment: 1 } },
+        where: { id: engagement.executiveId },
+        data: { currentClients: { increment: 1 } },
       });
     } else if (input.status === 'COMPLETED' || input.status === 'TERMINATED') {
       await this.prisma.executiveProfile.update({
-        where: { id: engagement.executiveProfileId },
-        data: { currentClientCount: { decrement: 1 } },
+        where: { id: engagement.executiveId },
+        data: { currentClients: { decrement: 1 } },
       });
     }
 
@@ -269,17 +216,14 @@ export class ExecutiveEngagementService {
       where: { id },
       data: {
         status: 'ACTIVE',
-        approvalStatus: 'APPROVED',
-        approvedBy: { push: approverId },
-        approvedAt: new Date(),
         startDate: new Date(),
       },
     });
 
     // Update executive's current client count
     await this.prisma.executiveProfile.update({
-      where: { id: engagement.executiveProfileId },
-      data: { currentClientCount: { increment: 1 } },
+      where: { id: engagement.executiveId },
+      data: { currentClients: { increment: 1 } },
     });
 
     return engagement;
@@ -288,14 +232,15 @@ export class ExecutiveEngagementService {
   /**
    * Log time entry
    */
-  async logTimeEntry(input: ExecutiveTimeEntryInput) {
+  async logTimeEntry(input: ExecutiveTimeEntryInput & { executiveId: string }) {
     const timeEntry = await this.prisma.executiveTimeEntry.create({
       data: {
         engagementId: input.engagementId,
+        executiveId: input.executiveId,
         date: input.date,
         hours: input.hours,
-        description: input.description,
-        category: input.category,
+        description: input.description || '',
+        category: input.category as any,
         billable: input.billable ?? true,
       },
     });
@@ -351,9 +296,8 @@ export class ExecutiveEngagementService {
         title: input.title,
         description: input.description,
         dueDate: input.dueDate,
-        deliverables: input.deliverables ? JSON.parse(JSON.stringify(input.deliverables)) : null,
-        successCriteria: input.successCriteria,
-        status: 'PENDING',
+        deliverables: input.deliverables ? input.deliverables.map((d: string) => JSON.parse(JSON.stringify({ name: d }))) : [],
+        status: 'NOT_STARTED',
       },
     });
 
@@ -367,8 +311,7 @@ export class ExecutiveEngagementService {
     const milestone = await this.prisma.executiveMilestone.update({
       where: { id: milestoneId },
       data: {
-        status,
-        completedAt: status === 'COMPLETED' ? new Date() : undefined,
+        status: status as any,
       },
     });
 
@@ -397,18 +340,18 @@ export class ExecutiveEngagementService {
         engagementId,
         dashboardLayout: JSON.parse(JSON.stringify(config.dashboardLayout)),
         enabledWidgets: config.enabledWidgets,
-        widgetSettings: JSON.parse(JSON.stringify(config.widgetSettings)),
-        pinnedDocuments: config.pinnedDocuments,
+        widgetConfigs: JSON.parse(JSON.stringify(config.widgetSettings)),
+        pinnedDocuments: config.pinnedDocuments?.map((d: string) => JSON.parse(JSON.stringify({ name: d, url: d, type: 'document' }))) || [],
         favoriteActions: config.favoriteActions,
-        quickLinks: JSON.parse(JSON.stringify(config.quickLinks)),
+        pinnedLinks: config.quickLinks?.map((l: { title: string; url: string }) => JSON.parse(JSON.stringify(l))) || [],
       },
       update: {
         dashboardLayout: JSON.parse(JSON.stringify(config.dashboardLayout)),
         enabledWidgets: config.enabledWidgets,
-        widgetSettings: JSON.parse(JSON.stringify(config.widgetSettings)),
-        pinnedDocuments: config.pinnedDocuments,
+        widgetConfigs: JSON.parse(JSON.stringify(config.widgetSettings)),
+        pinnedDocuments: config.pinnedDocuments?.map((d: string) => JSON.parse(JSON.stringify({ name: d, url: d, type: 'document' }))) || [],
         favoriteActions: config.favoriteActions,
-        quickLinks: JSON.parse(JSON.stringify(config.quickLinks)),
+        pinnedLinks: config.quickLinks?.map((l: { title: string; url: string }) => JSON.parse(JSON.stringify(l))) || [],
       },
     });
 
@@ -432,7 +375,7 @@ export class ExecutiveEngagementService {
   async getEngagementStats(executiveProfileId?: string, clientTenantId?: string) {
     const where: any = {};
 
-    if (executiveProfileId) where.executiveProfileId = executiveProfileId;
+    if (executiveProfileId) where.executiveId = executiveProfileId;
     if (clientTenantId) where.clientTenantId = clientTenantId;
 
     const [total, active, completed, totalRevenue] = await Promise.all([
@@ -473,8 +416,8 @@ export class ExecutiveEngagementService {
 
     // Update executive's current client count
     await this.prisma.executiveProfile.update({
-      where: { id: engagement.executiveProfileId },
-      data: { currentClientCount: { decrement: 1 } },
+      where: { id: engagement.executiveId },
+      data: { currentClients: { decrement: 1 } },
     });
 
     return engagement;
@@ -494,8 +437,8 @@ export class ExecutiveEngagementService {
 
     // Update executive's current client count
     await this.prisma.executiveProfile.update({
-      where: { id: engagement.executiveProfileId },
-      data: { currentClientCount: { decrement: 1 } },
+      where: { id: engagement.executiveId },
+      data: { currentClients: { decrement: 1 } },
     });
 
     return engagement;

@@ -204,7 +204,7 @@ export async function integrationRoutes(fastify: FastifyInstance) {
         const { executiveProfileId } = request.params as { executiveProfileId: string };
 
         const toolConfigs = await prisma.executiveToolConfig.findMany({
-          where: { executiveProfileId },
+          where: { executiveId: executiveProfileId },
         });
 
         return reply.send(toolConfigs);
@@ -229,24 +229,26 @@ export async function integrationRoutes(fastify: FastifyInstance) {
           customFields?: Record<string, unknown>;
         };
 
+        const configData = {
+          ...(preferences ? { preferences } : {}),
+          ...(shortcuts ? { shortcuts } : {}),
+          ...(customFields ? { customFields } : {}),
+        };
+
         const toolConfig = await prisma.executiveToolConfig.upsert({
           where: {
-            executiveProfileId_toolKey: {
-              executiveProfileId,
-              toolKey,
+            executiveId_toolId: {
+              executiveId: executiveProfileId,
+              toolId: toolKey,
             },
           },
           create: {
-            executiveProfileId,
-            toolKey,
-            preferences: preferences ? JSON.parse(JSON.stringify(preferences)) : {},
-            shortcuts: shortcuts ? JSON.parse(JSON.stringify(shortcuts)) : {},
-            customFields: customFields ? JSON.parse(JSON.stringify(customFields)) : {},
+            executiveId: executiveProfileId,
+            toolId: toolKey,
+            config: JSON.parse(JSON.stringify(configData)),
           },
           update: {
-            preferences: preferences ? JSON.parse(JSON.stringify(preferences)) : undefined,
-            shortcuts: shortcuts ? JSON.parse(JSON.stringify(shortcuts)) : undefined,
-            customFields: customFields ? JSON.parse(JSON.stringify(customFields)) : undefined,
+            config: JSON.parse(JSON.stringify(configData)),
           },
         });
 
