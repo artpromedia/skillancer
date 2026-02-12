@@ -44,7 +44,7 @@ This runbook provides step-by-step procedures for handling deployment scenarios 
 
 4. **Monitor Deployment**
    - Watch workflow progress
-   - Monitor Slack for notifications
+   - Monitor chat for notifications
    - Check AWS ECS console
 
 5. **Verify Production**
@@ -109,7 +109,7 @@ When a production deployment fails:
 
 1. **Automatic rollback is triggered**
    - Services revert to previous version
-   - Slack notification sent
+   - Notification sent
 
 2. **Verify Rollback**
 
@@ -187,9 +187,9 @@ When you need to manually rollback:
 ### P1 Incident Procedure
 
 1. **Alert (0-5 minutes)**
-   - Slack alert received
+   - Alert received
    - On-call engineer acknowledged
-   - War room created in Slack
+   - War room created in team chat
 
 2. **Assess (5-10 minutes)**
 

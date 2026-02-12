@@ -104,13 +104,13 @@ PR Created → Validate → Preview DB → Review → Merge
 
 - Automatically triggered on merge to `main`/`master`
 - Migrations applied to staging database
-- Slack notification sent on success/failure
+- Notification sent on success/failure
 
 #### Production Deployment
 
 - Requires staging migration success
 - Manual approval required for destructive changes
-- Slack notification sent on success/failure
+- Notification sent on success/failure
 
 ## Environment Configuration
 
@@ -122,7 +122,7 @@ Configure these in GitHub repository settings:
 | ------------------------- | ----------- | ------------------------------------------- |
 | `STAGING_DATABASE_URL`    | staging     | PostgreSQL connection string for staging    |
 | `PRODUCTION_DATABASE_URL` | production  | PostgreSQL connection string for production |
-| `SLACK_WEBHOOK_URL`       | all         | Slack webhook for notifications             |
+| `ALERT_WEBHOOK_URL`       | all         | Webhook URL for notifications               |
 
 ### Database URL Format
 

@@ -570,7 +570,7 @@ module "monitoring" {
 
   # Multiple alert channels for production
   alert_email      = var.alert_email
-  alert_slack_url  = var.alert_slack_webhook
+  alert_webhook_url  = var.alert_webhook_url
   alert_pagerduty  = var.pagerduty_service_key
 
   create_dashboard = true

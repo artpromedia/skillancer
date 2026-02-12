@@ -135,7 +135,7 @@ resource "aws_secretsmanager_secret_version" "integrations" {
     STRIPE_API_KEY           = var.stripe_api_key
     STRIPE_WEBHOOK_SECRET    = var.stripe_webhook_secret
     SENDGRID_API_KEY         = var.sendgrid_api_key
-    SLACK_WEBHOOK_URL        = var.slack_webhook_url
+    ALERT_WEBHOOK_URL        = var.alert_webhook_url
     SENTRY_DSN               = var.sentry_dsn
   })
 }

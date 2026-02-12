@@ -342,7 +342,6 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
     const { connectorSlug } = request.params as { connectorSlug: string };
     const signature =
       (request.headers['x-hub-signature-256'] as string) ||
-      (request.headers['x-slack-signature'] as string) ||
       (request.headers['x-signature'] as string) ||
       '';
 
@@ -365,26 +364,6 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
     }
   });
 
-  // Slack URL verification (special case)
-  fastify.post('/webhooks/slack/events', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = request.body as { type?: string; challenge?: string };
-
-    // Handle Slack URL verification challenge
-    if (body.type === 'url_verification' && body.challenge) {
-      return reply.send({ challenge: body.challenge });
-    }
-
-    // Handle regular events
-    const signature = request.headers['x-slack-signature'] as string;
-    const result = await webhookService.handleIncomingWebhook({
-      connectorId: 'slack',
-      payload: request.body,
-      headers: request.headers as Record<string, string>,
-      signature,
-    });
-
-    return reply.send({ ok: result.success });
-  });
 }
 
 // Extend FastifyInstance with authenticate

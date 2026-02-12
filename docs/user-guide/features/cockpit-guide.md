@@ -410,11 +410,10 @@ Create personalized report views:
 
 #### Communication
 
-| Platform | Features                     |
-| -------- | ---------------------------- |
-| Slack    | Notifications, time tracking |
-| Discord  | Status updates               |
-| Email    | Invoice delivery, reminders  |
+| Platform | Features                    |
+| -------- | --------------------------- |
+| Discord  | Status updates              |
+| Email    | Invoice delivery, reminders |
 
 #### Project Management
 

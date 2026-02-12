@@ -22,7 +22,7 @@ pnpm dev
 ## Features
 
 - Multi-tenant workspace management
-- Third-party integrations (Slack, etc.)
+- Third-party integrations (Discord, etc.)
 - Analytics aggregation
 - Custom reporting
 - Data sync and ETL

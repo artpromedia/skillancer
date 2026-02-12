@@ -43,7 +43,6 @@ export type IntegrationProvider =
   | 'PLAID'
   | 'GOOGLE_CALENDAR'
   | 'OUTLOOK'
-  | 'SLACK'
   | 'TRELLO'
   | 'ASANA'
   | 'JIRA'
@@ -61,7 +60,6 @@ export const IntegrationProvider = {
   PLAID: 'PLAID' as const,
   GOOGLE_CALENDAR: 'GOOGLE_CALENDAR' as const,
   OUTLOOK: 'OUTLOOK' as const,
-  SLACK: 'SLACK' as const,
   TRELLO: 'TRELLO' as const,
   ASANA: 'ASANA' as const,
   JIRA: 'JIRA' as const,

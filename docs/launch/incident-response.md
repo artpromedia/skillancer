@@ -157,13 +157,13 @@ For issues requiring specialized knowledge, escalate directly to the relevant do
 
 **Automated Detection Sources:**
 
-| Source             | What It Detects                                 | Alert Channel     |
-| ------------------ | ----------------------------------------------- | ----------------- |
-| Grafana/Prometheus | Error rate spikes, latency, resource exhaustion | PagerDuty         |
-| Sentry             | Application errors, unhandled exceptions        | PagerDuty + Slack |
-| Kubernetes         | Pod crashes, health check failures              | PagerDuty         |
-| Uptime monitors    | Endpoint availability                           | PagerDuty + Slack |
-| CloudWatch         | AWS resource alarms (RDS, ElastiCache, S3)      | PagerDuty         |
+| Source             | What It Detects                                 | Alert Channel       |
+| ------------------ | ----------------------------------------------- | ------------------- |
+| Grafana/Prometheus | Error rate spikes, latency, resource exhaustion | PagerDuty           |
+| Sentry             | Application errors, unhandled exceptions        | PagerDuty + Webhook |
+| Kubernetes         | Pod crashes, health check failures              | PagerDuty           |
+| Uptime monitors    | Endpoint availability                           | PagerDuty + Webhook |
+| CloudWatch         | AWS resource alarms (RDS, ElastiCache, S3)      | PagerDuty           |
 
 **Manual Detection Sources:**
 
@@ -177,7 +177,7 @@ For issues requiring specialized knowledge, escalate directly to the relevant do
 1. **Acknowledge the alert** in PagerDuty (stops escalation timer)
 2. **Assess severity** using the definitions above
 3. **Declare an incident** if severity is P0 or P1
-4. **Create an incident channel** in Slack: `#incident-YYYY-MM-DD-<brief-description>`
+4. **Create an incident channel** in Team Chat: `#incident-YYYY-MM-DD-<brief-description>`
 5. **Post the initial assessment** (use template below)
 6. **Assign roles:**
    - **Incident Commander (IC):** Coordinates response, makes decisions, communicates status
@@ -233,7 +233,7 @@ For issues requiring specialized knowledge, escalate directly to the relevant do
 
 ## Communication Templates
 
-### Incident Declaration (Slack - Internal)
+### Incident Declaration (Team Chat - Internal)
 
 ```
 INCIDENT DECLARED
@@ -250,7 +250,7 @@ Channel: #incident-YYYY-MM-DD-description
 Status Page: [Updated / Pending]
 ```
 
-### Status Update (Slack - Internal, Every 15 Minutes)
+### Status Update (Team Chat - Internal, Every 15 Minutes)
 
 ```
 INCIDENT UPDATE - [HH:MM UTC]
@@ -263,7 +263,7 @@ Next Steps: [What is being done next]
 ETA: [Estimated time to resolution, or "Unknown"]
 ```
 
-### Incident Resolved (Slack - Internal)
+### Incident Resolved (Team Chat - Internal)
 
 ```
 INCIDENT RESOLVED - [HH:MM UTC]
@@ -630,7 +630,7 @@ curl -X POST https://api.skillancer.com/admin/flags/disable-all \
 
 ### Internal
 
-| Role             | Name | Slack          | PagerDuty       |
+| Role             | Name | Chat           | PagerDuty       |
 | ---------------- | ---- | -------------- | --------------- |
 | Engineering Lead |      | @eng-lead      | Yes             |
 | DevOps Lead      |      | @devops-lead   | Yes             |

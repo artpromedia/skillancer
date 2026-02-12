@@ -71,7 +71,7 @@
 
 - [ ] Team standup and launch briefing
 - [ ] All team members on-call and available
-- [ ] Communication channels ready (Slack, Status page)
+- [ ] Communication channels ready (Team Chat, Status page)
 - [ ] Customer support prepared
 
 ### Deployment

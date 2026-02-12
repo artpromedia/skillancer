@@ -173,12 +173,12 @@ sum(rate(waf_blocked_requests_total[1h])) by (attack_type)
 
 ### Priority Routing
 
-| Priority      | Channels                  | Response Time     |
-| ------------- | ------------------------- | ----------------- |
-| P0 - Critical | PagerDuty + Slack + Email | Immediate         |
-| P1 - High     | Slack + Email             | 30 minutes        |
-| P2 - Medium   | Slack                     | 2 hours           |
-| P3 - Low      | Dashboard only            | Next business day |
+| Priority      | Channels                    | Response Time     |
+| ------------- | --------------------------- | ----------------- |
+| P0 - Critical | PagerDuty + Webhook + Email | Immediate         |
+| P1 - High     | Webhook + Email             | 30 minutes        |
+| P2 - Medium   | Webhook                     | 2 hours           |
+| P3 - Low      | Dashboard only              | Next business day |
 
 ### Alert Rules
 
@@ -289,14 +289,13 @@ receivers:
         severity: critical
         description: '{{ .CommonAnnotations.summary }}'
 
-  - name: slack-warnings
-    slack_configs:
-      - api_url: $SLACK_WEBHOOK_URL
-        channel: '#alerts'
-        title: '{{ .CommonAnnotations.summary }}'
+  - name: webhook-warnings
+    webhook_configs:
+      - url: $ALERT_WEBHOOK_URL
+        send_resolved: true
 
 route:
-  receiver: slack-warnings
+  receiver: webhook-warnings
   routes:
     - match:
         severity: critical

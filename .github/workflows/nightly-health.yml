@@ -6,7 +6,7 @@
 # - Check for stale dependencies
 # - Audit Docker image sizes
 # - Generate pipeline status dashboard
-# - Alert on any failures via Slack
+# - Alert on any failures via webhook
 # =============================================================================
 
 name: Nightly Health Check

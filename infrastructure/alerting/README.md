@@ -8,12 +8,12 @@ This directory contains configuration files for the Skillancer platform's alerti
 
 Alertmanager configuration for routing, grouping, and delivering alerts to various notification channels:
 
-- **Slack Channels**:
-  - `#alerts` - General alerts
-  - `#alerts-critical` - Critical issues requiring immediate attention
-  - `#alerts-warnings` - Non-critical warnings
-  - `#alerts-database` - Database-related alerts
-  - `#alerts-business` - Business metric alerts
+- **Webhook Notifications**:
+  - General alerts
+  - Critical issues requiring immediate attention
+  - Non-critical warnings
+  - Database-related alerts
+  - Business metric alerts
 
 - **PagerDuty Integration**:
   - Critical production issues
@@ -39,8 +39,8 @@ Prometheus alerting rules organized by category:
 Set these environment variables before deploying:
 
 ```bash
-# Slack
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz
+# Alert Webhook
+ALERT_WEBHOOK_URL=https://your-webhook-endpoint.example.com/alerts
 
 # PagerDuty
 PAGERDUTY_SERVICE_KEY=your-service-key

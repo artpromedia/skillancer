@@ -5,13 +5,13 @@ global:
   # How long to wait before sending notification
   resolve_timeout: 5m
 
-  # Slack webhook URL (set via environment variable)
-  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  # Webhook URL (set via environment variable)
+  webhook_url: '${ALERT_WEBHOOK_URL}'
 
 # Alert routing tree
 route:
   # Default receiver
-  receiver: 'slack-notifications'
+  receiver: 'webhook-notifications'
 
   # Group alerts by these labels
   group_by: ['alertname', 'service', 'severity']
@@ -35,21 +35,21 @@ route:
 
     - match:
         severity: critical
-      receiver: 'slack-critical'
+      receiver: 'webhook-critical'
       group_wait: 10s
       repeat_interval: 1h
 
-    # Warning alerts to Slack
+    # Warning alerts
     - match:
         severity: warning
-      receiver: 'slack-warnings'
+      receiver: 'webhook-warnings'
       group_wait: 1m
       repeat_interval: 4h
 
     # Database alerts
     - match:
         category: database
-      receiver: 'slack-database'
+      receiver: 'webhook-database'
       group_by: ['alertname', 'database']
 
     # Security alerts - immediate notification
@@ -62,7 +62,7 @@ route:
     # Business alerts
     - match:
         category: business
-      receiver: 'slack-business'
+      receiver: 'webhook-business'
       group_wait: 5m
 
 # Inhibition rules - suppress less severe alerts when critical exists
@@ -81,91 +81,35 @@ inhibit_rules:
 
 # Receivers define notification channels
 receivers:
-  # Default Slack channel
-  - name: 'slack-notifications'
-    slack_configs:
-      - channel: '#alerts'
+  # Default webhook notifications
+  - name: 'webhook-notifications'
+    webhook_configs:
+      - url: '${ALERT_WEBHOOK_URL}'
         send_resolved: true
-        title: '{{ .Status | toUpper }}{{ if eq .Status "firing" }}🔥{{ else }}✅{{ end }} {{ .CommonLabels.alertname }}'
-        text: |
-          *Service:* {{ .CommonLabels.service }}
-          *Severity:* {{ .CommonLabels.severity }}
-          *Environment:* {{ .CommonLabels.environment }}
 
-          {{ range .Alerts }}
-          *Alert:* {{ .Annotations.summary }}
-          *Description:* {{ .Annotations.description }}
-          *Started:* {{ .StartsAt | humanize }}
-          {{ end }}
-        actions:
-          - type: button
-            text: 'View in Grafana 📊'
-            url: '{{ .CommonAnnotations.grafana_url }}'
-          - type: button
-            text: 'Runbook 📖'
-            url: '{{ .CommonAnnotations.runbook_url }}'
-
-  # Critical alerts - Slack
-  - name: 'slack-critical'
-    slack_configs:
-      - channel: '#alerts-critical'
+  # Critical alerts - webhook
+  - name: 'webhook-critical'
+    webhook_configs:
+      - url: '${ALERT_WEBHOOK_URL}'
         send_resolved: true
-        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
-        title: '🚨 CRITICAL: {{ .CommonLabels.alertname }}'
-        text: |
-          *Immediate attention required!*
-
-          *Service:* {{ .CommonLabels.service }}
-          *Environment:* {{ .CommonLabels.environment }}
-
-          {{ range .Alerts }}
-          *Summary:* {{ .Annotations.summary }}
-          *Description:* {{ .Annotations.description }}
-          {{ end }}
-        actions:
-          - type: button
-            text: 'Acknowledge'
-            url: '{{ .CommonAnnotations.ack_url }}'
 
   # Warning alerts
-  - name: 'slack-warnings'
-    slack_configs:
-      - channel: '#alerts-warnings'
+  - name: 'webhook-warnings'
+    webhook_configs:
+      - url: '${ALERT_WEBHOOK_URL}'
         send_resolved: true
-        color: 'warning'
-        title: '⚠️ WARNING: {{ .CommonLabels.alertname }}'
-        text: |
-          *Service:* {{ .CommonLabels.service }}
-          *Severity:* {{ .CommonLabels.severity }}
-
-          {{ range .Alerts }}
-          {{ .Annotations.summary }}
-          {{ end }}
 
   # Database alerts
-  - name: 'slack-database'
-    slack_configs:
-      - channel: '#alerts-database'
+  - name: 'webhook-database'
+    webhook_configs:
+      - url: '${ALERT_WEBHOOK_URL}'
         send_resolved: true
-        title: '🗄️ Database Alert: {{ .CommonLabels.alertname }}'
-        text: |
-          *Database:* {{ .CommonLabels.database }}
-          *Service:* {{ .CommonLabels.service }}
-
-          {{ range .Alerts }}
-          {{ .Annotations.description }}
-          {{ end }}
 
   # Business alerts
-  - name: 'slack-business'
-    slack_configs:
-      - channel: '#alerts-business'
+  - name: 'webhook-business'
+    webhook_configs:
+      - url: '${ALERT_WEBHOOK_URL}'
         send_resolved: true
-        title: '📈 Business Alert: {{ .CommonLabels.alertname }}'
-        text: |
-          {{ range .Alerts }}
-          {{ .Annotations.summary }}
-          {{ end }}
 
   # PagerDuty for critical issues
   - name: 'pagerduty-critical'

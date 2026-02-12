@@ -227,7 +227,7 @@ We apologize for any inconvenience and appreciate your patience.
 The Skillancer Team
 ```
 
-### Internal Slack Announcement
+### Internal Chat Announcement
 
 ```
 🚨 **Incident Alert - [Severity]**
@@ -393,12 +393,12 @@ kubectl scale deployment/api-gateway --replicas=10
 
 ### Internal
 
-| Role             | Contact               |
-| ---------------- | --------------------- |
-| Engineering Lead | @eng-lead (Slack)     |
-| CTO              | @cto (Slack)          |
-| Security Lead    | @security (Slack)     |
-| Support Lead     | @support-lead (Slack) |
+| Role             | Contact              |
+| ---------------- | -------------------- |
+| Engineering Lead | @eng-lead (Chat)     |
+| CTO              | @cto (Chat)          |
+| Security Lead    | @security (Chat)     |
+| Support Lead     | @support-lead (Chat) |
 
 ### External
 

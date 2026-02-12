@@ -284,7 +284,7 @@ track('withdrawal.requested', { amount: number, method: string });
 | Payment Failures | >5%          | On-call + Billing |
 | p99 Latency      | >2s          | On-call           |
 
-### Warning Alerts (Slack Notification)
+### Warning Alerts (Notification)
 
 | Metric               | Threshold           | Review         |
 | -------------------- | ------------------- | -------------- |

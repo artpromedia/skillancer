@@ -60,10 +60,6 @@ const WEBHOOK_WIDGET_MAP: Record<string, Record<string, string[]>> = {
     sprint_started: ['sprint-progress'],
     sprint_closed: ['sprint-progress', 'velocity-metrics'],
   },
-  slack: {
-    message: ['channel-activity'],
-    reaction_added: ['engagement-metrics'],
-  },
 };
 
 export interface WebhookEvent {

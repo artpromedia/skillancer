@@ -142,7 +142,7 @@ export const SOC2_CONTROLS: ControlCategory[] = [
         description:
           'The entity internally communicates information necessary for internal control',
         status: ControlStatus.IMPLEMENTED,
-        skillancerFeatures: ['Notification service', 'Slack integration', 'Email alerts'],
+        skillancerFeatures: ['Notification service', 'Email alerts'],
         evidenceTypes: ['audit_log'],
         testingProcedures: ['Review communication channels'],
         gaps: [],

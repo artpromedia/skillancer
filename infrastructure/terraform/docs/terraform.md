@@ -316,7 +316,7 @@ The Terraform CI/CD pipeline is defined in `.github/workflows/terraform.yml`.
 3. **Security Scan**: tfsec and Checkov analysis
 4. **Cost Estimation**: Infracost analysis on PRs
 5. **Environment Protection**: Manual approval for prod
-6. **Slack Notifications**: Alerts on prod deployments
+6. **Webhook Notifications**: Alerts on prod deployments
 
 ### Required Secrets
 
@@ -327,7 +327,7 @@ Configure these in GitHub repository settings:
 | `AWS_ROLE_ARN_DEV`     | IAM role ARN for dev account     |
 | `AWS_ROLE_ARN_STAGING` | IAM role ARN for staging account |
 | `AWS_ROLE_ARN_PROD`    | IAM role ARN for prod account    |
-| `SLACK_WEBHOOK_URL`    | Slack webhook for notifications  |
+| `ALERT_WEBHOOK_URL`    | Webhook URL for notifications    |
 | `INFRACOST_API_KEY`    | Infracost API key (optional)     |
 
 ### GitHub Environments
@@ -518,7 +518,7 @@ terraform taint module.ecs_services["api-gateway"].aws_ecs_service.main
 1. Check CloudWatch Logs for application errors
 2. Review CloudWatch Alarms for infrastructure issues
 3. Check AWS Health Dashboard for service issues
-4. Contact DevOps team via Slack #infrastructure
+4. Contact DevOps team via #infrastructure channel
 
 ---
 

@@ -80,7 +80,7 @@ Before initiating any rollback, complete these steps:
 - [ ] Confirm the issue cannot be resolved with a feature flag toggle
 - [ ] Confirm the issue cannot be resolved with a quick hotfix (<10 minutes)
 - [ ] Get approval from the required authority (see decision matrix above)
-- [ ] Alert `#launch-war-room` Slack channel: "ROLLBACK INITIATED"
+- [ ] Alert `#launch-war-room` channel: "ROLLBACK INITIATED"
 - [ ] Update status page (status.skillancer.com): "Investigating issues, remediation in progress"
 - [ ] Notify Support team to pause outgoing customer responses
 - [ ] Designate an incident commander to coordinate the rollback
@@ -512,14 +512,14 @@ The Skillancer Team
 
 ### Notification Responsibilities
 
-| Audience                | Channel                | Responsible         | Timing            |
-| ----------------------- | ---------------------- | ------------------- | ----------------- |
-| Engineering team        | Slack #launch-war-room | Incident Commander  | Immediate         |
-| Support team            | Slack #support         | Incident Commander  | Within 5 minutes  |
-| Executive team          | Slack DM / Phone       | Engineering Lead    | Within 10 minutes |
-| Customers (status page) | status.skillancer.com  | Support Lead        | Within 10 minutes |
-| Customers (email)       | Email                  | Marketing + Support | After resolution  |
-| Public (social media)   | Twitter/LinkedIn       | Marketing Lead      | After resolution  |
+| Audience                | Channel                    | Responsible         | Timing            |
+| ----------------------- | -------------------------- | ------------------- | ----------------- |
+| Engineering team        | Team Chat #launch-war-room | Incident Commander  | Immediate         |
+| Support team            | Team Chat #support         | Incident Commander  | Within 5 minutes  |
+| Executive team          | Direct Message / Phone     | Engineering Lead    | Within 10 minutes |
+| Customers (status page) | status.skillancer.com      | Support Lead        | Within 10 minutes |
+| Customers (email)       | Email                      | Marketing + Support | After resolution  |
+| Public (social media)   | Twitter/LinkedIn           | Marketing Lead      | After resolution  |
 
 ---
 

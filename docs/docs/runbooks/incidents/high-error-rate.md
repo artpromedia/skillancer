@@ -229,7 +229,7 @@ Escalate if:
 pd trigger -s "High error rate - need assistance"
 
 # Or escalate to engineering lead
-# Slack: @eng-lead in #incidents
+# Chat: @eng-lead in #incidents
 ```
 
 ## Post-Incident

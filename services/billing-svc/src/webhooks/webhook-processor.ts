@@ -431,7 +431,7 @@ export class WebhookProcessor {
       '🚨 CRITICAL: Webhook processing failure requires immediate attention'
     );
 
-    // TODO: Send to PagerDuty/Slack
+    // TODO: Send to PagerDuty
   }
 
   /**

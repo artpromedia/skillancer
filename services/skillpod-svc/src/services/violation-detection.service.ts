@@ -38,7 +38,6 @@ interface ViolationThresholds {
 interface AlertConfig {
   webhookUrl?: string;
   emailRecipients?: string[];
-  slackChannel?: string;
 }
 
 // =============================================================================
@@ -470,7 +469,7 @@ export function createViolationDetectionService(
       })
     );
 
-    // Future enhancement: Implement webhook, email, and Slack alerts based on alertConfig
+    // Future enhancement: Implement webhook and email alerts based on alertConfig
   }
 
   return {

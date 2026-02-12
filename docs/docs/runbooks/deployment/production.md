@@ -14,7 +14,7 @@ This runbook covers the standard deployment process for Skillancer services to p
 - [ ] Access to AWS Console (production account)
 - [ ] kubectl configured for production cluster
 - [ ] GitHub access with merge permissions
-- [ ] Access to #deployments Slack channel
+- [ ] Access to #deployments chat channel
 - [ ] PagerDuty account for on-call status
 
 ## Pre-Deployment Checklist

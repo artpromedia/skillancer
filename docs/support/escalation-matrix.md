@@ -273,11 +273,11 @@ This document defines the escalation paths for support issues, response time exp
 
 ### Tier 3 - Engineering
 
-| Role              | Contact                   | Hours |
-| ----------------- | ------------------------- | ----- |
-| On-Call Primary   | #oncall-primary (Slack)   | 24/7  |
-| On-Call Secondary | #oncall-secondary (Slack) | 24/7  |
-| PagerDuty         | Automatic escalation      | 24/7  |
+| Role              | Contact                  | Hours |
+| ----------------- | ------------------------ | ----- |
+| On-Call Primary   | #oncall-primary (Chat)   | 24/7  |
+| On-Call Secondary | #oncall-secondary (Chat) | 24/7  |
+| PagerDuty         | Automatic escalation     | 24/7  |
 
 ### Tier 4 - Executive
 
@@ -302,7 +302,7 @@ This document defines the escalation paths for support issues, response time exp
    - Ticket ID
 
 2. **Notify next tier**
-   - Use designated Slack channel
+   - Use designated chat channel
    - @mention appropriate person
    - Include ticket link
 
@@ -320,7 +320,7 @@ This document defines the escalation paths for support issues, response time exp
 
 1. **Immediate actions**
    - Page via PagerDuty
-   - Post in #incidents Slack channel
+   - Post in #incidents chat channel
    - Update status page
 
 2. **War room**
@@ -391,7 +391,7 @@ This document defines the escalation paths for support issues, response time exp
 
 ## Escalation Templates
 
-### Slack Escalation Message
+### Chat Escalation Message
 
 ```
 🚨 ESCALATION REQUEST

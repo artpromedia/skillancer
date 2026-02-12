@@ -11183,7 +11183,6 @@ enum IntegrationProvider {
   TODOIST
 
   // Communication
-  SLACK
   DISCORD
   TEAMS
 

@@ -82,5 +82,5 @@ s3_bucket_arns = [
 
 # Alerts
 alert_email = "alerts-prod@skillancer.io"
-# alert_slack_webhook set via environment variable: TF_VAR_alert_slack_webhook
+# alert_webhook_url set via environment variable: TF_VAR_alert_webhook_url
 # pagerduty_service_key set via environment variable: TF_VAR_pagerduty_service_key

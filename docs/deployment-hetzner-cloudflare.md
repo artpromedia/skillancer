@@ -412,7 +412,7 @@ The GitHub Actions workflow at `.github/workflows/deploy-hetzner.yml` handles au
 | ---------------------------- | ---------------------------------------- |
 | `HETZNER_STAGING_KUBECONFIG` | Base64-encoded kubeconfig for staging    |
 | `HETZNER_PROD_KUBECONFIG`    | Base64-encoded kubeconfig for production |
-| `SLACK_WEBHOOK_URL`          | Slack notifications (optional)           |
+| `ALERT_WEBHOOK_URL`          | Alert notifications (optional)           |
 
 ### Encode kubeconfig
 

@@ -442,7 +442,7 @@ class BillingNotificationService {
     message: string;
     context?: Record<string, unknown>;
   }): Promise<void> {
-    // In production, this would alert to Slack, PagerDuty, etc.
+    // In production, this would alert to PagerDuty, etc.
     // For now, log with high visibility
     const logMethod = data.severity === 'critical' ? 'error' : 'warn';
     logger[logMethod](
@@ -451,7 +451,7 @@ class BillingNotificationService {
     );
 
     // TODO: Integrate with actual alerting services
-    // - Slack webhook for non-critical
+    // - Webhook for non-critical
     // - PagerDuty for critical
     // - Email to ops@skillancer.com
   }

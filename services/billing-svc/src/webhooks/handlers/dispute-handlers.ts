@@ -35,7 +35,7 @@ interface DisputeEvidence {
 
 /**
  * Handle new dispute creation - IMMEDIATE ACTION REQUIRED
- * - IMMEDIATE ALERT (Slack + Email to team)
+ * - IMMEDIATE ALERT (Email to team)
  * - Freeze related funds
  * - Gather evidence automatically
  * - Create internal dispute ticket
@@ -301,13 +301,13 @@ async function sendDisputeAlerts(dispute: Stripe.Dispute): Promise<void> {
     ? new Date(dispute.evidence_details.due_by * 1000).toLocaleDateString()
     : 'Unknown';
 
-  // TODO: Send Slack alert
+  // TODO: Send alert
   logger.error(
     {
       channel: '#payments-alerts',
       message: `🚨 DISPUTE ALERT: ${formattedAmount} dispute filed\nReason: ${dispute.reason}\nCharge: ${dispute.charge}\nDue: ${dueDate}\nAction required immediately!`,
     },
-    'Slack alert queued'
+    'Alert queued'
   );
 
   // TODO: Send email to payments team

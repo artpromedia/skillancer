@@ -46,12 +46,6 @@ const configSchema = z.object({
 
   // OAuth Provider Credentials
   providers: z.object({
-    slack: z
-      .object({
-        clientId: z.string().optional(),
-        clientSecret: z.string().optional(),
-      })
-      .optional(),
     google: z
       .object({
         clientId: z.string().optional(),
@@ -126,10 +120,6 @@ export function getConfig(): Config {
     },
 
     providers: {
-      slack: {
-        clientId: process.env.SLACK_CLIENT_ID,
-        clientSecret: process.env.SLACK_CLIENT_SECRET,
-      },
       google: {
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,

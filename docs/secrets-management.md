@@ -434,7 +434,7 @@ aws secretsmanager cancel-rotate-secret \
 
 - **Never commit secrets** to Git (even in private repos)
 - **Never log secrets** in application code
-- **Never share secrets** via Slack/email
+- **Never share secrets** via chat/email
 - **Never use production secrets** locally
 - **Never hardcode secrets** in Terraform
 - **Never disable encryption** on secrets

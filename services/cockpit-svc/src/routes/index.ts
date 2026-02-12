@@ -24,7 +24,6 @@ import { timeTrackingRoutes } from './time-tracking.routes.js';
 import { CalendarService } from '../services/calendar.service.js';
 import { EncryptionService } from '../services/encryption.service.js';
 import { DiscordIntegrationService } from '../services/integrations/discord-integration.service.js';
-import { SlackIntegrationService } from '../services/integrations/slack-integration.service.js';
 
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
@@ -225,20 +224,18 @@ export async function registerRoutes(
   );
 
   // ============================================================================
-  // Communication Platform Routes (CP-4.3: Slack & Discord Integrations)
+  // Communication Platform Routes (CP-4.3: Discord Integrations)
   // ============================================================================
 
-  // Create Slack and Discord integration services
-  const slackService = new SlackIntegrationService(deps.prisma, deps.logger, encryption);
+  // Create Discord integration service
   const discordService = new DiscordIntegrationService(deps.prisma, deps.logger, encryption);
 
-  // Register communication platform routes (Slack, Discord)
+  // Register communication platform routes (Discord)
   await fastify.register(
     (instance) => {
       registerCommunicationRoutes(instance, {
         prisma: deps.prisma,
         logger: deps.logger,
-        slackService,
         discordService,
       });
     },
@@ -288,7 +285,7 @@ export { registerIntegrationRoutes } from './integration.routes.js';
 export { registerFreelancePlatformRoutes } from './freelance-platform.routes.js';
 // Productivity Tools exports (CP-4.3: Productivity Tool Integrations)
 export { registerProductivityToolRoutes } from './productivity-tools.routes.js';
-// Communication Platform exports (CP-4.3: Slack & Discord Integrations)
+// Communication Platform exports (CP-4.3: Discord Integrations)
 export { registerCommunicationRoutes } from './communication.routes.js';
 // Market Integration exports (Market Contract to Cockpit Project)
 export { registerMarketContractRoutes } from './market-contracts.routes.js';

@@ -192,7 +192,7 @@ const POLICY_TEMPLATES: PolicyTemplate[] = [
       },
       {
         heading: '5. Communication',
-        content: `- Internal: Slack #incidents channel\n- Customer: Status page updates\n- Regulatory: As required by law`,
+        content: `- Internal: #incidents channel\n- Customer: Status page updates\n- Regulatory: As required by law`,
         variables: [],
       },
     ],

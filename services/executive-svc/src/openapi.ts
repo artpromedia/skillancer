@@ -85,7 +85,7 @@ Authorization: Bearer <your-jwt-token>
         Preferences: {
           type: 'object',
           properties: {
-            communicationChannel: { type: 'string', enum: ['EMAIL', 'PHONE', 'SLACK'] },
+            communicationChannel: { type: 'string', enum: ['EMAIL', 'PHONE'] },
             responseTimeExpectation: {
               type: 'string',
               enum: ['IMMEDIATE', 'SAME_DAY', 'NEXT_DAY'],
@@ -133,7 +133,7 @@ Authorization: Bearer <your-jwt-token>
           properties: {
             id: { type: 'string', format: 'uuid' },
             companyId: { type: 'string', format: 'uuid' },
-            type: { type: 'string', enum: ['SSO', 'HRIS', 'BILLING', 'SLACK', 'CUSTOM'] },
+            type: { type: 'string', enum: ['SSO', 'HRIS', 'BILLING', 'CUSTOM'] },
             status: { type: 'string', enum: ['PENDING', 'ACTIVE', 'FAILED', 'DISABLED'] },
             config: { type: 'object' },
           },

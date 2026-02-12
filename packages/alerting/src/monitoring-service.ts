@@ -179,12 +179,12 @@ export class MonitoringService {
   /**
    * Record a metric data point
    */
-  async recordMetric(
+  recordMetric(
     name: string,
     value: number,
     tags: Record<string, string> = {},
     source: string = 'application'
-  ): Promise<void> {
+  ): void {
     metricData.push({
       name,
       value,
@@ -199,20 +199,20 @@ export class MonitoringService {
     }
 
     // Check alert rules
-    await this.evaluateRules(name, value, tags);
+    this.evaluateRules(name, value, tags);
   }
 
   /**
    * Query metrics
    */
-  async queryMetrics(
+  queryMetrics(
     name: string,
     startTime: Date,
     endTime: Date,
     aggregation: 'avg' | 'sum' | 'min' | 'max' | 'count' = 'avg',
     interval: string = '1m',
     tags?: Record<string, string>
-  ): Promise<{ timestamp: Date; value: number }[]> {
+  ): { timestamp: Date; value: number }[] {
     let filtered = metricData.filter(
       (m) => m.name === name && m.timestamp >= startTime && m.timestamp <= endTime
     );
@@ -264,9 +264,9 @@ export class MonitoringService {
   /**
    * Create an alert rule
    */
-  async createAlertRule(
+  createAlertRule(
     rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>
-  ): Promise<AlertRule> {
+  ): AlertRule {
     const id = `rule_${randomBytes(8).toString('hex')}`;
 
     const alertRule: AlertRule = {
@@ -283,7 +283,7 @@ export class MonitoringService {
   /**
    * Fire an alert
    */
-  async fireAlert(rule: AlertRule, triggerValue: number): Promise<Alert> {
+  fireAlert(rule: AlertRule, triggerValue: number): Alert {
     const id = `alert_${Date.now()}_${randomBytes(4).toString('hex')}`;
 
     // Check for existing active alert for this rule
@@ -322,7 +322,7 @@ export class MonitoringService {
     alerts.set(id, alert);
 
     // Send notifications
-    await this.notifyAlert(alert);
+    this.notifyAlert(alert);
 
     console.log(`[ALERT] Fired ${id}: ${alert.name} (${alert.severity})`);
 
@@ -332,7 +332,7 @@ export class MonitoringService {
   /**
    * Acknowledge an alert
    */
-  async acknowledgeAlert(alertId: string, acknowledgedBy: string): Promise<Alert | null> {
+  acknowledgeAlert(alertId: string, acknowledgedBy: string): Alert | null {
     const alert = alerts.get(alertId);
     if (!alert) return null;
 
@@ -347,7 +347,7 @@ export class MonitoringService {
   /**
    * Resolve an alert
    */
-  async resolveAlert(alertId: string, resolvedBy: string = 'system'): Promise<Alert | null> {
+  resolveAlert(alertId: string, resolvedBy: string = 'system'): Alert | null {
     const alert = alerts.get(alertId);
     if (!alert) return null;
 
@@ -362,7 +362,7 @@ export class MonitoringService {
   /**
    * Mute an alert
    */
-  async muteAlert(alertId: string, duration: string): Promise<Alert | null> {
+  muteAlert(alertId: string, duration: string): Alert | null {
     const alert = alerts.get(alertId);
     if (!alert) return null;
 
@@ -377,7 +377,7 @@ export class MonitoringService {
   /**
    * Get active alerts
    */
-  async getActiveAlerts(severity?: AlertSeverity): Promise<Alert[]> {
+  getActiveAlerts(severity?: AlertSeverity): Alert[] {
     let active = Array.from(alerts.values()).filter(
       (a) => a.status === AlertStatus.FIRING || a.status === AlertStatus.ACKNOWLEDGED
     );
@@ -395,7 +395,7 @@ export class MonitoringService {
   /**
    * Get alert history
    */
-  async getAlertHistory(startDate: Date, endDate: Date): Promise<Alert[]> {
+  getAlertHistory(startDate: Date, endDate: Date): Alert[] {
     return Array.from(alerts.values()).filter(
       (a) => a.triggeredAt && a.triggeredAt >= startDate && a.triggeredAt <= endDate
     );
@@ -406,9 +406,9 @@ export class MonitoringService {
   /**
    * Create a health check
    */
-  async createHealthCheck(
+  createHealthCheck(
     check: Omit<HealthCheck, 'id' | 'lastCheck' | 'consecutiveFailures'>
-  ): Promise<HealthCheck> {
+  ): HealthCheck {
     const id = `hc_${randomBytes(8).toString('hex')}`;
 
     const healthCheck: HealthCheck = {
@@ -472,7 +472,7 @@ export class MonitoringService {
 
     // Alert if failing
     if (check.alertOnFailure && check.consecutiveFailures >= 3) {
-      await this.fireAlert(
+      this.fireAlert(
         {
           id: `rule_hc_${checkId}`,
           name: `Health Check Failed: ${check.name}`,
@@ -498,12 +498,12 @@ export class MonitoringService {
   /**
    * Get system health overview
    */
-  async getSystemHealth(): Promise<{
+  getSystemHealth(): {
     status: HealthStatus;
     components: { name: string; status: HealthStatus; lastCheck?: Date }[];
     uptime: number;
     activeAlerts: number;
-  }> {
+  } {
     const checks = Array.from(healthChecks.values());
     const components = checks.map((c) => ({
       name: c.name,
@@ -522,7 +522,7 @@ export class MonitoringService {
       }
     }
 
-    const activeAlerts = (await this.getActiveAlerts()).length;
+    const activeAlerts = this.getActiveAlerts().length;
 
     return {
       status: overallStatus,
@@ -537,14 +537,14 @@ export class MonitoringService {
   /**
    * Get dashboard by ID
    */
-  async getDashboard(id: string): Promise<Dashboard | null> {
+  getDashboard(id: string): Dashboard | null {
     return dashboards.get(id) || null;
   }
 
   /**
    * Get all dashboards
    */
-  async getDashboards(): Promise<Dashboard[]> {
+  getDashboards(): Dashboard[] {
     return Array.from(dashboards.values());
   }
 
@@ -553,10 +553,10 @@ export class MonitoringService {
   /**
    * Get monitoring metrics for compliance
    */
-  async getComplianceMetrics(
+  getComplianceMetrics(
     startDate: Date,
     endDate: Date
-  ): Promise<{
+  ): {
     totalAlerts: number;
     alertsByStatus: Record<string, number>;
     alertsBySeverity: Record<string, number>;
@@ -565,8 +565,8 @@ export class MonitoringService {
     slaCompliance: number;
     uptimePercentage: number;
     healthCheckPassRate: number;
-  }> {
-    const history = await this.getAlertHistory(startDate, endDate);
+  } {
+    const history = this.getAlertHistory(startDate, endDate);
 
     const alertsByStatus: Record<string, number> = {};
     const alertsBySeverity: Record<string, number> = {};
@@ -642,11 +642,11 @@ export class MonitoringService {
     }
   }
 
-  private async evaluateRules(
+  private evaluateRules(
     metricName: string,
     value: number,
-    tags: Record<string, string>
-  ): Promise<void> {
+    _tags: Record<string, string>
+  ): void {
     for (const rule of alertRules.values()) {
       if (!rule.enabled || rule.condition.metric !== metricName) continue;
 
@@ -673,12 +673,12 @@ export class MonitoringService {
       }
 
       if (shouldFire) {
-        await this.fireAlert(rule, value);
+        this.fireAlert(rule, value);
       }
     }
   }
 
-  private async executeHealthCheck(check: HealthCheck): Promise<{
+  private async executeHealthCheck(_check: HealthCheck): Promise<{
     status: HealthStatus;
     statusCode?: number;
     message?: string;
@@ -690,7 +690,7 @@ export class MonitoringService {
     return { status: HealthStatus.HEALTHY, statusCode: 200, message: 'OK' };
   }
 
-  private async notifyAlert(alert: Alert): Promise<void> {
+  private notifyAlert(alert: Alert): void {
     // In production, integrate with notification service
     console.log(`[ALERT NOTIFY] ${alert.severity.toUpperCase()}: ${alert.name}`);
   }
@@ -705,7 +705,7 @@ export class MonitoringService {
         comparisonOperator: ComparisonOperator.GREATER_THAN,
         window: '5m',
         severity: AlertSeverity.HIGH,
-        notificationChannels: ['slack-alerts', 'pagerduty'],
+        notificationChannels: ['webhook-alerts', 'pagerduty'],
         runbook: 'docs/runbooks/high-error-rate.md',
         tags: ['api', 'errors'],
         createdBy: 'system',
@@ -718,7 +718,7 @@ export class MonitoringService {
         comparisonOperator: ComparisonOperator.GREATER_THAN,
         window: '5m',
         severity: AlertSeverity.MEDIUM,
-        notificationChannels: ['slack-alerts'],
+        notificationChannels: ['webhook-alerts'],
         runbook: 'docs/runbooks/high-latency.md',
         tags: ['api', 'latency'],
         createdBy: 'system',
@@ -731,7 +731,7 @@ export class MonitoringService {
         comparisonOperator: ComparisonOperator.LESS_THAN,
         window: '1m',
         severity: AlertSeverity.CRITICAL,
-        notificationChannels: ['slack-alerts', 'pagerduty', 'sms'],
+        notificationChannels: ['webhook-alerts', 'pagerduty', 'sms'],
         runbook: 'docs/runbooks/db-pool-exhausted.md',
         tags: ['database', 'connections'],
         createdBy: 'system',
@@ -744,7 +744,7 @@ export class MonitoringService {
         comparisonOperator: ComparisonOperator.GREATER_THAN,
         window: '5m',
         severity: AlertSeverity.HIGH,
-        notificationChannels: ['slack-alerts'],
+        notificationChannels: ['webhook-alerts'],
         tags: ['infrastructure', 'memory'],
         createdBy: 'system',
       },
@@ -756,7 +756,7 @@ export class MonitoringService {
         comparisonOperator: ComparisonOperator.GREATER_THAN,
         window: '15m',
         severity: AlertSeverity.HIGH,
-        notificationChannels: ['slack-security', 'pagerduty'],
+        notificationChannels: ['webhook-security', 'pagerduty'],
         runbook: 'docs/runbooks/brute-force-attack.md',
         tags: ['security', 'authentication'],
         createdBy: 'system',
@@ -784,7 +784,7 @@ export class MonitoringService {
         timeout: 10,
         enabled: true,
         alertOnFailure: true,
-        notificationChannels: ['slack-alerts', 'pagerduty'],
+        notificationChannels: ['webhook-alerts', 'pagerduty'],
       },
       {
         name: 'PostgreSQL Primary',
@@ -794,7 +794,7 @@ export class MonitoringService {
         timeout: 5,
         enabled: true,
         alertOnFailure: true,
-        notificationChannels: ['slack-alerts', 'pagerduty'],
+        notificationChannels: ['webhook-alerts', 'pagerduty'],
       },
       {
         name: 'Redis Cache',
@@ -804,7 +804,7 @@ export class MonitoringService {
         timeout: 5,
         enabled: true,
         alertOnFailure: true,
-        notificationChannels: ['slack-alerts'],
+        notificationChannels: ['webhook-alerts'],
       },
       {
         name: 'Auth Service',
@@ -814,7 +814,7 @@ export class MonitoringService {
         timeout: 10,
         enabled: true,
         alertOnFailure: true,
-        notificationChannels: ['slack-alerts', 'pagerduty'],
+        notificationChannels: ['webhook-alerts', 'pagerduty'],
       },
     ];
 

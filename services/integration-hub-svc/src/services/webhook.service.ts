@@ -318,7 +318,6 @@ class WebhookService {
   private extractSignature(connectorSlug: string, headers: Record<string, string>): string {
     // Different providers use different header names
     const headerMap: Record<string, string> = {
-      slack: 'x-slack-signature',
       github: 'x-hub-signature-256',
       jira: 'x-atlassian-webhook-signature',
       notion: 'x-notion-signature',
@@ -366,7 +365,6 @@ class WebhookService {
   private getSignatureAlgorithm(connectorSlug: string): string {
     // Different providers use different algorithms
     const algorithmMap: Record<string, string> = {
-      slack: 'sha256',
       github: 'sha256',
       jira: 'sha256',
       notion: 'sha256',

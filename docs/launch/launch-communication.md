@@ -10,49 +10,49 @@ This document outlines the communication strategy for Skillancer's public launch
 
 ### T-14 Days
 
-| Audience         | Message                  | Channel            | Owner     |
-| ---------------- | ------------------------ | ------------------ | --------- |
-| Engineering Team | Code freeze announcement | Slack #engineering | Eng Lead  |
-| All Staff        | Launch timeline reminder | All-hands meeting  | CEO       |
-| Beta Users       | Launch date announcement | Email              | Marketing |
+| Audience         | Message                  | Channel                | Owner     |
+| ---------------- | ------------------------ | ---------------------- | --------- |
+| Engineering Team | Code freeze announcement | Team Chat #engineering | Eng Lead  |
+| All Staff        | Launch timeline reminder | All-hands meeting      | CEO       |
+| Beta Users       | Launch date announcement | Email                  | Marketing |
 
 ### T-7 Days
 
-| Audience     | Message                     | Channel        | Owner        |
-| ------------ | --------------------------- | -------------- | ------------ |
-| Support Team | Training schedule           | Slack #support | Support Lead |
-| Partners     | Integration readiness check | Email          | BD Team      |
-| Press        | Embargo press release       | Email          | PR           |
+| Audience     | Message                     | Channel            | Owner        |
+| ------------ | --------------------------- | ------------------ | ------------ |
+| Support Team | Training schedule           | Team Chat #support | Support Lead |
+| Partners     | Integration readiness check | Email              | BD Team      |
+| Press        | Embargo press release       | Email              | PR           |
 
 ### T-3 Days
 
-| Audience         | Message                       | Channel            | Owner       |
-| ---------------- | ----------------------------- | ------------------ | ----------- |
-| Engineering Team | On-call schedule confirmation | Slack #engineering | Eng Manager |
-| All Staff        | Launch day logistics          | Email              | Ops         |
-| Beta Users       | Final migration notice        | Email + In-app     | Product     |
+| Audience         | Message                       | Channel                | Owner       |
+| ---------------- | ----------------------------- | ---------------------- | ----------- |
+| Engineering Team | On-call schedule confirmation | Team Chat #engineering | Eng Manager |
+| All Staff        | Launch day logistics          | Email                  | Ops         |
+| Beta Users       | Final migration notice        | Email + In-app         | Product     |
 
 ### T-1 Day
 
-| Audience         | Message               | Channel                | Owner        |
-| ---------------- | --------------------- | ---------------------- | ------------ |
-| All Staff        | Launch day brief      | Slack #general         | CEO          |
-| Engineering Team | War room setup        | Slack #launch-war-room | Eng Lead     |
-| Support Team     | Final readiness check | Slack #support         | Support Lead |
+| Audience         | Message               | Channel                    | Owner        |
+| ---------------- | --------------------- | -------------------------- | ------------ |
+| All Staff        | Launch day brief      | Team Chat #general         | CEO          |
+| Engineering Team | War room setup        | Team Chat #launch-war-room | Eng Lead     |
+| Support Team     | Final readiness check | Team Chat #support         | Support Lead |
 
 ### Launch Day
 
-| Audience  | Message              | Channel        | Owner     |
-| --------- | -------------------- | -------------- | --------- |
-| All Staff | Go live confirmation | Slack #general | CTO       |
-| Public    | Launch announcement  | All channels   | Marketing |
-| Press     | Embargo lift         | Email          | PR        |
+| Audience  | Message              | Channel            | Owner     |
+| --------- | -------------------- | ------------------ | --------- |
+| All Staff | Go live confirmation | Team Chat #general | CTO       |
+| Public    | Launch announcement  | All channels       | Marketing |
+| Press     | Embargo lift         | Email              | PR        |
 
 ---
 
 ## Internal Communication
 
-### Slack Channels
+### Team Chat Channels
 
 | Channel          | Purpose                      | Members                            |
 | ---------------- | ---------------------------- | ---------------------------------- |

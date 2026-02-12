@@ -143,14 +143,6 @@ const WIDGET_REGISTRY: WidgetDefinition[] = [
   },
   // Integration widgets
   {
-    id: 'slack-activity',
-    name: 'Slack Activity',
-    description: 'Recent Slack messages and mentions',
-    category: 'integration',
-    requiredIntegrations: ['slack'],
-    defaultSize: { width: 2, height: 2 },
-  },
-  {
     id: 'github-activity',
     name: 'GitHub Activity',
     description: 'Recent commits, PRs, and issues',

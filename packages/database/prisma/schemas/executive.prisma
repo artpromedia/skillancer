@@ -389,7 +389,7 @@ model ExecutiveEngagement {
   
   // Communication
   meetingCadence        String?   // "Weekly 1:1", "Bi-weekly team standup"
-  communicationChannels String[]  // "Slack", "Email", "Platform"
+  communicationChannels String[]  // "Email", "Platform"
   
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt

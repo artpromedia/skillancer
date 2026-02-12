@@ -8,49 +8,6 @@ const integrationTypes = [
   // COMMON INTEGRATIONS (All Roles)
   // ============================================
   {
-    slug: 'slack',
-    name: 'Slack',
-    description: 'Team communication and collaboration platform',
-    logoUrl: '/integrations/slack.svg',
-    category: 'COMMUNICATION',
-    applicableRoles: [
-      'CTO',
-      'CFO',
-      'COO',
-      'CMO',
-      'CPO',
-      'CHRO',
-      'CLO',
-      'CISO',
-      'CDO',
-      'CSO',
-      'CRO',
-    ],
-    requiredScopes: ['channels:read', 'chat:write', 'users:read'],
-    optionalScopes: ['channels:history', 'groups:read'],
-    tier: 'BASIC',
-    widgets: [
-      {
-        id: 'channel-activity',
-        name: 'Channel Activity',
-        description: 'Recent messages in key channels',
-        refreshInterval: 60,
-      },
-      {
-        id: 'team-presence',
-        name: 'Team Presence',
-        description: "Who's online and available",
-        refreshInterval: 30,
-      },
-      {
-        id: 'notifications',
-        name: 'Notifications',
-        description: 'Unread mentions and messages',
-        refreshInterval: 30,
-      },
-    ],
-  },
-  {
     slug: 'google-calendar',
     name: 'Google Calendar',
     description: 'Calendar and scheduling management',

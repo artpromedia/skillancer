@@ -9,7 +9,6 @@ import type { ExecutiveType } from '@skillancer/database';
 import type { IntegrationCategory, ConnectorInfo } from '../types/index.js';
 
 // Import connectors
-import { SlackConnector } from './slack.connector.js';
 import { GoogleCalendarConnector } from './google-calendar.connector.js';
 import { NotionConnector } from './notion.connector.js';
 import { JiraConnector } from './jira.connector.js';
@@ -40,7 +39,6 @@ class ConnectorRegistry {
     }
 
     // Register all connectors
-    this.register(new SlackConnector());
     this.register(new GoogleCalendarConnector());
     this.register(new NotionConnector());
     this.register(new JiraConnector());

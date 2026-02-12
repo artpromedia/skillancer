@@ -156,8 +156,8 @@ variable "alert_email" {
   type        = string
 }
 
-variable "alert_slack_webhook" {
-  description = "Slack webhook URL for alerts"
+variable "alert_webhook_url" {
+  description = "Webhook URL for alerts"
   type        = string
   default     = ""
   sensitive   = true

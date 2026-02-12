@@ -250,13 +250,6 @@ const DEFAULT_SENSITIVE_PATTERNS: SensitiveDataPattern[] = [
     severity: 'HIGH',
     category: 'CREDENTIALS',
   },
-  // Slack Tokens
-  {
-    name: 'Slack Token',
-    pattern: /\bxox[baprs]-[0-9A-Za-z-]+\b/g,
-    severity: 'CRITICAL',
-    category: 'CREDENTIALS',
-  },
   // Stripe API Keys
   {
     name: 'Stripe API Key',

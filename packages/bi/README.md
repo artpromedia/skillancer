@@ -7,7 +7,7 @@ Business Intelligence and KPI Reporting package for the Skillancer platform.
 - **KPI Tracking**: Real-time and historical KPI calculation with caching
 - **Executive Dashboards**: Pre-built dashboard views for different stakeholders
 - **Report Generation**: PDF, Excel, and CSV report generation
-- **Alerting**: Threshold-based alerts with Slack/Email notifications
+- **Alerting**: Threshold-based alerts with Email/Webhook notifications
 - **Insights**: AI-powered anomaly detection and trend analysis
 
 ## KPI Categories

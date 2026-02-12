@@ -35,7 +35,7 @@ Regular maintenance procedures.
 | Role             | Contact         | Escalation               |
 | ---------------- | --------------- | ------------------------ |
 | On-Call Engineer | Check PagerDuty | Auto-escalates after 15m |
-| Engineering Lead | @eng-lead       | Slack DM                 |
+| Engineering Lead | @eng-lead       | Direct Message           |
 | DevOps           | @devops         | #devops channel          |
 | Security         | @security       | #security channel        |
 

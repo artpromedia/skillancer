@@ -14,7 +14,7 @@ This document describes emergency rollback procedures for database migrations in
 
 Before performing any rollback in production:
 
-1. **Notify the team** via Slack `#engineering`
+1. **Notify the team** via `#engineering` channel
 2. **Create an incident** if user-facing impact
 3. **Document actions** in the incident channel
 
@@ -288,7 +288,7 @@ COMMIT;
 Before performing any rollback:
 
 - [ ] **Backup current state** - Take a snapshot before making changes
-- [ ] **Notify team** - Alert via Slack `#engineering`
+- [ ] **Notify team** - Alert via `#engineering` channel
 - [ ] **Check dependencies** - Ensure no application code depends on changes
 - [ ] **Test in staging** - Verify rollback works in staging first
 - [ ] **Schedule maintenance window** - If user-facing impact expected

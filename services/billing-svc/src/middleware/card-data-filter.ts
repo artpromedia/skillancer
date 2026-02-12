@@ -440,7 +440,7 @@ async function alertOnViolation(
     'SECURITY ALERT: Card data detected in request'
   );
 
-  // In production, send to PagerDuty, Slack, etc.
+  // In production, send to PagerDuty, etc.
   // await alertingService.sendCriticalAlert({
   //   type: 'CARD_DATA_VIOLATION',
   //   details: { violations, request: { url: request.url, method: request.method } },

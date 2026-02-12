@@ -23,9 +23,9 @@ The Integration Hub Service provides a unified framework for connecting executiv
 │         │                │                │                      │
 │  ┌─────────────────────────────────────────────────┐            │
 │  │              Connector Registry                  │            │
-│  │  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐ │            │
-│  │  │ Slack  │  │ Google │  │ Notion │  │  Jira  │ │            │
-│  │  └────────┘  └────────┘  └────────┘  └────────┘ │            │
+│  │  ┌────────┐  ┌────────┐  ┌────────┐            │            │
+│  │  │ Google │  │ Notion │  │  Jira  │            │            │
+│  │  └────────┘  └────────┘  └────────┘            │            │
 │  └─────────────────────────────────────────────────┘            │
 │         │                │                │                      │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
@@ -39,7 +39,6 @@ The Integration Hub Service provides a unified framework for connecting executiv
 
 ### Common (All Executive Types)
 
-- Slack
 - Google Calendar
 - Microsoft Teams
 - Notion
@@ -87,8 +86,6 @@ The Integration Hub Service provides a unified framework for connecting executiv
 
 ```env
 # OAuth Secrets (per provider)
-SLACK_CLIENT_ID=
-SLACK_CLIENT_SECRET=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 NOTION_CLIENT_ID=

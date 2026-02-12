@@ -152,12 +152,12 @@ War Room: #security-incident-YYYYMMDD
 
 ### Internal Communication
 
-| Severity | Notify                    | Channel      | Timeframe   |
-| -------- | ------------------------- | ------------ | ----------- |
-| Critical | CTO, Security Lead, Legal | Call + Slack | Immediately |
-| High     | Security Lead, Eng Lead   | Slack        | 30 minutes  |
-| Medium   | Security Team             | Slack        | 2 hours     |
-| Low      | Security Team             | Email        | 24 hours    |
+| Severity | Notify                    | Channel     | Timeframe   |
+| -------- | ------------------------- | ----------- | ----------- |
+| Critical | CTO, Security Lead, Legal | Call + Chat | Immediately |
+| High     | Security Lead, Eng Lead   | Chat        | 30 minutes  |
+| Medium   | Security Team             | Chat        | 2 hours     |
+| Low      | Security Team             | Email       | 24 hours    |
 
 ### Executive Notification
 
@@ -430,12 +430,12 @@ psql -c "DELETE FROM oauth_tokens WHERE user_id = '$USER_ID';"
 
 ### Internal
 
-| Role          | Contact                              |
-| ------------- | ------------------------------------ |
-| Security Lead | @security-lead (Slack)               |
-| CTO           | @cto (Slack), cto@skillancer.com     |
-| Legal         | @legal (Slack), legal@skillancer.com |
-| DPO           | dpo@skillancer.com                   |
+| Role          | Contact                             |
+| ------------- | ----------------------------------- |
+| Security Lead | @security-lead (Chat)               |
+| CTO           | @cto (Chat), cto@skillancer.com     |
+| Legal         | @legal (Chat), legal@skillancer.com |
+| DPO           | dpo@skillancer.com                  |
 
 ### External
 

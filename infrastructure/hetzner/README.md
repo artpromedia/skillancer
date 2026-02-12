@@ -208,7 +208,7 @@ The `.github/workflows/deploy-hetzner.yml` workflow handles automated deployment
 | ---------------------------- | -------------------------------------------- |
 | `HETZNER_STAGING_KUBECONFIG` | Base64-encoded kubeconfig for staging K3s    |
 | `HETZNER_PROD_KUBECONFIG`    | Base64-encoded kubeconfig for production K3s |
-| `SLACK_WEBHOOK_URL`          | Slack notifications (optional)               |
+| `ALERT_WEBHOOK_URL`          | Alert notifications (optional)               |
 
 ### Workflow Flow
 

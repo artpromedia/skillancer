@@ -379,7 +379,7 @@ Monitors Service Level Objectives:
 ### Alert Routing
 
 ```
-Standard Alarms → SNS Topic (alarms) → Email/Slack
+Standard Alarms → SNS Topic (alarms) → Email/Webhook
 Critical Alarms → SNS Topic (critical-alarms) → PagerDuty/Phone
 ```
 

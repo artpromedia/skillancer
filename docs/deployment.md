@@ -39,7 +39,7 @@ When code is merged to `main`:
 2. **Build** - Build Docker images for all services
 3. **Deploy to Staging** - Deploy to staging environment
 4. **Health Checks** - Verify staging deployment
-5. **Notification** - Send Slack notification
+5. **Notification** - Send deployment notification
 
 ### Manual Production Deployment
 
@@ -58,7 +58,7 @@ If production deployment fails:
 
 - Automatic rollback is triggered
 - Services are restored to previous versions
-- Slack notification is sent
+- Notification is sent
 
 For manual rollback:
 
@@ -117,9 +117,9 @@ Configure these secrets in GitHub repository settings:
 
 ### Notifications
 
-| Secret              | Description                                |
-| ------------------- | ------------------------------------------ |
-| `SLACK_WEBHOOK_URL` | Slack webhook for deployment notifications |
+| Secret              | Description                              |
+| ------------------- | ---------------------------------------- |
+| `ALERT_WEBHOOK_URL` | Webhook URL for deployment notifications |
 
 ## Services
 
@@ -256,7 +256,7 @@ Timeout: 30s per request
 ### Deployment Tracking
 
 - GitHub Actions workflow provides real-time status
-- Slack notifications for all deployment events
+- Webhook notifications for all deployment events
 - AWS CloudWatch for ECS service metrics
 - Deployment records stored in S3
 

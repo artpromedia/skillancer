@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @module @skillancer/cockpit-svc/routes/communication
- * Communication Platform Integration Routes - Slack & Discord
+ * Communication Platform Integration Routes - Discord
  */
 
 import { z } from 'zod';
@@ -10,11 +10,6 @@ import type {
   DiscordIntegrationService,
   DiscordInteraction,
 } from '../services/integrations/discord-integration.service.js';
-import type {
-  SlackIntegrationService,
-  SlackSlashCommand,
-  SlackInteractionPayload,
-} from '../services/integrations/slack-integration.service.js';
 import type { PrismaClient } from '@skillancer/database';
 import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
@@ -25,14 +20,6 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 const integrationIdParamSchema = z.object({
   integrationId: z.string().uuid(),
-});
-
-const slackNotificationConfigSchema = z.object({
-  notificationChannel: z.string().optional(),
-  notifyOnPayment: z.boolean().optional(),
-  notifyOnInvoice: z.boolean().optional(),
-  notifyOnProject: z.boolean().optional(),
-  notifyOnDeadline: z.boolean().optional(),
 });
 
 const discordNotificationConfigSchema = z.object({
@@ -55,7 +42,6 @@ const testNotificationSchema = z.object({
 export interface CommunicationRouteDeps {
   prisma: PrismaClient;
   logger: Logger;
-  slackService: SlackIntegrationService;
   discordService: DiscordIntegrationService;
 }
 
@@ -67,282 +53,7 @@ export function registerCommunicationRoutes(
   app: FastifyInstance,
   deps: CommunicationRouteDeps
 ): void {
-  const { prisma, slackService, discordService } = deps;
-
-  // ============================================================================
-  // Slack Routes
-  // ============================================================================
-
-  /**
-   * List Slack channels for an integration
-   */
-  app.get(
-    '/integrations/:integrationId/slack/channels',
-    {
-      schema: {
-        tags: ['Integrations', 'Slack'],
-        summary: 'List Slack channels',
-        params: integrationIdParamSchema,
-        response: {
-          200: z.object({
-            channels: z.array(
-              z.object({
-                id: z.string(),
-                name: z.string(),
-                is_private: z.boolean(),
-                is_member: z.boolean(),
-              })
-            ),
-          }),
-        },
-      },
-    },
-    async (request: FastifyRequest<{ Params: { integrationId: string } }>, reply: FastifyReply) => {
-      const { integrationId } = request.params;
-
-      const integration = await prisma.integration.findUnique({
-        where: { id: integrationId },
-      });
-
-      if (integration?.provider !== 'SLACK') {
-        return reply.status(404).send({ error: 'Slack integration not found' });
-      }
-
-      const channels = await slackService.listChannels(integration);
-      return { channels };
-    }
-  );
-
-  /**
-   * Configure Slack notification settings
-   */
-  app.patch(
-    '/integrations/:integrationId/slack/notifications',
-    {
-      schema: {
-        tags: ['Integrations', 'Slack'],
-        summary: 'Configure Slack notification settings',
-        params: integrationIdParamSchema,
-        body: slackNotificationConfigSchema,
-        response: {
-          200: z.object({ success: z.boolean() }),
-        },
-      },
-    },
-    async (
-      request: FastifyRequest<{
-        Params: { integrationId: string };
-        Body: z.infer<typeof slackNotificationConfigSchema>;
-      }>,
-      reply: FastifyReply
-    ) => {
-      const { integrationId } = request.params;
-      const config = request.body;
-
-      const integration = await prisma.integration.findUnique({
-        where: { id: integrationId },
-      });
-
-      if (integration?.provider !== 'SLACK') {
-        return reply.status(404).send({ error: 'Slack integration not found' });
-      }
-
-      const existingOptions = (integration.syncOptions as Record<string, unknown>) ?? {};
-      await prisma.integration.update({
-        where: { id: integrationId },
-        data: {
-          syncOptions: {
-            ...existingOptions,
-            ...config,
-          },
-        },
-      });
-
-      return { success: true };
-    }
-  );
-
-  /**
-   * Send test notification to Slack
-   */
-  app.post(
-    '/integrations/:integrationId/slack/test',
-    {
-      schema: {
-        tags: ['Integrations', 'Slack'],
-        summary: 'Send test notification to Slack',
-        params: integrationIdParamSchema,
-        body: testNotificationSchema,
-        response: {
-          200: z.object({
-            success: z.boolean(),
-            messageTs: z.string(),
-          }),
-        },
-      },
-    },
-    async (
-      request: FastifyRequest<{
-        Params: { integrationId: string };
-        Body: z.infer<typeof testNotificationSchema>;
-      }>,
-      reply: FastifyReply
-    ) => {
-      const { integrationId } = request.params;
-      const { channelId } = request.body;
-
-      const integration = await prisma.integration.findUnique({
-        where: { id: integrationId },
-      });
-
-      if (integration?.provider !== 'SLACK') {
-        return reply.status(404).send({ error: 'Slack integration not found' });
-      }
-
-      const messageTs = await slackService.sendMessage(integration, channelId, {
-        text: '🎉 Test notification from Skillancer!',
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: '🎉 *Test Notification*\n\nYour Slack integration is working correctly!',
-            },
-          },
-        ],
-      });
-
-      return { success: true, messageTs };
-    }
-  );
-
-  // ============================================================================
-  // Slack Webhook Endpoints (Public - no auth required)
-  // ============================================================================
-
-  /**
-   * Handle Slack slash commands
-   */
-  app.post(
-    '/slack/commands',
-    {
-      schema: {
-        tags: ['Integrations', 'Slack', 'Webhooks'],
-        summary: 'Handle Slack slash commands',
-      },
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const command = request.body as SlackSlashCommand;
-
-      // Find integration by team ID
-      const integration = await prisma.integration.findFirst({
-        where: {
-          provider: 'SLACK',
-          providerAccountId: command.team_id,
-          status: 'CONNECTED',
-        },
-      });
-
-      if (!integration) {
-        return reply.send({
-          response_type: 'ephemeral',
-          text: 'Slack integration not connected. Please connect at skillancer.com/settings/integrations',
-        });
-      }
-
-      const response = await slackService.handleSlashCommand(integration, command);
-      return reply.send(response);
-    }
-  );
-
-  /**
-   * Handle Slack interactive components
-   */
-  app.post(
-    '/slack/interactive',
-    {
-      schema: {
-        tags: ['Integrations', 'Slack', 'Webhooks'],
-        summary: 'Handle Slack interactive actions',
-      },
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      // Slack sends payload as form-urlencoded with payload field
-      const body = request.body as { payload?: string } | SlackInteractionPayload;
-      const payload =
-        typeof (body as { payload?: string }).payload === 'string'
-          ? (JSON.parse((body as { payload: string }).payload) as SlackInteractionPayload)
-          : (body as SlackInteractionPayload);
-
-      const integration = await prisma.integration.findFirst({
-        where: {
-          provider: 'SLACK',
-          providerAccountId: payload.team.id,
-          status: 'CONNECTED',
-        },
-      });
-
-      if (!integration) {
-        return reply.status(200).send();
-      }
-
-      const response = await slackService.handleInteractiveAction(integration, payload);
-      if (response) {
-        return reply.send(response);
-      }
-
-      return reply.status(200).send();
-    }
-  );
-
-  /**
-   * Handle Slack events
-   */
-  app.post(
-    '/slack/events',
-    {
-      schema: {
-        tags: ['Integrations', 'Slack', 'Webhooks'],
-        summary: 'Handle Slack events',
-      },
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const payload = request.body as {
-        type: string;
-        challenge?: string;
-        team_id?: string;
-        event?: { type: string };
-      };
-
-      // URL verification challenge
-      if (payload.type === 'url_verification') {
-        return reply.send({ challenge: payload.challenge });
-      }
-
-      // Find integration
-      if (!payload.team_id) {
-        return reply.status(200).send();
-      }
-
-      const integration = await prisma.integration.findFirst({
-        where: {
-          provider: 'SLACK',
-          providerAccountId: payload.team_id,
-          status: 'CONNECTED',
-        },
-      });
-
-      if (integration && payload.event) {
-        await slackService.processWebhook(integration, {
-          eventType: payload.event.type,
-          payload: payload as Record<string, unknown>,
-          receivedAt: new Date(),
-        });
-      }
-
-      return reply.status(200).send();
-    }
-  );
+  const { prisma, discordService } = deps;
 
   // ============================================================================
   // Discord Routes

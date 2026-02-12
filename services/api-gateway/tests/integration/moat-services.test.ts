@@ -109,7 +109,7 @@ describe('Moat Services Integration', () => {
 
         expect(response.status).toBe(200);
         expect(Array.isArray(response.data)).toBe(true);
-        expect(response.data.some((i: any) => i.name === 'Slack')).toBe(true);
+        expect(response.data.length).toBeGreaterThan(0);
       });
 
       it('should get integration status', async () => {

@@ -126,7 +126,7 @@ This checklist covers all activities required for a successful Skillancer public
 
 - [ ] Team on standby (all team members assembled in war room)
 - [ ] Monitoring dashboards open (Grafana, Sentry, health dashboard)
-- [ ] Communication channels active (#launch-war-room Slack channel)
+- [ ] Communication channels active (#launch-war-room chat channel)
 - [ ] Status page updated: "Scheduled Maintenance"
 - [ ] DNS TTLs lowered to 5 minutes (done 24 hours prior)
 - [ ] Previous version tagged for rollback (`v1.0.0-rc.5`)
@@ -213,7 +213,7 @@ The launch is considered successful when:
 
 ## Emergency Contacts
 
-| Role             | Name | Phone | Slack          |
+| Role             | Name | Phone | Chat           |
 | ---------------- | ---- | ----- | -------------- |
 | Engineering Lead |      |       | @eng-lead      |
 | DevOps Lead      |      |       | @devops-lead   |

@@ -63,12 +63,12 @@ resource "aws_sns_topic_subscription" "critical_email" {
   endpoint  = var.alert_email
 }
 
-resource "aws_sns_topic_subscription" "alerts_slack" {
-  count = var.slack_webhook_url != null ? 1 : 0
+resource "aws_sns_topic_subscription" "alerts_webhook" {
+  count = var.alert_webhook_url != null ? 1 : 0
 
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "https"
-  endpoint  = var.slack_webhook_url
+  endpoint  = var.alert_webhook_url
 }
 
 # -----------------------------------------------------------------------------

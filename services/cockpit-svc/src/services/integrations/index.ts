@@ -66,13 +66,6 @@ export type {
 export { AsanaIntegrationService } from './asana-integration.service.js';
 
 // Communication Platform Integrations
-export { SlackIntegrationService } from './slack-integration.service.js';
-export type {
-  SlackSlashCommand,
-  SlackCommandResponse,
-  SlackInteractionPayload,
-} from './slack-integration.service.js';
-
 export { DiscordIntegrationService } from './discord-integration.service.js';
 export type {
   DiscordInteraction,

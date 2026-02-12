@@ -971,8 +971,6 @@ export class IntegrationPlatformService {
     switch (provider) {
       case 'GITHUB':
         return data.delivery as string;
-      case 'SLACK':
-        return data.event_id as string;
       case 'QUICKBOOKS':
       case 'XERO':
         return data.event_id as string;

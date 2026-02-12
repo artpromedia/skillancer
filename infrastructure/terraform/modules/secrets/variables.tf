@@ -101,8 +101,8 @@ variable "sendgrid_api_key" {
   sensitive   = true
 }
 
-variable "slack_webhook_url" {
-  description = "Slack webhook URL"
+variable "alert_webhook_url" {
+  description = "Alert webhook URL"
   type        = string
   default     = ""
   sensitive   = true

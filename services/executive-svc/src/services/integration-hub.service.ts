@@ -558,23 +558,6 @@ export class IntegrationHubService {
       },
       // Common Tools
       {
-        slug: 'slack',
-        name: 'Slack',
-        description: 'Send notifications and access workspace data',
-        category: 'COMMUNICATION',
-        applicableRoles: [
-          'FRACTIONAL_CTO',
-          'FRACTIONAL_CFO',
-          'FRACTIONAL_CMO',
-          'FRACTIONAL_COO',
-          'FRACTIONAL_CHRO',
-          'FRACTIONAL_CISO',
-          'FRACTIONAL_CPO',
-        ],
-        oauthProvider: 'slack',
-        tier: 'BASIC',
-      },
-      {
         slug: 'notion',
         name: 'Notion',
         description: 'Access documentation and knowledge base',
