@@ -26,8 +26,9 @@
  * ```
  */
 
-import type Redis from 'ioredis';
 import crypto from 'crypto';
+
+import type Redis from 'ioredis';
 
 // =============================================================================
 // TYPES
@@ -76,11 +77,11 @@ export interface CachedList<T> {
 // =============================================================================
 
 export class RepositoryCache<T> {
-  private redis: Redis;
-  private namespace: string;
-  private ttl: number;
-  private serialize: (value: unknown) => string;
-  private deserialize: <V>(value: string) => V;
+  private readonly redis: Redis;
+  private readonly namespace: string;
+  private readonly ttl: number;
+  private readonly serialize: (value: unknown) => string;
+  private readonly deserialize: <V>(value: string) => V;
 
   constructor(config: RepositoryCacheConfig) {
     this.redis = config.redis;
@@ -184,7 +185,10 @@ export class RepositoryCache<T> {
       const value = values[i];
       if (value) {
         try {
-          result.set(ids[i]!, this.deserialize<T>(value));
+          const id = ids[i];
+          if (id) {
+            result.set(id, this.deserialize<T>(value));
+          }
         } catch {
           // Skip invalid entries
         }
@@ -398,7 +402,7 @@ export function createRepositoryCache<T>(config: RepositoryCacheConfig): Reposit
 export function hashFilters(filters: Record<string, unknown>): string {
   const sorted = JSON.stringify(
     Object.keys(filters)
-      .sort()
+      .sort((a, b) => a.localeCompare(b))
       .reduce((acc, key) => ({ ...acc, [key]: filters[key] }), {})
   );
   return crypto.createHash('md5').update(sorted).digest('hex').substring(0, 8);

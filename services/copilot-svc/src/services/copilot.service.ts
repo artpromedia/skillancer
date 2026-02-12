@@ -13,12 +13,10 @@ import type {
   ProfileOptimizeResult,
   MarketInsightInput,
   MarketInsightResult,
-  Suggestion,
-  SuggestionType,
 } from '../types/copilot.types.js';
 
 export class CopilotService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   /**
    * Generate a proposal draft
@@ -370,10 +368,6 @@ export class CopilotService {
       input.userSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())
     );
 
-    let tone = 'professional';
-    if (input.tone === 'FRIENDLY') tone = 'friendly';
-    else if (input.tone === 'FORMAL') tone = 'formal';
-
     const greeting = input.clientName ? `Dear ${input.clientName}` : 'Hello';
 
     const intro = `${greeting},
@@ -525,7 +519,10 @@ ${userName}`;
     return {
       averageRate:
         contracts.length > 0
-          ? contracts.reduce((s: number, c: { suggestedRate: unknown }) => s + Number(c.suggestedRate), 0) / contracts.length
+          ? contracts.reduce(
+              (s: number, c: { suggestedRate: unknown }) => s + Number(c.suggestedRate),
+              0
+            ) / contracts.length
           : 0,
       count: contracts.length,
     };
@@ -552,7 +549,7 @@ ${userName}`;
     }
 
     // Skill demand factor
-    if (input.skills.some((s) => ['AI', 'Machine Learning', 'Blockchain'].includes(s))) {
+    if (input.skills.some((s) => new Set(['AI', 'Machine Learning', 'Blockchain']).has(s))) {
       factors.push({
         factor: 'High-Demand Skills',
         impact: 'POSITIVE',

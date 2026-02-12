@@ -4,13 +4,11 @@ import type {
   CardTransactionInput,
   CardBalance,
   TransactionSummary,
-  CardStatus,
 } from '../types/financial.types.js';
 import type { PrismaClient } from '@prisma/client';
 
-
 export class SkillancerCardService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   /**
    * Create a new Skillancer Card

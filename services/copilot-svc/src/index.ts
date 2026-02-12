@@ -100,15 +100,13 @@ async function start() {
   }
 }
 
-prisma
-  .$connect()
-  .then(() => {
-    console.log('Connected to database');
-    return start();
-  })
-  .catch((error) => {
-    console.error('Failed to connect to database:', error);
-    process.exit(1);
-  });
+try {
+  await prisma.$connect();
+  console.log('Connected to database');
+  await start();
+} catch (error) {
+  console.error('Failed to connect to database:', error);
+  process.exit(1);
+}
 
 export { buildApp };

@@ -9,7 +9,7 @@ import {
 } from '../types/executive.types';
 
 export class ExecutiveEngagementService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   /**
    * Create a new engagement proposal
@@ -296,7 +296,9 @@ export class ExecutiveEngagementService {
         title: input.title,
         description: input.description,
         dueDate: input.dueDate,
-        deliverables: input.deliverables ? input.deliverables.map((d: string) => JSON.parse(JSON.stringify({ name: d }))) : [],
+        deliverables: input.deliverables
+          ? input.deliverables.map((d: string) => JSON.parse(JSON.stringify({ name: d })))
+          : [],
         status: 'NOT_STARTED',
       },
     });
@@ -341,17 +343,29 @@ export class ExecutiveEngagementService {
         dashboardLayout: JSON.parse(JSON.stringify(config.dashboardLayout)),
         enabledWidgets: config.enabledWidgets,
         widgetConfigs: JSON.parse(JSON.stringify(config.widgetSettings)),
-        pinnedDocuments: config.pinnedDocuments?.map((d: string) => JSON.parse(JSON.stringify({ name: d, url: d, type: 'document' }))) || [],
+        pinnedDocuments:
+          config.pinnedDocuments?.map((d: string) =>
+            JSON.parse(JSON.stringify({ name: d, url: d, type: 'document' }))
+          ) || [],
         favoriteActions: config.favoriteActions,
-        pinnedLinks: config.quickLinks?.map((l: { title: string; url: string }) => JSON.parse(JSON.stringify(l))) || [],
+        pinnedLinks:
+          config.quickLinks?.map((l: { title: string; url: string }) =>
+            JSON.parse(JSON.stringify(l))
+          ) || [],
       },
       update: {
         dashboardLayout: JSON.parse(JSON.stringify(config.dashboardLayout)),
         enabledWidgets: config.enabledWidgets,
         widgetConfigs: JSON.parse(JSON.stringify(config.widgetSettings)),
-        pinnedDocuments: config.pinnedDocuments?.map((d: string) => JSON.parse(JSON.stringify({ name: d, url: d, type: 'document' }))) || [],
+        pinnedDocuments:
+          config.pinnedDocuments?.map((d: string) =>
+            JSON.parse(JSON.stringify({ name: d, url: d, type: 'document' }))
+          ) || [],
         favoriteActions: config.favoriteActions,
-        pinnedLinks: config.quickLinks?.map((l: { title: string; url: string }) => JSON.parse(JSON.stringify(l))) || [],
+        pinnedLinks:
+          config.quickLinks?.map((l: { title: string; url: string }) =>
+            JSON.parse(JSON.stringify(l))
+          ) || [],
       },
     });
 

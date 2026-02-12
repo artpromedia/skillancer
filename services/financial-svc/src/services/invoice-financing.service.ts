@@ -1,5 +1,5 @@
-
-import type { FinancingStatus ,
+import type {
+  FinancingStatus,
   InvoiceFinancingCreateInput,
   InvoiceFinancingUpdateInput,
   FinancingEligibility,
@@ -7,7 +7,7 @@ import type { FinancingStatus ,
 import type { PrismaClient } from '@prisma/client';
 
 export class InvoiceFinancingService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   /**
    * Check financing eligibility for an invoice
@@ -84,7 +84,7 @@ export class InvoiceFinancingService {
       feePercentage = 2.5;
     } else if (successfulFinancings >= 2) {
       maxPercentage = 0.85;
-      feePercentage = 3.0;
+      feePercentage = 3;
     }
 
     const maxAmount = Math.min(

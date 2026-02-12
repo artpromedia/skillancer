@@ -23,7 +23,7 @@ export interface IntegrationSyncResult {
 export class IntegrationHubService {
   private encryptionKey: Buffer;
 
-  constructor(private prisma: PrismaClient) {
+  constructor(private readonly prisma: PrismaClient) {
     // Use environment variable for encryption key
     const key = process.env.INTEGRATION_ENCRYPTION_KEY || 'default-32-char-encryption-key!';
     this.encryptionKey = Buffer.from(key.padEnd(32, '0').slice(0, 32));
@@ -207,7 +207,12 @@ export class IntegrationHubService {
   /**
    * Refresh OAuth token
    */
-  async refreshToken(integrationId: string, newAccessToken: string, newRefreshToken?: string, expiresAt?: Date) {
+  async refreshToken(
+    integrationId: string,
+    newAccessToken: string,
+    newRefreshToken?: string,
+    expiresAt?: Date
+  ) {
     const encryptedAccessToken = this.encrypt(newAccessToken);
     const encryptedRefreshToken = newRefreshToken ? this.encrypt(newRefreshToken) : undefined;
 
@@ -386,7 +391,9 @@ export class IntegrationHubService {
         logoUrl: data.logoUrl,
         tier: data.tier as any,
         addonPriceMonthly: data.addonPriceMonthly,
-        supportedWidgets: data.supportedWidgets ? JSON.parse(JSON.stringify(data.supportedWidgets)) : null,
+        supportedWidgets: data.supportedWidgets
+          ? JSON.parse(JSON.stringify(data.supportedWidgets))
+          : null,
         isActive: true,
       },
       update: {
@@ -402,7 +409,9 @@ export class IntegrationHubService {
         logoUrl: data.logoUrl,
         tier: data.tier as any,
         addonPriceMonthly: data.addonPriceMonthly,
-        supportedWidgets: data.supportedWidgets ? JSON.parse(JSON.stringify(data.supportedWidgets)) : undefined,
+        supportedWidgets: data.supportedWidgets
+          ? JSON.parse(JSON.stringify(data.supportedWidgets))
+          : undefined,
       },
     });
 
@@ -553,7 +562,15 @@ export class IntegrationHubService {
         name: 'Slack',
         description: 'Send notifications and access workspace data',
         category: 'COMMUNICATION',
-        applicableRoles: ['FRACTIONAL_CTO', 'FRACTIONAL_CFO', 'FRACTIONAL_CMO', 'FRACTIONAL_COO', 'FRACTIONAL_CHRO', 'FRACTIONAL_CISO', 'FRACTIONAL_CPO'],
+        applicableRoles: [
+          'FRACTIONAL_CTO',
+          'FRACTIONAL_CFO',
+          'FRACTIONAL_CMO',
+          'FRACTIONAL_COO',
+          'FRACTIONAL_CHRO',
+          'FRACTIONAL_CISO',
+          'FRACTIONAL_CPO',
+        ],
         oauthProvider: 'slack',
         tier: 'BASIC',
       },
@@ -562,7 +579,15 @@ export class IntegrationHubService {
         name: 'Notion',
         description: 'Access documentation and knowledge base',
         category: 'PRODUCTIVITY',
-        applicableRoles: ['FRACTIONAL_CTO', 'FRACTIONAL_CFO', 'FRACTIONAL_CMO', 'FRACTIONAL_COO', 'FRACTIONAL_CHRO', 'FRACTIONAL_CISO', 'FRACTIONAL_CPO'],
+        applicableRoles: [
+          'FRACTIONAL_CTO',
+          'FRACTIONAL_CFO',
+          'FRACTIONAL_CMO',
+          'FRACTIONAL_COO',
+          'FRACTIONAL_CHRO',
+          'FRACTIONAL_CISO',
+          'FRACTIONAL_CPO',
+        ],
         oauthProvider: 'notion',
         tier: 'BASIC',
       },
