@@ -100,7 +100,7 @@ async function authPluginImpl(app: FastifyInstance): Promise<void> {
   }
 
   // Register JWT plugin
-  await app.register(jwt, {
+  await app.register(jwt as any, {
     secret: jwtSecret,
     sign: {
       expiresIn: process.env.JWT_EXPIRES_IN || '1h',
@@ -148,9 +148,9 @@ async function authPluginImpl(app: FastifyInstance): Promise<void> {
       }
 
       try {
-        await request.jwtVerify();
+        await (request as any).jwtVerify();
         request.log.debug(
-          { userId: request.user?.userId, path: request.url },
+          { userId: (request as any).user?.userId, path: request.url },
           'User authenticated successfully'
         );
       } catch (err) {
@@ -178,9 +178,9 @@ async function authPluginImpl(app: FastifyInstance): Promise<void> {
       }
 
       try {
-        await request.jwtVerify();
+        await (request as any).jwtVerify();
         request.log.debug(
-          { userId: request.user?.userId, path: request.url },
+          { userId: (request as any).user?.userId, path: request.url },
           'Optional auth: User authenticated'
         );
       } catch {
@@ -200,7 +200,7 @@ async function authPluginImpl(app: FastifyInstance): Promise<void> {
 // EXPORTS
 // =============================================================================
 
-export const authPlugin = fp(authPluginImpl, {
+export const authPlugin = fp(authPluginImpl as any, {
   name: 'copilot-auth-plugin',
 });
 

@@ -30,7 +30,7 @@ const copilotService = new CopilotService(prisma);
 
 // Helper to get authenticated user from request (guaranteed after requireAuth)
 function getAuthenticatedUser(request: FastifyRequest): AuthenticatedUser {
-  const user = request.user;
+  const user = (request as any).user;
   if (!user?.userId) {
     // This should never happen if requireAuth preHandler ran
     throw new Error('User not authenticated');

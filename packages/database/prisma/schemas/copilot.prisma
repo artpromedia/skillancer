@@ -22,3 +22,25 @@ model CopilotInteraction {
   @@index([createdAt])
   @@map("copilot_interactions")
 }
+
+model ProposalDraft {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  user            User     @relation("UserProposalDrafts", fields: [userId], references: [id], onDelete: Cascade)
+
+  jobId           String?  @map("job_id")
+  jobTitle        String?  @map("job_title")
+  content         String   @db.Text
+  suggestedRate   Decimal? @map("suggested_rate") @db.Decimal(10, 2)
+  estimatedWinRate Int?    @map("estimated_win_rate")
+  keyPoints       String[]
+  improvements    Json?
+  status          String   @default("DRAFT") // DRAFT, SUBMITTED, ACCEPTED, REJECTED
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([createdAt])
+  @@map("proposal_drafts")
+}

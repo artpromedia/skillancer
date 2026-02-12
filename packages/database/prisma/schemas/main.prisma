@@ -257,6 +257,7 @@ model User {
 
   // Copilot Service
   copilotInteractions      CopilotInteraction[] @relation("UserCopilotInteractions")
+  proposalDrafts           ProposalDraft[]      @relation("UserProposalDrafts")
 
   // Talent Graph Service
   workRelationships           WorkRelationship[]    @relation("WorkRelationshipsAsUser")

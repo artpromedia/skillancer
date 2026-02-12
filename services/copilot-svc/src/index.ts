@@ -37,10 +37,10 @@ async function buildApp() {
   });
 
   // Register JWT authentication plugin
-  await fastify.register(authPlugin);
+  await fastify.register(authPlugin as any);
 
   // Register rate limiting plugin for AI endpoints
-  await fastify.register(rateLimitPlugin);
+  await fastify.register(rateLimitPlugin as any);
 
   fastify.decorateRequest('prisma', null);
   fastify.addHook('onRequest', async (request) => {
