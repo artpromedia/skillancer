@@ -1,0 +1,24 @@
+// =============================================================================
+// Copilot Service Prisma Schema
+// Sprint: AI Copilot for Freelancers
+// =============================================================================
+
+model CopilotInteraction {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  user             User     @relation("UserCopilotInteractions", fields: [userId], references: [id], onDelete: Cascade)
+
+  interactionType  String   @map("interaction_type")
+  inputContext      Json     @map("input_context")
+  response         String?  @db.Text
+  suggestions      String[]
+  confidence       Int      @default(0)
+  tokensUsed       Int      @default(0) @map("tokens_used")
+  processingTimeMs Int      @default(0) @map("processing_time_ms")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([userId, interactionType])
+  @@index([createdAt])
+  @@map("copilot_interactions")
+}

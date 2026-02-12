@@ -510,6 +510,45 @@ model ExecutiveMilestone {
 }
 
 // =============================================================================
+// INTEGRATION TYPE REGISTRY (Available integrations)
+// =============================================================================
+
+model IntegrationType {
+  id                String   @id @default(uuid())
+  slug              String   @unique
+  name              String
+  description       String?  @db.Text
+  category          String   // productivity, communication, project_management, etc.
+  applicableRoles   String[] // FRACTIONAL_CTO, FRACTIONAL_CFO, etc.
+
+  // OAuth Configuration
+  oauthProvider     String?
+  oauthAuthUrl      String?
+  oauthTokenUrl     String?
+  oauthScopes       String[]
+  apiBaseUrl        String?
+
+  // Display
+  logoUrl           String?
+
+  // Tier & Pricing
+  tier              String   @default("BASIC") // BASIC, PRO, ENTERPRISE
+  addonPriceMonthly Decimal? @db.Decimal(10, 2)
+
+  // Capabilities
+  supportedWidgets  String[]
+
+  isActive          Boolean  @default(true)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  integrations      ExecutiveIntegration[]
+
+  @@index([isActive, category])
+}
+
+// =============================================================================
 // EXECUTIVE INTEGRATION (Connected tools per engagement)
 // =============================================================================
 
@@ -517,31 +556,43 @@ model ExecutiveIntegration {
   id                    String   @id @default(uuid())
   engagementId          String
   engagement            ExecutiveEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
-  
-  // Integration Details
-  integrationType       String   // "slack", "github", "jira", etc.
-  integrationName       String   // Display name
-  
+
+  // Integration type (FK to IntegrationType)
+  integrationTypeId     String
+  integrationType       IntegrationType @relation(fields: [integrationTypeId], references: [id])
+
   // Connection
   status                ExecutiveIntegrationStatus @default(PENDING)
   connectedAt           DateTime?
-  lastSyncAt            DateTime?
-  
-  // Config
-  config                Json?    // Integration-specific config
+
+  // Auth
   accessToken           String?  // Encrypted
   refreshToken          String?  // Encrypted
-  tokenExpiry           DateTime?
-  
-  // Metadata
-  externalAccountId     String?  // ID in external system
-  externalAccountName   String?  // Name in external system
-  
+  tokenExpiresAt        DateTime?
+  apiKey                String?  // Encrypted
+
+  // Config
+  config                Json?    // Integration-specific config
+  accountId             String?  // ID in external system
+  accountName           String?  // Name in external system
+
+  // Sync
+  syncEnabled           Boolean  @default(false)
+  syncFrequency         String?  // hourly, daily, weekly
+  lastSyncAt            DateTime?
+  lastSyncStatus        String?  // success, error
+  lastSyncError         String?  @db.Text
+
+  // Cache
+  cachedData            Json?
+  cacheExpiresAt        DateTime?
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
-  
-  @@unique([engagementId, integrationType])
+
+  @@unique([engagementId, integrationTypeId])
   @@index([engagementId])
+  @@index([status, syncEnabled])
 }
 
 // =============================================================================
@@ -1001,6 +1052,8 @@ enum ExecutiveIntegrationStatus {
   CONNECTED
   DISCONNECTED
   ERROR
+  REQUIRES_REAUTH
+  REVOKED
 }
 
 // =============================================================================

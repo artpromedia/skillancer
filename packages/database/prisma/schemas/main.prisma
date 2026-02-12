@@ -255,6 +255,26 @@ model User {
   verificationBadges       UserVerificationBadge[] @relation("UserVerificationBadges")
   verificationCodes        VerificationCode[]
 
+  // Copilot Service
+  copilotInteractions      CopilotInteraction[] @relation("UserCopilotInteractions")
+
+  // Talent Graph Service
+  workRelationships           WorkRelationship[]    @relation("WorkRelationshipsAsUser")
+  workRelationshipsAsRelated  WorkRelationship[]    @relation("WorkRelationshipsAsRelated")
+  teamReunionsCreated         TeamReunion[]         @relation("TeamReunionCreator")
+  teamReunionMemberships      TeamReunionMember[]   @relation("TeamReunionMembers")
+  teamReunionInvitesSent      TeamReunionMember[]   @relation("TeamReunionInviter")
+  warmIntrosRequested         WarmIntroduction[]    @relation("WarmIntroRequester")
+  warmIntrosReceived          WarmIntroduction[]    @relation("WarmIntroTarget")
+  warmIntrosAsIntroducer      WarmIntroduction[]    @relation("WarmIntroIntroducer")
+
+  // Intelligence Service
+  outcomeAsClient             EngagementOutcome[]   @relation("OutcomeClient")
+  outcomeAsFreelancer         EngagementOutcome[]   @relation("OutcomeFreelancer")
+
+  // Financial Service — Invoice Financing
+  invoiceFinancingRequests    InvoiceFinancing[]    @relation("UserInvoiceFinancing")
+
   @@unique([oauthProvider, oauthId])
   @@index([email])
   @@index([status])
@@ -13886,4 +13906,269 @@ model VerificationCode {
   @@index([userId, type])
   @@index([expiresAt])
   @@map("verification_codes")
+}
+
+// ============================================================================
+// TALENT GRAPH — Work Relationships
+// ============================================================================
+
+enum WorkRelationshipType {
+  MANAGER
+  PEER
+  DIRECT_REPORT
+  CLIENT
+  VENDOR
+  MENTOR
+  MENTEE
+  COWORKER
+  COLLABORATOR
+}
+
+model WorkRelationship {
+  id               String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String                @map("user_id") @db.Uuid
+  relatedUserId    String                @map("related_user_id") @db.Uuid
+
+  relationshipType WorkRelationshipType  @map("relationship_type")
+  company          String?
+  startDate        DateTime?             @map("start_date")
+  endDate          DateTime?             @map("end_date")
+  projectName      String?               @map("project_name")
+
+  strength         String?               // STRONG, MODERATE, WEAK
+  collaborationScore Int?                @map("collaboration_score")
+  endorsement      Int                   @default(0)
+  skills           String[]
+  notes            String?               @db.Text
+
+  verified         Boolean               @default(false)
+  verifiedAt       DateTime?             @map("verified_at")
+  endorsedAt       DateTime?             @map("endorsed_at")
+
+  user             User                  @relation("WorkRelationshipsAsUser", fields: [userId], references: [id])
+  relatedUser      User                  @relation("WorkRelationshipsAsRelated", fields: [relatedUserId], references: [id])
+
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+
+  @@unique([userId, relatedUserId])
+  @@index([userId])
+  @@index([relatedUserId])
+  @@index([relationshipType])
+  @@map("work_relationships")
+}
+
+// ============================================================================
+// TALENT GRAPH — Team Reunions
+// ============================================================================
+
+enum TeamReunionStatus {
+  PROPOSED
+  CONFIRMED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum TeamReunionMemberStatus {
+  INVITED
+  ACCEPTED
+  CONFIRMED
+  JOINED
+  DECLINED
+}
+
+model TeamReunion {
+  id                   String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  creatorId            String            @map("creator_id") @db.Uuid
+  creator              User              @relation("TeamReunionCreator", fields: [creatorId], references: [id])
+
+  name                 String
+  description          String?           @db.Text
+  company              String?
+  industry             String?
+
+  projectName          String?           @map("project_name")
+  projectDescription   String?           @db.Text @map("project_description")
+  proposedBudget       Decimal?          @db.Decimal(12, 2) @map("proposed_budget")
+  proposedTimeline     String?           @map("proposed_timeline")
+  requiredSkills       String[]          @map("required_skills")
+
+  status               TeamReunionStatus @default(PROPOSED)
+  isActive             Boolean           @default(true) @map("is_active")
+
+  activatedAt          DateTime?         @map("activated_at")
+  completedAt          DateTime?         @map("completed_at")
+
+  members              TeamReunionMember[]
+
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+
+  @@index([creatorId])
+  @@index([isActive])
+  @@index([status])
+  @@map("team_reunions")
+}
+
+model TeamReunionMember {
+  id              String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  teamReunionId   String                  @map("team_reunion_id") @db.Uuid
+  teamReunion     TeamReunion             @relation(fields: [teamReunionId], references: [id], onDelete: Cascade)
+
+  userId          String                  @map("user_id") @db.Uuid
+  user            User                    @relation("TeamReunionMembers", fields: [userId], references: [id])
+
+  role            String?
+  proposedRole    String?                 @map("proposed_role")
+  relationship    String?
+
+  status          TeamReunionMemberStatus @default(INVITED)
+
+  invitedBy       String?                 @map("invited_by") @db.Uuid
+  invitedByUser   User?                   @relation("TeamReunionInviter", fields: [invitedBy], references: [id])
+  inviteMessage   String?                 @db.Text @map("invite_message")
+
+  responseMessage String?                 @db.Text @map("response_message")
+  respondedAt     DateTime?               @map("responded_at")
+  joinedAt        DateTime?               @map("joined_at")
+
+  createdAt       DateTime                @default(now()) @map("created_at")
+
+  @@unique([teamReunionId, userId])
+  @@index([userId])
+  @@index([status])
+  @@map("team_reunion_members")
+}
+
+// ============================================================================
+// TALENT GRAPH — Warm Introductions
+// ============================================================================
+
+model WarmIntroduction {
+  id                   String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  requesterId          String    @map("requester_id") @db.Uuid
+  targetUserId         String    @map("target_user_id") @db.Uuid
+  introducerId         String    @map("introducer_id") @db.Uuid
+
+  purpose              String    @db.Text
+  message              String?   @db.Text
+  context              String?   @db.Text
+
+  status               String    @default("PENDING") // PENDING, ACCEPTED, DECLINED, COMPLETED, EXPIRED
+
+  introducerResponse   String?   @db.Text @map("introducer_response")
+  introducerRespondedAt DateTime? @map("introducer_responded_at")
+  targetResponse       String?   @db.Text @map("target_response")
+  targetRespondedAt    DateTime? @map("target_responded_at")
+
+  completedAt          DateTime? @map("completed_at")
+  expiresAt            DateTime? @map("expires_at")
+
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  requester            User      @relation("WarmIntroRequester", fields: [requesterId], references: [id])
+  target               User      @relation("WarmIntroTarget", fields: [targetUserId], references: [id])
+  introducer           User      @relation("WarmIntroIntroducer", fields: [introducerId], references: [id])
+
+  @@index([requesterId])
+  @@index([targetUserId])
+  @@index([introducerId])
+  @@index([status])
+  @@map("warm_introductions")
+}
+
+// ============================================================================
+// INTELLIGENCE — Engagement Outcomes
+// ============================================================================
+
+model EngagementOutcome {
+  id                     String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId             String    @map("contract_id")
+
+  clientId               String?   @map("client_id") @db.Uuid
+  freelancerId           String?   @map("freelancer_id") @db.Uuid
+  client                 User?     @relation("OutcomeClient", fields: [clientId], references: [id])
+  freelancer             User?     @relation("OutcomeFreelancer", fields: [freelancerId], references: [id])
+
+  outcomeType            String?   @map("outcome_type")
+  rating                 String?
+  score                  Int?
+
+  metrics                Json?
+
+  clientFeedback         String?   @db.Text @map("client_feedback")
+  freelancerFeedback     String?   @db.Text @map("freelancer_feedback")
+  lessonsLearned         String[]  @map("lessons_learned")
+
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  @@index([contractId])
+  @@index([clientId])
+  @@index([freelancerId])
+  @@map("engagement_outcomes")
+}
+
+// ============================================================================
+// INTELLIGENCE — Success Predictions
+// ============================================================================
+
+model SuccessPrediction {
+  id                  String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId          String   @map("contract_id")
+  clientId            String   @map("client_id") @db.Uuid
+  freelancerId        String   @map("freelancer_id") @db.Uuid
+
+  successProbability  Decimal  @db.Decimal(5, 2) @map("success_probability")
+  confidence          String   // LOW, MEDIUM, HIGH, VERY_HIGH
+
+  riskFactors         Json     @map("risk_factors")
+  recommendations     String[]
+
+  modelVersion        String?  @map("model_version")
+
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([contractId])
+  @@index([freelancerId])
+  @@index([clientId])
+  @@map("success_predictions")
+}
+
+// ============================================================================
+// INTELLIGENCE — Engagement Risk Alerts
+// ============================================================================
+
+model EngagementRiskAlert {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId       String    @map("contract_id")
+
+  riskCategory     String    @map("risk_category")  // COMMUNICATION, TIMELINE, BUDGET, etc.
+  riskLevel        String    @map("risk_level")      // LOW, MEDIUM, HIGH, CRITICAL
+
+  title            String
+  description      String    @db.Text
+  indicators       String[]
+  suggestedActions String[]  @map("suggested_actions")
+
+  autoGenerated    Boolean   @default(false) @map("auto_generated")
+
+  acknowledged     Boolean   @default(false)
+  acknowledgedBy   String?   @map("acknowledged_by")
+  acknowledgedAt   DateTime? @map("acknowledged_at")
+
+  resolved         Boolean   @default(false)
+  resolvedBy       String?   @map("resolved_by")
+  resolvedAt       DateTime? @map("resolved_at")
+  resolution       String?   @db.Text
+
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([contractId, resolved])
+  @@index([riskLevel])
+  @@map("engagement_risk_alerts")
 }

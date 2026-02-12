@@ -12,31 +12,31 @@ model TreasuryAccount {
   userId                    String   @unique
   stripeFinancialAccountId  String   @unique
   stripeConnectAccountId    String
-  
+
   status                    String   @default("pending") // pending, active, restricted, closed
   features                  Json?    // Stripe feature flags
-  
+
   // Balance data (cached, source of truth is Stripe)
   balancesData              Json?    // { available, pending, reserved }
   lastBalanceSync           DateTime?
-  
+
   // Account details
   accountNumber             String?  // Encrypted
   routingNumber             String?
-  
+
   // Terms acceptance
   termsAcceptedAt           DateTime?
   termsVersion              String?
-  
+
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
   closedAt                  DateTime?
   closureReason             String?
-  
+
   user                      User     @relation(fields: [userId], references: [id])
   transactions              TreasuryTransaction[]
   payouts                   FinancialPayout[]
-  
+
   @@index([stripeFinancialAccountId])
   @@index([status])
 }
@@ -45,20 +45,20 @@ model TreasuryTransaction {
   id                   String   @id @default(cuid())
   userId               String
   stripeTransactionId  String   @unique
-  
+
   type                 String   // inbound, outbound, fee, interest
   amount               Decimal  @db.Decimal(12, 2)
   currency             String   @default("usd")
   status               String   // pending, completed, failed, reversed
-  
+
   description          String?
   metadata             Json?
-  
+
   completedAt          DateTime?
   createdAt            DateTime @default(now())
-  
+
   account              TreasuryAccount @relation(fields: [userId], references: [userId])
-  
+
   @@index([userId, createdAt])
   @@index([status])
 }
@@ -71,31 +71,31 @@ model FinancialPayout {
   id               String   @id @default(cuid())
   userId           String
   stripePayoutId   String   @unique
-  
+
   amount           Decimal  @db.Decimal(12, 2)
   feeAmount        Decimal  @db.Decimal(12, 2) @default(0)
   netAmount        Decimal  @db.Decimal(12, 2)
   currency         String   @default("usd")
-  
+
   speed            String   // standard, instant
   destination      String   // skillancer_card, external_debit, bank_account
   destinationId    String?
-  
+
   status           String   // pending, processing, completed, failed, canceled
   failureReason    String?
-  
+
   estimatedArrival DateTime?
   completedAt      DateTime?
   canceledAt       DateTime?
-  
+
   description      String?
   metadata         Json?
-  
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  
+
   account          TreasuryAccount @relation(fields: [userId], references: [userId])
-  
+
   @@index([userId, createdAt])
   @@index([status])
 }
@@ -107,32 +107,32 @@ model FinancialPayout {
 model BalanceSnapshot {
   id        String   @id @default(cuid())
   userId    String
-  
+
   available Decimal  @db.Decimal(12, 2)
   pending   Decimal  @db.Decimal(12, 2)
   reserved  Decimal  @db.Decimal(12, 2)
   taxVault  Decimal  @db.Decimal(12, 2)
   total     Decimal  @db.Decimal(12, 2)
-  
+
   createdAt DateTime @default(now())
-  
+
   @@index([userId, createdAt])
 }
 
 model BalanceOperation {
   id          String   @id @default(cuid())
   userId      String
-  
+
   type        String   // escrow_hold, escrow_release, tax_reserve, tax_release, deposit, withdrawal
   amount      Decimal  @db.Decimal(12, 2)
   fromBalance String   // available, pending, reserved, taxVault
   toBalance   String
-  
+
   description String?
   referenceId String?  // Contract ID, payout ID, etc.
-  
+
   createdAt   DateTime @default(now())
-  
+
   @@index([userId, createdAt])
   @@index([referenceId])
 }
@@ -140,15 +140,15 @@ model BalanceOperation {
 model BalanceAlert {
   id        String    @id @default(cuid())
   userId    String
-  
+
   type      String    // low_balance, large_deposit, unusual_activity, pending_cleared
   message   String
   amount    Decimal?  @db.Decimal(12, 2)
   threshold Decimal?  @db.Decimal(12, 2)
-  
+
   readAt    DateTime?
   createdAt DateTime  @default(now())
-  
+
   @@index([userId, readAt])
 }
 
@@ -160,15 +160,15 @@ model Cardholder {
   id                  String   @id @default(cuid())
   userId              String   @unique
   stripeCardholderId  String   @unique
-  
+
   status              String   @default("active") // active, inactive, blocked
-  
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
-  
+
   user                User     @relation(fields: [userId], references: [id])
   cards               IssuedCard[]
-  
+
   @@index([stripeCardholderId])
 }
 
@@ -177,40 +177,40 @@ model IssuedCard {
   userId         String
   stripeCardId   String   @unique
   cardholderId   String?
-  
+
   type           String   // virtual, physical
   status         String   @default("inactive") // inactive, active, frozen, canceled, lost, stolen
-  
+
   last4          String
   expMonth       Int
   expYear        Int
   brand          String   @default("Visa")
-  
+
   nickname       String?
   spendingLimits Json     // { perTransaction, daily, weekly, monthly }
-  
+
   // Physical card shipping
   shippingAddress        Json?
   shippingStatus         String?  // pending, shipped, delivered, returned, failure
   shippingCarrier        String?
   shippingTrackingNumber String?
-  
+
   // Digital wallet
   walletEnabled  Boolean  @default(false)
-  
+
   // Replacement tracking
   replacementFor String?  // ID of card this replaces
-  
+
   activatedAt    DateTime?
   canceledAt     DateTime?
-  
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  
+
   user           User     @relation(fields: [userId], references: [id])
   cardholder     Cardholder? @relation(fields: [cardholderId], references: [id])
   transactions   CardTransaction[]
-  
+
   @@index([userId])
   @@index([stripeCardId])
   @@index([status])
@@ -220,38 +220,48 @@ model CardTransaction {
   id                    String   @id @default(cuid())
   userId                String
   cardId                String
-  
+  skillancerCardId      String?  @map("skillancer_card_id")
+
   stripeAuthorizationId String?
   stripeTransactionId   String?
-  
+
   amount                Int      // In cents
   currency              String   @default("usd")
-  
+
   status                String   // pending, authorized, captured, declined, refunded, reversed
   type                  String   // purchase, refund, atm_withdrawal, transfer
-  
+
+  // Additional fields for SkillancerCard transactions
+  transactionType       String?  @map("transaction_type") // PURCHASE, REFUND, CASHBACK, etc.
+  transactionDate       DateTime? @map("transaction_date")
+  cashbackAmount        Decimal? @db.Decimal(12, 2) @map("cashback_amount")
+
   merchantName          String
   merchantCategory      String
   merchantCategoryCode  String
   merchantCity          String?
   merchantCountry       String?
-  
+
   description           String?
   receiptUrl            String?
-  
+
   // Categorization
   category              String   // software_subscriptions, office_supplies, etc.
   isBusinessExpense     Boolean  @default(false)
   notes                 String?
-  
+
+  metadata              Json?
+
   settledAt             DateTime?
   createdAt             DateTime @default(now())
-  
+
   card                  IssuedCard @relation(fields: [cardId], references: [id])
+  skillancerCard        SkillancerCard? @relation("SkillancerCardTransactions", fields: [skillancerCardId], references: [id])
   receipts              TransactionReceipt[]
-  
+
   @@index([userId, createdAt])
   @@index([cardId])
+  @@index([skillancerCardId])
   @@index([stripeAuthorizationId])
   @@index([stripeTransactionId])
   @@index([category])
@@ -260,15 +270,15 @@ model CardTransaction {
 model TransactionReceipt {
   id            String   @id @default(cuid())
   transactionId String
-  
+
   imageUrl      String?
   merchantReceipt String?
   parsedData    Json?    // { items, subtotal, tax, total }
-  
+
   uploadedAt    DateTime @default(now())
-  
+
   transaction   CardTransaction @relation(fields: [transactionId], references: [id])
-  
+
   @@index([transactionId])
 }
 
@@ -280,14 +290,14 @@ model SpendingControl {
   id      String   @id @default(cuid())
   userId  String
   cardId  String?  // null = applies to all cards
-  
+
   type    String   // transaction_limit, daily_limit, category_block, etc.
   config  Json     // Control-specific configuration
   enabled Boolean  @default(true)
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([userId])
   @@index([cardId])
 }
@@ -296,30 +306,65 @@ model MerchantRestriction {
   id                   String   @id @default(cuid())
   userId               String
   merchantCategoryCode String
-  
+
   allowed              Boolean  @default(true)
   limit                Decimal? @db.Decimal(12, 2)
   reason               String?
-  
+
   createdAt            DateTime @default(now())
-  
+
   @@unique([userId, merchantCategoryCode])
 }
 
 model SpendingAlert {
   id            String   @id @default(cuid())
   userId        String
-  
+
   type          String   // approaching_limit, limit_exceeded, unusual_spending, blocked_attempt
   threshold     Decimal? @db.Decimal(12, 2)
   currentAmount Decimal? @db.Decimal(12, 2)
   message       String
-  
+
   acknowledged  Boolean  @default(false)
-  
+
   createdAt     DateTime @default(now())
-  
+
   @@index([userId, acknowledged])
+}
+
+// =============================================================================
+// SKILLANCER CARD (Platform-managed debit card)
+// =============================================================================
+
+model SkillancerCard {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+
+  cardNumber        String?  @map("card_number")
+  cardType          String   @map("card_type")  // VIRTUAL, PHYSICAL
+  status            String   @default("PENDING")
+  nickname          String?
+
+  spendingLimit     Decimal? @db.Decimal(12, 2) @map("spending_limit")
+  currentBalance    Decimal  @db.Decimal(12, 2) @default(0) @map("current_balance")
+  cashbackEarned    Decimal  @db.Decimal(12, 2) @default(0) @map("cashback_earned")
+  cashbackRate      Decimal  @db.Decimal(5, 2) @default(0) @map("cashback_rate")
+  allowedCategories String[] @map("allowed_categories")
+
+  expiryDate        DateTime? @map("expiry_date")
+  lastUsedAt        DateTime? @map("last_used_at")
+
+  activatedAt       DateTime? @map("activated_at")
+  frozenAt          DateTime? @map("frozen_at")
+  cancelledAt       DateTime? @map("cancelled_at")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  transactions      CardTransaction[] @relation("SkillancerCardTransactions")
+
+  @@index([userId, status])
+  @@map("skillancer_cards")
 }
 
 // =============================================================================
@@ -327,53 +372,102 @@ model SpendingAlert {
 // =============================================================================
 
 model TaxVault {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  
-  balance         Decimal  @db.Decimal(12, 2) @default(0)
-  savingsRate     Int      @default(25)       // Percentage
-  autoSaveEnabled Boolean  @default(true)
-  targetQuarterly Decimal  @db.Decimal(12, 2) @default(0)
-  
-  settings        Json     // TaxVaultSettings
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  transactions    TaxVaultTransaction[]
-  
+  id               String   @id @default(cuid())
+  userId           String   @unique
+
+  balance          Decimal  @db.Decimal(12, 2) @default(0)
+  savingsRate      Int      @default(25)       // Percentage
+  autoSaveEnabled  Boolean  @default(true)
+  targetQuarterly  Decimal  @db.Decimal(12, 2) @default(0)
+
+  totalDeposits    Decimal  @db.Decimal(12, 2) @default(0) @map("total_deposits")
+  totalWithdrawals Decimal  @db.Decimal(12, 2) @default(0) @map("total_withdrawals")
+  lastDepositAt    DateTime? @map("last_deposit_at")
+  lastWithdrawalAt DateTime? @map("last_withdrawal_at")
+
+  settings         Json     // TaxVaultSettings
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  transactions     TaxVaultTransaction[]
+  deposits         TaxVaultDeposit[]    @relation("TaxVaultDeposits")
+  withdrawals      TaxVaultWithdrawal[] @relation("TaxVaultWithdrawals")
+
   @@index([userId])
 }
 
 model TaxVaultTransaction {
   id           String   @id @default(cuid())
   userId       String
-  
+
   type         String   // auto_save, manual_deposit, quarterly_payment, withdrawal, adjustment
   amount       Decimal  @db.Decimal(12, 2)
-  
+
   sourceId     String?  // Reference to original earning
   sourceName   String?
   balanceAfter Decimal  @db.Decimal(12, 2)
-  
+
   createdAt    DateTime @default(now())
-  
+
   vault        TaxVault @relation(fields: [userId], references: [userId])
-  
+
   @@index([userId, createdAt])
   @@index([type])
 }
 
+model TaxVaultDeposit {
+  id                  String   @id @default(cuid())
+  taxVaultId          String   @map("tax_vault_id")
+
+  amount              Decimal  @db.Decimal(12, 2)
+  source              String?  // earning_id, manual, auto
+  sourceTransactionId String?  @map("source_transaction_id")
+  notes               String?
+
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  vault               TaxVault @relation("TaxVaultDeposits", fields: [taxVaultId], references: [id])
+
+  @@index([taxVaultId, createdAt])
+  @@map("tax_vault_deposits")
+}
+
+model TaxVaultWithdrawal {
+  id                  String    @id @default(cuid())
+  taxVaultId          String    @map("tax_vault_id")
+
+  amount              Decimal   @db.Decimal(12, 2)
+  reason              String    // TAX_PAYMENT, QUARTERLY_ESTIMATE, etc.
+  taxYear             Int?      @map("tax_year")
+  taxQuarter          Int?      @map("tax_quarter")
+  recipientAccountId  String?   @map("recipient_account_id")
+  notes               String?
+  status              String    @default("PENDING")
+
+  processedAt         DateTime? @map("processed_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  vault               TaxVault  @relation("TaxVaultWithdrawals", fields: [taxVaultId], references: [id])
+
+  @@index([taxVaultId, createdAt])
+  @@map("tax_vault_withdrawals")
+}
+
+// =============================================================================
+// QUARTERLY TAX PAYMENTS
+// =============================================================================
+
 model QuarterlyTaxPayment {
   id       String   @id @default(cuid())
   userId   String
-  
+
   quarter  Int      // 1-4
   year     Int
   amount   Decimal  @db.Decimal(12, 2)
-  
+
   paidAt   DateTime
-  
+
   @@unique([userId, quarter, year])
   @@index([userId, year])
 }
@@ -382,7 +476,7 @@ model TaxEstimate {
   id                String   @id @default(cuid())
   userId            String
   year              Int
-  
+
   grossIncome       Decimal  @db.Decimal(12, 2)
   totalDeductions   Decimal  @db.Decimal(12, 2)
   federalTax        Decimal  @db.Decimal(12, 2)
@@ -390,11 +484,58 @@ model TaxEstimate {
   stateTax          Decimal  @db.Decimal(12, 2)
   totalTax          Decimal  @db.Decimal(12, 2)
   effectiveRate     Decimal  @db.Decimal(5, 2)
-  
+
   calculatedAt      DateTime @default(now())
-  
+
   @@unique([userId, year])
   @@index([userId])
+}
+
+// =============================================================================
+// INVOICE FINANCING
+// =============================================================================
+
+enum InvoiceFinancingStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  FUNDED
+  PARTIALLY_REPAID
+  REPAID
+  DEFAULTED
+}
+
+model InvoiceFinancing {
+  id                  String                 @id @default(cuid())
+  userId              String                 @map("user_id")
+  user                User                   @relation("UserInvoiceFinancing", fields: [userId], references: [id])
+
+  invoiceId           String                 @map("invoice_id")
+  invoiceAmount       Decimal                @db.Decimal(12, 2) @map("invoice_amount")
+  currency            String                 @default("usd")
+  clientName          String                 @map("client_name")
+  invoiceDueDate      DateTime               @map("invoice_due_date")
+
+  requestedAmount     Decimal                @db.Decimal(12, 2) @map("requested_amount")
+  approvedAmount      Decimal?               @db.Decimal(12, 2) @map("approved_amount")
+  feePercentage       Decimal?               @db.Decimal(5, 2) @map("fee_percentage")
+  feeAmount           Decimal?               @db.Decimal(12, 2) @map("fee_amount")
+
+  status              InvoiceFinancingStatus @default(DRAFT)
+  supportingDocuments Json?                  @map("supporting_documents")
+  notes               String?                @db.Text
+
+  fundedAt            DateTime?              @map("funded_at")
+  repaidAmount        Decimal?               @db.Decimal(12, 2) @map("repaid_amount")
+  repaidAt            DateTime?              @map("repaid_at")
+
+  createdAt           DateTime               @default(now()) @map("created_at")
+  updatedAt           DateTime               @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([status])
+  @@map("invoice_financing")
 }
 
 // =============================================================================
@@ -404,13 +545,13 @@ model TaxEstimate {
 model QuarterlyReminderPrefs {
   id                  String   @id @default(cuid())
   userId              String   @unique
-  
+
   enabled             Boolean  @default(true)
   daysBeforeDue       Json     // [30, 14, 7, 1]
   channels            Json     // ['email', 'in_app']
   includePaymentLink  Boolean  @default(true)
   customMessage       String?
-  
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
@@ -418,23 +559,23 @@ model QuarterlyReminderPrefs {
 model QuarterlyReminder {
   id              String    @id @default(cuid())
   userId          String
-  
+
   quarter         Int
   year            Int
   dueDate         DateTime
   estimatedAmount Decimal   @db.Decimal(12, 2)
   reminderDate    DateTime
-  
+
   status          String    @default("scheduled") // scheduled, sent, acknowledged, paid
   channels        Json      // ['email', 'push']
-  
+
   sentAt          DateTime?
   acknowledgedAt  DateTime?
-  
+
   createdAt       DateTime  @default(now())
-  
+
   user            User      @relation(fields: [userId], references: [id])
-  
+
   @@index([userId])
   @@index([status, reminderDate])
 }
@@ -446,52 +587,52 @@ model QuarterlyReminder {
 model KycVerification {
   id               String   @id @default(cuid())
   userId           String   @unique
-  
+
   status           String   @default("pending") // pending, verified, failed, expired
   level            String   @default("basic")   // basic, enhanced, full
-  
+
   // Identity verification
   identityStatus   String   @default("pending")
   documentType     String?  // passport, drivers_license, national_id
   documentNumber   String?  // Encrypted
-  
+
   // Address verification
   addressStatus    String   @default("pending")
-  
+
   // Tax information
   taxIdType        String?  // ssn, ein, itin
   taxIdLast4       String?
   taxIdVerified    Boolean  @default(false)
-  
+
   // Stripe Identity verification ID
   stripeVerificationId String?
-  
+
   verifiedAt       DateTime?
   expiresAt        DateTime?
-  
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  
+
   @@index([status])
 }
 
 model ComplianceDocument {
   id        String   @id @default(cuid())
   userId    String
-  
+
   type      String   // id_front, id_back, proof_of_address, w9, tax_return
   status    String   @default("pending") // pending, approved, rejected
-  
+
   fileUrl   String
   fileName  String
   mimeType  String
-  
+
   reviewedBy String?
   reviewNotes String?
   reviewedAt DateTime?
-  
+
   createdAt DateTime @default(now())
-  
+
   @@index([userId, type])
 }
 
@@ -502,18 +643,18 @@ model ComplianceDocument {
 model FinancialNotification {
   id        String   @id @default(cuid())
   userId    String
-  
+
   type      String   // deposit, payout, card_transaction, tax_reminder, etc.
   title     String
   message   String
   data      Json?
-  
+
   channel   String   // email, push, sms, in_app
-  
+
   readAt    DateTime?
-  
+
   createdAt DateTime @default(now())
-  
+
   @@index([userId, readAt])
   @@index([type])
 }
@@ -525,18 +666,18 @@ model FinancialNotification {
 model FinancialAuditLog {
   id         String   @id @default(cuid())
   userId     String
-  
+
   action     String   // card_details_viewed, payout_initiated, etc.
   resource   String   // card, payout, tax_vault, etc.
   resourceId String?
-  
+
   ipAddress  String?
   userAgent  String?
-  
+
   metadata   Json?
-  
+
   createdAt  DateTime @default(now())
-  
+
   @@index([userId, createdAt])
   @@index([action])
 }
