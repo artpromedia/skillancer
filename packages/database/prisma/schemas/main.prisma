@@ -5,7 +5,7 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions", "prismaSchemaFolder"]
   binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
 }
 
