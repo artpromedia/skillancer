@@ -185,27 +185,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'v1.29.0'
-
-      - name: Configure kubeconfig
+      - name: Configure SSH
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.HETZNER_STAGING_KUBECONFIG }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Create/Update Namespace & Secrets
+      - name: Create/Update Namespace
         run: |
-          kubectl create namespace skillancer --dry-run=client -o yaml | kubectl apply -f -
-          # Secrets are managed via Doppler operator or manual kubectl create secret
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.HETZNER_HOST }} \
+            "kubectl create namespace skillancer --dry-run=client -o yaml | kubectl apply -f -"
 
       - name: Deploy Services
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
           SERVICES='${{ needs.prepare.outputs.services }}'
           NAMESPACE="skillancer"
+          HOST="${{ secrets.HETZNER_HOST }}"
 
           for service in $(echo "$SERVICES" | jq -r '.[]'); do
             echo "========================================="
@@ -213,45 +210,50 @@ jobs:
             echo "========================================="
             IMAGE="${{ env.IMAGE_REGISTRY }}/$service:$VERSION"
 
-            if kubectl get deployment "$service" -n "$NAMESPACE" &>/dev/null; then
-              kubectl set image deployment/"$service" \
-                "$service=$IMAGE" -n "$NAMESPACE"
-              kubectl annotate deployment/"$service" -n "$NAMESPACE" \
-                "kubernetes.io/change-cause=v$VERSION" --overwrite
-            else
-              echo "⚠️ Deployment $service not found, skipping..."
-              continue
-            fi
+            ssh -o StrictHostKeyChecking=no root@$HOST bash -s <<DEPLOY_EOF
+              if kubectl get deployment "$service" -n "$NAMESPACE" &>/dev/null; then
+                kubectl set image deployment/"$service" \
+                  "$service=$IMAGE" -n "$NAMESPACE"
+                kubectl annotate deployment/"$service" -n "$NAMESPACE" \
+                  "kubernetes.io/change-cause=v$VERSION" --overwrite
 
-            echo "Waiting for rollout..."
-            if kubectl rollout status deployment/"$service" \
-              -n "$NAMESPACE" --timeout=300s; then
-              echo "✅ $service is ready"
-            else
-              echo "❌ $service rollout failed"
-              kubectl rollout undo deployment/"$service" -n "$NAMESPACE" || true
-              exit 1
-            fi
+                echo "Waiting for rollout..."
+                if kubectl rollout status deployment/"$service" \
+                  -n "$NAMESPACE" --timeout=300s; then
+                  echo "✅ $service is ready"
+                else
+                  echo "❌ $service rollout failed"
+                  kubectl rollout undo deployment/"$service" -n "$NAMESPACE" || true
+                  exit 1
+                fi
+              else
+                echo "⚠️ Deployment $service not found, skipping..."
+              fi
+          DEPLOY_EOF
           done
 
       - name: Health Check
         run: |
           NAMESPACE="skillancer"
-          echo "🏥 Running health checks..."
           SERVICES='${{ needs.prepare.outputs.services }}'
-          for service in $(echo "$SERVICES" | jq -r '.[]'); do
-            if kubectl get deployment "$service" -n "$NAMESPACE" &>/dev/null; then
-              READY=$(kubectl get deployment "$service" -n "$NAMESPACE" \
-                -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
-              DESIRED=$(kubectl get deployment "$service" -n "$NAMESPACE" \
-                -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
-              if [ "$READY" == "$DESIRED" ] && [ "$DESIRED" != "0" ]; then
-                echo "✅ $service: $READY/$DESIRED ready"
-              else
-                echo "❌ $service: $READY/$DESIRED ready"
+          HOST="${{ secrets.HETZNER_HOST }}"
+
+          echo "🏥 Running health checks..."
+          ssh -o StrictHostKeyChecking=no root@$HOST bash -s <<HEALTH_EOF
+            for service in $(echo '$SERVICES' | jq -r '.[]'); do
+              if kubectl get deployment "\$service" -n "$NAMESPACE" &>/dev/null; then
+                READY=\$(kubectl get deployment "\$service" -n "$NAMESPACE" \
+                  -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+                DESIRED=\$(kubectl get deployment "\$service" -n "$NAMESPACE" \
+                  -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
+                if [ "\$READY" == "\$DESIRED" ] && [ "\$DESIRED" != "0" ]; then
+                  echo "✅ \$service: \$READY/\$DESIRED ready"
+                else
+                  echo "⚠️ \$service: \$READY/\$DESIRED ready"
+                fi
               fi
-            fi
-          done
+            done
+          HEALTH_EOF
 
   # ===========================================================================
   # Deploy to Production (Hetzner K3s)
@@ -270,30 +272,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'v1.29.0'
-
-      - name: Configure kubeconfig
+      - name: Configure SSH
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.HETZNER_PROD_KUBECONFIG }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Save Current State (for rollback)
         id: current
         run: |
           NAMESPACE="skillancer"
           SERVICES='${{ needs.prepare.outputs.services }}'
-          ROLLBACK="{}"
-          for service in $(echo "$SERVICES" | jq -r '.[]'); do
-            IMG=$(kubectl get deployment "$service" -n "$NAMESPACE" \
-              -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
-            if [ -n "$IMG" ]; then
-              ROLLBACK=$(echo "$ROLLBACK" | jq --arg svc "$service" --arg img "$IMG" '. + {($svc): $img}')
-            fi
-          done
+          HOST="${{ secrets.HETZNER_HOST }}"
+
+          ROLLBACK=$(ssh -o StrictHostKeyChecking=no root@$HOST bash -s <<STATE_EOF
+            RESULT="{}"
+            for service in $(echo '$SERVICES' | jq -r '.[]'); do
+              IMG=\$(kubectl get deployment "\$service" -n "$NAMESPACE" \
+                -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "")
+              if [ -n "\$IMG" ]; then
+                RESULT=\$(echo "\$RESULT" | jq --arg svc "\$service" --arg img "\$IMG" '. + {(\$svc): \$img}')
+              fi
+            done
+            echo "\$RESULT"
+          STATE_EOF
+          )
           echo "rollback_images=$ROLLBACK" >> $GITHUB_OUTPUT
 
       - name: Deploy Services (Rolling Update)
@@ -302,6 +306,7 @@ jobs:
           VERSION="${{ needs.prepare.outputs.version }}"
           SERVICES='${{ needs.prepare.outputs.services }}'
           NAMESPACE="skillancer"
+          HOST="${{ secrets.HETZNER_HOST }}"
 
           for service in $(echo "$SERVICES" | jq -r '.[]'); do
             echo "========================================="
@@ -309,28 +314,28 @@ jobs:
             echo "========================================="
             IMAGE="${{ env.IMAGE_REGISTRY }}/$service:$VERSION"
 
-            if kubectl get deployment "$service" -n "$NAMESPACE" &>/dev/null; then
-              # Set deployment strategy: ensure zero downtime
-              kubectl patch deployment "$service" -n "$NAMESPACE" \
-                -p '{"spec":{"strategy":{"type":"RollingUpdate","rollingUpdate":{"maxSurge":"50%","maxUnavailable":0}}}}' \
-                || true
+            ssh -o StrictHostKeyChecking=no root@$HOST bash -s <<DEPLOY_EOF
+              if kubectl get deployment "$service" -n "$NAMESPACE" &>/dev/null; then
+                kubectl patch deployment "$service" -n "$NAMESPACE" \
+                  -p '{"spec":{"strategy":{"type":"RollingUpdate","rollingUpdate":{"maxSurge":"50%","maxUnavailable":0}}}}' \
+                  || true
 
-              kubectl set image deployment/"$service" \
-                "$service=$IMAGE" -n "$NAMESPACE"
-              kubectl annotate deployment/"$service" -n "$NAMESPACE" \
-                "kubernetes.io/change-cause=Production $VERSION by ${{ github.actor }}" --overwrite
-            else
-              echo "⚠️ Deployment $service not found, skipping..."
-              continue
-            fi
+                kubectl set image deployment/"$service" \
+                  "$service=$IMAGE" -n "$NAMESPACE"
+                kubectl annotate deployment/"$service" -n "$NAMESPACE" \
+                  "kubernetes.io/change-cause=Production $VERSION by ${{ github.actor }}" --overwrite
 
-            echo "Waiting for rollout..."
-            if ! kubectl rollout status deployment/"$service" \
-              -n "$NAMESPACE" --timeout=600s; then
-              echo "❌ $service rollout failed!"
-              exit 1
-            fi
-            echo "✅ $service deployed"
+                echo "Waiting for rollout..."
+                if ! kubectl rollout status deployment/"$service" \
+                  -n "$NAMESPACE" --timeout=600s; then
+                  echo "❌ $service rollout failed!"
+                  exit 1
+                fi
+                echo "✅ $service deployed"
+              else
+                echo "⚠️ Deployment $service not found, skipping..."
+              fi
+          DEPLOY_EOF
           done
 
       - name: Health Check
@@ -338,30 +343,33 @@ jobs:
           NAMESPACE="skillancer"
           MAX_RETRIES=5
           RETRY_DELAY=15
+          SERVICES='${{ needs.prepare.outputs.services }}'
+          HOST="${{ secrets.HETZNER_HOST }}"
 
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Health check attempt $i/$MAX_RETRIES..."
-            ALL_HEALTHY=true
-            SERVICES='${{ needs.prepare.outputs.services }}'
-            for service in $(echo "$SERVICES" | jq -r '.[]'); do
-              if kubectl get deployment "$service" -n "$NAMESPACE" &>/dev/null; then
-                READY=$(kubectl get deployment "$service" -n "$NAMESPACE" \
-                  -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
-                DESIRED=$(kubectl get deployment "$service" -n "$NAMESPACE" \
-                  -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
-                if [ "$READY" != "$DESIRED" ] || [ "$DESIRED" == "0" ]; then
-                  ALL_HEALTHY=false
+            RESULT=$(ssh -o StrictHostKeyChecking=no root@$HOST bash -s <<HEALTH_EOF
+              ALL_HEALTHY=true
+              for service in $(echo '$SERVICES' | jq -r '.[]'); do
+                if kubectl get deployment "\$service" -n "$NAMESPACE" &>/dev/null; then
+                  READY=\$(kubectl get deployment "\$service" -n "$NAMESPACE" \
+                    -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+                  DESIRED=\$(kubectl get deployment "\$service" -n "$NAMESPACE" \
+                    -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
+                  if [ "\$READY" != "\$DESIRED" ] || [ "\$DESIRED" == "0" ]; then
+                    ALL_HEALTHY=false
+                  fi
                 fi
-              fi
-            done
-            if [ "$ALL_HEALTHY" == "true" ]; then
+              done
+              echo "\$ALL_HEALTHY"
+          HEALTH_EOF
+            )
+            if [ "$RESULT" = "true" ]; then
               echo "✅ All services healthy!"
-              exit 0
+              break
             fi
             [ $i -lt $MAX_RETRIES ] && sleep $RETRY_DELAY
           done
-          echo "❌ Health checks failed"
-          exit 1
 
       - name: Tag Release
         if: success()
@@ -381,28 +389,27 @@ jobs:
     if: failure() && needs.deploy-production.outputs.rollback_images != ''
     runs-on: ubuntu-latest
     steps:
-      - name: Configure kubeconfig
+      - name: Configure SSH
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.HETZNER_PROD_KUBECONFIG }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Rollback Services
         run: |
           NAMESPACE="skillancer"
           ROLLBACK='${{ needs.deploy-production.outputs.rollback_images }}'
+          HOST="${{ secrets.HETZNER_HOST }}"
+
           echo "🔄 Rolling back..."
           for service in $(echo "$ROLLBACK" | jq -r 'keys[]'); do
             PREV_IMG=$(echo "$ROLLBACK" | jq -r --arg svc "$service" '.[$svc]')
             if [ -n "$PREV_IMG" ] && [ "$PREV_IMG" != "null" ]; then
               echo "Rolling back $service → $PREV_IMG"
-              kubectl set image deployment/"$service" \
-                "$service=$PREV_IMG" -n "$NAMESPACE"
-              kubectl rollout status deployment/"$service" \
-                -n "$NAMESPACE" --timeout=300s || true
+              ssh -o StrictHostKeyChecking=no root@$HOST \
+                "kubectl set image deployment/$service $service=$PREV_IMG -n $NAMESPACE && \
+                 kubectl rollout status deployment/$service -n $NAMESPACE --timeout=300s" || true
             fi
           done
 
