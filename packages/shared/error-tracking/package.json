@@ -1,5 +1,5 @@
 {
-  "name": "@skillancer/error-tracking",
+  "name": "@skillancer/error-tracking-shared",
   "version": "0.0.1",
   "description": "Error tracking integration for Skillancer applications using Sentry",
   "type": "module",
