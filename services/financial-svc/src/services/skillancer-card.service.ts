@@ -172,7 +172,7 @@ export class SkillancerCardService {
 
       const monthlySpend = await this.prisma.cardTransaction.aggregate({
         where: {
-          cardId: input.cardId,
+          skillancerCardId: input.cardId,
           transactionType: 'PURCHASE',
           status: 'COMPLETED',
           transactionDate: { gte: monthStart },
@@ -180,7 +180,7 @@ export class SkillancerCardService {
         _sum: { amount: true },
       });
 
-      const currentSpend = Number(monthlySpend._sum.amount || 0);
+      const currentSpend = Number(monthlySpend._sum?.amount || 0);
       if (currentSpend + input.amount > Number(card.spendingLimit)) {
         throw new Error('Transaction would exceed monthly spending limit');
       }
@@ -199,11 +199,15 @@ export class SkillancerCardService {
 
     const transaction = await this.prisma.cardTransaction.create({
       data: {
-        cardId: input.cardId,
+        skillancerCardId: input.cardId,
+        userId: card.userId,
         amount: input.amount,
         currency: input.currency,
         merchantName: input.merchantName,
         merchantCategory: input.merchantCategory,
+        merchantCategoryCode: input.merchantCategory,
+        category: input.merchantCategory,
+        type: (input.transactionType || 'purchase').toLowerCase(),
         description: input.description,
         transactionType: input.transactionType,
         status: 'COMPLETED',
@@ -246,7 +250,7 @@ export class SkillancerCardService {
     page = 1,
     limit = 50
   ) {
-    const where: any = { cardId };
+    const where: any = { skillancerCardId: cardId };
 
     if (startDate || endDate) {
       where.transactionDate = {};
@@ -293,7 +297,7 @@ export class SkillancerCardService {
 
     const pendingTransactions = await this.prisma.cardTransaction.aggregate({
       where: {
-        cardId,
+        skillancerCardId: cardId,
         status: 'PENDING',
         transactionType: 'PURCHASE',
       },
@@ -302,7 +306,7 @@ export class SkillancerCardService {
 
     return {
       available: Number(card.spendingLimit) - Number(card.currentBalance),
-      pending: Number(pendingTransactions._sum.amount || 0),
+      pending: Number(pendingTransactions._sum?.amount || 0),
       currency: 'USD',
     };
   }
@@ -317,7 +321,7 @@ export class SkillancerCardService {
   ): Promise<TransactionSummary> {
     const transactions = await this.prisma.cardTransaction.findMany({
       where: {
-        cardId,
+        skillancerCardId: cardId,
         transactionDate: { gte: startDate, lte: endDate },
         status: 'COMPLETED',
       },
@@ -330,7 +334,7 @@ export class SkillancerCardService {
     for (const txn of transactions) {
       if (txn.transactionType === 'PURCHASE') {
         totalSpent += Number(txn.amount);
-        totalCashback += Number(txn.cashbackAmount);
+        totalCashback += Number(txn.cashbackAmount || 0);
         categoryTotals[txn.merchantCategory] =
           (categoryTotals[txn.merchantCategory] || 0) + Number(txn.amount);
       }
@@ -369,11 +373,15 @@ export class SkillancerCardService {
     // Record cashback redemption as a transaction
     const transaction = await this.prisma.cardTransaction.create({
       data: {
-        cardId,
+        skillancerCardId: cardId,
+        userId: card.userId,
         amount,
         currency: 'USD',
         merchantName: 'Skillancer Cashback',
         merchantCategory: 'CASHBACK_REDEMPTION',
+        merchantCategoryCode: 'CASHBACK',
+        category: 'CASHBACK_REDEMPTION',
+        type: 'cashback',
         transactionType: 'CASHBACK',
         status: 'COMPLETED',
         transactionDate: new Date(),

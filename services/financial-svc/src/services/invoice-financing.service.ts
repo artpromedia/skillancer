@@ -206,14 +206,15 @@ export class InvoiceFinancingService {
       throw new Error('Financing request is not pending review');
     }
 
-    const feeAmount = approvedAmount * ((feePercentage || financing.feePercentage) / 100);
+    const effectiveFeePercentage = feePercentage || Number(financing.feePercentage || 0);
+    const feeAmount = approvedAmount * (effectiveFeePercentage / 100);
 
     const updatedFinancing = await this.prisma.invoiceFinancing.update({
       where: { id },
       data: {
         status: 'APPROVED',
         approvedAmount,
-        feePercentage: feePercentage || financing.feePercentage,
+        feePercentage: effectiveFeePercentage,
         feeAmount,
       },
     });

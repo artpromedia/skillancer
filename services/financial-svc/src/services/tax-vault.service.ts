@@ -28,11 +28,11 @@ export class TaxVaultService {
     const vault = await this.prisma.taxVault.create({
       data: {
         userId: input.userId,
-        currentBalance: 0,
+        balance: 0,
         totalDeposits: 0,
         totalWithdrawals: 0,
-        targetPercentage: input.targetPercentage || 25,
-        autosaveEnabled: input.autosaveEnabled ?? true,
+        savingsRate: input.targetPercentage || 25,
+        autoSaveEnabled: input.autosaveEnabled ?? true,
       },
     });
 
@@ -67,8 +67,8 @@ export class TaxVaultService {
     const vault = await this.prisma.taxVault.update({
       where: { userId },
       data: {
-        targetPercentage: input.targetPercentage,
-        autosaveEnabled: input.autosaveEnabled,
+        savingsRate: input.targetPercentage,
+        autoSaveEnabled: input.autosaveEnabled,
       },
     });
 
@@ -102,7 +102,7 @@ export class TaxVaultService {
     await this.prisma.taxVault.update({
       where: { id: input.taxVaultId },
       data: {
-        currentBalance: { increment: input.amount },
+        balance: { increment: input.amount },
         totalDeposits: { increment: input.amount },
         lastDepositAt: new Date(),
       },
@@ -123,7 +123,7 @@ export class TaxVaultService {
       throw new Error('Tax vault not found');
     }
 
-    if (Number(vault.currentBalance) < input.amount) {
+    if (Number(vault.balance) < input.amount) {
       throw new Error('Insufficient balance in tax vault');
     }
 
@@ -145,7 +145,7 @@ export class TaxVaultService {
     await this.prisma.taxVault.update({
       where: { id: input.taxVaultId },
       data: {
-        currentBalance: { decrement: input.amount },
+        balance: { decrement: input.amount },
         totalWithdrawals: { increment: input.amount },
         lastWithdrawalAt: new Date(),
       },
@@ -188,8 +188,9 @@ export class TaxVaultService {
     });
 
     // Calculate suggested savings based on estimated tax rate
-    const estimatedEarnings = Number(ytdDeposits._sum.amount || 0) / (vault.targetPercentage / 100);
-    const suggestedSavings = estimatedEarnings * (vault.targetPercentage / 100);
+    const savingsRate = vault.savingsRate || 25;
+    const estimatedEarnings = Number(ytdDeposits._sum.amount || 0) / (savingsRate / 100);
+    const suggestedSavings = estimatedEarnings * (savingsRate / 100);
 
     // Calculate next quarterly due date
     const now = new Date();
@@ -203,10 +204,10 @@ export class TaxVaultService {
     const nextQuarterlyDue = quarterlyDueDates.find((date) => date > now) ?? quarterlyDueDates[0] ?? null;
 
     return {
-      currentBalance: Number(vault.currentBalance),
+      currentBalance: Number(vault.balance),
       totalDeposits: Number(vault.totalDeposits),
       totalWithdrawals: Number(vault.totalWithdrawals),
-      targetPercentage: vault.targetPercentage,
+      targetPercentage: savingsRate,
       yearToDateEarnings: estimatedEarnings,
       suggestedSavings,
       nextQuarterlyDue,
@@ -226,18 +227,18 @@ export class TaxVaultService {
       vault = await this.getOrCreateVault({ userId });
     }
 
-    if (!vault.autosaveEnabled) {
+    if (!vault.autoSaveEnabled) {
       return null;
     }
 
-    const saveAmount = paymentAmount * (vault.targetPercentage / 100);
+    const saveAmount = paymentAmount * (vault.savingsRate / 100);
 
     const deposit = await this.deposit({
       taxVaultId: vault.id,
       amount: saveAmount,
       source: 'AUTO_SAVE',
       sourceTransactionId: paymentId,
-      notes: `Automatic tax savings from payment (${vault.targetPercentage}%)`,
+      notes: `Automatic tax savings from payment (${vault.savingsRate}%)`,
     });
 
     return deposit;
@@ -325,15 +326,12 @@ export class TaxVaultService {
       }),
     ]);
 
-    type DepositRecord = { amount: unknown; createdAt: Date; source: string };
-    type WithdrawalRecord = { amount: unknown; createdAt: Date; reason: string; taxQuarter: number | null };
-
-    const totalDeposited = deposits.reduce((sum: number, d: DepositRecord) => sum + Number(d.amount), 0);
-    const totalWithdrawn = withdrawals.reduce((sum: number, w: WithdrawalRecord) => sum + Number(w.amount), 0);
+    const totalDeposited = deposits.reduce((sum, d) => sum + Number(d.amount), 0);
+    const totalWithdrawn = withdrawals.reduce((sum, w) => sum + Number(w.amount), 0);
 
     // Group withdrawals by quarter
     const quarterlyWithdrawals: [number, number, number, number] = [0, 0, 0, 0];
-    for (const w of withdrawals as WithdrawalRecord[]) {
+    for (const w of withdrawals) {
       if (w.taxQuarter && w.taxQuarter >= 1 && w.taxQuarter <= 4) {
         const idx = w.taxQuarter - 1;
         quarterlyWithdrawals[idx as 0 | 1 | 2 | 3] += Number(w.amount);
@@ -351,12 +349,12 @@ export class TaxVaultService {
         q3: quarterlyWithdrawals[2],
         q4: quarterlyWithdrawals[3],
       },
-      deposits: (deposits as DepositRecord[]).map((d) => ({
+      deposits: deposits.map((d) => ({
         date: d.createdAt,
         amount: Number(d.amount),
         source: d.source,
       })),
-      withdrawals: (withdrawals as WithdrawalRecord[]).map((w) => ({
+      withdrawals: withdrawals.map((w) => ({
         date: w.createdAt,
         amount: Number(w.amount),
         reason: w.reason,

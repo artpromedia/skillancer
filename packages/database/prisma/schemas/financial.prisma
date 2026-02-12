@@ -219,7 +219,7 @@ model IssuedCard {
 model CardTransaction {
   id                    String   @id @default(cuid())
   userId                String
-  cardId                String
+  cardId                String?
   skillancerCardId      String?  @map("skillancer_card_id")
 
   stripeAuthorizationId String?
@@ -255,7 +255,7 @@ model CardTransaction {
   settledAt             DateTime?
   createdAt             DateTime @default(now())
 
-  card                  IssuedCard @relation(fields: [cardId], references: [id])
+  card                  IssuedCard? @relation(fields: [cardId], references: [id])
   skillancerCard        SkillancerCard? @relation("SkillancerCardTransactions", fields: [skillancerCardId], references: [id])
   receipts              TransactionReceipt[]
 
@@ -385,7 +385,7 @@ model TaxVault {
   lastDepositAt    DateTime? @map("last_deposit_at")
   lastWithdrawalAt DateTime? @map("last_withdrawal_at")
 
-  settings         Json     // TaxVaultSettings
+  settings         Json     @default("{}") // TaxVaultSettings
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
