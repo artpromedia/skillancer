@@ -222,10 +222,38 @@ pnpm test --filter=@skillancer/utils -- --watch
 
 ## Production Infrastructure
 
+**🚀 Now Running on Hetzner Cloud!**
+
+As of February 2026, Skillancer has migrated from AWS to Hetzner Cloud + Cloudflare R2:
+
+- **90% cost reduction** ($800/mo → $82/mo)
+- **Zero vendor lock-in** (cloud-agnostic architecture)
+- **HIPAA compliant** (AES-256-GCM encryption)
+- **EU data residency** (Hetzner Frankfurt datacenter)
+
+**Migration Documentation:**
+
+- [Post-Implementation Steps](POST_IMPLEMENTATION_STEPS.md) - Setup & deployment guide
+- [Quick Start](QUICK_START.md) - 10-minute setup
+- [Implementation Summary](IMPLEMENTATION_SUMMARY.md) - What changed
+- [Complete Guide](PHASE_1_3_IMPLEMENTATION_COMPLETE.md) - Comprehensive reference
+
+### Infrastructure Stack
+
+**Compute:** Hetzner Cloud K3s (Kubernetes)  
+**Object Storage:** Cloudflare R2 (S3-compatible, zero egress fees)  
+**Block Storage:** Hetzner Cloud Volumes API  
+**Database:** PostgreSQL 16 (self-hosted on Hetzner)  
+**Cache:** Redis 7 (self-hosted on Hetzner)  
+**CDN:** Cloudflare (global edge network)  
+**Encryption:** Node.js crypto (AES-256-GCM + PBKDF2)
+
 ### Infrastructure as Code
 
-- Terraform configuration: `infrastructure/terraform/production/main.tf`
-- Kubernetes values: `infrastructure/kubernetes/production/values.yaml`
+- Hetzner Terraform: `infrastructure/hetzner/terraform/`
+- Cloudflare Terraform: `infrastructure/cloudflare/terraform/`
+- Kubernetes manifests: `infrastructure/kubernetes/production/`
+- Deployment scripts: `scripts/deploy-hetzner.sh`
 
 ### Production Checklists
 

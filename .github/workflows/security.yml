@@ -207,6 +207,12 @@ jobs:
           - billing-svc
           - notification-svc
           - audit-svc
+          - copilot-svc
+          - executive-svc
+          - financial-svc
+          - intelligence-svc
+          - ml-recommendation-svc
+          - talent-graph-svc
     steps:
       - name: Checkout
         uses: actions/checkout@v4

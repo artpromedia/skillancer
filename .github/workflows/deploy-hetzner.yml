@@ -9,7 +9,7 @@ name: Deploy (Hetzner)
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
     paths:
       - 'services/**'
       - 'packages/**'
@@ -79,7 +79,7 @@ jobs:
         run: |
           INPUT_SERVICES="${{ github.event.inputs.services }}"
           if [[ "$INPUT_SERVICES" == "all" ]] || [[ -z "$INPUT_SERVICES" ]]; then
-            SERVICES='["api-gateway","auth-svc","market-svc","skillpod-svc","cockpit-svc","billing-svc","notification-svc","audit-svc"]'
+            SERVICES='["api-gateway","auth-svc","market-svc","skillpod-svc","cockpit-svc","billing-svc","notification-svc","audit-svc","copilot-svc","executive-svc","financial-svc","intelligence-svc","ml-recommendation-svc","talent-graph-svc"]'
           else
             SERVICES=$(echo "$INPUT_SERVICES" | jq -R 'split(",") | map(gsub(" "; ""))')
           fi
@@ -251,26 +251,6 @@ jobs:
             fi
           done
 
-      - name: Notify Slack (Success)
-        if: success()
-        uses: slackapi/slack-github-action@v1
-        with:
-          payload: |
-            {
-              "text": "✅ Staging deployment complete",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "✅ *Staging deployed*\nVersion: `${{ needs.prepare.outputs.version }}`\nBy: ${{ github.actor }}"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
   # ===========================================================================
   # Deploy to Production (Hetzner K3s)
   # ===========================================================================
@@ -423,16 +403,6 @@ jobs:
                 -n "$NAMESPACE" --timeout=300s || true
             fi
           done
-
-      - name: Notify Slack (Rollback)
-        uses: slackapi/slack-github-action@v1
-        with:
-          payload: |
-            {
-              "text": "🔄 Production ROLLED BACK for ${{ needs.prepare.outputs.version }}"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # ===========================================================================
   # Summary

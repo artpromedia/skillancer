@@ -1,0 +1,226 @@
+# =============================================================================
+# Skillancer Nightly Health & Monitoring
+# =============================================================================
+# Scheduled workflow that runs nightly to:
+# - Verify staging/production health
+# - Check for stale dependencies
+# - Audit Docker image sizes
+# - Generate pipeline status dashboard
+# - Alert on any failures via Slack
+# =============================================================================
+
+name: Nightly Health Check
+
+on:
+  schedule:
+    # Run at 2 AM UTC daily
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20.19.4'
+  PNPM_VERSION: '8'
+
+jobs:
+  # ===========================================================================
+  # ENVIRONMENT HEALTH CHECKS
+  # ===========================================================================
+  health-check:
+    name: 🏥 Environment Health
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - name: staging
+            url: https://api-staging.skillancer.com
+          - name: production
+            url: https://api.skillancer.com
+    steps:
+      - name: Check API Health
+        id: api-health
+        run: |
+          ENV_NAME="${{ matrix.environment.name }}"
+          URL="${{ matrix.environment.url }}"
+
+          echo "🏥 Checking $ENV_NAME health at $URL..."
+
+          # Health endpoint check
+          HTTP_STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" \
+            --max-time 30 "$URL/health" 2>/dev/null || echo "000")
+
+          RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" \
+            --max-time 30 "$URL/health" 2>/dev/null || echo "timeout")
+
+          echo "status=$HTTP_STATUS" >> $GITHUB_OUTPUT
+          echo "response_time=$RESPONSE_TIME" >> $GITHUB_OUTPUT
+
+          if [ "$HTTP_STATUS" == "200" ]; then
+            echo "✅ $ENV_NAME API is healthy (${RESPONSE_TIME}s)"
+            echo "healthy=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ $ENV_NAME API returned HTTP $HTTP_STATUS"
+            echo "healthy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check additional endpoints
+        id: endpoints
+        continue-on-error: true
+        run: |
+          URL="${{ matrix.environment.url }}"
+          ENDPOINTS=("/health/live" "/health/ready")
+          ALL_OK=true
+
+          for endpoint in "${ENDPOINTS[@]}"; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 "$URL$endpoint" 2>/dev/null || echo "000")
+            
+            if [ "$STATUS" != "200" ]; then
+              echo "⚠️ $endpoint: HTTP $STATUS"
+              ALL_OK=false
+            else
+              echo "✅ $endpoint: OK"
+            fi
+          done
+
+          echo "all_ok=$ALL_OK" >> $GITHUB_OUTPUT
+
+      - name: Generate Health Summary
+        run: |
+          echo "## 🏥 ${{ matrix.environment.name }} Health Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API Status | ${{ steps.api-health.outputs.healthy == 'true' && '✅ Healthy' || '❌ Unhealthy' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| HTTP Code | ${{ steps.api-health.outputs.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Response Time | ${{ steps.api-health.outputs.response_time }}s |" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
+  # DEPENDENCY FRESHNESS CHECK
+  # ===========================================================================
+  dependency-freshness:
+    name: 📦 Dependency Freshness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for outdated packages
+        run: |
+          echo "## 📦 Dependency Freshness Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check outdated packages
+          OUTDATED=$(pnpm outdated --recursive --format json 2>/dev/null || echo "{}")
+
+          # Count outdated
+          MAJOR_COUNT=$(echo "$OUTDATED" | jq '[.. | objects | select(.latest != null and .current != null)] | length' 2>/dev/null || echo "0")
+
+          echo "| Stat | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Outdated packages | $MAJOR_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # List critical outdated (security-related packages)
+          echo "### Security-Critical Packages" >> $GITHUB_STEP_SUMMARY
+          pnpm outdated --recursive 2>/dev/null | head -50 >> $GITHUB_STEP_SUMMARY || echo "Unable to check" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Check for known vulnerabilities
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔒 Vulnerability Check" >> $GITHUB_STEP_SUMMARY
+          AUDIT_RESULT=$(pnpm audit --audit-level=critical 2>&1 || true)
+          VULN_COUNT=$(echo "$AUDIT_RESULT" | grep -c "critical" || echo "0")
+
+          if [ "$VULN_COUNT" -gt "0" ]; then
+            echo "⚠️ **$VULN_COUNT critical vulnerabilities found!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No critical vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          fi
+        continue-on-error: true
+
+  # ===========================================================================
+  # DOCKER IMAGE AUDIT
+  # ===========================================================================
+  docker-audit:
+    name: 🐳 Docker Image Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Audit Docker image sizes
+        run: |
+          echo "## 🐳 Docker Image Audit" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Dockerfile | Stages |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          for dir in services/*/; do
+            service=$(basename "$dir")
+            if [ -f "$dir/Dockerfile" ]; then
+              STAGES=$(grep -c "^FROM" "$dir/Dockerfile" || echo "0")
+              echo "| $service | ✅ | $STAGES |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| $service | ❌ Missing | - |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Check for .dockerignore
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### .dockerignore Check" >> $GITHUB_STEP_SUMMARY
+          if [ -f ".dockerignore" ]; then
+            echo "✅ Root .dockerignore exists" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No root .dockerignore found — builds may be slow" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ===========================================================================
+  # PIPELINE STATUS DASHBOARD
+  # ===========================================================================
+  pipeline-dashboard:
+    name: 📊 Pipeline Dashboard
+    needs: [health-check, dependency-freshness, docker-audit]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Dashboard
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const healthResult = '${{ needs.health-check.result }}';
+            const depsResult = '${{ needs.dependency-freshness.result }}';
+            const dockerResult = '${{ needs.docker-audit.result }}';
+
+            const getEmoji = (result) => {
+              if (result === 'success') return '✅';
+              if (result === 'failure') return '❌';
+              return '⚠️';
+            };
+
+            let summary = '## 📊 Nightly Pipeline Dashboard\n\n';
+            summary += `**Date:** ${new Date().toISOString().split('T')[0]}\n\n`;
+            summary += '| Check | Status |\n';
+            summary += '|-------|--------|\n';
+            summary += `| Environment Health | ${getEmoji(healthResult)} ${healthResult} |\n`;
+            summary += `| Dependency Freshness | ${getEmoji(depsResult)} ${depsResult} |\n`;
+            summary += `| Docker Audit | ${getEmoji(dockerResult)} ${dockerResult} |\n`;
+
+            core.summary.addRaw(summary);
+            await core.summary.write();

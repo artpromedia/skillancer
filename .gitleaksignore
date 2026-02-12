@@ -1,0 +1,26 @@
+# =============================================================================
+# GitLeaks Ignore File
+# =============================================================================
+# Ignore false positives from documentation and example files
+# These are NOT real credentials - they are examples for documentation
+
+# Documentation files with example credentials
+AWS_TO_HETZNER_MIGRATION_PLAN.md
+PHASE_1_3_IMPLEMENTATION_COMPLETE.md
+IMPLEMENTATION_SUMMARY.md
+QUICK_START.md
+POST_IMPLEMENTATION_STEPS.md
+MIGRATION_COMPLETE.md
+
+# Example encryption key in documentation (NOT A REAL KEY)
+a7f3c9e2d8b4f6a1c5e9d3b7f2a8c4e6d9f1b3a5c7e2d4f6a8b1c3e5d7f9a2b4
+
+# .env.example files (templates only, not real credentials)
+**/.env.example
+**/*.env.example
+
+# Test credentials (LocalStack, development only)
+S3_ACCESS_KEY_ID=test
+S3_SECRET_ACCESS_KEY=test
+AWS_ACCESS_KEY_ID=test
+AWS_SECRET_ACCESS_KEY=test

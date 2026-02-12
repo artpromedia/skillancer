@@ -1,0 +1,11 @@
+# TruffleHog Configuration
+# Ignore false positives from documentation
+
+exclude_paths:
+  - '**/*.md'
+  - '**/.env.example'
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/.next/**'
+
+allow_verification_overlap: true

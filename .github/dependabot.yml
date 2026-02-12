@@ -238,6 +238,81 @@ updates:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
 
+  - package-ecosystem: 'docker'
+    directory: '/services/market-svc'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels:
+      - 'type: dependencies'
+      - 'docker'
+      - 'automated'
+    commit-message:
+      prefix: 'build(docker)'
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: 'docker'
+    directory: '/services/billing-svc'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels:
+      - 'type: dependencies'
+      - 'docker'
+      - 'automated'
+    commit-message:
+      prefix: 'build(docker)'
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: 'docker'
+    directory: '/services/notification-svc'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels:
+      - 'type: dependencies'
+      - 'docker'
+      - 'automated'
+    commit-message:
+      prefix: 'build(docker)'
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: 'docker'
+    directory: '/services/intelligence-svc'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels:
+      - 'type: dependencies'
+      - 'docker'
+      - 'automated'
+    commit-message:
+      prefix: 'build(docker)'
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: 'docker'
+    directory: '/services/talent-graph-svc'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels:
+      - 'type: dependencies'
+      - 'docker'
+      - 'automated'
+    commit-message:
+      prefix: 'build(docker)'
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
   # ===========================================================================
   # Flutter/Pub Dependencies (Mobile App)
   # ===========================================================================

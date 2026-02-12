@@ -455,26 +455,6 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -input=false -auto-approve
 
-      - name: Notify Slack
-        if: always()
-        uses: slackapi/slack-github-action@v1
-        with:
-          payload: |
-            {
-              "text": "Production Terraform Apply: ${{ job.status }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Production Terraform Apply*\n*Status:* ${{ job.status }}\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
-                  }
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
   # ---------------------------------------------------------------------------
   # Security Scan
   # ---------------------------------------------------------------------------

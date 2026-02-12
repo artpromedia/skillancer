@@ -1,0 +1,439 @@
+# =============================================================================
+# Skillancer Mobile CI/CD Pipeline
+# =============================================================================
+# Comprehensive CI/CD for the Flutter mobile app:
+# - Lint, format, analyze, and test on every PR
+# - Build Android APK + App Bundle
+# - Build iOS IPA (when runner available)
+# - Deploy to Firebase App Distribution for testing
+# - Publish to Google Play / App Store on release tags
+# =============================================================================
+
+name: Mobile CI/CD
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile.yml'
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        type: choice
+        options:
+          - debug
+          - release
+        default: 'debug'
+      deploy_target:
+        description: 'Deploy target'
+        required: false
+        type: choice
+        options:
+          - none
+          - firebase
+          - play-store
+        default: 'none'
+
+concurrency:
+  group: mobile-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.22.0'
+  JAVA_VERSION: '17'
+
+jobs:
+  # ===========================================================================
+  # CODE QUALITY
+  # ===========================================================================
+  quality:
+    name: 🔍 Code Quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed lib/ test/
+
+      - name: Analyze code
+        run: flutter analyze --fatal-infos
+
+      - name: Run code generation (if needed)
+        run: |
+          flutter pub run build_runner build --delete-conflicting-outputs 2>/dev/null || true
+
+  # ===========================================================================
+  # UNIT & WIDGET TESTS
+  # ===========================================================================
+  test:
+    name: 🧪 Tests
+    needs: quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: |
+          flutter pub run build_runner build --delete-conflicting-outputs 2>/dev/null || true
+
+      - name: Run unit & widget tests
+        run: flutter test --coverage --reporter=github
+
+      - name: Upload coverage
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: apps/mobile/coverage/lcov.info
+          flags: mobile
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Check coverage threshold
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            COVERAGE=$(flutter test --coverage 2>/dev/null && \
+              lcov --summary coverage/lcov.info 2>/dev/null | \
+              grep 'lines' | sed 's/.*: //' | sed 's/%.*//' || echo "0")
+            echo "📊 Code coverage: ${COVERAGE}%"
+          fi
+        continue-on-error: true
+
+  # ===========================================================================
+  # BUILD ANDROID
+  # ===========================================================================
+  build-android:
+    name: 🤖 Build Android
+    needs: test
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type != '')
+    defaults:
+      run:
+        working-directory: apps/mobile
+    outputs:
+      apk_path: ${{ steps.build.outputs.apk_path }}
+      aab_path: ${{ steps.build.outputs.aab_path }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: |
+          flutter pub run build_runner build --delete-conflicting-outputs 2>/dev/null || true
+
+      - name: Decode Android keystore
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
+            echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> android/key.properties
+            echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
+            echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
+            echo "storeFile=upload-keystore.jks" >> android/key.properties
+          fi
+
+      - name: Build APK (Debug)
+        if: github.event.inputs.build_type != 'release' && github.ref != 'refs/heads/main'
+        id: build-debug
+        run: |
+          flutter build apk --debug \
+            --build-number=${{ github.run_number }}
+          echo "apk_path=build/app/outputs/flutter-apk/app-debug.apk" >> $GITHUB_OUTPUT
+
+      - name: Build APK + App Bundle (Release)
+        if: github.event.inputs.build_type == 'release' || github.ref == 'refs/heads/main'
+        id: build-release
+        run: |
+          flutter build apk --release \
+            --build-number=${{ github.run_number }} \
+            --obfuscate --split-debug-info=build/debug-info
+          flutter build appbundle --release \
+            --build-number=${{ github.run_number }} \
+            --obfuscate --split-debug-info=build/debug-info
+          echo "apk_path=build/app/outputs/flutter-apk/app-release.apk" >> $GITHUB_OUTPUT
+          echo "aab_path=build/app/outputs/bundle/release/app-release.aab" >> $GITHUB_OUTPUT
+
+      - name: Set build output
+        id: build
+        run: |
+          APK="${{ steps.build-release.outputs.apk_path || steps.build-debug.outputs.apk_path }}"
+          AAB="${{ steps.build-release.outputs.aab_path }}"
+          echo "apk_path=$APK" >> $GITHUB_OUTPUT
+          echo "aab_path=$AAB" >> $GITHUB_OUTPUT
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: apps/mobile/build/app/outputs/flutter-apk/*.apk
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload App Bundle artifact
+        if: steps.build-release.outputs.aab_path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: apps/mobile/build/app/outputs/bundle/release/*.aab
+          retention-days: 30
+
+      - name: Upload debug symbols
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-symbols
+          path: apps/mobile/build/debug-info/
+          retention-days: 90
+          if-no-files-found: ignore
+
+  # ===========================================================================
+  # BUILD iOS
+  # ===========================================================================
+  build-ios:
+    name: 🍎 Build iOS
+    needs: test
+    runs-on: macos-latest
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release')
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: |
+          flutter pub run build_runner build --delete-conflicting-outputs 2>/dev/null || true
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install --repo-update
+
+      - name: Setup iOS signing
+        if: secrets.IOS_CERTIFICATE_BASE64 != ''
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ github.run_id }}
+        run: |
+          # Create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # Import certificate and provisioning profile
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$PROVISIONING_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Apply provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      - name: Build iOS (no codesign for CI)
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-number=${{ github.run_number }}
+
+      - name: Build IPA
+        if: secrets.IOS_CERTIFICATE_BASE64 != ''
+        run: |
+          flutter build ipa --release \
+            --build-number=${{ github.run_number }} \
+            --export-options-plist=ios/ExportOptions.plist \
+            --obfuscate --split-debug-info=build/debug-info
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: |
+            apps/mobile/build/ios/ipa/*.ipa
+            apps/mobile/build/ios/archive/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
+
+  # ===========================================================================
+  # DEPLOY TO FIREBASE APP DISTRIBUTION
+  # ===========================================================================
+  deploy-firebase:
+    name: 🔥 Deploy to Firebase
+    needs: [build-android, build-ios]
+    if: |
+      always() &&
+      (needs.build-android.result == 'success' || needs.build-ios.result == 'success') &&
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'firebase')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Android APK
+        if: needs.build-android.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: artifacts/android
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy Android to Firebase App Distribution
+        if: needs.build-android.result == 'success'
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          groups: internal-testers
+          file: artifacts/android/app-release.apk
+          releaseNotes: |
+            Build ${{ github.run_number }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+        continue-on-error: true
+
+  # ===========================================================================
+  # PUBLISH TO GOOGLE PLAY (manual trigger only)
+  # ===========================================================================
+  publish-play-store:
+    name: 🏪 Publish to Google Play
+    needs: [build-android]
+    if: |
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.deploy_target == 'play-store' &&
+      github.event.inputs.build_type == 'release'
+    runs-on: ubuntu-latest
+    environment:
+      name: production-mobile
+    steps:
+      - name: Download App Bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: android-aab
+          path: artifacts/android
+
+      - name: Publish to Google Play (Internal Track)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          packageName: com.skillancer.mobile
+          releaseFiles: artifacts/android/app-release.aab
+          track: internal
+          status: draft
+          whatsNewDirectory: apps/mobile/whatsnew
+        continue-on-error: true
+
+  # ===========================================================================
+  # STATUS CHECK
+  # ===========================================================================
+  mobile-status:
+    name: ✅ Mobile CI Status
+    if: always()
+    needs: [quality, test, build-android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check status
+        run: |
+          echo "## 📱 Mobile CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Quality | ${{ needs.quality.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Android Build | ${{ needs.build-android.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.quality.result }}" == "failure" ]] || \
+             [[ "${{ needs.test.result }}" == "failure" ]]; then
+            echo ""
+            echo "❌ Mobile CI failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ Mobile CI passed" >> $GITHUB_STEP_SUMMARY

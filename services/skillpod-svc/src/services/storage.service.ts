@@ -1,6 +1,6 @@
 /**
  * @module @skillancer/skillpod-svc/services/storage
- * Storage service for managing persistent volumes
+ * Storage service for managing persistent volumes with Hetzner Cloud
  */
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -25,132 +25,182 @@ export interface StorageService {
   getVolumeStatus(volumeId: string): Promise<string>;
 }
 
-interface EBSVolumeResponse {
-  VolumeId: string;
-  Size: number;
-  State: string;
-  CreateTime: string;
-  Tags?: Array<{ Key: string; Value: string }>;
+interface HetznerVolume {
+  id: number;
+  name: string;
+  size: number;
+  location: { name: string };
+  server: number | null;
+  status: string;
+  created: string;
+  labels: Record<string, string>;
+}
+
+interface HetznerApiResponse<T> {
+  [key: string]: T;
 }
 
 // =============================================================================
-// HELPER FUNCTIONS (outer scope)
+// HETZNER CLOUD API CLIENT
 // =============================================================================
 
-/**
- * Simple XML response parser (for demo - use proper parser in production)
- */
-function parseXmlResponse(xml: string): Record<string, unknown> {
-  // This is a simplified parser - in production use xml2js or similar
-  const result: Record<string, unknown> = {};
+class HetznerCloudClient {
+  private readonly apiToken: string;
+  private readonly baseUrl = 'https://api.hetzner.cloud/v1';
 
-  const volumeIdMatch = /<volumeId>([^<]+)<\/volumeId>/.exec(xml);
-  if (volumeIdMatch?.[1]) result.VolumeId = volumeIdMatch[1];
+  constructor(apiToken: string) {
+    this.apiToken = apiToken;
+  }
 
-  const sizeMatch = /<size>([^<]+)<\/size>/.exec(xml);
-  if (sizeMatch?.[1]) result.Size = Number.parseInt(sizeMatch[1], 10);
+  private async request<T>(
+    method: string,
+    endpoint: string,
+    body?: Record<string, unknown>
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
 
-  const stateMatch = /<status>([^<]+)<\/status>/.exec(xml);
-  if (stateMatch?.[1]) result.State = stateMatch[1];
-
-  const createTimeMatch = /<createTime>([^<]+)<\/createTime>/.exec(xml);
-  if (createTimeMatch?.[1]) result.CreateTime = createTimeMatch[1];
-
-  return result;
-}
-
-/**
- * Make request to EC2 API
- */
-async function ec2Request<T>(
-  region: string,
-  action: string,
-  params: Record<string, string>
-): Promise<T> {
-  const baseParams = {
-    Action: action,
-    Version: '2016-11-15',
-    ...params,
-  };
-
-  const queryString = Object.entries(baseParams)
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-    .join('&');
-
-  const url = `https://ec2.${region}.amazonaws.com?${queryString}`;
-
-  try {
     const response = await fetch(url, {
-      method: 'POST',
+      method,
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Bearer ${this.apiToken}`,
+        'Content-Type': 'application/json',
       },
+      body: body ? JSON.stringify(body) : undefined,
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`EC2 API error: ${errorText}`);
+      throw new Error(`Hetzner API error (${response.status}): ${errorText}`);
     }
 
-    // Parse XML response (simplified - in production use a proper XML parser)
-    const text = await response.text();
-    return parseXmlResponse(text) as T;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`EC2 request failed: ${error.message}`);
-    }
-    throw new Error('EC2 request failed: Unknown error');
+    return response.json() as Promise<T>;
+  }
+
+  async createVolume(params: {
+    name: string;
+    size: number;
+    location: string;
+    labels: Record<string, string>;
+  }): Promise<HetznerVolume> {
+    const response = await this.request<HetznerApiResponse<HetznerVolume>>('POST', '/volumes', {
+      name: params.name,
+      size: params.size,
+      location: params.location,
+      labels: params.labels,
+      format: 'ext4',
+      automount: false,
+    });
+    return response.volume;
+  }
+
+  async getVolume(volumeId: number): Promise<HetznerVolume> {
+    const response = await this.request<HetznerApiResponse<HetznerVolume>>(
+      'GET',
+      `/volumes/${volumeId}`
+    );
+    return response.volume;
+  }
+
+  async deleteVolume(volumeId: number): Promise<void> {
+    await this.request('DELETE', `/volumes/${volumeId}`);
+  }
+
+  async resizeVolume(volumeId: number, size: number): Promise<void> {
+    await this.request('POST', `/volumes/${volumeId}/actions/resize`, { size });
+  }
+
+  async attachVolume(volumeId: number, serverId: number): Promise<void> {
+    await this.request('POST', `/volumes/${volumeId}/actions/attach`, {
+      server: serverId,
+      automount: false,
+    });
+  }
+
+  async detachVolume(volumeId: number): Promise<void> {
+    await this.request('POST', `/volumes/${volumeId}/actions/detach`);
+  }
+
+  async listVolumes(labelSelector?: string): Promise<HetznerVolume[]> {
+    const endpoint = labelSelector
+      ? `/volumes?label_selector=${encodeURIComponent(labelSelector)}`
+      : '/volumes';
+
+    const response = await this.request<{ volumes: HetznerVolume[] }>('GET', endpoint);
+    return response.volumes;
   }
 }
 
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function getHetznerClient(): HetznerCloudClient {
+  const apiToken = process.env.HETZNER_API_TOKEN;
+
+  if (!apiToken) {
+    throw new Error('HETZNER_API_TOKEN environment variable not set');
+  }
+
+  return new HetznerCloudClient(apiToken);
+}
+
+function getHetznerLocation(): string {
+  return process.env.HETZNER_LOCATION || 'fsn1'; // Default: Falkenstein, Germany
+}
+
+function convertHetznerVolumeToVolumeInfo(volume: HetznerVolume): VolumeInfo {
+  return {
+    volumeId: volume.id.toString(),
+    name: volume.name,
+    sizeGb: volume.size,
+    status: volume.status,
+    createdAt: new Date(volume.created),
+  };
+}
+
 /**
- * Create a new EBS volume
+ * Create a new Hetzner Cloud volume
  */
 async function createVolumeImpl(_region: string, params: CreateVolumeParams): Promise<string> {
-  // In production, this would call the EC2 API to create an EBS volume
-  // For now, we'll simulate it
-
-  const volumeId = `vol-${Date.now().toString(16)}${Math.random().toString(16).slice(2, 8)}`;
-
-  console.log(`Creating EBS volume: ${volumeId}`);
+  console.log(`Creating Hetzner Cloud volume`);
   console.log(`  Tenant: ${params.tenantId}`);
   console.log(`  Name: ${params.name}`);
   console.log(`  Size: ${params.sizeGb} GB`);
-  console.log(`  Type: ${params.type || 'gp3'}`);
+  console.log(`  Location: ${getHetznerLocation()}`);
 
-  // In production:
-  // const availabilityZone = `${region}a`;
-  // await ec2Request(region, 'CreateVolume', {
-  //   AvailabilityZone: availabilityZone,
-  //   Size: params.sizeGb.toString(),
-  //   VolumeType: params.type || 'gp3',
-  //   'TagSpecification.1.ResourceType': 'volume',
-  //   'TagSpecification.1.Tag.1.Key': 'Name',
-  //   'TagSpecification.1.Tag.1.Value': params.name,
-  //   'TagSpecification.1.Tag.2.Key': 'TenantId',
-  //   'TagSpecification.1.Tag.2.Value': params.tenantId,
-  // });
+  const client = getHetznerClient();
 
-  return volumeId;
+  const volume = await client.createVolume({
+    name: params.name,
+    size: params.sizeGb,
+    location: getHetznerLocation(),
+    labels: {
+      tenant_id: params.tenantId,
+      environment: params.environment || 'production',
+      managed_by: 'skillancer',
+      purpose: 'skillpod-storage',
+    },
+  });
+
+  console.log(`  Created volume ID: ${volume.id}`);
+
+  return volume.id.toString();
 }
 
 /**
  * Get volume information
  */
 async function getVolumeImpl(_region: string, volumeId: string): Promise<VolumeInfo | null> {
-  // In production, this would call DescribeVolumes
-  // For now, we'll simulate it
-
   console.log(`Getting volume info: ${volumeId}`);
 
-  // Simulate volume info
-  return {
-    volumeId,
-    name: `volume-${volumeId.slice(-6)}`,
-    sizeGb: 50,
-    status: 'available',
-    createdAt: new Date(),
-  };
+  try {
+    const client = getHetznerClient();
+    const volume = await client.getVolume(Number.parseInt(volumeId));
+    return convertHetznerVolumeToVolumeInfo(volume);
+  } catch (error) {
+    console.error(`Failed to get volume ${volumeId}:`, error);
+    return null;
+  }
 }
 
 /**
@@ -159,10 +209,10 @@ async function getVolumeImpl(_region: string, volumeId: string): Promise<VolumeI
 async function deleteVolumeImpl(_region: string, volumeId: string): Promise<void> {
   console.log(`Deleting volume: ${volumeId}`);
 
-  // In production:
-  // await ec2Request(region, 'DeleteVolume', {
-  //   VolumeId: volumeId,
-  // });
+  const client = getHetznerClient();
+  await client.deleteVolume(Number.parseInt(volumeId));
+
+  console.log(`  Volume ${volumeId} deleted`);
 }
 
 /**
@@ -175,42 +225,39 @@ async function resizeVolumeImpl(
 ): Promise<void> {
   console.log(`Resizing volume ${volumeId} to ${newSizeGb} GB`);
 
-  // In production:
-  // await ec2Request(region, 'ModifyVolume', {
-  //   VolumeId: volumeId,
-  //   Size: newSizeGb.toString(),
-  // });
+  const client = getHetznerClient();
+  await client.resizeVolume(Number.parseInt(volumeId), newSizeGb);
+
+  console.log(`  Volume ${volumeId} resized to ${newSizeGb} GB`);
 }
 
 /**
- * Attach volume to an instance
+ * Attach volume to a server
  */
 async function attachVolumeImpl(
   _region: string,
   volumeId: string,
-  instanceId: string,
-  devicePath: string
+  serverId: string,
+  _devicePath: string // devicePath not needed for Hetzner (auto-assigned)
 ): Promise<void> {
-  console.log(`Attaching volume ${volumeId} to ${instanceId} at ${devicePath}`);
+  console.log(`Attaching volume ${volumeId} to server ${serverId}`);
 
-  // In production:
-  // await ec2Request(region, 'AttachVolume', {
-  //   VolumeId: volumeId,
-  //   InstanceId: instanceId,
-  //   Device: devicePath,
-  // });
+  const client = getHetznerClient();
+  await client.attachVolume(Number.parseInt(volumeId), Number.parseInt(serverId));
+
+  console.log(`  Volume ${volumeId} attached to server ${serverId}`);
 }
 
 /**
- * Detach volume from instance
+ * Detach volume from a server
  */
 async function detachVolumeImpl(_region: string, volumeId: string): Promise<void> {
   console.log(`Detaching volume: ${volumeId}`);
 
-  // In production:
-  // await ec2Request(region, 'DetachVolume', {
-  //   VolumeId: volumeId,
-  // });
+  const client = getHetznerClient();
+  await client.detachVolume(Number.parseInt(volumeId));
+
+  console.log(`  Volume ${volumeId} detached`);
 }
 
 /**
@@ -219,20 +266,21 @@ async function detachVolumeImpl(_region: string, volumeId: string): Promise<void
 async function listVolumesImpl(_region: string, tenantId: string): Promise<VolumeInfo[]> {
   console.log(`Listing volumes for tenant: ${tenantId}`);
 
-  // In production, this would call DescribeVolumes with tag filter
-  // For now, return empty array
-  return [];
+  const client = getHetznerClient();
+  const volumes = await client.listVolumes(`tenant_id=${tenantId}`);
+
+  return volumes.map(convertHetznerVolumeToVolumeInfo);
 }
 
 // =============================================================================
 // SERVICE FACTORY
 // =============================================================================
 
-// Default AWS region - in production this should come from environment config
-const DEFAULT_AWS_REGION = process.env.AWS_REGION || 'us-east-1';
+// Hetzner location from environment (default: Falkenstein)
+const HETZNER_LOCATION = process.env.HETZNER_LOCATION || 'fsn1';
 
 export function createStorageService(): StorageService {
-  const region = DEFAULT_AWS_REGION;
+  const region = HETZNER_LOCATION;
 
   return {
     createVolume: async (params: CreateVolumeParams) => createVolumeImpl(region, params),

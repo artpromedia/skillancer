@@ -223,6 +223,7 @@ REDIS_PASSWORD=$(ssh "$SERVER" "grep REDIS_PASSWORD /root/.skillancer-credential
 JWT_SECRET=$(openssl rand -hex 32)
 JWT_REFRESH_SECRET=$(openssl rand -hex 32)
 SESSION_SECRET=$(openssl rand -hex 32)
+ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)
 
 log "Creating secrets..."
 ssh "$SERVER" "kubectl -n skillancer create secret generic skillancer-secrets \
@@ -234,8 +235,19 @@ ssh "$SERVER" "kubectl -n skillancer create secret generic skillancer-secrets \
   --from-literal=JWT_REFRESH_SECRET='${JWT_REFRESH_SECRET}' \
   --from-literal=SESSION_SECRET='${SESSION_SECRET}' \
   --from-literal=S3_ENDPOINT='https://56f34d4c32d7deeeb917c5e27e0083ac.r2.cloudflarestorage.com' \
-  --from-literal=S3_BUCKET='skillancer-production-uploads' \
   --from-literal=S3_REGION='auto' \
+  --from-literal=S3_BUCKET_UPLOADS='skillancer-production-uploads' \
+  --from-literal=S3_BUCKET_ASSETS='skillancer-production-assets' \
+  --from-literal=S3_BUCKET_RECORDINGS='skillancer-production-recordings' \
+  --from-literal=S3_FORCE_PATH_STYLE='false' \
+  --from-literal=S3_CDN_URL='https://cdn.skillancer.com' \
+  --from-literal=S3_ACCESS_KEY_ID='placeholder-update-with-r2-key' \
+  --from-literal=S3_SECRET_ACCESS_KEY='placeholder-update-with-r2-secret' \
+  --from-literal=ENCRYPTION_MASTER_KEY='${ENCRYPTION_MASTER_KEY}' \
+  --from-literal=ENCRYPTION_ALGORITHM='aes-256-gcm' \
+  --from-literal=HETZNER_API_TOKEN='placeholder-update-with-hetzner-token' \
+  --from-literal=HETZNER_LOCATION='fsn1' \
+  --from-literal=HETZNER_VOLUME_SIZE='10' \
   --from-literal=STRIPE_SECRET_KEY='placeholder' \
   --from-literal=STRIPE_WEBHOOK_SECRET='placeholder' \
   --from-literal=STRIPE_PUBLISHABLE_KEY='placeholder' \
