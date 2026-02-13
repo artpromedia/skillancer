@@ -264,9 +264,7 @@ export class MonitoringService {
   /**
    * Create an alert rule
    */
-  createAlertRule(
-    rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>
-  ): AlertRule {
+  createAlertRule(rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>): AlertRule {
     const id = `rule_${randomBytes(8).toString('hex')}`;
 
     const alertRule: AlertRule = {
@@ -642,11 +640,7 @@ export class MonitoringService {
     }
   }
 
-  private evaluateRules(
-    metricName: string,
-    value: number,
-    _tags: Record<string, string>
-  ): void {
+  private evaluateRules(metricName: string, value: number, _tags: Record<string, string>): void {
     for (const rule of alertRules.values()) {
       if (!rule.enabled || rule.condition.metric !== metricName) continue;
 
