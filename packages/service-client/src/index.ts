@@ -81,6 +81,28 @@ export {
   type NotificationPreferences,
 } from './clients/notification-client.js';
 
+export {
+  MLRecommendationServiceClient,
+  mlRecommendationClient,
+  type AnalyzeJobInput,
+  type JobAnalysis,
+  type GenerateSuggestionsInput,
+  type ProposalSuggestions,
+  type ScoreProposalInput,
+  type ProposalScore,
+  type ImproveProposalInput,
+  type ProposalImprovement,
+  type OptimizeRateInput,
+  type RateRecommendation,
+  type AnalyzeRateInput,
+  type RateAnalysis,
+  type MarketRateData,
+  type MarketInsightsInput,
+  type MarketInsights,
+  type LlmCompletionInput,
+  type LlmCompletionResult,
+} from './clients/ml-recommendation-client.js';
+
 // Queue exports
 export {
   QueueManager,

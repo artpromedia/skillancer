@@ -33,6 +33,10 @@
       "types": "./dist/clients/notification-client.d.ts",
       "import": "./dist/clients/notification-client.js"
     },
+    "./ml-recommendation": {
+      "types": "./dist/clients/ml-recommendation-client.d.ts",
+      "import": "./dist/clients/ml-recommendation-client.js"
+    },
     "./queue": {
       "types": "./dist/queue/index.d.ts",
       "import": "./dist/queue/index.js"
