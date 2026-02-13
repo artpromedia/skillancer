@@ -385,7 +385,7 @@ const rateLimitingPluginImpl: FastifyPluginAsync<RateLimitConfig> = async (
 
 export const rateLimitingPlugin = fp(rateLimitingPluginImpl, {
   name: 'rate-limiting',
-  fastify: '5.x',
+  fastify: '4.x',
 });
 
 // =============================================================================

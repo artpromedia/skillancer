@@ -192,7 +192,7 @@ function extractResourceId(url: string): string | undefined {
 }
 
 export const auditPlugin = fp(auditPluginAsync, {
-  fastify: '5.x',
+  fastify: '4.x',
   name: '@skillancer/audit-client',
 });
 

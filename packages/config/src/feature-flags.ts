@@ -304,7 +304,7 @@ export function isFeatureEnabled(
 
   // Check environment
   const env = context?.environment || process.env.NODE_ENV || 'development';
-  if (!flag.environments.includes(env as any)) {
+  if (!(flag.environments as string[]).includes(env)) {
     return false;
   }
 
@@ -429,7 +429,7 @@ export class FeatureFlagService {
   async syncFlags(): Promise<void> {
     const pipeline = this.redis.pipeline();
 
-    for (const [key, flag] of Object.entries(ALL_FLAGS)) {
+    for (const [_key, flag] of Object.entries(ALL_FLAGS)) {
       const redisKey = `${FeatureFlagService.KEY_PREFIX}${this.environment}:${flag.id}`;
       pipeline.set(redisKey, JSON.stringify(flag), 'EX', this.cacheExpiration);
     }
