@@ -97,5 +97,5 @@ COPY --from=builder --chown=intelligence:nodejs /app ./
 USER intelligence
 EXPOSE 3010
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3010/health/live || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3010/health || exit 1
 CMD ["node", "services/intelligence-svc/dist/index.js"]

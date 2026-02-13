@@ -97,5 +97,5 @@ COPY --from=builder --chown=market:nodejs /app ./
 USER market
 EXPOSE 3002
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3002/health/live || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3002/health || exit 1
 CMD ["node", "services/market-svc/dist/index.js"]

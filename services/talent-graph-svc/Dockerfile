@@ -97,5 +97,5 @@ COPY --from=builder --chown=talentgraph:nodejs /app ./
 USER talentgraph
 EXPOSE 3009
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3009/health/live || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3009/health || exit 1
 CMD ["node", "services/talent-graph-svc/dist/index.js"]

@@ -514,7 +514,7 @@ metadata:
   labels:
     app: executive-svc
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: executive-svc
@@ -586,7 +586,7 @@ metadata:
   labels:
     app: financial-svc
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: financial-svc
@@ -658,7 +658,7 @@ metadata:
   labels:
     app: talent-graph-svc
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: talent-graph-svc
@@ -730,7 +730,7 @@ metadata:
   labels:
     app: intelligence-svc
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: intelligence-svc
@@ -802,7 +802,7 @@ metadata:
   labels:
     app: copilot-svc
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: copilot-svc

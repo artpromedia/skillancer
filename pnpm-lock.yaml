@@ -1936,6 +1936,9 @@ importers:
       '@types/node':
         specifier: ^20.11.0
         version: 20.19.28
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(tsx@4.21.0)(typescript@5.5.4)
       tsx:
         specifier: ^4.7.0
         version: 4.21.0
@@ -2003,6 +2006,9 @@ importers:
       rimraf:
         specifier: ^5.0.7
         version: 5.0.10
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(tsx@4.21.0)(typescript@5.5.4)
       tsx:
         specifier: ^4.15.4
         version: 4.21.0
@@ -2155,6 +2161,9 @@ importers:
       rimraf:
         specifier: ^5.0.7
         version: 5.0.10
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(tsx@4.21.0)(typescript@5.5.4)
       tsx:
         specifier: ^4.15.4
         version: 4.21.0
@@ -2353,6 +2362,9 @@ importers:
       rimraf:
         specifier: ^5.0.7
         version: 5.0.10
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(tsx@4.21.0)(typescript@5.5.4)
       tsx:
         specifier: ^4.15.4
         version: 4.21.0
@@ -2420,6 +2432,9 @@ importers:
       '@types/node':
         specifier: ^20.11.0
         version: 20.19.28
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(tsx@4.21.0)(typescript@5.5.4)
       tsx:
         specifier: ^4.7.0
         version: 4.21.0
@@ -2718,6 +2733,9 @@ importers:
       rimraf:
         specifier: ^5.0.7
         version: 5.0.10
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(tsx@4.21.0)(typescript@5.5.4)
       tsx:
         specifier: ^4.15.4
         version: 4.21.0

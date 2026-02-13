@@ -97,5 +97,5 @@ COPY --from=builder --chown=executive:nodejs /app ./
 USER executive
 EXPOSE 3007
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3007/health/live || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3007/health || exit 1
 CMD ["node", "services/executive-svc/dist/index.js"]

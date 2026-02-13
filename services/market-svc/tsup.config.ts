@@ -1,0 +1,32 @@
+import { defineConfig } from 'tsup';
+
+export default defineConfig({
+  entry: ['src/index.ts'],
+  format: ['esm'],
+  target: 'node20',
+  platform: 'node',
+  splitting: false,
+  sourcemap: true,
+  clean: true,
+  external: [
+    '@prisma/client',
+    '.prisma/client',
+    '.prisma/client/default',
+    '@skillancer/audit-client',
+    '@skillancer/database',
+    '@skillancer/cache',
+    '@skillancer/logger',
+    '@skillancer/types',
+    '@skillancer/utils',
+    '@trpc/server',
+    '@socket.io/redis-adapter',
+    'fastify',
+    'fastify-plugin',
+    'ioredis',
+    'redis',
+    'socket.io',
+    'stripe',
+    'zod',
+  ],
+  tsconfig: './tsconfig.json',
+});

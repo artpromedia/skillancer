@@ -44,6 +44,16 @@ spec:
               value: 'http://notification-svc.skillancer.svc.cluster.local:4006'
             - name: AUDIT_SERVICE_URL
               value: 'http://audit-svc.skillancer.svc.cluster.local:3012'
+            - name: EXECUTIVE_SERVICE_URL
+              value: 'http://executive-svc.skillancer.svc.cluster.local:3007'
+            - name: FINANCIAL_SERVICE_URL
+              value: 'http://financial-svc.skillancer.svc.cluster.local:3008'
+            - name: TALENT_GRAPH_SERVICE_URL
+              value: 'http://talent-graph-svc.skillancer.svc.cluster.local:3009'
+            - name: INTELLIGENCE_SERVICE_URL
+              value: 'http://intelligence-svc.skillancer.svc.cluster.local:3010'
+            - name: COPILOT_SERVICE_URL
+              value: 'http://copilot-svc.skillancer.svc.cluster.local:3011'
             - name: ML_RECOMMENDATION_SERVICE_URL
               value: 'http://ml-recommendation-svc.skillancer.svc.cluster.local:8080'
           envFrom:
