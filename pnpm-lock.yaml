@@ -1868,6 +1868,12 @@ importers:
 
   services/cockpit-svc:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.705.0
+        version: 3.967.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.958.0
+        version: 3.967.0
       '@azure/msal-node':
         specifier: ^3.8.4
         version: 3.8.4
@@ -2383,6 +2389,9 @@ importers:
       '@socket.io/redis-adapter':
         specifier: ^8.3.0
         version: 8.3.0(socket.io-adapter@2.5.6)
+      '@trpc/server':
+        specifier: ^10.45.0
+        version: 10.45.4
       fastify:
         specifier: ^4.29.1
         version: 4.29.1
@@ -2614,6 +2623,9 @@ importers:
       fastify-plugin:
         specifier: ^4.5.1
         version: 4.5.1
+      fastify-type-provider-zod:
+        specifier: ^2.0.0
+        version: 2.1.0(fastify@4.29.1)(zod@3.25.76)
       ioredis:
         specifier: ^5.3.2
         version: 5.9.1
@@ -21390,6 +21402,17 @@ packages:
 
   /fastify-plugin@4.5.1:
     resolution: {integrity: sha512-stRHYGeuqpEZTL1Ef0Ovr2ltazUT9g844X5z/zEBFLG8RYlpDiOCIG+ATvYEp+/zmc7sN29mcIMp8gvYplYPIQ==}
+    dev: false
+
+  /fastify-type-provider-zod@2.1.0(fastify@4.29.1)(zod@3.25.76):
+    resolution: {integrity: sha512-p0plQyrxVR1IxJaOVbKRkduYh74HAS6Pm2szhFrc/vFdfIEu8UWo/cPFZCrcKyeo8ICjWbHH1zkx8lWw/ivpqg==}
+    peerDependencies:
+      fastify: ^4.29.1
+      zod: ^3.14.2
+    dependencies:
+      fastify: 4.29.1
+      zod: 3.25.76
+      zod-to-json-schema: 3.25.1(zod@3.25.76)
     dev: false
 
   /fastify@4.29.1:

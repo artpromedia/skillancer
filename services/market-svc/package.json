@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@trpc/server": "^10.45.0",
     "@skillancer/audit-client": "workspace:*",
     "@skillancer/database": "workspace:*",
     "@skillancer/cache": "workspace:*",

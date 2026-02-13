@@ -20,6 +20,7 @@ import sensible from '@fastify/sensible';
 import websocket from '@fastify/websocket';
 import { PrismaClient } from '@/types/prisma-shim.js';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
 import { getConfig } from './config/index.js';
 import { createContainmentMiddleware, createWatermarkMiddleware } from './middleware/index.js';
@@ -101,6 +102,10 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         : undefined,
     },
   });
+
+  // Register Zod schema validation support
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   // ===========================================================================
   // PLUGINS
