@@ -14,49 +14,129 @@ import type {
   MarketInsightInput,
   MarketInsightResult,
 } from '../types/copilot.types.js';
+import { MLRecommendationClient } from '../clients/ml-recommendation.client.js';
 
 export class CopilotService {
-  constructor(private readonly prisma: PrismaClient) {}
+  private readonly mlClient: MLRecommendationClient;
+
+  constructor(private readonly prisma: PrismaClient) {
+    this.mlClient = new MLRecommendationClient();
+  }
 
   /**
-   * Generate a proposal draft
+   * Generate a proposal draft.
+   *
+   * Delegates job analysis, suggestion generation, scoring, and rate
+   * optimization to ml-recommendation-svc. Keeps draft persistence
+   * and interaction logging local.
    */
   async generateProposalDraft(input: ProposalDraftInput): Promise<ProposalDraftResult> {
     const startTime = Date.now();
 
-    // Get user's profile and history
-    const [userProfile, previousProposals] = await Promise.all([
-      this.getUserProfile(input.userId),
-      this.getSuccessfulProposals(input.userId),
-    ]);
+    // Get user's profile for personalization context
+    const userProfile = await this.getUserProfile(input.userId);
+    const userName = (userProfile as any)?.firstName || 'there';
 
-    // Calculate skill match
-    const skillMatch = this.calculateSkillMatch(input.requiredSkills, input.userSkills);
+    // Build freelancer context for the ML service
+    const freelancerContext = {
+      user_id: input.userId,
+      name: userName,
+      skills: input.userSkills,
+      tone: input.tone || 'PROFESSIONAL',
+      emphasis: input.emphasis || [],
+    };
 
-    // Generate cover letter based on patterns
-    const coverLetter = this.generateCoverLetter(input, userProfile, skillMatch);
+    // Try ML-powered generation, fall back to local templates
+    let coverLetter: string;
+    let keyPoints: string[];
+    let suggestedRate: number;
+    let rateJustification: string;
+    let estimatedWinRate: number;
+    let improvements: any[];
 
-    // Calculate suggested rate
-    const suggestedRate = await this.calculateSuggestedRate(input);
+    try {
+      // Delegate to ml-recommendation-svc for AI-powered results
+      const [suggestions, rateResult] = await Promise.all([
+        this.mlClient.generateProposalSuggestions({
+          job_id: input.jobId,
+          job_description: input.jobDescription,
+          freelancer_context: freelancerContext,
+          tone: input.tone?.toLowerCase(),
+          focus_areas: input.emphasis,
+        }),
+        this.mlClient.optimizeRate({
+          job_id: input.jobId,
+          job_title: input.jobTitle,
+          job_description: input.jobDescription,
+          skills_required: input.requiredSkills,
+          budget_min: input.budget?.min,
+          budget_max: input.budget?.max,
+          freelancer_profile: freelancerContext,
+          strategy: 'balanced',
+        }),
+      ]);
 
-    // Generate key points
-    const keyPoints = this.generateKeyPoints(input, skillMatch);
+      // Compose cover letter from ML suggestions
+      const hook = suggestions.opening_hooks[0];
+      const hookText =
+        typeof hook === 'object' && hook !== null
+          ? (hook as any).text || JSON.stringify(hook)
+          : String(hook || '');
 
-    // Calculate estimated win rate
-    const estimatedWinRate = this.estimateWinRate(skillMatch, suggestedRate, input);
+      const greeting = input.clientName ? `Dear ${input.clientName},` : 'Hello,';
+      coverLetter = [
+        greeting,
+        '',
+        hookText,
+        '',
+        suggestions.experience_highlights.map((h) => `• ${h}`).join('\n'),
+        '',
+        input.proposedTimeline
+          ? `I can complete this project within ${input.proposedTimeline}.`
+          : '',
+        '',
+        suggestions.closing_cta[0] || "I'd love to discuss how I can help. Let's connect!",
+        '',
+        `Best regards,`,
+        userName,
+      ]
+        .filter(Boolean)
+        .join('\n');
 
-    // Generate improvements
-    const improvements = this.generateImprovements(coverLetter, input);
+      keyPoints = [
+        ...suggestions.experience_highlights.slice(0, 3),
+        ...suggestions.personalization_tips.slice(0, 2),
+      ];
 
-    // Store the draft
+      suggestedRate = rateResult.recommended_rate;
+      rateJustification = rateResult.reasoning.join('; ');
+      estimatedWinRate = rateResult.win_probability;
+      improvements = suggestions.personalization_tips.map((tip) => ({
+        section: 'Personalization',
+        current: '',
+        suggested: tip,
+        reason: 'ML-powered recommendation',
+      }));
+    } catch {
+      // ML service unavailable — fall back to local generation
+      const skillMatch = this.calculateSkillMatch(input.requiredSkills, input.userSkills);
+      coverLetter = this.generateCoverLetterLocal(input, userProfile, skillMatch);
+      keyPoints = this.generateKeyPointsLocal(input, skillMatch);
+      suggestedRate = this.calculateSuggestedRateLocal(input);
+      rateJustification = `Based on skill count for ${input.requiredSkills.slice(0, 2).join(' and ')}`;
+      estimatedWinRate = this.estimateWinRateLocal(skillMatch, suggestedRate, input);
+      improvements = this.generateImprovementsLocal(coverLetter, input);
+    }
+
+    // Store the draft (always local — copilot-svc owns draft persistence)
     const draft = await this.prisma.proposalDraft.create({
       data: {
         userId: input.userId,
         jobId: input.jobId,
         jobTitle: input.jobTitle,
         content: coverLetter,
-        suggestedRate: suggestedRate.optimal,
-        estimatedWinRate,
+        suggestedRate,
+        estimatedWinRate: Math.round(estimatedWinRate * 100),
         keyPoints,
         improvements: JSON.parse(JSON.stringify(improvements)),
         status: 'DRAFT',
@@ -73,7 +153,7 @@ export class CopilotService {
       {
         content: coverLetter,
         confidence: estimatedWinRate,
-        tokensUsed: coverLetter.length / 4, // Approximate
+        tokensUsed: coverLetter.length / 4,
         processingTime: Date.now() - startTime,
       }
     );
@@ -83,101 +163,101 @@ export class CopilotService {
       content: coverLetter,
       coverLetter,
       keyPoints,
-      suggestedRate: suggestedRate.optimal,
-      rateJustification: suggestedRate.justification,
-      estimatedWinRate,
+      suggestedRate,
+      rateJustification,
+      estimatedWinRate: Math.round(estimatedWinRate * 100),
       improvements,
     };
   }
 
   /**
-   * Get rate suggestions
+   * Get rate suggestions.
+   *
+   * Delegates rate optimization to ml-recommendation-svc.
+   * Falls back to local heuristics if unavailable.
    */
   async suggestRate(input: RateSuggestionInput): Promise<RateSuggestionResult> {
     const startTime = Date.now();
 
-    // Get market data for skills
-    const marketData = await this.getMarketRates(input.skills, input.industry);
+    try {
+      // Delegate to ml-recommendation-svc
+      const result = await this.mlClient.optimizeRate({
+        job_id: 'rate-suggestion',
+        job_title: 'Rate inquiry',
+        job_description: `Skills: ${input.skills.join(', ')}`,
+        skills_required: input.skills,
+        freelancer_profile: {
+          user_id: input.userId,
+          skills: input.skills,
+          experience_years: input.experience,
+          location: input.location,
+        },
+        strategy: 'balanced',
+      });
 
-    // Get user's history
-    const userHistory = await this.getUserRateHistory(input.userId);
+      const suggestedHourlyRate = {
+        min: result.rate_range.min,
+        max: result.rate_range.max,
+        optimal: result.recommended_rate,
+      };
 
-    // Calculate suggested rate based on factors
-    const factors = this.analyzeRateFactors(input, marketData, userHistory);
+      // Map ML market position to our enum
+      const pos = result.market_position.position?.toUpperCase() || 'AT_MARKET';
+      let marketPosition: 'BELOW_MARKET' | 'AT_MARKET' | 'ABOVE_MARKET' = 'AT_MARKET';
+      if (pos.includes('BELOW')) marketPosition = 'BELOW_MARKET';
+      else if (pos.includes('ABOVE')) marketPosition = 'ABOVE_MARKET';
 
-    // Calculate final rate suggestion
-    const rateAdjustment = factors.reduce(
-      (adj, f) => adj + (f.impact === 'POSITIVE' ? f.weight : -f.weight),
-      0
-    );
-    const baseRate = marketData.averageRate;
-    const adjustedRate = baseRate * (1 + rateAdjustment);
+      await this.logInteraction(
+        {
+          userId: input.userId,
+          interactionType: InteractionType.RATE_SUGGEST,
+          inputContext: input as any,
+        },
+        {
+          content: JSON.stringify(suggestedHourlyRate),
+          confidence: result.confidence,
+          tokensUsed: 100,
+          processingTime: Date.now() - startTime,
+        }
+      );
 
-    const suggestedHourlyRate = {
-      min: Math.round(adjustedRate * 0.85),
-      max: Math.round(adjustedRate * 1.15),
-      optimal: Math.round(adjustedRate),
-    };
-
-    // Determine market position
-    let marketPosition: 'BELOW_MARKET' | 'AT_MARKET' | 'ABOVE_MARKET' = 'AT_MARKET';
-    if (suggestedHourlyRate.optimal < marketData.p25) marketPosition = 'BELOW_MARKET';
-    else if (suggestedHourlyRate.optimal > marketData.p75) marketPosition = 'ABOVE_MARKET';
-
-    // Generate recommendations
-    const recommendations = this.generateRateRecommendations(input, marketData, factors);
-
-    // Log interaction
-    await this.logInteraction(
-      {
-        userId: input.userId,
-        interactionType: InteractionType.RATE_SUGGEST,
-        inputContext: input as any,
-      },
-      {
-        content: JSON.stringify(suggestedHourlyRate),
-        confidence: 0.8,
-        tokensUsed: 100,
-        processingTime: Date.now() - startTime,
-      }
-    );
-
-    return {
-      suggestedHourlyRate,
-      marketPosition,
-      competitorRange: {
-        min: marketData.p25,
-        max: marketData.p75,
-      },
-      factors,
-      recommendations,
-    };
+      return {
+        suggestedHourlyRate,
+        marketPosition,
+        competitorRange: result.rate_range,
+        factors: result.reasoning.map((r) => ({
+          factor: r,
+          impact: 'POSITIVE' as const,
+          weight: 0.1,
+          explanation: r,
+        })),
+        recommendations: result.alternative_strategies.map(
+          (s) => (s as any).description || JSON.stringify(s)
+        ),
+      };
+    } catch {
+      // Fallback to local heuristics
+      return this.suggestRateLocal(input, startTime);
+    }
   }
 
   /**
-   * Assist with message drafting
+   * Assist with message drafting.
+   *
+   * This stays local — template-based intent responses don't need ML.
+   * The LLM proxy can be used here later for enhanced quality.
    */
   async assistMessage(input: MessageAssistInput): Promise<MessageAssistResult> {
     const startTime = Date.now();
 
-    // Analyze conversation context
     const contextAnalysis = this.analyzeConversation(input.conversationContext);
-
-    // Generate suggested message
     const suggestedMessage = this.generateMessage(input, contextAnalysis);
-
-    // Generate alternative versions
     const alternativeVersions = this.generateAlternativeMessages(input, contextAnalysis);
-
-    // Analyze current draft tone if provided
     const toneAnalysis = input.draftMessage
       ? this.analyzeTone(input.draftMessage)
       : { current: 'NEUTRAL', recommended: input.tone || 'PROFESSIONAL' };
-
-    // Identify key points and gaps
     const { covered, missing } = this.identifyKeyPoints(input, contextAnalysis);
 
-    // Log interaction
     await this.logInteraction(
       {
         userId: input.userId,
@@ -202,30 +282,21 @@ export class CopilotService {
   }
 
   /**
-   * Optimize user profile
+   * Optimize user profile.
+   *
+   * This stays local — profile completeness scoring and template-based
+   * optimization are unique to copilot-svc and don't require ML.
    */
   async optimizeProfile(input: ProfileOptimizeInput): Promise<ProfileOptimizeResult> {
     const startTime = Date.now();
 
-    // Analyze current profile completeness
     const completenessScore = this.calculateProfileCompleteness(input);
-
-    // Generate optimized headline
     const optimizedHeadline = this.generateOptimizedHeadline(input);
-
-    // Generate optimized summary
     const optimizedSummary = this.generateOptimizedSummary(input);
-
-    // Analyze skills
     const { toHighlight, toAdd } = await this.analyzeSkills(input);
-
-    // Generate keyword suggestions for SEO
     const keywordSuggestions = this.generateKeywordSuggestions(input);
-
-    // Generate improvement suggestions
     const improvements = this.generateProfileImprovements(input, completenessScore);
 
-    // Log interaction
     await this.logInteraction(
       {
         userId: input.userId,
@@ -252,219 +323,141 @@ export class CopilotService {
   }
 
   /**
-   * Get market insights
+   * Get market insights.
+   *
+   * Delegates to ml-recommendation-svc for real market data.
+   * Falls back to local static data if unavailable.
    */
   async getMarketInsights(input: MarketInsightInput): Promise<MarketInsightResult> {
-    // Get market data
-    const marketData = await this.getMarketRates(input.skills, input.industry);
+    try {
+      const result = await this.mlClient.getMarketInsights({
+        skills: input.skills,
+        industry: input.industry,
+        location: input.location,
+      });
 
-    // Analyze demand
-    const demandAnalysis = await this.analyzeDemand(input.skills, input.industry);
-
-    // Identify skill gaps and emerging skills
-    const { gaps, emerging } = await this.analyzeSkillTrends(input.skills, input.industry);
-
-    // Generate tips
-    const tips = this.generateMarketTips(input, demandAnalysis, marketData);
-
-    return {
-      demandLevel: demandAnalysis.level,
-      demandTrend: demandAnalysis.trend,
-      averageRate: {
-        hourly: marketData.averageRate,
-        project: marketData.averageRate * 160, // Approximate monthly
-      },
-      competitionLevel: demandAnalysis.competition,
-      topCompetitors: demandAnalysis.competitorCount,
-      skillGaps: gaps,
-      emergingSkills: emerging,
-      marketTips: tips,
-    };
+      return {
+        demandLevel: result.demand_level as 'HIGH' | 'MEDIUM' | 'LOW',
+        demandTrend: result.demand_trend as 'RISING' | 'STABLE' | 'FALLING',
+        averageRate: result.average_rate,
+        competitionLevel: result.competition_level as 'HIGH' | 'MEDIUM' | 'LOW',
+        topCompetitors: result.top_competitors,
+        skillGaps: result.skill_gaps,
+        emergingSkills: result.emerging_skills,
+        marketTips: result.market_tips,
+      };
+    } catch {
+      // Fallback to local static data
+      return this.getMarketInsightsLocal(input);
+    }
   }
 
-  /**
-   * Get proposal draft by ID
-   */
+  // ===========================================================================
+  // Draft CRUD (always local — copilot-svc owns draft persistence)
+  // ===========================================================================
+
   async getProposalDraft(draftId: string) {
-    const draft = await this.prisma.proposalDraft.findUnique({
-      where: { id: draftId },
-    });
-    return draft;
+    return this.prisma.proposalDraft.findUnique({ where: { id: draftId } });
   }
 
-  /**
-   * Update proposal draft
-   */
   async updateProposalDraft(draftId: string, content: string) {
-    const draft = await this.prisma.proposalDraft.update({
+    return this.prisma.proposalDraft.update({
       where: { id: draftId },
       data: { content, updatedAt: new Date() },
     });
-    return draft;
   }
 
-  /**
-   * Get user's proposal drafts
-   */
   async getUserProposalDrafts(userId: string, status?: string) {
     const where: any = { userId };
     if (status) where.status = status;
-
-    const drafts = await this.prisma.proposalDraft.findMany({
+    return this.prisma.proposalDraft.findMany({
       where,
       orderBy: { createdAt: 'desc' },
     });
-    return drafts;
   }
 
-  /**
-   * Get user's copilot interaction history
-   */
   async getInteractionHistory(userId: string, type?: InteractionType, limit = 50) {
     const where: any = { userId };
     if (type) where.interactionType = type;
-
-    const interactions = await this.prisma.copilotInteraction.findMany({
+    return this.prisma.copilotInteraction.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
-    return interactions;
   }
 
-  // Private helper methods
-
-  private async getUserProfile(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { profile: true },
-    });
-    return user;
-  }
-
-  private async getSuccessfulProposals(userId: string) {
-    const drafts = await this.prisma.proposalDraft.findMany({
-      where: {
-        userId,
-        status: 'ACCEPTED',
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-    });
-    return drafts;
-  }
+  // ===========================================================================
+  // Local fallback helpers (used when ml-recommendation-svc is unavailable)
+  // ===========================================================================
 
   private calculateSkillMatch(required: string[], userSkills: string[]): number {
     const requiredLower = required.map((s) => s.toLowerCase());
     const userLower = userSkills.map((s) => s.toLowerCase());
-
     const matched = requiredLower.filter((s) => userLower.includes(s));
     return required.length > 0 ? matched.length / required.length : 0;
   }
 
-  private generateCoverLetter(input: ProposalDraftInput, profile: any, skillMatch: number): string {
+  private generateCoverLetterLocal(
+    input: ProposalDraftInput,
+    profile: any,
+    skillMatch: number
+  ): string {
     const userName = profile?.firstName || 'there';
     const matchedSkills = input.requiredSkills.filter((s) =>
       input.userSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())
     );
 
     const greeting = input.clientName ? `Dear ${input.clientName}` : 'Hello';
-
-    const intro = `${greeting},
-
-I'm excited to apply for the ${input.jobTitle} position. With my expertise in ${matchedSkills.slice(0, 3).join(', ')}${matchedSkills.length > 3 ? ' and more' : ''}, I'm confident I can deliver exceptional results for your project.`;
-
-    const body = `
-After reviewing your requirements, I understand you need ${this.summarizeRequirements(input.jobDescription)}. This aligns perfectly with my experience, particularly in:
-
-${matchedSkills
-  .slice(0, 4)
-  .map((s) => `• ${s}`)
-  .join('\n')}
-
-${input.emphasis ? `I'd particularly like to emphasize my strength in ${input.emphasis.join(' and ')}.` : ''}`;
-
+    const intro = `${greeting},\n\nI'm excited to apply for the ${input.jobTitle} position. With my expertise in ${matchedSkills.slice(0, 3).join(', ')}${matchedSkills.length > 3 ? ' and more' : ''}, I'm confident I can deliver exceptional results for your project.`;
+    const body = `\nAfter reviewing your requirements, I understand you need ${this.summarizeRequirements(input.jobDescription)}. This aligns perfectly with my experience, particularly in:\n\n${matchedSkills.slice(0, 4).map((s) => `• ${s}`).join('\n')}\n\n${input.emphasis ? `I'd particularly like to emphasize my strength in ${input.emphasis.join(' and ')}.` : ''}`;
     const timeline = input.proposedTimeline
       ? `\nI can complete this project within ${input.proposedTimeline}.`
       : '';
-
-    const closing = `
-I'd love to discuss how I can help achieve your goals. Let's schedule a call to explore this further.
-
-Best regards,
-${userName}`;
+    const closing = `\nI'd love to discuss how I can help achieve your goals. Let's schedule a call to explore this further.\n\nBest regards,\n${userName}`;
 
     return intro + body + timeline + closing;
   }
 
   private summarizeRequirements(description: string): string {
-    // Simple summarization - in production would use NLP
     const sentences = description.split(/[.!?]/);
     return sentences[0]?.trim() || 'a skilled professional';
   }
 
-  private async calculateSuggestedRate(input: ProposalDraftInput): Promise<{
-    optimal: number;
-    justification: string;
-  }> {
-    // Get market rates for skills
-    const marketData = await this.getMarketRates(input.requiredSkills, input.clientIndustry);
-
-    let rate = marketData.averageRate;
-
-    // Adjust based on budget if provided
+  private calculateSuggestedRateLocal(input: ProposalDraftInput): number {
+    const baseRate = 50 + input.requiredSkills.length * 5;
     if (input.budget) {
       const budgetRate = (input.budget.min + input.budget.max) / 2;
-      rate = Math.min(rate, budgetRate * 1.1); // Don't exceed budget by too much
+      return Math.round(Math.min(baseRate, budgetRate * 1.1));
     }
-
-    return {
-      optimal: Math.round(rate),
-      justification: `Based on market rates for ${input.requiredSkills.slice(0, 2).join(' and ')} skills`,
-    };
+    return Math.round(baseRate);
   }
 
-  private generateKeyPoints(input: ProposalDraftInput, skillMatch: number): string[] {
+  private generateKeyPointsLocal(input: ProposalDraftInput, skillMatch: number): string[] {
     const points: string[] = [];
-
     points.push(`${Math.round(skillMatch * 100)}% skill match with requirements`);
-
-    if (skillMatch >= 0.8) {
-      points.push('Strong alignment with all key requirements');
-    }
-
-    if (input.userSkills.length >= input.requiredSkills.length) {
+    if (skillMatch >= 0.8) points.push('Strong alignment with all key requirements');
+    if (input.userSkills.length >= input.requiredSkills.length)
       points.push('Comprehensive skill coverage');
-    }
-
     points.push('Ready to start immediately');
-
     return points;
   }
 
-  private estimateWinRate(
+  private estimateWinRateLocal(
     skillMatch: number,
-    rate: { optimal: number },
+    rate: number,
     input: ProposalDraftInput
   ): number {
-    let winRate = 0.3; // Base rate
-
-    // Skill match bonus
+    let winRate = 0.3;
     winRate += skillMatch * 0.3;
-
-    // Rate competitiveness
     if (input.budget) {
       const midBudget = (input.budget.min + input.budget.max) / 2;
-      if (rate.optimal <= midBudget) winRate += 0.15;
+      if (rate <= midBudget) winRate += 0.15;
     }
-
     return Math.min(0.85, Math.max(0.1, winRate));
   }
 
-  private generateImprovements(coverLetter: string, input: ProposalDraftInput): any[] {
+  private generateImprovementsLocal(coverLetter: string, input: ProposalDraftInput): any[] {
     const improvements: any[] = [];
-
-    // Check for personalization
     if (!input.clientName) {
       improvements.push({
         section: 'Greeting',
@@ -473,8 +466,6 @@ ${userName}`;
         reason: 'Personalized greetings increase response rates by 15%',
       });
     }
-
-    // Check length
     if (coverLetter.length < 500) {
       improvements.push({
         section: 'Length',
@@ -483,55 +474,65 @@ ${userName}`;
         reason: 'Proposals with 500-800 words have higher success rates',
       });
     }
-
     return improvements;
   }
 
-  private async getMarketRates(
-    skills: string[],
-    industry?: string
-  ): Promise<{
-    averageRate: number;
-    p25: number;
-    p75: number;
-  }> {
-    // In production, this would query actual market data
-    // For now, return reasonable defaults based on skill count
-    const baseRate = 50 + skills.length * 5;
-
-    return {
-      averageRate: baseRate,
-      p25: baseRate * 0.7,
-      p75: baseRate * 1.3,
+  private async suggestRateLocal(
+    input: RateSuggestionInput,
+    startTime: number
+  ): Promise<RateSuggestionResult> {
+    const baseRate = 50 + input.skills.length * 5;
+    const factors = this.analyzeRateFactorsLocal(input);
+    const rateAdjustment = factors.reduce(
+      (adj, f) => adj + (f.impact === 'POSITIVE' ? f.weight : -f.weight),
+      0
+    );
+    const adjustedRate = baseRate * (1 + rateAdjustment);
+    const suggestedHourlyRate = {
+      min: Math.round(adjustedRate * 0.85),
+      max: Math.round(adjustedRate * 1.15),
+      optimal: Math.round(adjustedRate),
     };
-  }
 
-  private async getUserRateHistory(userId: string) {
-    const contracts = await this.prisma.proposalDraft.findMany({
-      where: {
-        userId,
-        status: 'ACCEPTED',
+    let marketPosition: 'BELOW_MARKET' | 'AT_MARKET' | 'ABOVE_MARKET' = 'AT_MARKET';
+    const p25 = baseRate * 0.7;
+    const p75 = baseRate * 1.3;
+    if (suggestedHourlyRate.optimal < p25) marketPosition = 'BELOW_MARKET';
+    else if (suggestedHourlyRate.optimal > p75) marketPosition = 'ABOVE_MARKET';
+
+    const recommendations = [
+      'Consider offering package deals for long-term engagements',
+      ...(input.experience >= 5
+        ? ['Highlight your track record and case studies to justify premium rates']
+        : []),
+      'Be prepared to negotiate within your range',
+    ];
+
+    await this.logInteraction(
+      {
+        userId: input.userId,
+        interactionType: InteractionType.RATE_SUGGEST,
+        inputContext: input as any,
       },
-      select: { suggestedRate: true },
-      take: 20,
-    });
+      {
+        content: JSON.stringify(suggestedHourlyRate),
+        confidence: 0.8,
+        tokensUsed: 100,
+        processingTime: Date.now() - startTime,
+      }
+    );
 
     return {
-      averageRate:
-        contracts.length > 0
-          ? contracts.reduce(
-              (s: number, c: { suggestedRate: unknown }) => s + Number(c.suggestedRate),
-              0
-            ) / contracts.length
-          : 0,
-      count: contracts.length,
+      suggestedHourlyRate,
+      marketPosition,
+      competitorRange: { min: p25, max: p75 },
+      factors,
+      recommendations,
     };
   }
 
-  private analyzeRateFactors(input: RateSuggestionInput, marketData: any, userHistory: any): any[] {
+  private analyzeRateFactorsLocal(input: RateSuggestionInput): any[] {
     const factors: any[] = [];
-
-    // Experience factor
     if (input.experience >= 10) {
       factors.push({
         factor: 'Senior Experience',
@@ -547,8 +548,6 @@ ${userName}`;
         explanation: 'Less experience may require more competitive pricing',
       });
     }
-
-    // Skill demand factor
     if (input.skills.some((s) => new Set(['AI', 'Machine Learning', 'Blockchain']).has(s))) {
       factors.push({
         factor: 'High-Demand Skills',
@@ -557,8 +556,6 @@ ${userName}`;
         explanation: 'These skills are currently in high demand',
       });
     }
-
-    // Complexity factor
     if (input.projectComplexity === 'HIGH') {
       factors.push({
         factor: 'High Complexity',
@@ -567,34 +564,33 @@ ${userName}`;
         explanation: 'Complex projects justify higher rates',
       });
     }
-
     return factors;
   }
 
-  private generateRateRecommendations(
-    input: RateSuggestionInput,
-    marketData: any,
-    factors: any[]
-  ): string[] {
-    const recommendations: string[] = [];
-
-    recommendations.push('Consider offering package deals for long-term engagements');
-
-    if (input.experience >= 5) {
-      recommendations.push('Highlight your track record and case studies to justify premium rates');
-    }
-
-    recommendations.push('Be prepared to negotiate within your range');
-
-    return recommendations;
+  private getMarketInsightsLocal(input: MarketInsightInput): MarketInsightResult {
+    const baseRate = 50 + input.skills.length * 5;
+    return {
+      demandLevel: 'MEDIUM',
+      demandTrend: 'STABLE',
+      averageRate: { hourly: baseRate, project: baseRate * 160 },
+      competitionLevel: 'MEDIUM',
+      topCompetitors: 500,
+      skillGaps: ['Cloud Architecture', 'DevOps'],
+      emergingSkills: ['AI/ML', 'Web3', 'Sustainability'],
+      marketTips: [
+        'Highlight your specialized skills in proposals',
+        'Consider expanding into emerging skill areas',
+        'Build a strong portfolio to stand out from competition',
+      ],
+    };
   }
 
+  // ===========================================================================
+  // Message assist helpers (local — these stay in copilot-svc)
+  // ===========================================================================
+
   private analyzeConversation(messages: string[]): any {
-    return {
-      sentiment: 'NEUTRAL',
-      topics: ['project', 'timeline'],
-      pendingQuestions: [],
-    };
+    return { sentiment: 'NEUTRAL', topics: ['project', 'timeline'], pendingQuestions: [] };
   }
 
   private generateMessage(input: MessageAssistInput, context: any): string {
@@ -610,7 +606,6 @@ ${userName}`;
       FOLLOW_UP:
         'I wanted to follow up on our previous conversation. Please let me know if you have any updates.',
     };
-
     const key = (input.intent || 'FOLLOW_UP') as keyof typeof intents;
     return intents[key] ?? intents.FOLLOW_UP;
   }
@@ -623,10 +618,7 @@ ${userName}`;
   }
 
   private analyzeTone(text: string): { current: string; recommended: string } {
-    return {
-      current: 'PROFESSIONAL',
-      recommended: 'PROFESSIONAL',
-    };
+    return { current: 'PROFESSIONAL', recommended: 'PROFESSIONAL' };
   }
 
   private identifyKeyPoints(
@@ -638,6 +630,10 @@ ${userName}`;
       missing: ['Budget confirmation', 'Next steps'],
     };
   }
+
+  // ===========================================================================
+  // Profile optimization helpers (local — these stay in copilot-svc)
+  // ===========================================================================
 
   private calculateProfileCompleteness(input: ProfileOptimizeInput): number {
     let score = 0;
@@ -676,7 +672,6 @@ ${userName}`;
 
   private generateProfileImprovements(input: ProfileOptimizeInput, completeness: number): any[] {
     const improvements: any[] = [];
-
     if (!input.currentHeadline) {
       improvements.push({
         section: 'Headline',
@@ -684,7 +679,6 @@ ${userName}`;
         impact: 'HIGH',
       });
     }
-
     if (!input.currentSummary) {
       improvements.push({
         section: 'Summary',
@@ -692,7 +686,6 @@ ${userName}`;
         impact: 'HIGH',
       });
     }
-
     if (input.skills.length < 10) {
       improvements.push({
         section: 'Skills',
@@ -700,50 +693,42 @@ ${userName}`;
         impact: 'MEDIUM',
       });
     }
-
     return improvements;
   }
 
-  private async analyzeDemand(
-    skills: string[],
-    industry?: string
-  ): Promise<{
-    level: 'HIGH' | 'MEDIUM' | 'LOW';
-    trend: 'RISING' | 'STABLE' | 'FALLING';
-    competition: 'HIGH' | 'MEDIUM' | 'LOW';
-    competitorCount: number;
-  }> {
-    // In production, would analyze real market data
+  // ===========================================================================
+  // Shared helpers
+  // ===========================================================================
+
+  private async getUserProfile(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true },
+    });
+  }
+
+  private async getUserRateHistory(userId: string) {
+    const contracts = await this.prisma.proposalDraft.findMany({
+      where: { userId, status: 'ACCEPTED' },
+      select: { suggestedRate: true },
+      take: 20,
+    });
     return {
-      level: 'MEDIUM',
-      trend: 'STABLE',
-      competition: 'MEDIUM',
-      competitorCount: 500,
+      averageRate:
+        contracts.length > 0
+          ? contracts.reduce(
+              (s: number, c: { suggestedRate: unknown }) => s + Number(c.suggestedRate),
+              0
+            ) / contracts.length
+          : 0,
+      count: contracts.length,
     };
   }
 
-  private async analyzeSkillTrends(
-    skills: string[],
-    industry?: string
-  ): Promise<{
-    gaps: string[];
-    emerging: string[];
-  }> {
-    return {
-      gaps: ['Cloud Architecture', 'DevOps'],
-      emerging: ['AI/ML', 'Web3', 'Sustainability'],
-    };
-  }
-
-  private generateMarketTips(input: MarketInsightInput, demand: any, market: any): string[] {
-    return [
-      'Highlight your specialized skills in proposals',
-      'Consider expanding into emerging skill areas',
-      'Build a strong portfolio to stand out from competition',
-    ];
-  }
-
-  private async logInteraction(input: CopilotInteractionInput, response: Partial<CopilotResponse>) {
+  private async logInteraction(
+    input: CopilotInteractionInput,
+    response: Partial<CopilotResponse>
+  ) {
     await this.prisma.copilotInteraction.create({
       data: {
         userId: input.userId,

@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     ML_SCORE_WEIGHT: float = 0.6
     RULE_SCORE_WEIGHT: float = 0.4
     
+    # Service-to-service authentication
+    # When set, /ai/* routes require this token in the X-Service-Token header.
+    # Leave empty to disable auth (development mode).
+    ML_SERVICE_TOKEN: str = ""
+
     # Feature flags
     USE_GPU: bool = False
     ENABLE_CACHING: bool = True
