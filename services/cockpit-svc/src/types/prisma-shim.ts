@@ -17,6 +17,8 @@ export type PrismaClient = InstanceType<typeof _PrismaClientClass>;
 // Prisma Namespace
 // ============================================================================
 
+// Runtime value for esbuild/tsup compatibility (namespace-only exports are stripped)
+export const Prisma = {} as any;
 export namespace Prisma {
   export type Decimal = {
     toNumber(): number;
@@ -27,6 +29,16 @@ export namespace Prisma {
   export type JsonValue = any;
   export type InputJsonValue = any;
 }
+
+// Alias for GoalStatus (used by learning-time-sync.service.ts)
+export const GoalStatus = {
+  ACTIVE: 'ACTIVE',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  PAUSED: 'PAUSED',
+} as const;
+// Singleton PrismaClient instance stub (used by executive-integration.service.ts)
+export const prisma = new PrismaClient();
 
 // ============================================================================
 // Enums - Integration
@@ -765,3 +777,56 @@ export interface Reminder {
   updatedAt: Date;
   [key: string]: any;
 }
+
+// ============================================================================
+// Stub exports for esbuild/tsup compatibility
+// These types are imported as values in some files (with @ts-nocheck)
+// ============================================================================
+
+export type UnifiedTransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'REFUND';
+export const UnifiedTransactionType = {
+  INCOME: 'INCOME',
+  EXPENSE: 'EXPENSE',
+  TRANSFER: 'TRANSFER',
+  REFUND: 'REFUND',
+} as const;
+
+export type UnifiedSyncStatus = 'PENDING' | 'SYNCED' | 'FAILED' | 'SKIPPED';
+export const UnifiedSyncStatus = {
+  PENDING: 'PENDING',
+  SYNCED: 'SYNCED',
+  FAILED: 'FAILED',
+  SKIPPED: 'SKIPPED',
+} as const;
+
+export type UnifiedTransactionSource =
+  | 'MARKET'
+  | 'COCKPIT'
+  | 'UPWORK'
+  | 'QUICKBOOKS'
+  | 'PLAID'
+  | 'MANUAL';
+export const UnifiedTransactionSource = {
+  MARKET: 'MARKET',
+  COCKPIT: 'COCKPIT',
+  UPWORK: 'UPWORK',
+  QUICKBOOKS: 'QUICKBOOKS',
+  PLAID: 'PLAID',
+  MANUAL: 'MANUAL',
+} as const;
+
+export type FinancialReportStatus = 'DRAFT' | 'GENERATING' | 'COMPLETED' | 'FAILED';
+export const FinancialReportStatus = {
+  DRAFT: 'DRAFT',
+  GENERATING: 'GENERATING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+} as const;
+
+export type FinancialReportType = 'PROFIT_LOSS' | 'CASH_FLOW' | 'TAX_SUMMARY' | 'BALANCE_SHEET';
+export const FinancialReportType = {
+  PROFIT_LOSS: 'PROFIT_LOSS',
+  CASH_FLOW: 'CASH_FLOW',
+  TAX_SUMMARY: 'TAX_SUMMARY',
+  BALANCE_SHEET: 'BALANCE_SHEET',
+} as const;

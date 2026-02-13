@@ -80,7 +80,7 @@ RUN cd packages/cache && (pnpm build 2>/dev/null || true)
 RUN cd packages/service-client && (pnpm build 2>/dev/null || true)
 RUN cd packages/audit-client && (pnpm build 2>/dev/null || true)
 RUN cd packages/service-utils && (pnpm build 2>/dev/null || true)
-RUN cd services/market-svc && (pnpm build || true)
+RUN cd services/market-svc && pnpm build
 
 # =============================================================================
 # Stage: Runner
