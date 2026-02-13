@@ -429,7 +429,7 @@ export class FeatureFlagService {
   async syncFlags(): Promise<void> {
     const pipeline = this.redis.pipeline();
 
-    for (const [_key, flag] of Object.entries(ALL_FLAGS)) {
+    for (const [, flag] of Object.entries(ALL_FLAGS)) {
       const redisKey = `${FeatureFlagService.KEY_PREFIX}${this.environment}:${flag.id}`;
       pipeline.set(redisKey, JSON.stringify(flag), 'EX', this.cacheExpiration);
     }

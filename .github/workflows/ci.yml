@@ -319,7 +319,7 @@ jobs:
         run: pnpm db:generate
 
       - name: Run Unit Tests with Coverage
-        run: pnpm test -- --coverage --passWithNoTests
+        run: pnpm test -- -- --coverage --passWithNoTests
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v4

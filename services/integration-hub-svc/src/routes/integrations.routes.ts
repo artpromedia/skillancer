@@ -363,7 +363,6 @@ export async function integrationRoutes(fastify: FastifyInstance): Promise<void>
       return reply.status(500).send({ error: message });
     }
   });
-
 }
 
 // Extend FastifyInstance with authenticate
