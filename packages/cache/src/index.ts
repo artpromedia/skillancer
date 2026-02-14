@@ -104,6 +104,22 @@ export {
   type ConfigValidationResult,
 } from './config';
 
+// Convenience singleton
+import { CacheService } from './cache-service';
+import { getRedisClient } from './client';
+
+let _cacheInstance: CacheService | null = null;
+
+/**
+ * Get a default CacheService singleton backed by the default Redis client.
+ */
+export function getCache(): CacheService {
+  if (!_cacheInstance) {
+    _cacheInstance = new CacheService(getRedisClient(), 'skillancer');
+  }
+  return _cacheInstance;
+}
+
 // Repository Cache
 export {
   RepositoryCache,

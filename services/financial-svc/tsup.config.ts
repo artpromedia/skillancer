@@ -8,6 +8,6 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  external: [/^[^.\\/]/, /^\\.prisma/],
+  external: ['@prisma/client', /^\.prisma/],
   tsconfig: './tsconfig.json',
 });
