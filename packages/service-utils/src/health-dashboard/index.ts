@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/require-await */
 /**
  * @module @skillancer/service-utils/health-dashboard
  * Comprehensive health check dashboard for monitoring all services
@@ -21,8 +22,9 @@
  * ```
  */
 
-import fp from 'fastify-plugin';
 import os from 'os';
+
+import fp from 'fastify-plugin';
 
 import type { FastifyInstance, FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify';
 
@@ -194,13 +196,13 @@ async function checkService(name: string, url: string, timeout = 5000): Promise<
     const latency = Date.now() - start;
 
     if (response.ok) {
-      const data = await response.json().catch(() => ({}));
+      const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
 
       return {
         name,
         status: 'healthy',
         latency,
-        version: data.version,
+        version: data.version as string | undefined,
         lastCheck: new Date(),
         message: 'Service responding',
         details: data,
@@ -291,12 +293,12 @@ const healthDashboardPluginImpl: FastifyPluginAsync<HealthDashboardConfig> = asy
           },
         },
       },
-    },
+    } as any,
     handler: async () => ({
       status: 'ok',
       timestamp: new Date().toISOString(),
     }),
-  });
+  } as any);
 
   // Liveness probe (for Kubernetes)
   app.get(`${routePrefix}/live`, {
@@ -311,9 +313,9 @@ const healthDashboardPluginImpl: FastifyPluginAsync<HealthDashboardConfig> = asy
           },
         },
       },
-    },
+    } as any,
     handler: async () => ({ status: 'alive' }),
-  });
+  } as any);
 
   // Readiness probe (for Kubernetes)
   app.get(`${routePrefix}/ready`, {
@@ -336,7 +338,7 @@ const healthDashboardPluginImpl: FastifyPluginAsync<HealthDashboardConfig> = asy
           },
         },
       },
-    },
+    } as any,
     handler: async (_request: FastifyRequest, reply: FastifyReply) => {
       const checks: Record<string, boolean> = {};
       let ready = true;
@@ -370,7 +372,7 @@ const healthDashboardPluginImpl: FastifyPluginAsync<HealthDashboardConfig> = asy
 
       return reply.status(ready ? 200 : 503).send(response);
     },
-  });
+  } as any);
 
   // Full dashboard
   app.get(`${routePrefix}/dashboard`, {
@@ -392,7 +394,7 @@ const healthDashboardPluginImpl: FastifyPluginAsync<HealthDashboardConfig> = asy
           },
         },
       },
-    },
+    } as any,
     handler: async () => {
       const allServices: ServiceHealth[] = [];
 
@@ -469,7 +471,7 @@ const healthDashboardPluginImpl: FastifyPluginAsync<HealthDashboardConfig> = asy
 
       return dashboard;
     },
-  });
+  } as any);
 
   app.log.info(`[Health] Dashboard available at ${routePrefix}/dashboard`);
 };

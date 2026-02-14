@@ -1,7 +1,8 @@
 'use client';
 
-import * as React from 'react';
 import Image, { type ImageProps } from 'next/image';
+import * as React from 'react';
+
 import { cn } from '../lib/utils';
 
 // =============================================================================
@@ -92,7 +93,7 @@ export const OptimizedImage = React.forwardRef<HTMLDivElement, OptimizedImagePro
       className,
       onLoadComplete,
       onErrorCapture,
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Transforming deprecated priority to loading='eager'
+      // Transforming deprecated priority to loading='eager'
       priority,
       ...props
     },
@@ -137,21 +138,20 @@ export const OptimizedImage = React.forwardRef<HTMLDivElement, OptimizedImagePro
         {/* Low quality placeholder */}
         {lqip && isLoading && (
           <Image
-            src={lqip}
-            alt=""
             fill
+            alt=""
+            aria-hidden="true"
             className={cn(
               'absolute inset-0 scale-110 blur-lg',
               fitClasses[fit],
               roundedClasses[rounded]
             )}
-            aria-hidden="true"
+            src={lqip}
           />
         )}
 
         {/* Main image */}
         <Image
-          src={hasError ? fallback : imageSrc}
           alt={alt}
           className={cn(
             'transition-opacity duration-300',
@@ -164,8 +164,9 @@ export const OptimizedImage = React.forwardRef<HTMLDivElement, OptimizedImagePro
             if (lazy) return 'lazy';
             return undefined;
           })()}
-          onLoad={handleLoad}
+          src={hasError ? fallback : imageSrc}
           onError={handleError}
+          onLoad={handleLoad}
           {...props}
         />
       </div>
@@ -198,8 +199,9 @@ export const AvatarImage = React.forwardRef<HTMLDivElement, AvatarImageProps>(
       if (!name) return '?';
       const parts = name.trim().split(/\s+/);
       if (parts.length >= 2) {
-        const lastPart = parts.at(-1);
-        return `${parts[0][0]}${lastPart?.[0] ?? ''}`.toUpperCase();
+        const firstChar = parts[0]?.[0] ?? '';
+        const lastChar = parts.at(-1)?.[0] ?? '';
+        return `${firstChar}${lastChar}`.toUpperCase();
       }
       return name.substring(0, 2).toUpperCase();
     }, [name]);
@@ -208,12 +210,12 @@ export const AvatarImage = React.forwardRef<HTMLDivElement, AvatarImageProps>(
       return (
         <div
           ref={ref}
+          aria-label={alt || name}
           className={cn(
             'bg-primary text-primary-foreground flex items-center justify-center rounded-full font-medium',
             className
           )}
           style={{ width: size, height: size, fontSize: size * 0.4 }}
-          aria-label={alt || name}
         >
           {initials}
         </div>
@@ -223,13 +225,13 @@ export const AvatarImage = React.forwardRef<HTMLDivElement, AvatarImageProps>(
     return (
       <OptimizedImage
         ref={ref}
-        src={src}
         alt={alt || name || 'Avatar'}
-        width={size}
+        className={className}
+        fit="cover"
         height={size}
         rounded="full"
-        fit="cover"
-        className={className}
+        src={src}
+        width={size}
         onErrorCapture={() => setShowFallback(true)}
         {...props}
       />
@@ -286,11 +288,11 @@ export function BackgroundImage({
   return (
     <div className={cn('relative overflow-hidden', parallax && 'bg-fixed', className)}>
       <Image
-        src={src}
-        alt={alt}
         fill
+        alt={alt}
         className={cn('-z-10 object-cover', positionClasses[position], parallax && 'transform-gpu')}
         loading={priority ? 'eager' : 'lazy'}
+        src={src}
       />
 
       {/* Overlay */}
@@ -354,22 +356,22 @@ export function ImageGallery({
       {images.map((image, index) => (
         <button
           key={`${image.src}-${index}`}
-          type="button"
           className={cn(
             'relative overflow-hidden rounded-lg transition-transform hover:scale-[1.02]',
             onImageClick && 'cursor-pointer'
           )}
-          onClick={() => onImageClick?.(index)}
           disabled={!onImageClick}
+          type="button"
+          onClick={() => onImageClick?.(index)}
         >
           <OptimizedImage
-            src={image.src}
-            alt={image.alt}
-            width={image.width || 400}
-            height={image.height || 400}
-            aspectRatio={aspectRatio}
             lazy
             showSkeleton
+            alt={image.alt}
+            aspectRatio={aspectRatio}
+            height={image.height || 400}
+            src={image.src}
+            width={image.width || 400}
           />
         </button>
       ))}

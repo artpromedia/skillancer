@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/require-await */
 /**
  * @module @skillancer/service-utils/csrf
  * CSRF (Cross-Site Request Forgery) Protection
@@ -25,6 +26,7 @@
  */
 
 import crypto from 'crypto';
+
 import fp from 'fastify-plugin';
 
 import type { FastifyInstance, FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify';
@@ -250,7 +252,7 @@ const csrfPluginImpl: FastifyPluginAsync<Partial<CsrfConfig>> = async (
 
   // Hook to set CSRF cookie on every response
   app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
-    const cookies = request.cookies as Record<string, string> | undefined;
+    const cookies = (request as any).cookies as Record<string, string> | undefined;
     const existingCookie = cookies?.[config.cookieName];
     const existingToken = parseCsrfCookie(existingCookie);
 
@@ -282,7 +284,7 @@ const csrfPluginImpl: FastifyPluginAsync<Partial<CsrfConfig>> = async (
     (request as any).csrfToken = newToken;
 
     // Set cookie (will be sent with response)
-    reply.setCookie(config.cookieName, serializeCsrfToken(newToken), {
+    (reply as any).setCookie(config.cookieName, serializeCsrfToken(newToken), {
       httpOnly: true,
       secure: config.secureCookie,
       sameSite: config.sameSite,
@@ -347,12 +349,12 @@ const csrfPluginImpl: FastifyPluginAsync<Partial<CsrfConfig>> = async (
           },
         },
       },
-    },
+    } as any,
     handler: async (request: FastifyRequest) => {
       const token = getCsrfToken(request);
       return { token };
     },
-  });
+  } as any);
 
   app.log.info('[CSRF] Protection enabled');
 };

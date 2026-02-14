@@ -12,7 +12,6 @@
     "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
-    "composite": true,
     "skipLibCheck": true,
     "noEmit": false,
     "types": ["node"],
