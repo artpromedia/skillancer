@@ -402,17 +402,23 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Executive Profile'],
         summary: 'Search executives',
-        querystring: z.object({
-          type: z.string().optional(),
-          industries: z.string().optional(), // comma-separated
-          minHourlyRate: z.coerce.number().optional(),
-          maxHourlyRate: z.coerce.number().optional(),
-          minHoursPerWeek: z.coerce.number().optional(),
-          availability: z.enum(['immediate', 'one_week', 'two_weeks', 'one_month']).optional(),
-          query: z.string().optional(),
-          page: z.coerce.number().min(1).default(1),
-          limit: z.coerce.number().min(1).max(50).default(20),
-        }),
+        querystring: {
+          type: 'object',
+          properties: {
+            type: { type: 'string' },
+            industries: { type: 'string' },
+            minHourlyRate: { type: 'number' },
+            maxHourlyRate: { type: 'number' },
+            minHoursPerWeek: { type: 'number' },
+            availability: {
+              type: 'string',
+              enum: ['immediate', 'one_week', 'two_weeks', 'one_month'],
+            },
+            query: { type: 'string' },
+            page: { type: 'integer', minimum: 1, default: 1 },
+            limit: { type: 'integer', minimum: 1, maximum: 50, default: 20 },
+          },
+        },
       },
     },
     async (request, reply) => {
@@ -441,9 +447,12 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Executive Profile'],
         summary: 'Get featured executives',
-        querystring: z.object({
-          limit: z.coerce.number().min(1).max(12).default(6),
-        }),
+        querystring: {
+          type: 'object',
+          properties: {
+            limit: { type: 'integer', minimum: 1, maximum: 12, default: 6 },
+          },
+        },
       },
     },
     async (request, reply) => {

@@ -33,9 +33,13 @@ export async function referencePublicRoutes(app: FastifyInstance): Promise<void>
         summary: 'Get reference request details',
         description:
           'Get details to display on the reference submission form. No authentication required.',
-        params: z.object({
-          token: z.string().min(10),
-        }),
+        params: {
+          type: 'object',
+          properties: {
+            token: { type: 'string', minLength: 10 },
+          },
+          required: ['token'],
+        },
       },
     },
     async (request, reply) => {
