@@ -71,8 +71,9 @@ let config: Config | null = null;
 
 export function getConfig(): Config {
   if (!config) {
-    // Use nullish coalescing to preserve Zod defaults when env vars are unset
-    const rawPort = process.env.EXECUTIVE_SVC_PORT || process.env.PORT;
+    // NOTE: Do NOT use EXECUTIVE_SVC_PORT - Kubernetes auto-injects it as
+    // "tcp://10.43.x.x:3007" (service discovery), which breaks z.coerce.number()
+    const rawPort = process.env.PORT;
     config = configSchema.parse({
       nodeEnv: process.env.NODE_ENV,
       port: rawPort || undefined, // pass undefined so z.coerce.number().default(3007) applies

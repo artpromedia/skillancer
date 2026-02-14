@@ -186,7 +186,9 @@ export function getConfig(): Config {
   const env = process.env;
 
   const rawConfig = {
-    port: env['PORT'] ?? env['AUTH_SVC_PORT'] ?? 4001,
+    // NOTE: Do NOT use AUTH_SVC_PORT - Kubernetes auto-injects it as
+    // "tcp://10.43.x.x:3001" (service discovery), which breaks port parsing
+    port: env['PORT'] ?? 4001,
     host: env['HOST'] ?? '0.0.0.0',
     nodeEnv: env['NODE_ENV'] ?? 'development',
 
