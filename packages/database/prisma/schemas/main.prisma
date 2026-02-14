@@ -453,6 +453,7 @@ enum OAuthProvider {
   LINKEDIN
   MICROSOFT
   APPLE
+  GITHUB
 }
 
 model OAuthAccount {

@@ -242,6 +242,13 @@ export function getConfig(): Config {
           env['LINKEDIN_CALLBACK_URL'] ??
           `${env['API_URL'] ?? 'http://localhost:4001'}/auth/oauth/linkedin/callback`,
       },
+      github: {
+        clientId: env['GITHUB_CLIENT_ID'],
+        clientSecret: env['GITHUB_CLIENT_SECRET'],
+        callbackUrl:
+          env['GITHUB_CALLBACK_URL'] ??
+          `${env['API_URL'] ?? 'http://localhost:4001'}/auth/oauth/github/callback`,
+      },
     },
 
     appUrl: env['APP_URL'] ?? 'http://localhost:3000',

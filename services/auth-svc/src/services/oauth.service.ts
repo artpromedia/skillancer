@@ -50,7 +50,7 @@ interface AppleIdToken {
   nonce_supported?: boolean;
 }
 
-type OAuthProvider = 'google' | 'microsoft' | 'apple' | 'facebook' | 'linkedin';
+type OAuthProvider = 'google' | 'microsoft' | 'apple' | 'facebook' | 'linkedin' | 'github';
 
 // =============================================================================
 // CACHE KEYS
@@ -675,6 +675,150 @@ export class OAuthService {
   }
 
   // ===========================================================================
+  // GITHUB OAUTH
+  // ===========================================================================
+
+  /**
+   * Generate GitHub OAuth authorization URL
+   *
+   * @param redirectUrl - Optional custom redirect URL
+   * @returns Auth URL and state token
+   * @throws OAuthNotConfiguredError if GitHub OAuth not configured
+   */
+  async getGitHubAuthUrl(redirectUrl?: string): Promise<{ url: string; state: string }> {
+    const { github } = this.config.oauth;
+
+    if (!github.clientId || !github.clientSecret || !github.callbackUrl) {
+      throw new OAuthNotConfiguredError('github');
+    }
+
+    const state = await this.generateState('github', redirectUrl);
+
+    const params = new URLSearchParams({
+      client_id: github.clientId,
+      redirect_uri: github.callbackUrl,
+      scope: 'read:user user:email',
+      state,
+    });
+
+    return {
+      url: `https://github.com/login/oauth/authorize?${params.toString()}`,
+      state,
+    };
+  }
+
+  /**
+   * Handle GitHub OAuth callback
+   *
+   * @param code - Authorization code from GitHub
+   * @param state - State token for CSRF protection
+   * @param deviceInfo - Device information
+   * @returns OAuth result with user and tokens
+   * @throws OAuthError if authentication fails
+   */
+  async handleGitHubCallback(
+    code: string,
+    state: string,
+    deviceInfo: DeviceInfo
+  ): Promise<OAuthResult> {
+    const { github } = this.config.oauth;
+
+    if (!github.clientId || !github.clientSecret || !github.callbackUrl) {
+      throw new OAuthNotConfiguredError('github');
+    }
+
+    // Verify state
+    await this.verifyState(state, 'github');
+
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: github.clientId,
+        client_secret: github.clientSecret,
+        code,
+        redirect_uri: github.callbackUrl,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      throw new OAuthError('github', `Failed to exchange code: ${error}`);
+    }
+
+    const tokenData = (await tokenResponse.json()) as { access_token: string; error?: string };
+
+    if (tokenData.error) {
+      throw new OAuthError('github', `Token exchange failed: ${tokenData.error}`);
+    }
+
+    // Get user info from GitHub API
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+        Accept: 'application/vnd.github+json',
+      },
+    });
+
+    if (!userResponse.ok) {
+      throw new OAuthError('github', 'Failed to get user info');
+    }
+
+    const ghUser = (await userResponse.json()) as {
+      id: number;
+      email?: string | null;
+      name?: string | null;
+      login: string;
+      avatar_url?: string;
+    };
+
+    // GitHub may not return email in user profile — fetch from emails endpoint
+    let email = ghUser.email;
+    if (!email) {
+      const emailsResponse = await fetch('https://api.github.com/user/emails', {
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+          Accept: 'application/vnd.github+json',
+        },
+      });
+
+      if (emailsResponse.ok) {
+        const emails = (await emailsResponse.json()) as Array<{
+          email: string;
+          primary: boolean;
+          verified: boolean;
+        }>;
+        const primaryEmail = emails.find((e) => e.primary && e.verified);
+        email = primaryEmail?.email ?? emails.find((e) => e.verified)?.email ?? null;
+      }
+    }
+
+    if (!email) {
+      throw new OAuthError(
+        'github',
+        'Email permission is required. Please make your email public or grant email access.'
+      );
+    }
+
+    const nameParts = (ghUser.name ?? ghUser.login).split(' ');
+
+    const userInfo: OAuthUserInfo = {
+      id: String(ghUser.id),
+      email,
+      firstName: nameParts[0] ?? ghUser.login,
+      lastName: nameParts.slice(1).join(' ') ?? '',
+      displayName: ghUser.name ?? ghUser.login,
+      avatarUrl: ghUser.avatar_url,
+    };
+
+    return this.findOrCreateUser('github', userInfo, deviceInfo);
+  }
+
+  // ===========================================================================
   // PRIVATE HELPERS
   // ===========================================================================
 
@@ -721,8 +865,14 @@ export class OAuthService {
    */
   private getOAuthProviderEnum(
     provider: OAuthProvider
-  ): 'GOOGLE' | 'MICROSOFT' | 'APPLE' | 'FACEBOOK' | 'LINKEDIN' {
-    return provider.toUpperCase() as 'GOOGLE' | 'MICROSOFT' | 'APPLE' | 'FACEBOOK' | 'LINKEDIN';
+  ): 'GOOGLE' | 'MICROSOFT' | 'APPLE' | 'FACEBOOK' | 'LINKEDIN' | 'GITHUB' {
+    return provider.toUpperCase() as
+      | 'GOOGLE'
+      | 'MICROSOFT'
+      | 'APPLE'
+      | 'FACEBOOK'
+      | 'LINKEDIN'
+      | 'GITHUB';
   }
 
   /**

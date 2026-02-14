@@ -250,6 +250,60 @@ async function appleCallbackHandler(
 }
 
 /**
+ * GET /auth/oauth/github - Initiate GitHub OAuth
+ */
+async function githubInitHandler(
+  request: FastifyRequest<{ Querystring: { redirect_url?: string } }>,
+  reply: FastifyReply
+): Promise<void> {
+  const oauthService = getOAuthService();
+
+  const { url } = await oauthService.getGitHubAuthUrl(request.query.redirect_url);
+
+  void reply.redirect(url);
+}
+
+/**
+ * GET /auth/oauth/github/callback - GitHub OAuth callback
+ */
+async function githubCallbackHandler(
+  request: FastifyRequest<{ Querystring: OAuthCallbackQuery }>,
+  reply: FastifyReply
+): Promise<void> {
+  const query = oauthCallbackQuerySchema.parse(request.query);
+
+  // Handle OAuth errors
+  if (query.error) {
+    request.log.warn(
+      { error: query.error, description: query.error_description },
+      'GitHub OAuth error'
+    );
+    void reply.redirect(getErrorRedirectUrl(query.error, query.error_description));
+    return;
+  }
+
+  if (!query.code || !query.state) {
+    void reply.redirect(getErrorRedirectUrl('invalid_request', 'Missing code or state'));
+    return;
+  }
+
+  try {
+    const deviceInfo = getDeviceInfo(request);
+    const result = await getOAuthService().handleGitHubCallback(
+      query.code,
+      query.state,
+      deviceInfo
+    );
+
+    void reply.redirect(getSuccessRedirectUrl(result.tokens));
+  } catch (error) {
+    request.log.error({ error }, 'GitHub OAuth callback failed');
+    const message = error instanceof OAuthError ? error.message : 'Authentication failed';
+    void reply.redirect(getErrorRedirectUrl('server_error', message));
+  }
+}
+
+/**
  * GET /auth/oauth/facebook - Initiate Facebook OAuth
  */
 async function facebookInitHandler(
@@ -529,6 +583,56 @@ export async function oauthRoutes(fastify: FastifyInstance): Promise<void> {
       },
     },
     appleCallbackHandler
+  );
+
+  // GitHub OAuth
+  fastify.get(
+    '/oauth/github',
+    {
+      schema: {
+        description: 'Initiate GitHub OAuth flow',
+        tags: ['oauth'],
+        querystring: {
+          type: 'object',
+          properties: {
+            redirect_url: { type: 'string' },
+          },
+        },
+        response: {
+          302: {
+            description: 'Redirect to GitHub OAuth',
+            type: 'null',
+          },
+        },
+      },
+    },
+    githubInitHandler
+  );
+
+  fastify.get(
+    '/oauth/github/callback',
+    {
+      schema: {
+        description: 'GitHub OAuth callback',
+        tags: ['oauth'],
+        querystring: {
+          type: 'object',
+          properties: {
+            code: { type: 'string' },
+            state: { type: 'string' },
+            error: { type: 'string' },
+            error_description: { type: 'string' },
+          },
+        },
+        response: {
+          302: {
+            description: 'Redirect to app with tokens or error',
+            type: 'null',
+          },
+        },
+      },
+    },
+    githubCallbackHandler
   );
 
   // Facebook OAuth
