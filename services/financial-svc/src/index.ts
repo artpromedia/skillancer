@@ -3,10 +3,10 @@ import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
 import Fastify from 'fastify';
 
-import { cardRoutes } from './routes/card.routes';
-import { financingRoutes } from './routes/financing.routes';
-import { healthRoutes } from './routes/health.routes';
-import { taxVaultRoutes } from './routes/tax-vault.routes';
+import { cardRoutes } from './routes/card.routes.js';
+import { financingRoutes } from './routes/financing.routes.js';
+import { healthRoutes } from './routes/health.routes.js';
+import { taxVaultRoutes } from './routes/tax-vault.routes.js';
 
 const prisma = new PrismaClient();
 
@@ -88,7 +88,7 @@ async function start() {
   try {
     const app = await buildApp();
 
-    const port = Number.parseInt(process.env.PORT || '3007', 10);
+    const port = Number.parseInt(process.env.PORT || '3008', 10);
     const host = process.env.HOST || '0.0.0.0';
 
     await app.listen({ port, host });

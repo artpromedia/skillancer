@@ -104,8 +104,9 @@ const start = async () => {
       { prefix: '/api/cockpit' }
     );
 
-    await server.listen({ port: 4005, host: '0.0.0.0' });
-    logger.info('Cockpit service started on port 4005');
+    const port = Number(process.env.PORT) || 3004;
+    await server.listen({ port, host: '0.0.0.0' });
+    logger.info(`Cockpit service started on port ${port}`);
 
     // Start background workers
     if (process.env.ENABLE_WORKERS !== 'false') {

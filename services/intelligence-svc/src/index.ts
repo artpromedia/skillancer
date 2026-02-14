@@ -4,10 +4,10 @@ import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
 
-import { healthRoutes } from './routes/health.routes';
-import { intelligenceRoutes } from './routes/intelligence.routes';
-import { registerAuthPlugin } from './middleware/auth';
-import { rateLimitPlugin } from './plugins/rate-limit';
+import { healthRoutes } from './routes/health.routes.js';
+import { intelligenceRoutes } from './routes/intelligence.routes.js';
+import { registerAuthPlugin } from './middleware/auth.js';
+import { rateLimitPlugin } from './plugins/rate-limit.js';
 
 const prisma = new PrismaClient();
 
@@ -95,7 +95,7 @@ async function start() {
   try {
     const app = await buildApp();
 
-    const port = Number.parseInt(process.env.PORT || '3009', 10);
+    const port = Number.parseInt(process.env.PORT || '3010', 10);
     const host = process.env.HOST || '0.0.0.0';
 
     await app.listen({ port, host });

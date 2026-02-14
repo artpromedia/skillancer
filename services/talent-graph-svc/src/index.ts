@@ -3,10 +3,10 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
 
-import { healthRoutes } from './routes/health.routes';
-import { relationshipRoutes } from './routes/relationship.routes';
-import { introductionRoutes } from './routes/introduction.routes';
-import { teamReunionRoutes } from './routes/team-reunion.routes';
+import { healthRoutes } from './routes/health.routes.js';
+import { relationshipRoutes } from './routes/relationship.routes.js';
+import { introductionRoutes } from './routes/introduction.routes.js';
+import { teamReunionRoutes } from './routes/team-reunion.routes.js';
 
 const prisma = new PrismaClient();
 
@@ -83,7 +83,7 @@ async function start() {
   try {
     const app = await buildApp();
 
-    const port = Number.parseInt(process.env.PORT || '3008', 10);
+    const port = Number.parseInt(process.env.PORT || '3009', 10);
     const host = process.env.HOST || '0.0.0.0';
 
     await app.listen({ port, host });

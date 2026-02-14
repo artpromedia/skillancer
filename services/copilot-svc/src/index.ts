@@ -5,8 +5,8 @@ import { PrismaClient } from '@prisma/client';
 
 import { authPlugin } from './plugins/auth.js';
 import { rateLimitPlugin } from './plugins/rate-limit.js';
-import { healthRoutes } from './routes/health.routes';
-import { copilotRoutes } from './routes/copilot.routes';
+import { healthRoutes } from './routes/health.routes.js';
+import { copilotRoutes } from './routes/copilot.routes.js';
 
 const prisma = new PrismaClient();
 
@@ -87,7 +87,7 @@ async function start() {
   try {
     const app = await buildApp();
 
-    const port = Number.parseInt(process.env.PORT || '3010', 10);
+    const port = Number.parseInt(process.env.PORT || '3011', 10);
     const host = process.env.HOST || '0.0.0.0';
 
     await app.listen({ port, host });

@@ -103,8 +103,9 @@ const start = async () => {
     process.on('SIGINT', shutdown);
 
     // Start server
-    await server.listen({ port: 4003, host: '0.0.0.0' });
-    server.log.info('Market service started on port 4003');
+    const port = Number(process.env.PORT) || 3002;
+    await server.listen({ port, host: '0.0.0.0' });
+    server.log.info(`Market service started on port ${port}`);
   } catch (err) {
     server.log.error(err);
     // eslint-disable-next-line n/no-process-exit

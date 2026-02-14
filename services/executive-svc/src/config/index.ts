@@ -7,20 +7,26 @@ import { z } from 'zod';
 const configSchema = z.object({
   // Server
   nodeEnv: z.enum(['development', 'production', 'test']).default('development'),
-  port: z.coerce.number().default(3008),
+  port: z.coerce.number().default(3007),
   host: z.string().default('0.0.0.0'),
   logLevel: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   // API
-  apiBaseUrl: z.string().default('http://localhost:3008'),
+  apiBaseUrl: z.string().default('http://localhost:3007'),
   corsOrigins: z
     .string()
     .transform((val) => val.split(','))
     .default('http://localhost:3000'),
 
   // Auth - Required in production, optional with dev defaults for development
-  jwtSecret: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-  cookieSecret: z.string().min(32, 'COOKIE_SECRET must be at least 32 characters'),
+  jwtSecret: z
+    .string()
+    .min(32, 'JWT_SECRET must be at least 32 characters')
+    .default('dev-jwt-secret-change-in-production-00000'),
+  cookieSecret: z
+    .string()
+    .min(32, 'COOKIE_SECRET must be at least 32 characters')
+    .default('dev-cookie-secret-change-in-production-0'),
 
   // Database
   databaseUrl: z.string().default('postgresql://postgres:postgres@localhost:5432/skillancer'),
@@ -52,7 +58,10 @@ const configSchema = z.object({
   vettingReferencesRequired: z.coerce.number().default(3),
 
   // Reference Token - Required in production
-  referenceTokenSecret: z.string().min(32, 'REFERENCE_TOKEN_SECRET must be at least 32 characters'),
+  referenceTokenSecret: z
+    .string()
+    .min(32, 'REFERENCE_TOKEN_SECRET must be at least 32 characters')
+    .default('dev-ref-token-secret-change-in-prod-000'),
   referenceTokenExpiryDays: z.coerce.number().default(14),
 });
 
