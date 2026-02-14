@@ -34,15 +34,15 @@ model User {
   locale            String            @default("en") @db.VarChar(10)
 
   // Contact verification
-  emailVerified     Boolean           @default(false) @map("email_verified")
-  emailVerifiedAt   DateTime?         @map("email_verified_at")
-  phone             String?           @db.VarChar(20)
-  phoneVerified     Boolean           @default(false) @map("phone_verified")
-  phoneVerifiedAt   DateTime?         @map("phone_verified_at")
-  paymentVerified   Boolean           @default(false) @map("payment_verified")
-  paymentVerifiedAt DateTime?         @map("payment_verified_at")
+  emailVerified     Boolean   @default(false) @map("email_verified")
+  emailVerifiedAt   DateTime? @map("email_verified_at")
+  phone             String?   @db.VarChar(20)
+  phoneVerified     Boolean   @default(false) @map("phone_verified")
+  phoneVerifiedAt   DateTime? @map("phone_verified_at")
+  paymentVerified   Boolean   @default(false) @map("payment_verified")
+  paymentVerifiedAt DateTime? @map("payment_verified_at")
 
-  // OAuth fields
+  // OAuth fields (legacy single-provider — kept for backward compat)
   oauthProvider String? @map("oauth_provider") @db.VarChar(50)
   oauthId       String? @map("oauth_id") @db.VarChar(255)
 
@@ -51,8 +51,10 @@ model User {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
   lastLoginAt DateTime? @map("last_login_at")
+  lastLoginIp String?   @map("last_login_ip") @db.VarChar(45)
 
   // Relations
+  oauthAccounts           OAuthAccount[]
   tenantMemberships       TenantMember[]
   jobsPosted              Job[]                      @relation("ClientJobs")
   bids                    Bid[]
@@ -221,60 +223,60 @@ model User {
   revenueProjections     RevenueProjection[]
 
   // Sprint M4: Portable Verified Work History
-  platformConnections      PlatformConnection[]
-  workHistoryItems         WorkHistoryItem[]
-  workHistoryReviews       WorkHistoryReview[]
-  verifiableCredentials    VerifiableCredential[]
-  unifiedReputationScore   UnifiedReputationScore?
-  unifiedProfile           UnifiedProfile?
+  platformConnections    PlatformConnection[]
+  workHistoryItems       WorkHistoryItem[]
+  workHistoryReviews     WorkHistoryReview[]
+  verifiableCredentials  VerifiableCredential[]
+  unifiedReputationScore UnifiedReputationScore?
+  unifiedProfile         UnifiedProfile?
 
   // Sprint M8: Guild & Agency Accounts
   guildMemberships GuildMember[]
 
   // Sprint M9: Healthcare Vertical Module
-  medicalCredentials       MedicalCredential[]
-  hipaaTrainingRecords     HIPAATraining[]
-  exclusionChecks          ExclusionCheck[]
-  healthcarePhiAccessLogs  PHIAccessLog[]
-  healthcareClientConfig   HealthcareClientConfig?
+  medicalCredentials      MedicalCredential[]
+  hipaaTrainingRecords    HIPAATraining[]
+  exclusionChecks         ExclusionCheck[]
+  healthcarePhiAccessLogs PHIAccessLog[]
+  healthcareClientConfig  HealthcareClientConfig?
 
   // Sprint EX1: Executive Profile & Vetting
-  executiveProfile         ExecutiveProfile?
+  executiveProfile ExecutiveProfile?
 
   // Sprint M5: Financial Services
-  treasuryAccount          TreasuryAccount?
-  cardholder               Cardholder?
-  issuedCards              IssuedCard[]
-  quarterlyReminders       QuarterlyReminder[]
+  treasuryAccount    TreasuryAccount?
+  cardholder         Cardholder?
+  issuedCards        IssuedCard[]
+  quarterlyReminders QuarterlyReminder[]
 
   // Sprint M3: SkillPod B2B Enterprise
-  skillPodMemberships      SkillPodTenantUser[]
+  skillPodMemberships SkillPodTenantUser[]
 
   // Identity Verification
-  verificationInquiries    VerificationInquiry[]
-  verificationBadges       UserVerificationBadge[] @relation("UserVerificationBadges")
-  verificationCodes        VerificationCode[]
+  verificationInquiries VerificationInquiry[]
+  verificationBadges    UserVerificationBadge[] @relation("UserVerificationBadges")
+  verificationCodes     VerificationCode[]
 
   // Copilot Service
-  copilotInteractions      CopilotInteraction[] @relation("UserCopilotInteractions")
-  proposalDrafts           ProposalDraft[]      @relation("UserProposalDrafts")
+  copilotInteractions CopilotInteraction[] @relation("UserCopilotInteractions")
+  proposalDrafts      ProposalDraft[]      @relation("UserProposalDrafts")
 
   // Talent Graph Service
-  workRelationships           WorkRelationship[]    @relation("WorkRelationshipsAsUser")
-  workRelationshipsAsRelated  WorkRelationship[]    @relation("WorkRelationshipsAsRelated")
-  teamReunionsCreated         TeamReunion[]         @relation("TeamReunionCreator")
-  teamReunionMemberships      TeamReunionMember[]   @relation("TeamReunionMembers")
-  teamReunionInvitesSent      TeamReunionMember[]   @relation("TeamReunionInviter")
-  warmIntrosRequested         WarmIntroduction[]    @relation("WarmIntroRequester")
-  warmIntrosReceived          WarmIntroduction[]    @relation("WarmIntroTarget")
-  warmIntrosAsIntroducer      WarmIntroduction[]    @relation("WarmIntroIntroducer")
+  workRelationships          WorkRelationship[]  @relation("WorkRelationshipsAsUser")
+  workRelationshipsAsRelated WorkRelationship[]  @relation("WorkRelationshipsAsRelated")
+  teamReunionsCreated        TeamReunion[]       @relation("TeamReunionCreator")
+  teamReunionMemberships     TeamReunionMember[] @relation("TeamReunionMembers")
+  teamReunionInvitesSent     TeamReunionMember[] @relation("TeamReunionInviter")
+  warmIntrosRequested        WarmIntroduction[]  @relation("WarmIntroRequester")
+  warmIntrosReceived         WarmIntroduction[]  @relation("WarmIntroTarget")
+  warmIntrosAsIntroducer     WarmIntroduction[]  @relation("WarmIntroIntroducer")
 
   // Intelligence Service
-  outcomeAsClient             EngagementOutcome[]   @relation("OutcomeClient")
-  outcomeAsFreelancer         EngagementOutcome[]   @relation("OutcomeFreelancer")
+  outcomeAsClient     EngagementOutcome[] @relation("OutcomeClient")
+  outcomeAsFreelancer EngagementOutcome[] @relation("OutcomeFreelancer")
 
   // Financial Service — Invoice Financing
-  invoiceFinancingRequests    InvoiceFinancing[]    @relation("UserInvoiceFinancing")
+  invoiceFinancingRequests InvoiceFinancing[] @relation("UserInvoiceFinancing")
 
   @@unique([oauthProvider, oauthId])
   @@index([email])
@@ -425,6 +427,7 @@ model RefreshToken {
   id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   token     String    @unique @db.VarChar(500)
   userId    String    @map("user_id") @db.Uuid
+  family    String?   @db.Uuid
   expiresAt DateTime  @map("expires_at")
   createdAt DateTime  @default(now()) @map("created_at")
   revokedAt DateTime? @map("revoked_at")
@@ -436,7 +439,40 @@ model RefreshToken {
   @@index([userId])
   @@index([token])
   @@index([expiresAt])
+  @@index([family])
   @@map("refresh_tokens")
+}
+
+// ============================================================================
+// OAUTH ACCOUNTS (Multi-provider social login)
+// ============================================================================
+
+enum OAuthProvider {
+  GOOGLE
+  FACEBOOK
+  LINKEDIN
+  MICROSOFT
+  APPLE
+}
+
+model OAuthAccount {
+  id                String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String        @map("user_id") @db.Uuid
+  provider          OAuthProvider
+  providerAccountId String        @map("provider_account_id") @db.VarChar(255)
+  email             String?       @db.VarChar(255)
+  accessToken       String?       @map("access_token") @db.Text
+  refreshToken      String?       @map("refresh_token") @db.Text
+  expiresAt         DateTime?     @map("expires_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId], name: "provider_providerAccountId")
+  @@index([userId])
+  @@index([provider])
+  @@map("oauth_accounts")
 }
 
 model UserSkill {
@@ -948,7 +984,7 @@ model Job {
   invitations   ProjectInvitation[]
   questions     ProjectQuestion[]
   conversations Conversation[]      @relation("JobConversations")
-  
+
   // Sprint M9: Healthcare
   healthcareDetails HealthcareJobDetails?
 
@@ -1997,19 +2033,19 @@ model SecurityViolation {
 
 // Sprint M5: Security Events for fraud detection
 model SecurityEvent {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  type        String   @db.VarChar(50)
-  severity    String   @default("LOW") @db.VarChar(20)
-  description String   @db.Text
-  ipAddress   String?  @map("ip_address") @db.VarChar(45)
-  userAgent   String?  @map("user_agent") @db.Text
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  type        String    @db.VarChar(50)
+  severity    String    @default("LOW") @db.VarChar(20)
+  description String    @db.Text
+  ipAddress   String?   @map("ip_address") @db.VarChar(45)
+  userAgent   String?   @map("user_agent") @db.Text
   metadata    Json?
-  resolved    Boolean  @default(false)
-  resolution  String?  @db.Text
+  resolved    Boolean   @default(false)
+  resolution  String?   @db.Text
   resolvedAt  DateTime? @map("resolved_at")
-  resolvedBy  String?  @map("resolved_by") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
+  resolvedBy  String?   @map("resolved_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([type])
@@ -12377,8 +12413,8 @@ model WorkHistoryItem {
   status      String    @db.VarChar(50) // completed, in_progress, cancelled
 
   // Financial data
-  amount     Decimal  @default(0) @db.Decimal(14, 2)
-  currency   String   @default("USD") @db.VarChar(10)
+  amount      Decimal  @default(0) @db.Decimal(14, 2)
+  currency    String   @default("USD") @db.VarChar(10)
   billingType String?  @map("billing_type") @db.VarChar(50) // hourly, fixed, milestone
   hoursWorked Decimal? @map("hours_worked") @db.Decimal(10, 2)
   hourlyRate  Decimal? @map("hourly_rate") @db.Decimal(10, 2)
@@ -12400,7 +12436,7 @@ model WorkHistoryItem {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   reviews WorkHistoryReview[]
 
   @@unique([userId, platform, externalId], name: "userId_platform_externalId")
@@ -12435,7 +12471,7 @@ model WorkHistoryReview {
   reviewDate   DateTime @map("review_date")
 
   // Verification
-  isVerified     Boolean  @default(false) @map("is_verified")
+  isVerified        Boolean  @default(false) @map("is_verified")
   authenticityScore Decimal? @map("authenticity_score") @db.Decimal(5, 4)
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -12474,7 +12510,7 @@ model VerifiableCredential {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  subject          User                       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject          User                        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   verificationLogs CredentialVerificationLog[]
 
   @@index([subjectId])
@@ -12510,16 +12546,16 @@ model UnifiedReputationScore {
   userId String @unique @map("user_id") @db.Uuid
 
   // Overall score (0-100)
-  overallScore Decimal @map("overall_score") @db.Decimal(5, 2)
+  overallScore Decimal        @map("overall_score") @db.Decimal(5, 2)
   tier         ReputationTier
 
   // Component scores (0-100)
-  earningsScore      Decimal @map("earnings_score") @db.Decimal(5, 2)
-  reviewsScore       Decimal @map("reviews_score") @db.Decimal(5, 2)
-  completionScore    Decimal @map("completion_score") @db.Decimal(5, 2)
+  earningsScore       Decimal @map("earnings_score") @db.Decimal(5, 2)
+  reviewsScore        Decimal @map("reviews_score") @db.Decimal(5, 2)
+  completionScore     Decimal @map("completion_score") @db.Decimal(5, 2)
   responsivenessScore Decimal @map("responsiveness_score") @db.Decimal(5, 2)
-  profileScore       Decimal @map("profile_score") @db.Decimal(5, 2)
-  credentialsScore   Decimal @map("credentials_score") @db.Decimal(5, 2)
+  profileScore        Decimal @map("profile_score") @db.Decimal(5, 2)
+  credentialsScore    Decimal @map("credentials_score") @db.Decimal(5, 2)
 
   // Aggregated stats
   totalEarnings     Decimal @map("total_earnings") @db.Decimal(14, 2)
@@ -12533,8 +12569,8 @@ model UnifiedReputationScore {
   percentileRank Decimal @map("percentile_rank") @db.Decimal(5, 2)
 
   // Trend
-  trend            ScoreTrend
-  trendPercentage  Decimal    @map("trend_percentage") @db.Decimal(5, 2)
+  trend           ScoreTrend
+  trendPercentage Decimal    @map("trend_percentage") @db.Decimal(5, 2)
 
   // History (stored as JSON array)
   scoreHistory Json @map("score_history") @db.JsonB
@@ -12570,20 +12606,20 @@ enum ScoreTrend {
 
 // Background job queue for sync and verification tasks
 model VerificationJob {
-  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId String @map("user_id") @db.Uuid
+  id     String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String              @map("user_id") @db.Uuid
   type   VerificationJobType
 
   // Job data
-  payload  Json  @db.JsonB
-  result   Json? @db.JsonB
+  payload Json  @db.JsonB
+  result  Json? @db.JsonB
 
   // Status
-  status       VerificationJobStatus @default(PENDING)
-  attempts     Int       @default(0)
-  maxAttempts  Int       @default(3) @map("max_attempts")
-  lastError    String?   @map("last_error") @db.Text
-  
+  status      VerificationJobStatus @default(PENDING)
+  attempts    Int                   @default(0)
+  maxAttempts Int                   @default(3) @map("max_attempts")
+  lastError   String?               @map("last_error") @db.Text
+
   // Scheduling
   scheduledFor DateTime  @map("scheduled_for")
   startedAt    DateTime? @map("started_at")
@@ -12624,15 +12660,15 @@ model UnifiedProfile {
   userId String @unique @map("user_id") @db.Uuid
 
   // Aggregated profile data
-  headline      String?  @db.VarChar(500)
-  bio           String?  @db.Text
-  skills        String[] @db.VarChar(100)
-  languages     String[] @db.VarChar(50)
-  location      String?  @db.VarChar(255)
-  timezone      String?  @db.VarChar(50)
-  hourlyRate    Decimal? @map("hourly_rate") @db.Decimal(10, 2)
-  currency      String   @default("USD") @db.VarChar(10)
-  availability  String?  @db.VarChar(50)
+  headline     String?  @db.VarChar(500)
+  bio          String?  @db.Text
+  skills       String[] @db.VarChar(100)
+  languages    String[] @db.VarChar(50)
+  location     String?  @db.VarChar(255)
+  timezone     String?  @db.VarChar(50)
+  hourlyRate   Decimal? @map("hourly_rate") @db.Decimal(10, 2)
+  currency     String   @default("USD") @db.VarChar(10)
+  availability String?  @db.VarChar(50)
 
   // Skill levels (JSON map: skill -> level)
   skillLevels Json @map("skill_levels") @db.JsonB
@@ -12641,7 +12677,7 @@ model UnifiedProfile {
   platformProfiles Json @map("platform_profiles") @db.JsonB
 
   // Categories/expertise
-  primaryCategory    String?  @map("primary_category") @db.VarChar(255)
+  primaryCategory     String?  @map("primary_category") @db.VarChar(255)
   secondaryCategories String[] @map("secondary_categories") @db.VarChar(255)
 
   // Completeness score (0-100)
@@ -12686,12 +12722,12 @@ model Guild {
   deletedAt DateTime? @map("deleted_at")
 
   // Relations
-  members      GuildMember[]
-  projects     GuildProject[]
-  proposals    GuildProposal[]
-  treasury     GuildTreasury?
-  reviews      GuildReview[]
-  invitations  GuildInvitation[]
+  members     GuildMember[]
+  projects    GuildProject[]
+  proposals   GuildProposal[]
+  treasury    GuildTreasury?
+  reviews     GuildReview[]
+  invitations GuildInvitation[]
 
   @@index([slug])
   @@index([status])
@@ -12701,12 +12737,12 @@ model Guild {
 }
 
 model GuildMember {
-  id          String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  guildId     String       @map("guild_id") @db.Uuid
-  userId      String       @map("user_id") @db.Uuid
-  role        GuildRole    @default(MEMBER)
-  status      MemberStatus @default(INVITED)
-  isPrimary   Boolean      @default(false) @map("is_primary")
+  id        String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guildId   String       @map("guild_id") @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  role      GuildRole    @default(MEMBER)
+  status    MemberStatus @default(INVITED)
+  isPrimary Boolean      @default(false) @map("is_primary")
 
   // Permissions stored as JSON
   permissions Json @default("{}") @db.JsonB
@@ -12757,13 +12793,13 @@ model GuildInvitation {
 }
 
 model GuildProject {
-  id              String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  guildId         String              @map("guild_id") @db.Uuid
-  contractId      String?             @map("contract_id") @db.Uuid
-  proposalId      String?             @map("proposal_id") @db.Uuid
-  name            String              @db.VarChar(300)
-  description     String?             @db.Text
-  status          GuildProjectStatus  @default(ACTIVE)
+  id          String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guildId     String             @map("guild_id") @db.Uuid
+  contractId  String?            @map("contract_id") @db.Uuid
+  proposalId  String?            @map("proposal_id") @db.Uuid
+  name        String             @db.VarChar(300)
+  description String?            @db.Text
+  status      GuildProjectStatus @default(ACTIVE)
 
   // Team composition stored as JSON
   teamComposition Json @map("team_composition") @db.JsonB
@@ -12772,8 +12808,8 @@ model GuildProject {
   revenueSplit Json @map("revenue_split") @db.JsonB
 
   // Financial tracking
-  totalValue    Decimal  @default(0) @map("total_value") @db.Decimal(15, 2)
-  paidOut       Decimal  @default(0) @map("paid_out") @db.Decimal(15, 2)
+  totalValue Decimal @default(0) @map("total_value") @db.Decimal(15, 2)
+  paidOut    Decimal @default(0) @map("paid_out") @db.Decimal(15, 2)
 
   // Timestamps
   startedAt   DateTime  @default(now()) @map("started_at")
@@ -12792,12 +12828,12 @@ model GuildProject {
 }
 
 model GuildProjectAssignment {
-  id            String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  projectId     String  @map("project_id") @db.Uuid
-  memberId      String  @map("member_id") @db.Uuid
-  role          String  @db.VarChar(100)
-  allocation    Decimal @db.Decimal(5, 2) // Percentage or hours
-  allocationType String @default("PERCENTAGE") @map("allocation_type") @db.VarChar(20)
+  id             String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId      String  @map("project_id") @db.Uuid
+  memberId       String  @map("member_id") @db.Uuid
+  role           String  @db.VarChar(100)
+  allocation     Decimal @db.Decimal(5, 2) // Percentage or hours
+  allocationType String  @default("PERCENTAGE") @map("allocation_type") @db.VarChar(20)
 
   // Timestamps
   assignedAt DateTime  @default(now()) @map("assigned_at")
@@ -12812,16 +12848,16 @@ model GuildProjectAssignment {
 }
 
 model GuildProposal {
-  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  guildId         String            @map("guild_id") @db.Uuid
-  jobId           String            @map("job_id") @db.Uuid
-  bidId           String?           @map("bid_id") @db.Uuid
-  status          GuildProposalStatus @default(DRAFT)
+  id      String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guildId String              @map("guild_id") @db.Uuid
+  jobId   String              @map("job_id") @db.Uuid
+  bidId   String?             @map("bid_id") @db.Uuid
+  status  GuildProposalStatus @default(DRAFT)
 
   // Proposal content
-  coverLetter     String  @map("cover_letter") @db.Text
-  proposedRate    Decimal @map("proposed_rate") @db.Decimal(15, 2)
-  estimatedDays   Int?    @map("estimated_days")
+  coverLetter   String  @map("cover_letter") @db.Text
+  proposedRate  Decimal @map("proposed_rate") @db.Decimal(15, 2)
+  estimatedDays Int?    @map("estimated_days")
 
   // Team composition for this proposal
   teamComposition Json @map("team_composition") @db.JsonB
@@ -12857,22 +12893,22 @@ model GuildTreasury {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  guild        Guild                @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  guild        Guild              @relation(fields: [guildId], references: [id], onDelete: Cascade)
   transactions GuildTransaction[]
 
   @@map("guild_treasuries")
 }
 
 model GuildTransaction {
-  id          String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  treasuryId  String                 @map("treasury_id") @db.Uuid
+  id          String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  treasuryId  String               @map("treasury_id") @db.Uuid
   type        GuildTransactionType
-  amount      Decimal                @db.Decimal(15, 2)
-  description String                 @db.VarChar(500)
-  projectId   String?                @map("project_id") @db.Uuid
-  userId      String?                @map("user_id") @db.Uuid
-  reference   String?                @db.VarChar(100)
-  metadata    Json                   @default("{}") @db.JsonB
+  amount      Decimal              @db.Decimal(15, 2)
+  description String               @db.VarChar(500)
+  projectId   String?              @map("project_id") @db.Uuid
+  userId      String?              @map("user_id") @db.Uuid
+  reference   String?              @db.VarChar(100)
+  metadata    Json                 @default("{}") @db.JsonB
 
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
@@ -12887,8 +12923,8 @@ model GuildTransaction {
 }
 
 model GuildRevenueSplit {
-  id        String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  projectId String          @map("project_id") @db.Uuid
+  id        String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String             @map("project_id") @db.Uuid
   status    RevenueSplitStatus @default(PENDING)
 
   // Split configuration
@@ -12901,15 +12937,15 @@ model GuildRevenueSplit {
   allocations Json @db.JsonB
 
   // Approval tracking
-  approvedBy  String[] @map("approved_by") @db.Uuid
-  requiredApprovals Int @default(1) @map("required_approvals")
+  approvedBy        String[] @map("approved_by") @db.Uuid
+  requiredApprovals Int      @default(1) @map("required_approvals")
 
   // Timestamps
-  proposedAt  DateTime  @default(now()) @map("proposed_at")
-  approvedAt  DateTime? @map("approved_at")
-  executedAt  DateTime? @map("executed_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  proposedAt DateTime  @default(now()) @map("proposed_at")
+  approvedAt DateTime? @map("approved_at")
+  executedAt DateTime? @map("executed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
 
   // Relations
   project GuildProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -12920,16 +12956,16 @@ model GuildRevenueSplit {
 }
 
 model GuildReview {
-  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  guildId    String @map("guild_id") @db.Uuid
-  projectId  String @map("project_id") @db.Uuid
-  clientId   String @map("client_id") @db.Uuid
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  guildId   String @map("guild_id") @db.Uuid
+  projectId String @map("project_id") @db.Uuid
+  clientId  String @map("client_id") @db.Uuid
 
   // Ratings
-  rating           Int     @db.SmallInt // 1-5
-  qualityRating    Int?    @map("quality_rating") @db.SmallInt
+  rating              Int  @db.SmallInt // 1-5
+  qualityRating       Int? @map("quality_rating") @db.SmallInt
   communicationRating Int? @map("communication_rating") @db.SmallInt
-  timelinessRating Int?    @map("timeliness_rating") @db.SmallInt
+  timelinessRating    Int? @map("timeliness_rating") @db.SmallInt
 
   // Review content
   reviewText String? @map("review_text") @db.Text
@@ -13008,43 +13044,43 @@ enum RevenueSplitStatus {
 
 // Medical Credential - Stores healthcare professional credentials
 model MedicalCredential {
-  id                  String                    @id @default(uuid()) @db.Uuid
-  userId              String                    @map("user_id") @db.Uuid
-  type                CredentialType
-  licenseNumber       String?                   @map("license_number")
-  state               String?                   // Issuing state/jurisdiction
-  issuingAuthority    String?                   @map("issuing_authority")
-  issueDate           DateTime?                 @map("issue_date")
-  expirationDate      DateTime?                 @map("expiration_date")
-  specialty           String?
-  npiNumber           String?                   @map("npi_number")
-  deaNumber           String?                   @map("dea_number")
-  
+  id               String         @id @default(uuid()) @db.Uuid
+  userId           String         @map("user_id") @db.Uuid
+  type             CredentialType
+  licenseNumber    String?        @map("license_number")
+  state            String? // Issuing state/jurisdiction
+  issuingAuthority String?        @map("issuing_authority")
+  issueDate        DateTime?      @map("issue_date")
+  expirationDate   DateTime?      @map("expiration_date")
+  specialty        String?
+  npiNumber        String?        @map("npi_number")
+  deaNumber        String?        @map("dea_number")
+
   // Verification
-  verificationStatus  CredentialVerificationStatus @default(PENDING) @map("verification_status")
-  verifiedAt          DateTime?                 @map("verified_at")
-  verifiedBy          String?                   @map("verified_by")
-  verificationMethod  String?                   @map("verification_method")
-  verificationSource  String?                   @map("verification_source")
-  lastVerifiedAt      DateTime?                 @map("last_verified_at")
-  nextVerificationAt  DateTime?                 @map("next_verification_at")
-  
+  verificationStatus CredentialVerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt         DateTime?                    @map("verified_at")
+  verifiedBy         String?                      @map("verified_by")
+  verificationMethod String?                      @map("verification_method")
+  verificationSource String?                      @map("verification_source")
+  lastVerifiedAt     DateTime?                    @map("last_verified_at")
+  nextVerificationAt DateTime?                    @map("next_verification_at")
+
   // Documents
-  documentUrl         String?                   @map("document_url")
-  documentHash        String?                   @map("document_hash")
-  
+  documentUrl  String? @map("document_url")
+  documentHash String? @map("document_hash")
+
   // Status
-  status              CredentialStatus          @default(ACTIVE)
-  disciplinaryActions Json?                     @map("disciplinary_actions")
+  status              CredentialStatus @default(ACTIVE)
+  disciplinaryActions Json?            @map("disciplinary_actions")
   notes               String?
-  
+
   // Metadata
-  metadata            Json?
-  createdAt           DateTime                  @default(now()) @map("created_at")
-  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user                User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   verificationHistory CredentialVerification[]
 
   @@index([userId])
@@ -13056,20 +13092,20 @@ model MedicalCredential {
 
 // Credential Verification History
 model CredentialVerification {
-  id              String                    @id @default(uuid()) @db.Uuid
-  credentialId    String                    @map("credential_id") @db.Uuid
-  verificationDate DateTime                 @default(now()) @map("verification_date")
-  method          String                    // PRIMARY_SOURCE, API, MANUAL
-  source          String                    // State board, NPDB, etc.
-  status          CredentialVerificationStatus
-  result          Json?                     // Full verification result
-  notes           String?
-  verifiedBy      String?                   @map("verified_by")
-  
-  createdAt       DateTime                  @default(now()) @map("created_at")
+  id               String                       @id @default(uuid()) @db.Uuid
+  credentialId     String                       @map("credential_id") @db.Uuid
+  verificationDate DateTime                     @default(now()) @map("verification_date")
+  method           String // PRIMARY_SOURCE, API, MANUAL
+  source           String // State board, NPDB, etc.
+  status           CredentialVerificationStatus
+  result           Json? // Full verification result
+  notes            String?
+  verifiedBy       String?                      @map("verified_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  credential      MedicalCredential         @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  credential MedicalCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
 
   @@index([credentialId])
   @@map("credential_verifications")
@@ -13077,28 +13113,28 @@ model CredentialVerification {
 
 // HIPAA Training Record
 model HIPAATraining {
-  id                String              @id @default(uuid()) @db.Uuid
-  userId            String              @map("user_id") @db.Uuid
-  trainingType      HIPAATrainingType   @map("training_type")
-  provider          String              // Training provider name
-  completionDate    DateTime            @map("completion_date")
-  expirationDate    DateTime            @map("expiration_date")
-  certificateUrl    String?             @map("certificate_url")
-  certificateHash   String?             @map("certificate_hash")
-  verificationCode  String?             @map("verification_code")
-  
+  id               String            @id @default(uuid()) @db.Uuid
+  userId           String            @map("user_id") @db.Uuid
+  trainingType     HIPAATrainingType @map("training_type")
+  provider         String // Training provider name
+  completionDate   DateTime          @map("completion_date")
+  expirationDate   DateTime          @map("expiration_date")
+  certificateUrl   String?           @map("certificate_url")
+  certificateHash  String?           @map("certificate_hash")
+  verificationCode String?           @map("verification_code")
+
   // Status
-  status            HIPAATrainingStatus @default(ACTIVE)
-  verifiedAt        DateTime?           @map("verified_at")
-  verifiedBy        String?             @map("verified_by")
-  
+  status     HIPAATrainingStatus @default(ACTIVE)
+  verifiedAt DateTime?           @map("verified_at")
+  verifiedBy String?             @map("verified_by")
+
   // Metadata
-  metadata          Json?
-  createdAt         DateTime            @default(now()) @map("created_at")
-  updatedAt         DateTime            @updatedAt @map("updated_at")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expirationDate])
@@ -13108,44 +13144,44 @@ model HIPAATraining {
 
 // Business Associate Agreement
 model BAA {
-  id                String          @id @default(uuid()) @db.Uuid
-  type              BAAType
-  partyAId          String          @map("party_a_id") @db.Uuid  // Usually Skillancer or Client
-  partyAType        String          @map("party_a_type")          // PLATFORM, CLIENT, FREELANCER
-  partyBId          String          @map("party_b_id") @db.Uuid
-  partyBType        String          @map("party_b_type")
-  
+  id         String  @id @default(uuid()) @db.Uuid
+  type       BAAType
+  partyAId   String  @map("party_a_id") @db.Uuid // Usually Skillancer or Client
+  partyAType String  @map("party_a_type") // PLATFORM, CLIENT, FREELANCER
+  partyBId   String  @map("party_b_id") @db.Uuid
+  partyBType String  @map("party_b_type")
+
   // BAA Details
-  version           String          @default("1.0")
-  templateId        String?         @map("template_id")
-  customTerms       Json?           @map("custom_terms")
-  
+  version     String  @default("1.0")
+  templateId  String? @map("template_id")
+  customTerms Json?   @map("custom_terms")
+
   // Signing
-  status            BAAStatus       @default(DRAFT)
-  partyASigned      Boolean         @default(false) @map("party_a_signed")
-  partyASignedAt    DateTime?       @map("party_a_signed_at")
-  partyASignatureId String?         @map("party_a_signature_id")
-  partyBSigned      Boolean         @default(false) @map("party_b_signed")
-  partyBSignedAt    DateTime?       @map("party_b_signed_at")
-  partyBSignatureId String?         @map("party_b_signature_id")
-  
+  status            BAAStatus @default(DRAFT)
+  partyASigned      Boolean   @default(false) @map("party_a_signed")
+  partyASignedAt    DateTime? @map("party_a_signed_at")
+  partyASignatureId String?   @map("party_a_signature_id")
+  partyBSigned      Boolean   @default(false) @map("party_b_signed")
+  partyBSignedAt    DateTime? @map("party_b_signed_at")
+  partyBSignatureId String?   @map("party_b_signature_id")
+
   // Dates
-  effectiveDate     DateTime?       @map("effective_date")
-  expirationDate    DateTime?       @map("expiration_date")
-  terminatedAt      DateTime?       @map("terminated_at")
-  terminationReason String?         @map("termination_reason")
-  
+  effectiveDate     DateTime? @map("effective_date")
+  expirationDate    DateTime? @map("expiration_date")
+  terminatedAt      DateTime? @map("terminated_at")
+  terminationReason String?   @map("termination_reason")
+
   // Documents
-  documentUrl       String?         @map("document_url")
-  signedDocumentUrl String?         @map("signed_document_url")
-  
+  documentUrl       String? @map("document_url")
+  signedDocumentUrl String? @map("signed_document_url")
+
   // Metadata
-  metadata          Json?
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  amendments        BAAAmendment[]
+  amendments BAAAmendment[]
 
   @@index([partyAId])
   @@index([partyBId])
@@ -13156,22 +13192,22 @@ model BAA {
 
 // BAA Amendment
 model BAAAmendment {
-  id              String          @id @default(uuid()) @db.Uuid
-  baaId           String          @map("baa_id") @db.Uuid
-  version         String
-  description     String
-  changes         Json
-  status          BAAStatus       @default(DRAFT)
-  
-  effectiveDate   DateTime?       @map("effective_date")
-  signedAt        DateTime?       @map("signed_at")
-  documentUrl     String?         @map("document_url")
-  
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
+  id          String    @id @default(uuid()) @db.Uuid
+  baaId       String    @map("baa_id") @db.Uuid
+  version     String
+  description String
+  changes     Json
+  status      BAAStatus @default(DRAFT)
+
+  effectiveDate DateTime? @map("effective_date")
+  signedAt      DateTime? @map("signed_at")
+  documentUrl   String?   @map("document_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  baa             BAA             @relation(fields: [baaId], references: [id], onDelete: Cascade)
+  baa BAA @relation(fields: [baaId], references: [id], onDelete: Cascade)
 
   @@index([baaId])
   @@map("baa_amendments")
@@ -13179,37 +13215,37 @@ model BAAAmendment {
 
 // Exclusion Check Record
 model ExclusionCheck {
-  id              String              @id @default(uuid()) @db.Uuid
-  userId          String              @map("user_id") @db.Uuid
-  checkDate       DateTime            @default(now()) @map("check_date")
-  
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  checkDate DateTime @default(now()) @map("check_date")
+
   // Databases checked
-  oigChecked      Boolean             @default(false) @map("oig_checked")
-  oigResult       ExclusionResult     @default(CLEAR) @map("oig_result")
-  oigMatchData    Json?               @map("oig_match_data")
-  
-  samChecked      Boolean             @default(false) @map("sam_checked")
-  samResult       ExclusionResult     @default(CLEAR) @map("sam_result")
-  samMatchData    Json?               @map("sam_match_data")
-  
-  stateChecked    Boolean             @default(false) @map("state_checked")
-  stateResult     ExclusionResult     @default(CLEAR) @map("state_result")
-  stateMatchData  Json?               @map("state_match_data")
-  
+  oigChecked   Boolean         @default(false) @map("oig_checked")
+  oigResult    ExclusionResult @default(CLEAR) @map("oig_result")
+  oigMatchData Json?           @map("oig_match_data")
+
+  samChecked   Boolean         @default(false) @map("sam_checked")
+  samResult    ExclusionResult @default(CLEAR) @map("sam_result")
+  samMatchData Json?           @map("sam_match_data")
+
+  stateChecked   Boolean         @default(false) @map("state_checked")
+  stateResult    ExclusionResult @default(CLEAR) @map("state_result")
+  stateMatchData Json?           @map("state_match_data")
+
   // Overall result
-  overallResult   ExclusionResult     @default(CLEAR) @map("overall_result")
-  reviewedBy      String?             @map("reviewed_by")
-  reviewedAt      DateTime?           @map("reviewed_at")
-  reviewNotes     String?             @map("review_notes")
-  
+  overallResult ExclusionResult @default(CLEAR) @map("overall_result")
+  reviewedBy    String?         @map("reviewed_by")
+  reviewedAt    DateTime?       @map("reviewed_at")
+  reviewNotes   String?         @map("review_notes")
+
   // Status
-  status          ExclusionCheckStatus @default(COMPLETED)
-  nextCheckDate   DateTime?           @map("next_check_date")
-  
-  createdAt       DateTime            @default(now()) @map("created_at")
+  status        ExclusionCheckStatus @default(COMPLETED)
+  nextCheckDate DateTime?            @map("next_check_date")
+
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([checkDate])
@@ -13219,46 +13255,46 @@ model ExclusionCheck {
 
 // PHI Access Log
 model PHIAccessLog {
-  id              String          @id @default(uuid()) @db.Uuid
-  userId          String          @map("user_id") @db.Uuid
-  sessionId       String?         @map("session_id") @db.Uuid
-  contractId      String?         @map("contract_id") @db.Uuid
-  
+  id         String  @id @default(uuid()) @db.Uuid
+  userId     String  @map("user_id") @db.Uuid
+  sessionId  String? @map("session_id") @db.Uuid
+  contractId String? @map("contract_id") @db.Uuid
+
   // Access details
-  accessType      PHIAccessType   @map("access_type")
-  action          String          // VIEW, EDIT, DOWNLOAD, PRINT, etc.
-  resourceType    String          @map("resource_type")   // PATIENT_RECORD, LAB_RESULT, etc.
-  resourceId      String?         @map("resource_id")     // De-identified reference
-  
+  accessType   PHIAccessType @map("access_type")
+  action       String // VIEW, EDIT, DOWNLOAD, PRINT, etc.
+  resourceType String        @map("resource_type") // PATIENT_RECORD, LAB_RESULT, etc.
+  resourceId   String?       @map("resource_id") // De-identified reference
+
   // Context
-  ehrSystem       String?         @map("ehr_system")
-  patientCount    Int?            @map("patient_count")   // Number of records accessed
-  dataCategories  String[]        @map("data_categories") // Types of PHI accessed
-  
+  ehrSystem      String?  @map("ehr_system")
+  patientCount   Int?     @map("patient_count") // Number of records accessed
+  dataCategories String[] @map("data_categories") // Types of PHI accessed
+
   // Location/Device
-  ipAddress       String?         @map("ip_address")
-  userAgent       String?         @map("user_agent")
-  deviceId        String?         @map("device_id")
-  
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+  deviceId  String? @map("device_id")
+
   // Authorization
-  authorized      Boolean         @default(true)
-  authorizationId String?         @map("authorization_id")
-  justification   String?         // Reason for access
-  
+  authorized      Boolean @default(true)
+  authorizationId String? @map("authorization_id")
+  justification   String? // Reason for access
+
   // Recording
-  recordingUrl    String?         @map("recording_url")
-  screenshotUrl   String?         @map("screenshot_url")
-  
+  recordingUrl  String? @map("recording_url")
+  screenshotUrl String? @map("screenshot_url")
+
   // Flags
-  flagged         Boolean         @default(false)
-  flagReason      String?         @map("flag_reason")
-  reviewedBy      String?         @map("reviewed_by")
-  reviewedAt      DateTime?       @map("reviewed_at")
-  
-  timestamp       DateTime        @default(now())
-  
+  flagged    Boolean   @default(false)
+  flagReason String?   @map("flag_reason")
+  reviewedBy String?   @map("reviewed_by")
+  reviewedAt DateTime? @map("reviewed_at")
+
+  timestamp DateTime @default(now())
+
   // Relations
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([sessionId])
@@ -13270,82 +13306,82 @@ model PHIAccessLog {
 
 // Healthcare Job Extension
 model HealthcareJobDetails {
-  id                  String              @id @default(uuid()) @db.Uuid
-  jobId               String              @unique @map("job_id") @db.Uuid
-  
+  id    String @id @default(uuid()) @db.Uuid
+  jobId String @unique @map("job_id") @db.Uuid
+
   // Healthcare-specific fields
-  ehrSystems          String[]            @map("ehr_systems")      // Epic, Cerner, etc.
-  requiredCredentials String[]            @map("required_credentials")
-  phiAccessLevel      PHIAccessLevel      @map("phi_access_level")
-  hipaaTrainingRequired Boolean           @default(true) @map("hipaa_training_required")
-  baaRequired         Boolean             @default(true) @map("baa_required")
-  
+  ehrSystems            String[]       @map("ehr_systems") // Epic, Cerner, etc.
+  requiredCredentials   String[]       @map("required_credentials")
+  phiAccessLevel        PHIAccessLevel @map("phi_access_level")
+  hipaaTrainingRequired Boolean        @default(true) @map("hipaa_training_required")
+  baaRequired           Boolean        @default(true) @map("baa_required")
+
   // Setting
-  healthcareSetting   String?             @map("healthcare_setting") // Hospital, Clinic, etc.
-  specialty           String?
-  
+  healthcareSetting String? @map("healthcare_setting") // Hospital, Clinic, etc.
+  specialty         String?
+
   // Compliance
-  complianceNotes     String?             @map("compliance_notes")
-  
-  createdAt           DateTime            @default(now()) @map("created_at")
-  updatedAt           DateTime            @updatedAt @map("updated_at")
+  complianceNotes String? @map("compliance_notes")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  job                 Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@map("healthcare_job_details")
 }
 
 // Healthcare Client Setup
 model HealthcareClientConfig {
-  id                  String              @id @default(uuid()) @db.Uuid
-  clientId            String              @unique @map("client_id") @db.Uuid
-  
+  id       String @id @default(uuid()) @db.Uuid
+  clientId String @unique @map("client_id") @db.Uuid
+
   // Organization type
-  organizationType    HealthcareOrgType   @map("organization_type")
-  coveredEntity       Boolean             @default(false) @map("covered_entity")
-  
+  organizationType HealthcareOrgType @map("organization_type")
+  coveredEntity    Boolean           @default(false) @map("covered_entity")
+
   // EHR Configuration
-  ehrSystem           String?             @map("ehr_system")
-  ehrApiEndpoint      String?             @map("ehr_api_endpoint")
-  ehrCredentialsEnc   String?             @map("ehr_credentials_enc") // Encrypted
-  ehrConnected        Boolean             @default(false) @map("ehr_connected")
-  ehrLastTestedAt     DateTime?           @map("ehr_last_tested_at")
-  
+  ehrSystem         String?   @map("ehr_system")
+  ehrApiEndpoint    String?   @map("ehr_api_endpoint")
+  ehrCredentialsEnc String?   @map("ehr_credentials_enc") // Encrypted
+  ehrConnected      Boolean   @default(false) @map("ehr_connected")
+  ehrLastTestedAt   DateTime? @map("ehr_last_tested_at")
+
   // Default policies
-  defaultPHIPolicy    Json?               @map("default_phi_policy")
-  defaultCredentials  String[]            @map("default_credentials")
-  defaultTrainingReqs String[]            @map("default_training_reqs")
-  
+  defaultPHIPolicy    Json?    @map("default_phi_policy")
+  defaultCredentials  String[] @map("default_credentials")
+  defaultTrainingReqs String[] @map("default_training_reqs")
+
   // BAA Status
-  platformBAAId       String?             @map("platform_baa_id") @db.Uuid
-  platformBAASigned   Boolean             @default(false) @map("platform_baa_signed")
-  
-  createdAt           DateTime            @default(now()) @map("created_at")
-  updatedAt           DateTime            @updatedAt @map("updated_at")
+  platformBAAId     String? @map("platform_baa_id") @db.Uuid
+  platformBAASigned Boolean @default(false) @map("platform_baa_signed")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  client              User                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@map("healthcare_client_configs")
 }
 
 // Healthcare Compliance Enums
 enum HealthcareCredentialType {
-  MD          // Medical Doctor
-  DO          // Doctor of Osteopathy
-  NP          // Nurse Practitioner
-  PA          // Physician Assistant
-  RN          // Registered Nurse
-  LPN         // Licensed Practical Nurse
-  CPC         // Certified Professional Coder
-  CCS         // Certified Coding Specialist
-  RHIT        // Registered Health Information Technician
-  RHIA        // Registered Health Information Administrator
-  DEA         // DEA Registration
-  BOARD_CERT  // Board Certification
+  MD // Medical Doctor
+  DO // Doctor of Osteopathy
+  NP // Nurse Practitioner
+  PA // Physician Assistant
+  RN // Registered Nurse
+  LPN // Licensed Practical Nurse
+  CPC // Certified Professional Coder
+  CCS // Certified Coding Specialist
+  RHIT // Registered Health Information Technician
+  RHIA // Registered Health Information Administrator
+  DEA // DEA Registration
+  BOARD_CERT // Board Certification
   MALPRACTICE // Malpractice Insurance
-  NPI         // National Provider Identifier
+  NPI // National Provider Identifier
   OTHER
 }
 
@@ -13383,10 +13419,10 @@ enum HIPAATrainingStatus {
 }
 
 enum BAAType {
-  PLATFORM_CLIENT      // Skillancer to Client
-  PLATFORM_FREELANCER  // Skillancer to Freelancer
-  CLIENT_FREELANCER    // Client to Freelancer (via platform)
-  SUBCONTRACTOR        // Freelancer subcontractor
+  PLATFORM_CLIENT // Skillancer to Client
+  PLATFORM_FREELANCER // Skillancer to Freelancer
+  CLIENT_FREELANCER // Client to Freelancer (via platform)
+  SUBCONTRACTOR // Freelancer subcontractor
 }
 
 enum BAAStatus {
@@ -13423,9 +13459,9 @@ enum PHIAccessType {
 
 enum PHIAccessLevel {
   NONE
-  LIMITED        // De-identified data only
-  STANDARD       // Normal PHI access
-  FULL           // Full access including sensitive
+  LIMITED // De-identified data only
+  STANDARD // Normal PHI access
+  FULL // Full access including sensitive
 }
 
 enum HealthcareOrgType {
@@ -13446,25 +13482,25 @@ enum HealthcareOrgType {
 // ============================================================================
 
 model APICustomer {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  companyName String    @map("company_name") @db.VarChar(255)
-  email       String    @unique @db.VarChar(255)
-  contactName String?   @map("contact_name") @db.VarChar(200)
-  phone       String?   @db.VarChar(50)
-  website     String?   @db.VarChar(500)
-  industry    String?   @db.VarChar(100)
-  companySize String?   @map("company_size") @db.VarChar(50)
-  plan        APIPlan   @default(STARTER)
+  id          String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  companyName String            @map("company_name") @db.VarChar(255)
+  email       String            @unique @db.VarChar(255)
+  contactName String?           @map("contact_name") @db.VarChar(200)
+  phone       String?           @db.VarChar(50)
+  website     String?           @db.VarChar(500)
+  industry    String?           @db.VarChar(100)
+  companySize String?           @map("company_size") @db.VarChar(50)
+  plan        APIPlan           @default(STARTER)
   status      APICustomerStatus @default(ACTIVE)
-  
+
   // Billing
   stripeCustomerId String? @unique @map("stripe_customer_id") @db.VarChar(255)
   billingEmail     String? @map("billing_email") @db.VarChar(255)
-  
+
   // Limits
-  monthlyCallLimit   Int @default(1000) @map("monthly_call_limit")
-  customDataAccess   Boolean @default(false) @map("custom_data_access")
-  
+  monthlyCallLimit Int     @default(1000) @map("monthly_call_limit")
+  customDataAccess Boolean @default(false) @map("custom_data_access")
+
   // Timestamps
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
@@ -13480,63 +13516,63 @@ model APICustomer {
 }
 
 model APIKey {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  customerId  String    @map("customer_id") @db.Uuid
-  keyHash     String    @unique @map("key_hash") @db.VarChar(255)
-  keyPrefix   String    @map("key_prefix") @db.VarChar(20) // e.g., "sk_live_abc..."
-  name        String    @db.VarChar(100)
-  description String?   @db.Text
-  scopes      String[]  // ["rates:read", "availability:read", etc.]
-  
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  keyHash     String   @unique @map("key_hash") @db.VarChar(255)
+  keyPrefix   String   @map("key_prefix") @db.VarChar(20) // e.g., "sk_live_abc..."
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  scopes      String[] // ["rates:read", "availability:read", etc.]
+
   // Status
-  status      APIKeyStatus @default(ACTIVE)
-  lastUsedAt  DateTime?    @map("last_used_at")
-  expiresAt   DateTime?    @map("expires_at")
-  
+  status     APIKeyStatus @default(ACTIVE)
+  lastUsedAt DateTime?    @map("last_used_at")
+  expiresAt  DateTime?    @map("expires_at")
+
   // Rate limiting
   rateLimitPerMinute Int @default(60) @map("rate_limit_per_minute")
   rateLimitPerDay    Int @default(10000) @map("rate_limit_per_day")
-  
+
   // Timestamps
-  createdAt   DateTime  @default(now()) @map("created_at")
-  revokedAt   DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
 
   // Relations
-  customer    APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  usage       APIUsage[]
+  customer APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  usage    APIUsage[]
 
   @@index([keyHash])
   @@map("api_keys")
 }
 
 model APIUsage {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  customerId  String   @map("customer_id") @db.Uuid
-  keyId       String   @map("key_id") @db.Uuid
-  endpoint    String   @db.VarChar(200)
-  method      String   @db.VarChar(10)
-  path        String   @db.VarChar(500)
-  queryParams Json?    @map("query_params")
-  
+  id          String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId  String @map("customer_id") @db.Uuid
+  keyId       String @map("key_id") @db.Uuid
+  endpoint    String @db.VarChar(200)
+  method      String @db.VarChar(10)
+  path        String @db.VarChar(500)
+  queryParams Json?  @map("query_params")
+
   // Response
-  statusCode  Int      @map("status_code")
-  responseMs  Int      @map("response_ms")
-  responseSize Int?    @map("response_size")
-  
+  statusCode   Int  @map("status_code")
+  responseMs   Int  @map("response_ms")
+  responseSize Int? @map("response_size")
+
   // Request metadata
-  ipAddress   String?  @map("ip_address") @db.VarChar(45)
-  userAgent   String?  @map("user_agent") @db.VarChar(500)
-  
+  ipAddress String? @map("ip_address") @db.VarChar(45)
+  userAgent String? @map("user_agent") @db.VarChar(500)
+
   // Error tracking
-  errorCode   String?  @map("error_code") @db.VarChar(50)
+  errorCode    String? @map("error_code") @db.VarChar(50)
   errorMessage String? @map("error_message") @db.Text
-  
+
   // Timestamp
-  timestamp   DateTime @default(now())
+  timestamp DateTime @default(now())
 
   // Relations
-  customer    APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  key         APIKey @relation(fields: [keyId], references: [id], onDelete: Cascade)
+  customer APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  key      APIKey      @relation(fields: [keyId], references: [id], onDelete: Cascade)
 
   @@index([customerId, timestamp])
   @@index([keyId, timestamp])
@@ -13545,56 +13581,56 @@ model APIUsage {
 }
 
 model APIInvoice {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  customerId  String   @map("customer_id") @db.Uuid
-  
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId String @map("customer_id") @db.Uuid
+
   // Billing period
   periodStart DateTime @map("period_start")
   periodEnd   DateTime @map("period_end")
-  
+
   // Usage
-  totalCalls  Int      @map("total_calls")
-  includedCalls Int    @map("included_calls")
-  overageCalls Int     @map("overage_calls")
-  
+  totalCalls    Int @map("total_calls")
+  includedCalls Int @map("included_calls")
+  overageCalls  Int @map("overage_calls")
+
   // Amounts
-  baseFee     Decimal  @map("base_fee") @db.Decimal(10, 2)
-  overageFee  Decimal  @map("overage_fee") @db.Decimal(10, 2)
-  totalAmount Decimal  @map("total_amount") @db.Decimal(10, 2)
-  
+  baseFee     Decimal @map("base_fee") @db.Decimal(10, 2)
+  overageFee  Decimal @map("overage_fee") @db.Decimal(10, 2)
+  totalAmount Decimal @map("total_amount") @db.Decimal(10, 2)
+
   // Status
-  status      InvoiceStatus @default(PENDING)
-  stripeInvoiceId String? @map("stripe_invoice_id") @db.VarChar(255)
-  paidAt      DateTime? @map("paid_at")
-  
+  status          InvoiceStatus @default(PENDING)
+  stripeInvoiceId String?       @map("stripe_invoice_id") @db.VarChar(255)
+  paidAt          DateTime?     @map("paid_at")
+
   // Timestamps
-  createdAt   DateTime @default(now()) @map("created_at")
-  dueAt       DateTime @map("due_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  dueAt     DateTime @map("due_at")
 
   // Relations
-  customer    APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, periodStart])
   @@map("api_invoices")
 }
 
 model APIUsageAlert {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  customerId  String   @map("customer_id") @db.Uuid
-  
-  alertType   UsageAlertType @map("alert_type")
-  threshold   Int      // e.g., 80 for 80%
-  message     String   @db.Text
-  
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId String @map("customer_id") @db.Uuid
+
+  alertType UsageAlertType @map("alert_type")
+  threshold Int // e.g., 80 for 80%
+  message   String         @db.Text
+
   // Status
-  acknowledged Boolean @default(false)
+  acknowledged   Boolean   @default(false)
   acknowledgedAt DateTime? @map("acknowledged_at")
-  
+
   // Timestamp
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  customer    APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer APICustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, createdAt])
   @@map("api_usage_alerts")
@@ -13605,43 +13641,43 @@ model APIUsageAlert {
 // ============================================================================
 
 model IntelligenceRateAggregate {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  skill           String   @db.VarChar(200)
-  skillCategory   String?  @map("skill_category") @db.VarChar(100)
-  experienceLevel String?  @map("experience_level") @db.VarChar(50)
-  location        String?  @db.VarChar(100) // Country code or region
-  projectType     String?  @map("project_type") @db.VarChar(50) // hourly, fixed, etc.
-  
+  id              String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  skill           String  @db.VarChar(200)
+  skillCategory   String? @map("skill_category") @db.VarChar(100)
+  experienceLevel String? @map("experience_level") @db.VarChar(50)
+  location        String? @db.VarChar(100) // Country code or region
+  projectType     String? @map("project_type") @db.VarChar(50) // hourly, fixed, etc.
+
   // Time period
-  period          DateTime // First day of month/week
-  periodType      PeriodType @map("period_type") @default(MONTHLY)
-  
+  period     DateTime // First day of month/week
+  periodType PeriodType @default(MONTHLY) @map("period_type")
+
   // Sample data
-  sampleSize      Int      @map("sample_size")
-  
+  sampleSize Int @map("sample_size")
+
   // Rate percentiles (hourly)
-  p10             Decimal  @db.Decimal(10, 2)
-  p25             Decimal  @db.Decimal(10, 2)
-  p50             Decimal  @db.Decimal(10, 2)
-  p75             Decimal  @db.Decimal(10, 2)
-  p90             Decimal  @db.Decimal(10, 2)
-  
+  p10 Decimal @db.Decimal(10, 2)
+  p25 Decimal @db.Decimal(10, 2)
+  p50 Decimal @db.Decimal(10, 2)
+  p75 Decimal @db.Decimal(10, 2)
+  p90 Decimal @db.Decimal(10, 2)
+
   // Statistics
-  mean            Decimal  @db.Decimal(10, 2)
-  stdDev          Decimal? @map("std_dev") @db.Decimal(10, 2)
-  
+  mean   Decimal  @db.Decimal(10, 2)
+  stdDev Decimal? @map("std_dev") @db.Decimal(10, 2)
+
   // Fixed project rates
   fixedProjectAvg Decimal? @map("fixed_project_avg") @db.Decimal(10, 2)
   fixedProjectP50 Decimal? @map("fixed_project_p50") @db.Decimal(10, 2)
-  
+
   // Trend
-  yoyChange       Decimal? @map("yoy_change") @db.Decimal(5, 4) // e.g., 0.0800 = 8%
-  qoqChange       Decimal? @map("qoq_change") @db.Decimal(5, 4)
-  momChange       Decimal? @map("mom_change") @db.Decimal(5, 4)
-  
+  yoyChange Decimal? @map("yoy_change") @db.Decimal(5, 4) // e.g., 0.0800 = 8%
+  qoqChange Decimal? @map("qoq_change") @db.Decimal(5, 4)
+  momChange Decimal? @map("mom_change") @db.Decimal(5, 4)
+
   // Metadata
-  calculatedAt    DateTime @default(now()) @map("calculated_at")
-  dataVersion     Int      @default(1) @map("data_version")
+  calculatedAt DateTime @default(now()) @map("calculated_at")
+  dataVersion  Int      @default(1) @map("data_version")
 
   @@unique([skill, experienceLevel, location, projectType, period, periodType])
   @@index([skill, period])
@@ -13650,31 +13686,31 @@ model IntelligenceRateAggregate {
 }
 
 model AvailabilitySnapshot {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  skill           String   @db.VarChar(200)
-  skillCategory   String?  @map("skill_category") @db.VarChar(100)
-  experienceLevel String?  @map("experience_level") @db.VarChar(50)
-  location        String?  @db.VarChar(100)
-  
+  id              String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  skill           String  @db.VarChar(200)
+  skillCategory   String? @map("skill_category") @db.VarChar(100)
+  experienceLevel String? @map("experience_level") @db.VarChar(50)
+  location        String? @db.VarChar(100)
+
   // Snapshot date
-  snapshotDate    DateTime @map("snapshot_date")
-  
+  snapshotDate DateTime @map("snapshot_date")
+
   // Availability counts
-  availableNow    Int      @map("available_now") // Ready to start immediately
-  available7Days  Int      @map("available_7_days")
-  available30Days Int      @map("available_30_days")
-  available90Days Int      @map("available_90_days")
-  totalQualified  Int      @map("total_qualified")
-  
+  availableNow    Int @map("available_now") // Ready to start immediately
+  available7Days  Int @map("available_7_days")
+  available30Days Int @map("available_30_days")
+  available90Days Int @map("available_90_days")
+  totalQualified  Int @map("total_qualified")
+
   // Hours availability
-  avgHoursPerWeek Decimal? @map("avg_hours_per_week") @db.Decimal(5, 2)
-  totalHoursAvailable Int? @map("total_hours_available")
-  
+  avgHoursPerWeek     Decimal? @map("avg_hours_per_week") @db.Decimal(5, 2)
+  totalHoursAvailable Int?     @map("total_hours_available")
+
   // Availability score (0-1)
   availabilityScore Decimal @map("availability_score") @db.Decimal(3, 2)
-  
+
   // Metadata
-  calculatedAt    DateTime @default(now()) @map("calculated_at")
+  calculatedAt DateTime @default(now()) @map("calculated_at")
 
   @@unique([skill, experienceLevel, location, snapshotDate])
   @@index([skill, snapshotDate])
@@ -13683,39 +13719,39 @@ model AvailabilitySnapshot {
 }
 
 model DemandSignal {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  skill           String   @db.VarChar(200)
-  skillCategory   String?  @map("skill_category") @db.VarChar(100)
-  location        String?  @db.VarChar(100)
-  
+  id            String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  skill         String  @db.VarChar(200)
+  skillCategory String? @map("skill_category") @db.VarChar(100)
+  location      String? @db.VarChar(100)
+
   // Time period
-  period          DateTime // First day of period
-  periodType      PeriodType @map("period_type") @default(MONTHLY)
-  
+  period     DateTime // First day of period
+  periodType PeriodType @default(MONTHLY) @map("period_type")
+
   // Demand metrics
-  jobPostings     Int      @map("job_postings")
-  bidVolume       Int      @map("bid_volume")
-  contractsCreated Int     @map("contracts_created")
-  searchVolume    Int?     @map("search_volume")
-  
+  jobPostings      Int  @map("job_postings")
+  bidVolume        Int  @map("bid_volume")
+  contractsCreated Int  @map("contracts_created")
+  searchVolume     Int? @map("search_volume")
+
   // Calculated scores
-  demandScore     Decimal  @map("demand_score") @db.Decimal(4, 2) // 1-10 scale
+  demandScore      Decimal  @map("demand_score") @db.Decimal(4, 2) // 1-10 scale
   competitionRatio Decimal? @map("competition_ratio") @db.Decimal(5, 2) // candidates per job
-  
+
   // Trends
-  trend30d        Decimal? @map("trend_30d") @db.Decimal(5, 4)
-  trend90d        Decimal? @map("trend_90d") @db.Decimal(5, 4)
-  trendYoy        Decimal? @map("trend_yoy") @db.Decimal(5, 4)
-  
+  trend30d Decimal? @map("trend_30d") @db.Decimal(5, 4)
+  trend90d Decimal? @map("trend_90d") @db.Decimal(5, 4)
+  trendYoy Decimal? @map("trend_yoy") @db.Decimal(5, 4)
+
   // Related skills
-  relatedSkills   String[] @map("related_skills")
-  
+  relatedSkills String[] @map("related_skills")
+
   // Classification
-  isEmerging      Boolean  @default(false) @map("is_emerging")
-  isDeclining     Boolean  @default(false) @map("is_declining")
-  
+  isEmerging  Boolean @default(false) @map("is_emerging")
+  isDeclining Boolean @default(false) @map("is_declining")
+
   // Metadata
-  calculatedAt    DateTime @default(now()) @map("calculated_at")
+  calculatedAt DateTime @default(now()) @map("calculated_at")
 
   @@unique([skill, location, period, periodType])
   @@index([skill, period])
@@ -13725,9 +13761,9 @@ model DemandSignal {
 
 // Intelligence API Enums
 enum APIPlan {
-  STARTER      // $199/mo - 1,000 calls
+  STARTER // $199/mo - 1,000 calls
   PROFESSIONAL // $499/mo - 10,000 calls
-  ENTERPRISE   // Custom pricing
+  ENTERPRISE // Custom pricing
 }
 
 enum APICustomerStatus {
@@ -13747,10 +13783,10 @@ enum APIKeyStatus {
 // Note: PeriodType enum is defined earlier (line ~5953)
 
 enum UsageAlertType {
-  APPROACHING_LIMIT  // 80% of quota
-  LIMIT_REACHED      // 100% of quota
-  UNUSUAL_USAGE      // Spike detection
-  RATE_LIMIT_HIT     // Too many requests
+  APPROACHING_LIMIT // 80% of quota
+  LIMIT_REACHED // 100% of quota
+  UNUSUAL_USAGE // Spike detection
+  RATE_LIMIT_HIT // Too many requests
 }
 
 // ============================================================================
@@ -13758,9 +13794,9 @@ enum UsageAlertType {
 // ============================================================================
 
 enum IdentityVerificationType {
-  BASIC      // ID + Selfie
-  ENHANCED   // Basic + AML screening
-  PREMIUM    // Enhanced + Biometrics
+  BASIC // ID + Selfie
+  ENHANCED // Basic + AML screening
+  PREMIUM // Enhanced + Biometrics
 }
 
 enum IdentityVerificationStatus {
@@ -13800,25 +13836,25 @@ model VerificationInquiry {
   verificationType  IdentityVerificationType   @map("verification_type")
   status            IdentityVerificationStatus @default(PENDING)
   resultLevel       VerificationLevel?         @map("result_level")
-  
+
   // Timestamps
-  initiatedAt       DateTime                   @default(now()) @map("initiated_at")
-  completedAt       DateTime?                  @map("completed_at")
-  expiresAt         DateTime?                  @map("expires_at")
-  
+  initiatedAt DateTime  @default(now()) @map("initiated_at")
+  completedAt DateTime? @map("completed_at")
+  expiresAt   DateTime? @map("expires_at")
+
   // Review details
-  reviewedBy        String?                    @map("reviewed_by") @db.Uuid
-  reviewedAt        DateTime?                  @map("reviewed_at")
-  reviewNotes       String?                    @map("review_notes") @db.Text
-  declineReasons    String[]                   @map("decline_reasons")
-  
+  reviewedBy     String?   @map("reviewed_by") @db.Uuid
+  reviewedAt     DateTime? @map("reviewed_at")
+  reviewNotes    String?   @map("review_notes") @db.Text
+  declineReasons String[]  @map("decline_reasons")
+
   // Raw response from Persona
-  rawResponse       Json?                      @map("raw_response")
-  
+  rawResponse Json? @map("raw_response")
+
   // Relations
-  user              User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documents         VerificationDocument[]
-  
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents VerificationDocument[]
+
   @@index([userId])
   @@index([status])
   @@index([personaInquiryId])
@@ -13826,55 +13862,55 @@ model VerificationInquiry {
 }
 
 model VerificationDocument {
-  id               String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  inquiryId        String                     @map("inquiry_id") @db.Uuid
-  documentType     VerificationDocumentType   @map("document_type")
-  status           VerificationDocumentStatus @default(PENDING)
-  
+  id           String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  inquiryId    String                     @map("inquiry_id") @db.Uuid
+  documentType VerificationDocumentType   @map("document_type")
+  status       VerificationDocumentStatus @default(PENDING)
+
   // Document details
-  country          String?                    @db.VarChar(3)
-  expirationDate   DateTime?                  @map("expiration_date")
-  
+  country        String?   @db.VarChar(3)
+  expirationDate DateTime? @map("expiration_date")
+
   // Verification results
-  frontImageUrl    String?                    @map("front_image_url") @db.VarChar(500)
-  backImageUrl     String?                    @map("back_image_url") @db.VarChar(500)
-  
+  frontImageUrl String? @map("front_image_url") @db.VarChar(500)
+  backImageUrl  String? @map("back_image_url") @db.VarChar(500)
+
   // Extracted data (encrypted)
-  extractedData    Json?                      @map("extracted_data")
-  
+  extractedData Json? @map("extracted_data")
+
   // Timestamps
-  createdAt        DateTime                   @default(now()) @map("created_at")
-  updatedAt        DateTime                   @updatedAt @map("updated_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   // Relations
-  inquiry          VerificationInquiry        @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
-  
+  inquiry VerificationInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
   @@index([inquiryId])
   @@index([documentType])
   @@map("verification_documents")
 }
 
 model UserVerificationBadge {
-  id            String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId        String            @map("user_id") @db.Uuid
-  level         VerificationLevel
-  
+  id     String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId String            @map("user_id") @db.Uuid
+  level  VerificationLevel
+
   // Badge validity
-  grantedAt     DateTime          @default(now()) @map("granted_at")
-  expiresAt     DateTime          @map("expires_at")
-  isActive      Boolean           @default(true) @map("is_active")
-  
+  grantedAt DateTime @default(now()) @map("granted_at")
+  expiresAt DateTime @map("expires_at")
+  isActive  Boolean  @default(true) @map("is_active")
+
   // Source inquiry
-  inquiryId     String?           @map("inquiry_id") @db.Uuid
-  
+  inquiryId String? @map("inquiry_id") @db.Uuid
+
   // Revocation
-  revokedAt     DateTime?         @map("revoked_at")
-  revokedBy     String?           @map("revoked_by") @db.Uuid
-  revokeReason  String?           @map("revoke_reason") @db.Text
-  
+  revokedAt    DateTime? @map("revoked_at")
+  revokedBy    String?   @map("revoked_by") @db.Uuid
+  revokeReason String?   @map("revoke_reason") @db.Text
+
   // Relations
-  user          User              @relation("UserVerificationBadges", fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User @relation("UserVerificationBadges", fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([level, isActive])
   @@map("user_verification_badges")
@@ -13895,17 +13931,17 @@ model VerificationCode {
   type        VerificationCodeType
   codeHash    String               @map("code_hash") @db.VarChar(100)
   destination String               @db.VarChar(255) // Email or phone number
-  
+
   // Attempt tracking
-  attempts    Int                  @default(0)
-  
+  attempts Int @default(0)
+
   // Timestamps
-  createdAt   DateTime             @default(now()) @map("created_at")
-  expiresAt   DateTime             @map("expires_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+
   // Relations
-  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, type])
   @@index([expiresAt])
   @@map("verification_codes")
@@ -13928,31 +13964,31 @@ enum WorkRelationshipType {
 }
 
 model WorkRelationship {
-  id               String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId           String                @map("user_id") @db.Uuid
-  relatedUserId    String                @map("related_user_id") @db.Uuid
+  id            String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId        String @map("user_id") @db.Uuid
+  relatedUserId String @map("related_user_id") @db.Uuid
 
-  relationshipType WorkRelationshipType  @map("relationship_type")
+  relationshipType WorkRelationshipType @map("relationship_type")
   company          String?
-  startDate        DateTime?             @map("start_date")
-  endDate          DateTime?             @map("end_date")
-  projectName      String?               @map("project_name")
+  startDate        DateTime?            @map("start_date")
+  endDate          DateTime?            @map("end_date")
+  projectName      String?              @map("project_name")
 
-  strength         String?               // STRONG, MODERATE, WEAK
-  collaborationScore Int?                @map("collaboration_score")
-  endorsement      String?               @db.Text
-  skills           String[]
-  notes            String?               @db.Text
+  strength           String? // STRONG, MODERATE, WEAK
+  collaborationScore Int?     @map("collaboration_score")
+  endorsement        String?  @db.Text
+  skills             String[]
+  notes              String?  @db.Text
 
-  verified         Boolean               @default(false)
-  verifiedAt       DateTime?             @map("verified_at")
-  endorsedAt       DateTime?             @map("endorsed_at")
+  verified   Boolean   @default(false)
+  verifiedAt DateTime? @map("verified_at")
+  endorsedAt DateTime? @map("endorsed_at")
 
-  user             User                  @relation("WorkRelationshipsAsUser", fields: [userId], references: [id])
-  relatedUser      User                  @relation("WorkRelationshipsAsRelated", fields: [relatedUserId], references: [id])
+  user        User @relation("WorkRelationshipsAsUser", fields: [userId], references: [id])
+  relatedUser User @relation("WorkRelationshipsAsRelated", fields: [relatedUserId], references: [id])
 
-  createdAt        DateTime              @default(now()) @map("created_at")
-  updatedAt        DateTime              @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([userId, relatedUserId])
   @@index([userId])
@@ -13982,31 +14018,31 @@ enum TeamReunionMemberStatus {
 }
 
 model TeamReunion {
-  id                   String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  creatorId            String            @map("creator_id") @db.Uuid
-  creator              User              @relation("TeamReunionCreator", fields: [creatorId], references: [id])
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  creatorId String @map("creator_id") @db.Uuid
+  creator   User   @relation("TeamReunionCreator", fields: [creatorId], references: [id])
 
-  name                 String
-  description          String?           @db.Text
-  company              String?
-  industry             String?
+  name        String
+  description String? @db.Text
+  company     String?
+  industry    String?
 
-  projectName          String?           @map("project_name")
-  projectDescription   String?           @db.Text @map("project_description")
-  proposedBudget       Decimal?          @db.Decimal(12, 2) @map("proposed_budget")
-  proposedTimeline     String?           @map("proposed_timeline")
-  requiredSkills       String[]          @map("required_skills")
+  projectName        String?  @map("project_name")
+  projectDescription String?  @map("project_description") @db.Text
+  proposedBudget     Decimal? @map("proposed_budget") @db.Decimal(12, 2)
+  proposedTimeline   String?  @map("proposed_timeline")
+  requiredSkills     String[] @map("required_skills")
 
-  status               TeamReunionStatus @default(PROPOSED)
-  isActive             Boolean           @default(true) @map("is_active")
+  status   TeamReunionStatus @default(PROPOSED)
+  isActive Boolean           @default(true) @map("is_active")
 
-  activatedAt          DateTime?         @map("activated_at")
-  completedAt          DateTime?         @map("completed_at")
+  activatedAt DateTime? @map("activated_at")
+  completedAt DateTime? @map("completed_at")
 
-  members              TeamReunionMember[]
+  members TeamReunionMember[]
 
-  createdAt            DateTime          @default(now()) @map("created_at")
-  updatedAt            DateTime          @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([creatorId])
   @@index([isActive])
@@ -14015,28 +14051,28 @@ model TeamReunion {
 }
 
 model TeamReunionMember {
-  id              String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  teamReunionId   String                  @map("team_reunion_id") @db.Uuid
-  teamReunion     TeamReunion             @relation(fields: [teamReunionId], references: [id], onDelete: Cascade)
+  id            String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  teamReunionId String      @map("team_reunion_id") @db.Uuid
+  teamReunion   TeamReunion @relation(fields: [teamReunionId], references: [id], onDelete: Cascade)
 
-  userId          String                  @map("user_id") @db.Uuid
-  user            User                    @relation("TeamReunionMembers", fields: [userId], references: [id])
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation("TeamReunionMembers", fields: [userId], references: [id])
 
-  role            String?
-  proposedRole    String?                 @map("proposed_role")
-  relationship    String?
+  role         String?
+  proposedRole String? @map("proposed_role")
+  relationship String?
 
-  status          TeamReunionMemberStatus @default(INVITED)
+  status TeamReunionMemberStatus @default(INVITED)
 
-  invitedBy       String?                 @map("invited_by") @db.Uuid
-  invitedByUser   User?                   @relation("TeamReunionInviter", fields: [invitedBy], references: [id])
-  inviteMessage   String?                 @db.Text @map("invite_message")
+  invitedBy     String? @map("invited_by") @db.Uuid
+  invitedByUser User?   @relation("TeamReunionInviter", fields: [invitedBy], references: [id])
+  inviteMessage String? @map("invite_message") @db.Text
 
-  responseMessage String?                 @db.Text @map("response_message")
-  respondedAt     DateTime?               @map("responded_at")
-  joinedAt        DateTime?               @map("joined_at")
+  responseMessage String?   @map("response_message") @db.Text
+  respondedAt     DateTime? @map("responded_at")
+  joinedAt        DateTime? @map("joined_at")
 
-  createdAt       DateTime                @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([teamReunionId, userId])
   @@index([userId])
@@ -14049,31 +14085,31 @@ model TeamReunionMember {
 // ============================================================================
 
 model WarmIntroduction {
-  id                   String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  requesterId          String    @map("requester_id") @db.Uuid
-  targetUserId         String    @map("target_user_id") @db.Uuid
-  introducerId         String    @map("introducer_id") @db.Uuid
+  id           String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  requesterId  String @map("requester_id") @db.Uuid
+  targetUserId String @map("target_user_id") @db.Uuid
+  introducerId String @map("introducer_id") @db.Uuid
 
-  purpose              String    @db.Text
-  message              String?   @db.Text
-  context              String?   @db.Text
+  purpose String  @db.Text
+  message String? @db.Text
+  context String? @db.Text
 
-  status               String    @default("PENDING") // PENDING, ACCEPTED, DECLINED, COMPLETED, EXPIRED
+  status String @default("PENDING") // PENDING, ACCEPTED, DECLINED, COMPLETED, EXPIRED
 
-  introducerResponse   String?   @db.Text @map("introducer_response")
+  introducerResponse    String?   @map("introducer_response") @db.Text
   introducerRespondedAt DateTime? @map("introducer_responded_at")
-  targetResponse       String?   @db.Text @map("target_response")
-  targetRespondedAt    DateTime? @map("target_responded_at")
+  targetResponse        String?   @map("target_response") @db.Text
+  targetRespondedAt     DateTime? @map("target_responded_at")
 
-  completedAt          DateTime? @map("completed_at")
-  expiresAt            DateTime? @map("expires_at")
+  completedAt DateTime? @map("completed_at")
+  expiresAt   DateTime? @map("expires_at")
 
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  requester            User      @relation("WarmIntroRequester", fields: [requesterId], references: [id])
-  target               User      @relation("WarmIntroTarget", fields: [targetUserId], references: [id])
-  introducer           User      @relation("WarmIntroIntroducer", fields: [introducerId], references: [id])
+  requester  User @relation("WarmIntroRequester", fields: [requesterId], references: [id])
+  target     User @relation("WarmIntroTarget", fields: [targetUserId], references: [id])
+  introducer User @relation("WarmIntroIntroducer", fields: [introducerId], references: [id])
 
   @@index([requesterId])
   @@index([targetUserId])
@@ -14087,26 +14123,26 @@ model WarmIntroduction {
 // ============================================================================
 
 model EngagementOutcome {
-  id                     String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  contractId             String    @map("contract_id")
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId String @map("contract_id")
 
-  clientId               String?   @map("client_id") @db.Uuid
-  freelancerId           String?   @map("freelancer_id") @db.Uuid
-  client                 User?     @relation("OutcomeClient", fields: [clientId], references: [id])
-  freelancer             User?     @relation("OutcomeFreelancer", fields: [freelancerId], references: [id])
+  clientId     String? @map("client_id") @db.Uuid
+  freelancerId String? @map("freelancer_id") @db.Uuid
+  client       User?   @relation("OutcomeClient", fields: [clientId], references: [id])
+  freelancer   User?   @relation("OutcomeFreelancer", fields: [freelancerId], references: [id])
 
-  outcomeType            String?   @map("outcome_type")
-  rating                 String?
-  score                  Int?
+  outcomeType String? @map("outcome_type")
+  rating      String?
+  score       Int?
 
-  metrics                Json?
+  metrics Json?
 
-  clientFeedback         String?   @db.Text @map("client_feedback")
-  freelancerFeedback     String?   @db.Text @map("freelancer_feedback")
-  lessonsLearned         String[]  @map("lessons_learned")
+  clientFeedback     String?  @map("client_feedback") @db.Text
+  freelancerFeedback String?  @map("freelancer_feedback") @db.Text
+  lessonsLearned     String[] @map("lessons_learned")
 
-  createdAt              DateTime  @default(now()) @map("created_at")
-  updatedAt              DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([contractId])
   @@index([clientId])
@@ -14119,21 +14155,21 @@ model EngagementOutcome {
 // ============================================================================
 
 model SuccessPrediction {
-  id                  String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  contractId          String   @map("contract_id")
-  clientId            String   @map("client_id") @db.Uuid
-  freelancerId        String   @map("freelancer_id") @db.Uuid
+  id           String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId   String @map("contract_id")
+  clientId     String @map("client_id") @db.Uuid
+  freelancerId String @map("freelancer_id") @db.Uuid
 
-  successProbability  Decimal  @db.Decimal(5, 2) @map("success_probability")
-  confidence          String   // LOW, MEDIUM, HIGH, VERY_HIGH
+  successProbability Decimal @map("success_probability") @db.Decimal(5, 2)
+  confidence         String // LOW, MEDIUM, HIGH, VERY_HIGH
 
-  riskFactors         Json     @map("risk_factors")
-  recommendations     String[]
+  riskFactors     Json     @map("risk_factors")
+  recommendations String[]
 
-  modelVersion        String?  @map("model_version")
+  modelVersion String? @map("model_version")
 
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([contractId])
   @@index([freelancerId])
@@ -14146,30 +14182,30 @@ model SuccessPrediction {
 // ============================================================================
 
 model EngagementRiskAlert {
-  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  contractId       String    @map("contract_id")
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contractId String @map("contract_id")
 
-  riskCategory     String    @map("risk_category")  // COMMUNICATION, TIMELINE, BUDGET, etc.
-  riskLevel        String    @map("risk_level")      // LOW, MEDIUM, HIGH, CRITICAL
+  riskCategory String @map("risk_category") // COMMUNICATION, TIMELINE, BUDGET, etc.
+  riskLevel    String @map("risk_level") // LOW, MEDIUM, HIGH, CRITICAL
 
   title            String
-  description      String    @db.Text
+  description      String   @db.Text
   indicators       String[]
-  suggestedActions String[]  @map("suggested_actions")
+  suggestedActions String[] @map("suggested_actions")
 
-  autoGenerated    Boolean   @default(false) @map("auto_generated")
+  autoGenerated Boolean @default(false) @map("auto_generated")
 
-  acknowledged     Boolean   @default(false)
-  acknowledgedBy   String?   @map("acknowledged_by")
-  acknowledgedAt   DateTime? @map("acknowledged_at")
+  acknowledged   Boolean   @default(false)
+  acknowledgedBy String?   @map("acknowledged_by")
+  acknowledgedAt DateTime? @map("acknowledged_at")
 
-  resolved         Boolean   @default(false)
-  resolvedBy       String?   @map("resolved_by")
-  resolvedAt       DateTime? @map("resolved_at")
-  resolution       String?   @db.Text
+  resolved   Boolean   @default(false)
+  resolvedBy String?   @map("resolved_by")
+  resolvedAt DateTime? @map("resolved_at")
+  resolution String?   @db.Text
 
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([contractId, resolved])
   @@index([riskLevel])
