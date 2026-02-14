@@ -38,6 +38,21 @@ const server = Fastify({
   pluginTimeout: 120_000, // 120s - default 10s is too short for 15+ sub-plugin registrations
 });
 
+// Create logger instance (available at module level for route registration)
+const logger = createLogger(server.log);
+
+// Register rate limiting plugin (must be before routes)
+// All plugin registrations must happen synchronously at module level
+// because avvio auto-boots on next tick after module-level route definitions.
+server.register(rateLimitPlugin, { redis });
+
+// Register routes with dependencies (synchronous registration, async internals)
+void registerRoutes(server, {
+  prisma,
+  redis,
+  logger: logger as never, // Type coercion for Logger interface
+});
+
 // Health check endpoint
 server.get('/health', () => {
   return { status: 'ok', service: 'market-svc' };
@@ -56,22 +71,9 @@ server.get('/ready', async () => {
 
 const start = async () => {
   try {
-    // Connect to database
+    // Connect to database eagerly before server.listen()
     await prisma.$connect();
     server.log.info('Connected to database');
-
-    // Register rate limiting plugin (must be before routes)
-    await server.register(rateLimitPlugin, { redis });
-
-    // Create logger instance
-    const logger = createLogger(server.log);
-
-    // Register routes with dependencies
-    await registerRoutes(server, {
-      prisma,
-      redis,
-      logger: logger as never, // Type coercion for Logger interface
-    });
 
     // Start background jobs
     const reviewJobs = new ReviewJobs(prisma, redis, logger as never);

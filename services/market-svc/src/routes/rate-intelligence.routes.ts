@@ -286,7 +286,7 @@ export function rateIntelligenceRoutes(fastify: FastifyInstance): void {
         },
         security: [{ bearerAuth: [] }],
       } as OpenAPISchema,
-      preHandler: [app.authenticate as never],
+      ...(app.authenticate ? { preHandler: [app.authenticate as never] } : {}),
     },
     async (request, reply) => {
       try {
@@ -335,7 +335,7 @@ export function rateIntelligenceRoutes(fastify: FastifyInstance): void {
         },
         security: [{ bearerAuth: [] }],
       } as OpenAPISchema,
-      preHandler: [app.authenticate as never],
+      ...(app.authenticate ? { preHandler: [app.authenticate as never] } : {}),
     },
     async (request, reply) => {
       try {
@@ -370,7 +370,7 @@ export function rateIntelligenceRoutes(fastify: FastifyInstance): void {
         },
         security: [{ bearerAuth: [] }],
       } as OpenAPISchema,
-      preHandler: [app.authenticate as never],
+      ...(app.authenticate ? { preHandler: [app.authenticate as never] } : {}),
     },
     async (request, reply) => {
       try {
@@ -407,7 +407,7 @@ export function rateIntelligenceRoutes(fastify: FastifyInstance): void {
         },
         security: [{ bearerAuth: [] }],
       } as OpenAPISchema,
-      preHandler: [app.authenticate as never],
+      ...(app.authenticate ? { preHandler: [app.authenticate as never] } : {}),
     },
     async (request, reply) => {
       try {
@@ -443,7 +443,7 @@ export function rateIntelligenceRoutes(fastify: FastifyInstance): void {
         },
         security: [{ bearerAuth: [] }],
       } as OpenAPISchema,
-      preHandler: [app.authenticate as never],
+      ...(app.authenticate ? { preHandler: [app.authenticate as never] } : {}),
     },
     async (request, reply) => {
       try {
@@ -478,7 +478,7 @@ export function rateIntelligenceRoutes(fastify: FastifyInstance): void {
         },
         security: [{ bearerAuth: [] }],
       } as OpenAPISchema,
-      preHandler: [app.authenticate as never],
+      ...(app.authenticate ? { preHandler: [app.authenticate as never] } : {}),
     },
     async (request: AuthenticatedRequest, reply) => {
       try {
@@ -532,7 +532,7 @@ export function rateIntelligenceRoutes(fastify: FastifyInstance): void {
         },
         security: [{ bearerAuth: [] }],
       } as OpenAPISchema,
-      preHandler: [app.authenticate as never],
+      ...(app.authenticate ? { preHandler: [app.authenticate as never] } : {}),
     },
     async (request: AuthenticatedRequest, reply) => {
       try {
@@ -586,7 +586,7 @@ export function rateIntelligenceRoutes(fastify: FastifyInstance): void {
         },
         security: [{ bearerAuth: [] }],
       } as OpenAPISchema,
-      preHandler: [app.authenticate as never],
+      ...(app.authenticate ? { preHandler: [app.authenticate as never] } : {}),
     },
     async (request: AuthenticatedRequest, reply) => {
       try {

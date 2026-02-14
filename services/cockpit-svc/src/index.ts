@@ -61,6 +61,15 @@ const server = Fastify({
   pluginTimeout: 120_000, // 120s - default 10s is too short for 18+ sub-plugin registrations
 });
 
+// Register all routes as a plugin BEFORE any async work
+// (avvio auto-boots on next tick, so register() must be called synchronously)
+server.register(
+  async (instance) => {
+    await registerRoutes(instance, { prisma, redis, logger });
+  },
+  { prefix: '/api/cockpit' }
+);
+
 // Health check
 server.get('/health', () => {
   return { status: 'ok', service: 'cockpit-svc' };
@@ -97,20 +106,11 @@ server.get('/ready', async () => {
 
 const start = async () => {
   try {
-    // Eagerly connect to database and Redis before plugin registration
-    // so lazy connection doesn't eat into the plugin timeout window
+    // Eagerly connect to database and Redis before server.listen()
     await prisma.$connect();
     logger.info('Connected to database');
     await redis.ping();
     logger.info('Redis ping successful');
-
-    // Register CRM routes under /api/cockpit prefix
-    await server.register(
-      async (instance) => {
-        await registerRoutes(instance, { prisma, redis, logger });
-      },
-      { prefix: '/api/cockpit' }
-    );
 
     const port = Number(process.env.PORT) || 3004;
     await server.listen({ port, host: '0.0.0.0' });
