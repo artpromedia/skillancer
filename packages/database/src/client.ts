@@ -38,6 +38,11 @@ if (process.env['NODE_ENV'] !== 'production') {
 }
 
 /**
+ * Alias for prisma client (used by some services as `db`)
+ */
+export const db = prisma;
+
+/**
  * Type-safe database client type
  */
 export type DatabaseClient = typeof prisma;

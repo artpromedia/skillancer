@@ -479,4 +479,22 @@ export {
   ServicePaymentStatus,
   ServiceEscrowStatus,
   ServiceMessageType,
+  // Unified Financial / Report enums
+  FinancialReportType,
+  FinancialReportType as FinancialReportTypeEnum,
+  FinancialReportStatus,
+  FinancialReportStatus as FinancialReportStatusEnum,
+  UnifiedTransactionSource,
+  UnifiedTransactionSource as UnifiedTransactionSourceEnum,
+  UnifiedTransactionType,
+  UnifiedTransactionType as UnifiedTransactionTypeEnum,
+  UnifiedSyncStatus,
+  UnifiedSyncStatus as UnifiedSyncStatusEnum,
+  // Learning enums
+  LearningGoalType,
+  LearningGoalType as LearningGoalTypeEnum,
+  GoalPeriodType,
+  GoalPeriodType as GoalPeriodTypeEnum,
+  GoalStatus,
+  GoalStatus as GoalStatusEnum,
 } from '@prisma/client';

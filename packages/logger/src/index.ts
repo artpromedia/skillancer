@@ -214,3 +214,23 @@ export const logger = createLogger({
   serviceName: process.env.SERVICE_NAME || 'skillancer',
   environment: process.env.NODE_ENV || 'development',
 });
+
+/**
+ * Structured logging factory (Python structlog-style API).
+ * Provides a `.get(name)` method for creating named loggers.
+ *
+ * @example
+ * ```typescript
+ * import { structlog } from '@skillancer/logger';
+ * const logger = structlog.get('my-service');
+ * logger.info('Hello world');
+ * ```
+ */
+export const structlog = {
+  /**
+   * Get a named logger instance
+   * @param name - Logger name (typically the module or service name)
+   * @returns A configured Pino logger
+   */
+  get: (name: string): Logger => createLogger({ name }),
+};
