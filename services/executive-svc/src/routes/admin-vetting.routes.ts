@@ -79,7 +79,31 @@ export async function adminVettingRoutes(app: FastifyInstance): Promise<void> {
       schema: {
         tags: ['Admin - Vetting'],
         summary: 'Get vetting pipeline',
-        querystring: pipelineQuerySchema,
+        querystring: {
+          type: 'object',
+          properties: {
+            status: {
+              type: 'string',
+              enum: ['PENDING', 'IN_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN'],
+            },
+            stage: {
+              type: 'string',
+              enum: [
+                'APPLICATION',
+                'AUTOMATED_SCREENING',
+                'INTERVIEW_SCHEDULED',
+                'INTERVIEW_COMPLETED',
+                'REFERENCE_CHECK',
+                'BACKGROUND_CHECK',
+                'FINAL_REVIEW',
+                'COMPLETE',
+              ],
+            },
+            assignee: { type: 'string', format: 'uuid' },
+            page: { type: 'integer', minimum: 1, default: 1 },
+            limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
+        },
       },
     },
     async (request, reply) => {
