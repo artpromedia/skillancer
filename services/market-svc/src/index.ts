@@ -35,6 +35,7 @@ const createLogger = (fastifyLogger: ReturnType<typeof Fastify>['log']) => ({
 
 const server = Fastify({
   logger: true,
+  pluginTimeout: 120_000, // 120s - default 10s is too short for 15+ sub-plugin registrations
 });
 
 // Health check endpoint

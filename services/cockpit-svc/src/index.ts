@@ -58,6 +58,7 @@ const marketSyncWorker = new MarketSyncWorker(prisma, redis, logger);
 
 const server = Fastify({
   logger: true,
+  pluginTimeout: 120_000, // 120s - default 10s is too short for 18+ sub-plugin registrations
 });
 
 // Health check
@@ -96,6 +97,13 @@ server.get('/ready', async () => {
 
 const start = async () => {
   try {
+    // Eagerly connect to database and Redis before plugin registration
+    // so lazy connection doesn't eat into the plugin timeout window
+    await prisma.$connect();
+    logger.info('Connected to database');
+    await redis.ping();
+    logger.info('Redis ping successful');
+
     // Register CRM routes under /api/cockpit prefix
     await server.register(
       async (instance) => {

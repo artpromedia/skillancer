@@ -28,7 +28,7 @@ const ALLOWED_ORIGINS: Record<string, string[]> = {
 
 export function getAllowedOrigins(env?: string): string[] {
   const environment = env || process.env.NODE_ENV || 'development';
-  return ALLOWED_ORIGINS[environment] || ALLOWED_ORIGINS.development;
+  return ALLOWED_ORIGINS[environment] ?? ALLOWED_ORIGINS.development ?? [];
 }
 
 export function isOriginAllowed(origin: string, env?: string): boolean {

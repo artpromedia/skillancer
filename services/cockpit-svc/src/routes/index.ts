@@ -46,7 +46,7 @@ export async function registerRoutes(
 
   // Register client routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerClientRoutes(instance, deps);
     },
     { prefix: '/clients' }
@@ -54,7 +54,7 @@ export async function registerRoutes(
 
   // Register opportunity routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerOpportunityRoutes(instance, deps);
     },
     { prefix: '/opportunities' }
@@ -62,7 +62,7 @@ export async function registerRoutes(
 
   // Register reminder routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerReminderRoutes(instance, deps);
     },
     { prefix: '/reminders' }
@@ -70,7 +70,7 @@ export async function registerRoutes(
 
   // Register document routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerDocumentRoutes(instance, deps);
     },
     { prefix: '/documents' }
@@ -82,7 +82,7 @@ export async function registerRoutes(
 
   // Register project routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerProjectRoutes(instance, deps);
     },
     { prefix: '/projects' }
@@ -90,7 +90,7 @@ export async function registerRoutes(
 
   // Register template routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerTemplateRoutes(instance, deps);
     },
     { prefix: '/templates' }
@@ -98,7 +98,7 @@ export async function registerRoutes(
 
   // Register workload routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerWorkloadRoutes(instance, deps);
     },
     { prefix: '/workload' }
@@ -153,7 +153,7 @@ export async function registerRoutes(
 
   // Register finance routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerFinanceRoutes(instance, {
         ...deps,
         plaidConfig: process.env.PLAID_CLIENT_ID
@@ -175,7 +175,7 @@ export async function registerRoutes(
 
   // Register invoice routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerInvoiceRoutes(instance, deps);
     },
     { prefix: '/invoicing' }
@@ -193,7 +193,7 @@ export async function registerRoutes(
 
   // Register integration routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerIntegrationRoutes(instance, { ...deps, encryption });
     },
     { prefix: '/platform' }
@@ -205,7 +205,7 @@ export async function registerRoutes(
 
   // Register freelance platform routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerFreelancePlatformRoutes(instance, { ...deps, encryption });
     },
     { prefix: '/api' }
@@ -217,7 +217,7 @@ export async function registerRoutes(
 
   // Register productivity tool routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerProductivityToolRoutes(instance, { ...deps, encryption });
     },
     { prefix: '/api' }
@@ -232,7 +232,7 @@ export async function registerRoutes(
 
   // Register communication platform routes (Discord)
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerCommunicationRoutes(instance, {
         prisma: deps.prisma,
         logger: deps.logger,

@@ -38,7 +38,7 @@ export async function registerRoutes(
 ): Promise<void> {
   // Register review routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerReviewRoutes(instance, deps);
     },
     { prefix: '/reviews' }
@@ -46,7 +46,7 @@ export async function registerRoutes(
 
   // Register enhanced review routes (with fraud detection)
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerEnhancedReviewRoutes(instance, deps);
     },
     { prefix: '/v2/reviews' }
@@ -54,7 +54,7 @@ export async function registerRoutes(
 
   // Register admin review routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerAdminReviewRoutes(instance, deps);
     },
     { prefix: '/admin/reviews' }
@@ -62,7 +62,7 @@ export async function registerRoutes(
 
   // Register service catalog routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerServiceRoutes(instance, deps);
     },
     { prefix: '/services' }
@@ -70,7 +70,7 @@ export async function registerRoutes(
 
   // Register service orders routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerServiceOrderRoutes(instance, deps);
     },
     { prefix: '/service-orders' }
@@ -78,7 +78,7 @@ export async function registerRoutes(
 
   // Register rate intelligence routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       rateIntelligenceRoutes(instance);
     },
     { prefix: '/market' }
@@ -86,7 +86,7 @@ export async function registerRoutes(
 
   // Register escrow routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerEscrowRoutes(instance, deps);
     },
     { prefix: '/escrow' }
@@ -94,7 +94,7 @@ export async function registerRoutes(
 
   // Register invoice routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerInvoiceRoutes(instance, deps);
     },
     { prefix: '/invoices' }
@@ -102,7 +102,7 @@ export async function registerRoutes(
 
   // Register payout routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerPayoutRoutes(instance, deps);
     },
     { prefix: '/payouts' }
@@ -111,7 +111,7 @@ export async function registerRoutes(
   // Register Stripe webhook routes
   if (deps.stripeWebhookSecret) {
     await fastify.register(
-      (instance) => {
+      async (instance) => {
         registerStripeWebhookRoutes(instance, {
           prisma: deps.prisma,
           logger: deps.logger,
@@ -125,7 +125,7 @@ export async function registerRoutes(
 
   // Register conversation routes (messaging system)
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerConversationRoutes(instance, deps);
     },
     { prefix: '/conversations' }
@@ -133,7 +133,7 @@ export async function registerRoutes(
 
   // Register message routes (messaging system)
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerMessageRoutes(instance, deps);
     },
     { prefix: '/conversations' }
@@ -141,7 +141,7 @@ export async function registerRoutes(
 
   // Register presence routes (messaging system)
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerPresenceRoutes(instance, deps);
     },
     { prefix: '/presence' }
@@ -149,7 +149,7 @@ export async function registerRoutes(
 
   // Register notification routes
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerNotificationRoutes(instance, deps);
     },
     { prefix: '/api' }
@@ -157,7 +157,7 @@ export async function registerRoutes(
 
   // Register credential routes (SkillPod integration)
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerCredentialRoutes(instance, deps);
     },
     { prefix: '/credentials' }
@@ -165,7 +165,7 @@ export async function registerRoutes(
 
   // Register profile routes (Sprint 13: Profile Integration & Endorsements)
   await fastify.register(
-    (instance) => {
+    async (instance) => {
       registerProfileRoutes(instance, deps);
     },
     { prefix: '/profiles' }
