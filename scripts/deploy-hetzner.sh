@@ -261,6 +261,11 @@ apply_deployment_manifest() {
     cockpit-svc)      port=3004 ;;
     billing-svc)      port=3005 ;;
     notification-svc) port=4006 ;;
+    executive-svc)    port=3007 ;;
+    financial-svc)    port=3008 ;;
+    talent-graph-svc) port=3009 ;;
+    intelligence-svc) port=3010 ;;
+    copilot-svc)      port=3011 ;;
     audit-svc)        port=3012 ;;
     *)                port=3000 ;;
   esac

@@ -484,4 +484,35 @@ export function createAuditClient(options: AuditClientOptions): AuditClient {
   return new AuditClient(options);
 }
 
+// =============================================================================
+// CONVENIENCE FUNCTION
+// =============================================================================
+
+/**
+ * Simple audit log function for quick logging without needing an AuditClient instance.
+ * Logs the event to console/stdout. Services that need Redis-backed audit queues
+ * should use createAuditClient() instead.
+ */
+export async function createAuditLog(params: {
+  userId: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  details?: Record<string, unknown>;
+}): Promise<void> {
+  // Use structured logging so audit events can be collected by log aggregation
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      type: 'audit',
+      timestamp: new Date().toISOString(),
+      userId: params.userId,
+      action: params.action,
+      resourceType: params.resourceType,
+      resourceId: params.resourceId,
+      details: params.details,
+    })
+  );
+}
+
 export default AuditClient;

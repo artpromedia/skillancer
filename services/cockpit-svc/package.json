@@ -34,10 +34,8 @@
     "google-auth-library": "^9.0.0",
     "googleapis": "^169.0.0",
     "ioredis": "^5.3.2",
+    "puppeteer": "^22.0.0",
     "zod": "^3.22.0"
-  },
-  "optionalDependencies": {
-    "puppeteer": "^22.0.0"
   },
   "devDependencies": {
     "@skillancer/config": "workspace:*",
