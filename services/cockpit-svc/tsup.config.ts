@@ -8,6 +8,6 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  external: [/^@skillancer\//, '@prisma/client', /^\.prisma/, 'puppeteer'],
+  external: [/^@skillancer\//, '@prisma/client', /^\.prisma/, 'puppeteer', 'zod'],
   tsconfig: './tsconfig.json',
 });

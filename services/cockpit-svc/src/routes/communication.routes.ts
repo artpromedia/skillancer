@@ -4,8 +4,6 @@
  * Communication Platform Integration Routes - Discord
  */
 
-import { z } from 'zod';
-
 import type {
   DiscordIntegrationService,
   DiscordInteraction,
@@ -15,25 +13,36 @@ import type { Logger } from '@skillancer/logger';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 // ============================================================================
-// Request Schemas
+// Request Schemas (JSON Schema for Fastify/Ajv)
 // ============================================================================
 
-const integrationIdParamSchema = z.object({
-  integrationId: z.string().uuid(),
-});
+const integrationIdParamSchema = {
+  type: 'object' as const,
+  properties: {
+    integrationId: { type: 'string' as const, format: 'uuid' },
+  },
+  required: ['integrationId'] as const,
+};
 
-const discordNotificationConfigSchema = z.object({
-  guildId: z.string().optional(),
-  notificationChannelId: z.string().optional(),
-  notifyOnPayment: z.boolean().optional(),
-  notifyOnInvoice: z.boolean().optional(),
-  notifyOnProject: z.boolean().optional(),
-  notifyOnDeadline: z.boolean().optional(),
-});
+const discordNotificationConfigSchema = {
+  type: 'object' as const,
+  properties: {
+    guildId: { type: 'string' as const },
+    notificationChannelId: { type: 'string' as const },
+    notifyOnPayment: { type: 'boolean' as const },
+    notifyOnInvoice: { type: 'boolean' as const },
+    notifyOnProject: { type: 'boolean' as const },
+    notifyOnDeadline: { type: 'boolean' as const },
+  },
+};
 
-const testNotificationSchema = z.object({
-  channelId: z.string(),
-});
+const testNotificationSchema = {
+  type: 'object' as const,
+  properties: {
+    channelId: { type: 'string' as const },
+  },
+  required: ['channelId'] as const,
+};
 
 // ============================================================================
 // Route Dependencies
@@ -70,15 +79,22 @@ export function registerCommunicationRoutes(
         summary: 'List Discord guilds (servers)',
         params: integrationIdParamSchema,
         response: {
-          200: z.object({
-            guilds: z.array(
-              z.object({
-                id: z.string(),
-                name: z.string(),
-                icon: z.string().nullable(),
-              })
-            ),
-          }),
+          200: {
+            type: 'object',
+            properties: {
+              guilds: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    name: { type: 'string' },
+                    icon: { type: ['string', 'null'] },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -113,20 +129,31 @@ export function registerCommunicationRoutes(
       schema: {
         tags: ['Integrations', 'Discord'],
         summary: 'List Discord channels for a guild',
-        params: z.object({
-          integrationId: z.string().uuid(),
-          guildId: z.string(),
-        }),
+        params: {
+          type: 'object',
+          properties: {
+            integrationId: { type: 'string', format: 'uuid' },
+            guildId: { type: 'string' },
+          },
+          required: ['integrationId', 'guildId'],
+        },
         response: {
-          200: z.object({
-            channels: z.array(
-              z.object({
-                id: z.string(),
-                name: z.string(),
-                type: z.number(),
-              })
-            ),
-          }),
+          200: {
+            type: 'object',
+            properties: {
+              channels: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    name: { type: 'string' },
+                    type: { type: 'number' },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -167,14 +194,21 @@ export function registerCommunicationRoutes(
         params: integrationIdParamSchema,
         body: discordNotificationConfigSchema,
         response: {
-          200: z.object({ success: z.boolean() }),
+          200: { type: 'object', properties: { success: { type: 'boolean' } } },
         },
       },
     },
     async (
       request: FastifyRequest<{
         Params: { integrationId: string };
-        Body: z.infer<typeof discordNotificationConfigSchema>;
+        Body: {
+          guildId?: string;
+          notificationChannelId?: string;
+          notifyOnPayment?: boolean;
+          notifyOnInvoice?: boolean;
+          notifyOnProject?: boolean;
+          notifyOnDeadline?: boolean;
+        };
       }>,
       reply: FastifyReply
     ) => {
@@ -216,17 +250,20 @@ export function registerCommunicationRoutes(
         params: integrationIdParamSchema,
         body: testNotificationSchema,
         response: {
-          200: z.object({
-            success: z.boolean(),
-            messageId: z.string(),
-          }),
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              messageId: { type: 'string' },
+            },
+          },
         },
       },
     },
     async (
       request: FastifyRequest<{
         Params: { integrationId: string };
-        Body: z.infer<typeof testNotificationSchema>;
+        Body: { channelId: string };
       }>,
       reply: FastifyReply
     ) => {
@@ -334,7 +371,7 @@ export function registerCommunicationRoutes(
         tags: ['Integrations', 'Discord', 'Admin'],
         summary: 'Register Discord slash commands',
         response: {
-          200: z.object({ success: z.boolean() }),
+          200: { type: 'object', properties: { success: { type: 'boolean' } } },
         },
       },
     },
