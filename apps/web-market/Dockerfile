@@ -73,6 +73,9 @@ RUN cd packages/api-client && (pnpm build 2>/dev/null || true)
 RUN cd packages/auth && (pnpm build 2>/dev/null || true)
 RUN cd packages/shared/api-client && (pnpm build 2>/dev/null || true)
 
+# API URL (inlined at build time by Next.js for OAuth redirects etc.)
+ENV NEXT_PUBLIC_API_URL="https://api.skillancer.com"
+
 # Firebase client-side config (inlined at build time by Next.js)
 ENV NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSyAgykz7phejxvyhbvPDrtZBDV325hq8O2E"
 ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="skillancer.firebaseapp.com"
