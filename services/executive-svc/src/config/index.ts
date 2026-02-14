@@ -71,9 +71,11 @@ let config: Config | null = null;
 
 export function getConfig(): Config {
   if (!config) {
+    // Use nullish coalescing to preserve Zod defaults when env vars are unset
+    const rawPort = process.env.EXECUTIVE_SVC_PORT || process.env.PORT;
     config = configSchema.parse({
       nodeEnv: process.env.NODE_ENV,
-      port: process.env.EXECUTIVE_SVC_PORT || process.env.PORT,
+      port: rawPort || undefined, // pass undefined so z.coerce.number().default(3007) applies
       host: process.env.HOST,
       logLevel: process.env.LOG_LEVEL,
       apiBaseUrl: process.env.EXECUTIVE_SVC_API_BASE_URL || process.env.API_BASE_URL,
